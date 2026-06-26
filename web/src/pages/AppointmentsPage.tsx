@@ -81,7 +81,7 @@ export default function AppointmentsPage() {
   // Appointments for selected day
   const dayAppts = appts.filter((a) => {
     if (!a.start_time || selectedDay === null) return false;
-    const d = new Date(a.start_time / 1000);
+    const d = new Date(a.start_time);
     return d.getFullYear() === calYear && d.getMonth() === calMonth && d.getDate() === selectedDay;
   }).sort((a, b) => a.start_time - b.start_time);
 
@@ -157,7 +157,7 @@ export default function AppointmentsPage() {
           )}
 
           {dayAppts.map((a) => {
-            const startStr = new Date(a.start_time / 1000).toLocaleTimeString("en-US", {
+            const startStr = new Date(a.start_time).toLocaleTimeString("en-US", {
               hour: "numeric", minute: "2-digit",
             });
             return (

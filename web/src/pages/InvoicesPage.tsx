@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2, FileDown } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, "default" | "warning" | "success" | "destructive" | "outline"> = {
@@ -147,9 +147,13 @@ export default function InvoicesPage() {
         {selectedInv && (
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle>#{selectedInv.invoice_number} — ${selectedInv.total.toFixed(2)}</CardTitle></CardHeader>
+              <CardHeader><CardTitle>#{selectedInv.invoice_number} — ${selectedInv.total.toFixed(2)}</CardTitle>
+                <Button size="sm" variant="outline" onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, "_blank")}>
+                  <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
+                </Button>
+              </CardHeader>
               <CardContent className="space-y-3">
-                <Select value={selectedInv.status} onChange={(e) => { api.invoices.updateStatus(selectedInv.id, e.target.value); selectInvoice(selectedInv); }}>
+                <Select value={selectedInv.status} onChange={async (e) => { await api.invoices.updateStatus(selectedInv.id, e.target.value); load(); selectInvoice(selectedInv); }}>
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
                   <option value="paid">Paid</option>

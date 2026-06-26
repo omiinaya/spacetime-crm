@@ -196,7 +196,7 @@ export default function TicketsPage() {
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {notes.map((n) => (
                     <div key={n.id} className="text-sm p-2 rounded bg-muted/50">
-                      <p className="text-xs text-muted-foreground">{n.author} — {new Date(n.created_at / 1000).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{n.author} — {new Date(n.created_at).toLocaleString()}</p>
                       <p className="mt-1">{n.content}</p>
                     </div>
                   ))}

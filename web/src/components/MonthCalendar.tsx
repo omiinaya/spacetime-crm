@@ -49,7 +49,7 @@ export default function MonthCalendar({
     const map = new Map<number, CalendarEvent[]>();
     for (const ev of events) {
       if (!ev.start_time) continue;
-      const d = new Date(ev.start_time / 1000);
+      const d = new Date(ev.start_time);
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
         const list = map.get(day) || [];
