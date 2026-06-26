@@ -61,22 +61,31 @@ async def _call(reducer: str, args: list[Any] | None = None) -> Any:
     if resp.status_code >= 400:
         logger.error("STDB call error (%s): %s", reducer, resp.text[:200])
         raise HTTPException(502, f"Reducer call failed: {resp.text[:200]}")
-    return resp.json()
+    try:
+        return resp.json()
+    except Exception:
+        return {"ok": True}
+
+
+def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
+    return sorted(rows, key=lambda r: r.get(key, 0) or 0, reverse=desc)
 
 
 # ── CUSTOMER endpoints ────────────────────────────────────────
 
 @app.get("/api/customers")
 async def list_customers(search: str = ""):
-    rows = await _sql(
-        f"SELECT * FROM customer WHERE "
-        f"LOWER(first_name) LIKE '%{search.lower()}%' "
-        f"OR LOWER(last_name) LIKE '%{search.lower()}%' "
-        f"OR LOWER(email) LIKE '%{search.lower()}%' "
-        f"OR phone LIKE '%{search}%' "
-        f"ORDER BY created_at DESC" if search else "SELECT * FROM customer ORDER BY created_at DESC"
-    )
-    return {"customers": rows}
+    rows = await _sql("SELECT * FROM customer")
+    q = search.lower().strip()
+    if q:
+        rows = [
+            r for r in rows
+            if q in (r.get("first_name") or "").lower()
+            or q in (r.get("last_name") or "").lower()
+            or q in (r.get("email") or "").lower()
+            or q in (r.get("phone") or "")
+        ]
+    return {"customers": _sort(rows, "created_at")}
 
 
 @app.post("/api/customers")
@@ -121,9 +130,10 @@ async def delete_customer(customer_id: str):
 
 @app.get("/api/tickets")
 async def list_tickets(status: str = ""):
-    where = f"WHERE status = '{status}'" if status else ""
-    rows = await _sql(f"SELECT * FROM ticket {where} ORDER BY created_at DESC")
-    return {"tickets": rows}
+    rows = await _sql("SELECT * FROM ticket")
+    if status:
+        rows = [r for r in rows if r.get("status") == status]
+    return {"tickets": _sort(rows, "created_at")}
 
 
 @app.post("/api/tickets")
@@ -154,10 +164,8 @@ async def assign_ticket(ticket_id: str, body: dict):
 
 @app.get("/api/tickets/{ticket_id}/notes")
 async def get_ticket_notes(ticket_id: str):
-    rows = await _sql(
-        f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}' ORDER BY created_at ASC"
-    )
-    return {"notes": rows}
+    rows = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}'")
+    return {"notes": _sort(rows, "created_at", desc=False)}
 
 
 @app.post("/api/tickets/{ticket_id}/notes")
@@ -181,9 +189,10 @@ async def delete_ticket(ticket_id: str):
 
 @app.get("/api/invoices")
 async def list_invoices(status: str = ""):
-    where = f"WHERE status = '{status}'" if status else ""
-    rows = await _sql(f"SELECT * FROM invoice {where} ORDER BY created_at DESC")
-    return {"invoices": rows}
+    rows = await _sql("SELECT * FROM invoices")
+    if status:
+        rows = [r for r in rows if r.get("status") == status]
+    return {"invoices": _sort(rows, "created_at")}
 
 
 @app.post("/api/invoices")
@@ -206,10 +215,8 @@ async def update_invoice_status(invoice_id: str, body: dict):
 
 @app.get("/api/invoices/{invoice_id}/line-items")
 async def get_invoice_line_items(invoice_id: str):
-    rows = await _sql(
-        f"SELECT * FROM invoice_line_item WHERE invoice_id = '{invoice_id}' ORDER BY sort_order ASC"
-    )
-    return {"line_items": rows}
+    rows = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
 @app.post("/api/invoices/{invoice_id}/line-items")
@@ -240,9 +247,10 @@ async def delete_invoice(invoice_id: str):
 
 @app.get("/api/payments")
 async def list_payments(invoice_id: str = ""):
-    where = f"WHERE invoice_id = '{invoice_id}'" if invoice_id else ""
-    rows = await _sql(f"SELECT * FROM payment {where} ORDER BY created_at DESC")
-    return {"payments": rows}
+    rows = await _sql("SELECT * FROM payment")
+    if invoice_id:
+        rows = [r for r in rows if r.get("invoice_id") == invoice_id]
+    return {"payments": _sort(rows, "created_at")}
 
 
 @app.post("/api/payments")
@@ -268,8 +276,8 @@ async def delete_payment(payment_id: str):
 
 @app.get("/api/appointments")
 async def list_appointments():
-    rows = await _sql("SELECT * FROM appointment ORDER BY start_time ASC")
-    return {"appointments": rows}
+    rows = await _sql("SELECT * FROM appointment")
+    return {"appointments": _sort(rows, "start_time", desc=False)}
 
 
 @app.post("/api/appointments")
@@ -302,9 +310,15 @@ async def delete_appointment(appt_id: str):
 
 @app.get("/api/products")
 async def list_products(search: str = ""):
-    where = f"WHERE LOWER(name) LIKE '%{search.lower()}%' OR LOWER(sku) LIKE '%{search.lower()}%'" if search else ""
-    rows = await _sql(f"SELECT * FROM product {where} ORDER BY name ASC")
-    return {"products": rows}
+    rows = await _sql("SELECT * FROM product")
+    q = search.lower().strip()
+    if q:
+        rows = [
+            r for r in rows
+            if q in (r.get("name") or "").lower()
+            or q in (r.get("sku") or "").lower()
+        ]
+    return {"products": _sort(rows, "name", desc=False)}
 
 
 @app.post("/api/products")
@@ -337,9 +351,10 @@ async def delete_product(product_id: str):
 
 @app.get("/api/estimates")
 async def list_estimates(status: str = ""):
-    where = f"WHERE status = '{status}'" if status else ""
-    rows = await _sql(f"SELECT * FROM estimate {where} ORDER BY created_at DESC")
-    return {"estimates": rows}
+    rows = await _sql("SELECT * FROM estimates")
+    if status:
+        rows = [r for r in rows if r.get("status") == status]
+    return {"estimates": _sort(rows, "created_at")}
 
 
 @app.post("/api/estimates")
@@ -361,10 +376,8 @@ async def update_estimate_status(estimate_id: str, body: dict):
 
 @app.get("/api/estimates/{estimate_id}/line-items")
 async def get_estimate_line_items(estimate_id: str):
-    rows = await _sql(
-        f"SELECT * FROM estimate_line_item WHERE estimate_id = '{estimate_id}' ORDER BY sort_order ASC"
-    )
-    return {"line_items": rows}
+    rows = await _sql(f"SELECT * FROM estimate_line_items WHERE estimate_id = '{estimate_id}'")
+    return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
 @app.post("/api/estimates/{estimate_id}/line-items")
@@ -389,8 +402,8 @@ async def delete_estimate(estimate_id: str):
 
 @app.get("/api/purchase-orders")
 async def list_purchase_orders():
-    rows = await _sql("SELECT * FROM purchase_order ORDER BY created_at DESC")
-    return {"purchase_orders": rows}
+    rows = await _sql("SELECT * FROM purchase_order")
+    return {"purchase_orders": _sort(rows, "created_at")}
 
 
 @app.post("/api/purchase-orders")
@@ -412,19 +425,23 @@ async def delete_purchase_order(po_id: str):
 
 @app.get("/api/stats")
 async def dashboard_stats():
-    customers = await _sql("SELECT COUNT(*) as count FROM customer")
-    tickets = await _sql("SELECT COUNT(*) as count FROM ticket")
-    open_tickets = await _sql("SELECT COUNT(*) as count FROM ticket WHERE status NOT IN ('resolved','closed')")
-    invoices = await _sql("SELECT SUM(total) as total FROM invoice WHERE status = 'paid'")
-    pending_invoices = await _sql("SELECT SUM(total) as total FROM invoice WHERE status NOT IN ('paid','cancelled')")
-    appointments = await _sql("SELECT COUNT(*) as count FROM appointment WHERE start_time > 0")
+    all_customers = await _sql("SELECT * FROM customer")
+    all_tickets = await _sql("SELECT * FROM ticket")
+    all_invoices = await _sql("SELECT * FROM invoices")
+    all_appointments = await _sql("SELECT * FROM appointment")
+    total_customers = len(all_customers)
+    total_tickets = len(all_tickets)
+    open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
+    revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") == "paid")
+    pending_revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") not in ("paid", "cancelled"))
+    upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
     return {
-        "total_customers": customers[0]["count"] if customers else 0,
-        "total_tickets": tickets[0]["count"] if tickets else 0,
-        "open_tickets": open_tickets[0]["count"] if open_tickets else 0,
-        "revenue": invoices[0]["total"] if invoices and invoices[0]["total"] else 0,
-        "pending_revenue": pending_invoices[0]["total"] if pending_invoices and pending_invoices[0]["total"] else 0,
-        "upcoming_appointments": appointments[0]["count"] if appointments else 0,
+        "total_customers": total_customers,
+        "total_tickets": total_tickets,
+        "open_tickets": open_tickets,
+        "revenue": revenue,
+        "pending_revenue": pending_revenue,
+        "upcoming_appointments": upcoming_appointments,
     }
 
 
@@ -432,8 +449,8 @@ async def dashboard_stats():
 
 @app.get("/api/users")
 async def list_users():
-    rows = await _sql("SELECT * FROM user ORDER BY name ASC")
-    return {"users": rows}
+    rows = await _sql("SELECT * FROM user")
+    return {"users": _sort(rows, "name", desc=False)}
 
 
 @app.post("/api/users")
