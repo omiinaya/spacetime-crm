@@ -2,12 +2,15 @@ import json
 import logging
 from typing import Any
 from pathlib import Path
+from datetime import datetime
 
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from jinja2 import Environment, FileSystemLoader
+from weasyprint import HTML
 
 from config import settings
 
@@ -69,6 +72,22 @@ async def _call(reducer: str, args: list[Any] | None = None) -> Any:
 
 def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
     return sorted(rows, key=lambda r: r.get(key, 0) or 0, reverse=desc)
+
+
+# ── Jinja2 template loader ────────────────────────────────────
+
+TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
+
+STATUS_LABELS = {
+    "draft": "Draft", "sent": "Sent", "paid": "Paid",
+    "partial": "Partial", "overdue": "Overdue", "cancelled": "Cancelled",
+}
+
+STATUS_CSS = {
+    "draft": "draft", "sent": "sent", "paid": "paid",
+    "partial": "partial", "overdue": "overdue", "cancelled": "cancelled",
+}
 
 
 # ── CUSTOMER endpoints ────────────────────────────────────────
@@ -241,6 +260,64 @@ async def delete_invoice_line_item(invoice_id: str, item_id: str):
 async def delete_invoice(invoice_id: str):
     await _call("delete_invoice", [invoice_id])
     return {"ok": True}
+
+
+@app.get("/api/invoices/{invoice_id}/pdf")
+async def invoice_pdf(invoice_id: str):
+    invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
+    if not invs:
+        raise HTTPException(404, "Invoice not found")
+    inv = invs[0]
+    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    items = _sort(items, "sort_order", desc=False)
+    cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+
+    customer = cust[0] if cust else {}
+    status = inv.get("status", "draft")
+    ts = inv.get("created_at", 0) / 1000
+    due = inv.get("due_date", 0) / 1000
+
+    template = jinja_env.get_template("invoice.html")
+    html = template.render(
+        status=STATUS_CSS.get(status, "draft"),
+        status_label=STATUS_LABELS.get(status, status.capitalize()),
+        invoice_number=inv.get("invoice_number", ""),
+        customer_name=f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or "—",
+        customer_company=customer.get("company", ""),
+        customer_address=", ".join(filter(None, [
+            customer.get("address_line1", ""),
+            customer.get("city", ""),
+            customer.get("state", ""),
+        ])),
+        customer_email=customer.get("email", ""),
+        customer_phone=customer.get("phone", ""),
+        date=datetime.fromtimestamp(ts).strftime("%b %d, %Y") if ts else "—",
+        due_date=datetime.fromtimestamp(due).strftime("%b %d, %Y") if due else "—",
+        terms=inv.get("terms", ""),
+        notes=inv.get("notes", ""),
+        subtotal=f"{float(inv.get('subtotal', 0)):.2f}",
+        total=f"{float(inv.get('total', 0)):.2f}",
+        tax_amount=f"{float(inv.get('tax_amount', 0)):.2f}",
+        tax_rate=f"{float(inv.get('tax_rate', 0)) * 100:.1f}",
+        discount_amount=float(inv.get("discount_amount", 0)),
+        items=[
+            {
+                "description": i.get("description", ""),
+                "quantity": i.get("quantity", 1),
+                "unit_price": f"{float(i.get('unit_price', 0)):.2f}",
+                "total": f"{float(i.get('total', 0)):.2f}",
+            }
+            for i in items
+        ],
+    )
+
+    pdf = HTML(string=html).write_pdf()
+    filename = f"invoice_{inv.get('invoice_number', 'unknown')}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
 
 
 # ── PAYMENT endpoints ─────────────────────────────────────────
