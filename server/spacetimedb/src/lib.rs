@@ -1,0 +1,194 @@
+#![allow(clippy::too_many_arguments)]
+
+use spacetimedb::*;
+
+mod customer;
+mod ticket;
+mod payment;
+mod appointment;
+mod product;
+mod purchase_order;
+mod user;
+
+pub use customer::*;
+pub use ticket::*;
+pub use payment::*;
+pub use appointment::*;
+pub use product::*;
+pub use purchase_order::*;
+pub use user::*;
+
+// ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──
+
+#[spacetimedb::table(accessor = invoices, public)]
+#[derive(Debug, Clone)]
+pub struct Invoice {
+    #[primary_key]
+    pub id: String,
+    pub customer_id: String,
+    pub ticket_id: String,
+    pub invoice_number: u64,
+    pub status: String,
+    pub subtotal: f64,
+    pub tax_rate: f64,
+    pub tax_amount: f64,
+    pub total: f64,
+    pub discount_amount: f64,
+    pub discount_percent: f64,
+    pub notes: String,
+    pub terms: String,
+    pub due_date: u64,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+#[spacetimedb::table(accessor = invoice_line_items, public)]
+#[derive(Debug, Clone)]
+pub struct InvoiceLineItem {
+    #[primary_key]
+    pub id: String,
+    pub invoice_id: String,
+    pub item_type: String,
+    pub description: String,
+    pub quantity: f64,
+    pub unit_price: f64,
+    pub total: f64,
+    pub sort_order: u32,
+}
+
+#[spacetimedb::table(accessor = estimates, public)]
+#[derive(Debug, Clone)]
+pub struct Estimate {
+    #[primary_key]
+    pub id: String,
+    pub customer_id: String,
+    pub ticket_id: String,
+    pub estimate_number: u64,
+    pub status: String,
+    pub subtotal: f64,
+    pub tax_rate: f64,
+    pub tax_amount: f64,
+    pub total: f64,
+    pub discount_amount: f64,
+    pub notes: String,
+    pub expires_at: u64,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+#[spacetimedb::table(accessor = estimate_line_items, public)]
+#[derive(Debug, Clone)]
+pub struct EstimateLineItem {
+    #[primary_key]
+    pub id: String,
+    pub estimate_id: String,
+    pub item_type: String,
+    pub description: String,
+    pub quantity: f64,
+    pub unit_price: f64,
+    pub total: f64,
+    pub sort_order: u32,
+}
+
+// ─── Reducers ──
+
+#[spacetimedb::reducer]
+pub fn create_invoice(ctx: &ReducerContext, customer_id: String, ticket_id: String, notes: String, terms: String, due_date: u64) {
+    let id = make_id("inv", ctx);
+    let now = now_ms(ctx);
+    let invoice_number = ctx.db.invoices().iter().count() as u64 + 10001;
+    ctx.db.invoices().insert(Invoice {
+        id, customer_id, ticket_id, invoice_number,
+        status: "draft".to_string(),
+        subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0,
+        discount_amount: 0.0, discount_percent: 0.0,
+        notes, terms, due_date, created_at: now, updated_at: now,
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn update_invoice_status(ctx: &ReducerContext, id: String, status: String) {
+    if let Some(inv) = ctx.db.invoices().id().find(&id) {
+        ctx.db.invoices().id().update(Invoice { status, ..inv });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn add_invoice_line_item(ctx: &ReducerContext, invoice_id: String, item_type: String, description: String, quantity: f64, unit_price: f64) {
+    let id = make_id("iln", ctx);
+    let total = quantity * unit_price;
+    let sort = ctx.db.invoice_line_items().iter().filter(|i| i.invoice_id == invoice_id).count() as u32;
+    ctx.db.invoice_line_items().insert(InvoiceLineItem { id, invoice_id: invoice_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
+    // Recalc invoice totals
+    if let Some(inv) = ctx.db.invoices().id().find(&invoice_id) {
+        let items: Vec<InvoiceLineItem> = ctx.db.invoice_line_items().iter().filter(|i| i.invoice_id == invoice_id).collect();
+        let subtotal: f64 = items.iter().map(|i| i.total).sum();
+        let tax_amount = subtotal * inv.tax_rate;
+        let total = subtotal + tax_amount - inv.discount_amount;
+        ctx.db.invoices().id().update(Invoice { subtotal, tax_amount, total, updated_at: now_ms(ctx), ..inv });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn delete_invoice_line_item(ctx: &ReducerContext, id: String) {
+    ctx.db.invoice_line_items().id().delete(&id);
+}
+
+#[spacetimedb::reducer]
+pub fn delete_invoice(ctx: &ReducerContext, id: String) {
+    ctx.db.invoices().id().delete(&id);
+}
+
+// ─── Estimate reducers ──
+
+#[spacetimedb::reducer]
+pub fn create_estimate(ctx: &ReducerContext, customer_id: String, ticket_id: String, notes: String, expires_at: u64) {
+    let id = make_id("est", ctx);
+    let now = now_ms(ctx);
+    let estimate_number = ctx.db.estimates().iter().count() as u64 + 1001;
+    ctx.db.estimates().insert(Estimate {
+        id, customer_id, ticket_id, estimate_number,
+        status: "draft".to_string(),
+        subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0, discount_amount: 0.0,
+        notes, expires_at, created_at: now, updated_at: now,
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn update_estimate_status(ctx: &ReducerContext, id: String, status: String) {
+    if let Some(e) = ctx.db.estimates().id().find(&id) {
+        ctx.db.estimates().id().update(Estimate { status, ..e });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn add_estimate_line_item(ctx: &ReducerContext, estimate_id: String, item_type: String, description: String, quantity: f64, unit_price: f64) {
+    let id = make_id("eln", ctx);
+    let total = quantity * unit_price;
+    let sort = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id).count() as u32;
+    ctx.db.estimate_line_items().insert(EstimateLineItem { id, estimate_id: estimate_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
+    if let Some(est) = ctx.db.estimates().id().find(&estimate_id) {
+        let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id).collect();
+        let subtotal: f64 = items.iter().map(|i| i.total).sum();
+        let tax_amount = subtotal * est.tax_rate;
+        ctx.db.estimates().id().update(Estimate { subtotal, tax_amount, total: subtotal + tax_amount - est.discount_amount, updated_at: now_ms(ctx), ..est });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn delete_estimate(ctx: &ReducerContext, id: String) {
+    ctx.db.estimates().id().delete(&id);
+}
+
+// ─── Helpers ──
+
+fn now_ms(ctx: &ReducerContext) -> u64 {
+    ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000
+}
+
+fn make_id(prefix: &str, ctx: &ReducerContext) -> String {
+    let ts = now_ms(ctx);
+    let discrim = ctx.sender().to_hex();
+    let short = if discrim.len() > 8 { &discrim[..8] } else { &discrim };
+    format!("{}_{}_{}", prefix, ts, short)
+}

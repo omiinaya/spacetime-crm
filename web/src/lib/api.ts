@@ -1,0 +1,374 @@
+const API_BASE = "/api";
+
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    ...options,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+export interface Customer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  mobile: string;
+  address_line1: string;
+  address_line2: string;
+  city: string;
+  state: string;
+  zip: string;
+  company: string;
+  notes: string;
+  tags: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface Ticket {
+  id: string;
+  customer_id: string;
+  ticket_number: number;
+  title: string;
+  description: string;
+  device_type: string;
+  device_model: string;
+  device_serial: string;
+  status: string;
+  priority: string;
+  assigned_user_id: string;
+  notes: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface TicketNote {
+  id: string;
+  ticket_id: string;
+  author: string;
+  content: string;
+  internal: boolean;
+  created_at: number;
+}
+
+export interface Invoice {
+  id: string;
+  customer_id: string;
+  ticket_id: string;
+  invoice_number: number;
+  status: string;
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  total: number;
+  discount_amount: number;
+  notes: string;
+  terms: string;
+  due_date: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface InvoiceLineItem {
+  id: string;
+  invoice_id: string;
+  item_type: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  sort_order: number;
+}
+
+export interface Payment {
+  id: string;
+  invoice_id: string;
+  customer_id: string;
+  amount: number;
+  method: string;
+  reference: string;
+  notes: string;
+  created_at: number;
+}
+
+export interface Appointment {
+  id: string;
+  customer_id: string;
+  ticket_id: string;
+  title: string;
+  description: string;
+  start_time: number;
+  end_time: number;
+  all_day: boolean;
+  status: string;
+  color: string;
+  created_at: number;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  description: string;
+  category: string;
+  price: number;
+  cost: number;
+  quantity_on_hand: number;
+  quantity_committed: number;
+  quantity_available: number;
+  min_stock: number;
+  location: string;
+  active: boolean;
+  created_at: number;
+}
+
+export interface Estimate {
+  id: string;
+  customer_id: string;
+  ticket_id: string;
+  estimate_number: number;
+  status: string;
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  total: number;
+  discount_amount: number;
+  notes: string;
+  expires_at: number;
+  created_at: number;
+}
+
+export interface EstimateLineItem {
+  id: string;
+  estimate_id: string;
+  item_type: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  sort_order: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  vendor_name: string;
+  po_number: number;
+  status: string;
+  subtotal: number;
+  tax_amount: number;
+  total: number;
+  notes: string;
+  created_at: number;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  created_at: number;
+}
+
+export interface DashboardStats {
+  total_customers: number;
+  total_tickets: number;
+  open_tickets: number;
+  revenue: number;
+  pending_revenue: number;
+  upcoming_appointments: number;
+}
+
+// ── API client ──
+
+export const api = {
+  stats: {
+    get: () => apiFetch<DashboardStats>("/stats"),
+  },
+  customers: {
+    list: (search?: string) =>
+      apiFetch<{ customers: Customer[] }>(
+        `/customers${search ? `?search=${encodeURIComponent(search)}` : ""}`
+      ),
+    create: (data: Partial<Customer>) =>
+      apiFetch<{ ok: boolean }>("/customers", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: Partial<Customer>) =>
+      apiFetch<{ ok: boolean }>(`/customers/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/customers/${id}`, { method: "DELETE" }),
+  },
+  tickets: {
+    list: (status?: string) =>
+      apiFetch<{ tickets: Ticket[] }>(
+        `/tickets${status ? `?status=${status}` : ""}`
+      ),
+    create: (data: Partial<Ticket>) =>
+      apiFetch<{ ok: boolean }>("/tickets", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      apiFetch<{ ok: boolean }>(`/tickets/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }),
+    assign: (id: string, assigned_user_id: string) =>
+      apiFetch<{ ok: boolean }>(`/tickets/${id}/assign`, {
+        method: "PUT",
+        body: JSON.stringify({ assigned_user_id }),
+      }),
+    notes: {
+      list: (ticketId: string) =>
+        apiFetch<{ notes: TicketNote[] }>(`/tickets/${ticketId}/notes`),
+      create: (ticketId: string, data: Partial<TicketNote>) =>
+        apiFetch<{ ok: boolean }>(`/tickets/${ticketId}/notes`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+    },
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/tickets/${id}`, { method: "DELETE" }),
+  },
+  invoices: {
+    list: (status?: string) =>
+      apiFetch<{ invoices: Invoice[] }>(
+        `/invoices${status ? `?status=${status}` : ""}`
+      ),
+    create: (data: Partial<Invoice>) =>
+      apiFetch<{ ok: boolean }>("/invoices", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      apiFetch<{ ok: boolean }>(`/invoices/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }),
+    lineItems: {
+      list: (invoiceId: string) =>
+        apiFetch<{ line_items: InvoiceLineItem[] }>(
+          `/invoices/${invoiceId}/line-items`
+        ),
+      create: (invoiceId: string, data: Partial<InvoiceLineItem>) =>
+        apiFetch<{ ok: boolean }>(`/invoices/${invoiceId}/line-items`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+      delete: (invoiceId: string, itemId: string) =>
+        apiFetch<{ ok: boolean }>(
+          `/invoices/${invoiceId}/line-items/${itemId}`,
+          { method: "DELETE" }
+        ),
+    },
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/invoices/${id}`, { method: "DELETE" }),
+  },
+  payments: {
+    list: (invoiceId?: string) =>
+      apiFetch<{ payments: Payment[] }>(
+        `/payments${invoiceId ? `?invoice_id=${invoiceId}` : ""}`
+      ),
+    record: (data: Partial<Payment>) =>
+      apiFetch<{ ok: boolean }>("/payments", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/payments/${id}`, { method: "DELETE" }),
+  },
+  appointments: {
+    list: () => apiFetch<{ appointments: Appointment[] }>("/appointments"),
+    create: (data: Partial<Appointment>) =>
+      apiFetch<{ ok: boolean }>("/appointments", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      apiFetch<{ ok: boolean }>(`/appointments/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/appointments/${id}`, { method: "DELETE" }),
+  },
+  products: {
+    list: (search?: string) =>
+      apiFetch<{ products: Product[] }>(
+        `/products${search ? `?search=${encodeURIComponent(search)}` : ""}`
+      ),
+    create: (data: Partial<Product>) =>
+      apiFetch<{ ok: boolean }>("/products", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateQuantity: (id: string, quantity_on_hand: number) =>
+      apiFetch<{ ok: boolean }>(`/products/${id}/quantity`, {
+        method: "PUT",
+        body: JSON.stringify({ quantity_on_hand }),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/products/${id}`, { method: "DELETE" }),
+  },
+  estimates: {
+    list: (status?: string) =>
+      apiFetch<{ estimates: Estimate[] }>(
+        `/estimates${status ? `?status=${status}` : ""}`
+      ),
+    create: (data: Partial<Estimate>) =>
+      apiFetch<{ ok: boolean }>("/estimates", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      apiFetch<{ ok: boolean }>(`/estimates/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }),
+    lineItems: {
+      list: (estimateId: string) =>
+        apiFetch<{ line_items: EstimateLineItem[] }>(
+          `/estimates/${estimateId}/line-items`
+        ),
+      create: (estimateId: string, data: Partial<EstimateLineItem>) =>
+        apiFetch<{ ok: boolean }>(`/estimates/${estimateId}/line-items`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+    },
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/estimates/${id}`, { method: "DELETE" }),
+  },
+  purchaseOrders: {
+    list: () =>
+      apiFetch<{ purchase_orders: PurchaseOrder[] }>("/purchase-orders"),
+    create: (data: Partial<PurchaseOrder>) =>
+      apiFetch<{ ok: boolean }>("/purchase-orders", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/purchase-orders/${id}`, {
+        method: "DELETE",
+      }),
+  },
+  users: {
+    list: () => apiFetch<{ users: User[] }>("/users"),
+    create: (data: Partial<User>) =>
+      apiFetch<{ ok: boolean }>("/users", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
+};
