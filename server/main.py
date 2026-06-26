@@ -255,14 +255,26 @@ async def list_payments(invoice_id: str = ""):
 
 @app.post("/api/payments")
 async def record_payment(body: dict):
+    invoice_id = body.get("invoice_id", "")
     await _call("record_payment", [
-        body.get("invoice_id", ""),
+        invoice_id,
         body.get("customer_id", ""),
         body.get("amount", 0),
         body.get("method", "cash"),
         body.get("reference", ""),
         body.get("notes", ""),
     ])
+    # Auto-update invoice status based on total payments
+    if invoice_id:
+        invoices = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
+        payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+        if invoices:
+            inv = invoices[0]
+            total_paid = sum(float(p.get("amount", 0)) for p in payments)
+            inv_total = float(inv.get("total", 0))
+            new_status = "paid" if total_paid >= inv_total else "partial" if total_paid > 0 else inv.get("status", "draft")
+            if new_status != inv.get("status"):
+                await _call("update_invoice_status", [invoice_id, new_status])
     return {"ok": True}
 
 

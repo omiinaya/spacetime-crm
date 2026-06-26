@@ -12,8 +12,9 @@ const statusColors: Record<string, "default" | "warning" | "success" | "destruct
   draft: "outline",
   sent: "default",
   paid: "success",
+  partial: "warning",
   overdue: "destructive",
-  cancelled: "secondary",
+  cancelled: "outline",
 };
 
 export default function InvoicesPage() {
