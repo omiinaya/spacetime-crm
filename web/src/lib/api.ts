@@ -547,6 +547,10 @@ export const api = {
       a.remove();
     },
   },
+  health: {
+    check: () => apiFetch<{ server: string; stdb: string; module: string }>("/health"),
+    ready: () => apiFetch<{ status: string }>("/health/ready"),
+  },
   import: {
     customers: (file: File) => {
       const form = new FormData();

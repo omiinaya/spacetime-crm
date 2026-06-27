@@ -38,9 +38,9 @@
 
 ## Phase 4: Production
 - [x] Authentication (login/password for staff)
-- [ ] Role-based permissions (admin, tech, front-desk)
-- [ ] Audit logging
+- [x] Role-based permissions (admin, tech, front-desk)
+- [x] Audit logging
 - [x] Data export (CSV, XLSX)
-- [ ] Docker Compose for one-command deploy
-- [ ] Backup/restore scripts
-- [ ] Health checks and monitoring
+- [x] Docker Compose for one-command deploy
+- [x] Backup/restore scripts
+- [x] Health checks and monitoring

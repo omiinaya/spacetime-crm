@@ -57,7 +57,7 @@ spacetime-crm/
 spacetime start -l 3001
 ```
 
-### 2. Publish the module
+### 2. Publish the module (manual)
 
 ```bash
 cd server/spacetimedb
@@ -83,6 +83,82 @@ npm run dev
 
 Open http://localhost:5185
 
+---
+
+## 🐳 Docker Compose (Production)
+
+One-command deploy with SpacetimeDB + backend bundled together:
+
+```bash
+cp .env.example .env
+# Edit .env to set JWT_SECRET (required for production)
+
+# Optional: pre-build STDB module so backend auto-publishes on start
+cd server/spacetimedb
+cargo build --release --target wasm32-unknown-unknown
+cd ../..
+
+# Start everything
+docker compose up -d
+```
+
+Open http://localhost:8723
+
+**To publish the STDB module manually after deploy:**
+
+```bash
+./scripts/publish-stdb.sh
+```
+
+### What happens:
+
+1. **SpacetimeDB** starts on port 3001
+2. **Backend** waits for STDB to be healthy, then starts FastAPI serving API + pre-built React frontend on port 8723
+3. If a pre-built `.wasm` module was included at build time, the entrypoint auto-publishes it
+
+### Stop:
+
+```bash
+docker compose down
+# To also remove STDB data:
+docker compose down -v
+```
+
+### Manual STDB module publish:
+
+```bash
+./scripts/publish-stdb.sh [database_name]
+```
+
+---
+
+## 💾 Backup & Restore
+
+### Backup all data:
+
+```bash
+python3 scripts/backup.py
+# Saved to ./backups/spacetime-crm-backup-<timestamp>.json.gz
+```
+
+Dumps all 18 STDB tables to a compressed JSON snapshot.
+
+### Restore from backup:
+
+```bash
+# 1. Build the STDB module first
+cd server/spacetimedb
+cargo build --release --target wasm32-unknown-unknown
+cd ../..
+
+# 2. Run restore (will delete + re-publish database!)
+python3 scripts/restore.py backups/spacetime-crm-backup-<timestamp>.json.gz
+```
+
+⚠️  Restore is destructive — it deletes the existing database, re-publishes the module, and re-inserts records. Tables with `import_*` reducers (customer, product) preserve their IDs. Other tables use their create reducers (new IDs generated). A manual password/settings restore may be needed.
+
+---
+
 ## API Endpoints
 
 | Domain | Endpoints |
@@ -97,6 +173,10 @@ Open http://localhost:5185
 | **Estimates** | `GET/POST /api/estimates`, status updates, line item CRUD |
 | **Purchase Orders** | `GET/POST /api/purchase-orders`, delete |
 | **Users** | `GET/POST /api/users` |
+| **Roles** | `require_role()` middleware protects all admin/staff endpoints |
+| **Audit Log** | `GET /api/audit-log` (admin only) |
+| **CSV Export** | `GET /api/export/{entity}` (customers, tickets, invoices, etc.) |
+| **CSV Import** | `POST /api/import/customers`, `POST /api/import/products` |
 
 ## SpacetimeDB Tables
 
@@ -113,5 +193,6 @@ Open http://localhost:5185
 - **estimate_line_item** — individual items on estimates
 - **purchase_order** — vendor purchase orders
 - **purchase_order_line_item** — items on POs
+- **audit_log** — immutable audit trail of all CRUD operations
 - **user** — staff accounts with roles
 - **user_settings** — per-user preferences

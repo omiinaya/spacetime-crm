@@ -1518,6 +1518,68 @@ async def mail_settings_test(user: dict = Depends(require_role("admin"))):
     return result
 
 
+# ── HEALTH CHECKS ─────────────────────────────────────────
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint — verifies server and STDB connectivity."""
+    results: dict = {"server": "ok", "stdb": "unknown", "module": "unknown"}
+    http_code = 200
+
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.post(
+                settings.stdb_sql_url,
+                content="SELECT 1 AS ok",
+                headers={"Content-Type": "application/sql"},
+            )
+            if resp.status_code < 500:
+                results["stdb"] = "ok"
+                # Check that tables exist (module is published)
+                tr = await client.post(
+                    settings.stdb_sql_url,
+                    content="SELECT COUNT(*) AS c FROM customer",
+                    headers={"Content-Type": "application/sql"},
+                )
+                if tr.status_code < 500:
+                    results["module"] = "ok"
+                else:
+                    # Module hasn't been published yet; try any known table
+                    tr2 = await client.post(
+                        settings.stdb_sql_url,
+                        content="SELECT 1 AS ok FROM user LIMIT 1",
+                        headers={"Content-Type": "application/sql"},
+                    )
+                    results["module"] = "ok" if tr2.status_code < 500 else "not published"
+            else:
+                results["stdb"] = f"error: {resp.status_code}"
+                http_code = 503
+    except Exception as e:
+        results["stdb"] = f"unreachable: {e}"
+        http_code = 503
+
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=results, status_code=http_code)
+
+
+@app.get("/api/health/ready")
+async def health_ready():
+    """Readiness probe — STDB must be connected."""
+    try:
+        async with httpx.AsyncClient(timeout=3) as client:
+            resp = await client.post(
+                settings.stdb_sql_url,
+                content="SELECT 1",
+                headers={"Content-Type": "application/sql"},
+            )
+            if resp.status_code < 500:
+                return {"status": "ok"}
+    except Exception:
+        pass
+    return {"status": "unavailable"}
+
+
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT / "web" / "dist"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)

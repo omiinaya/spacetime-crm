@@ -1,0 +1,8 @@
+.git/
+.gitignore
+.env
+*.md
+node_modules/
+server/spacetimedb/target/
+server/__pycache__/
+*.pyc

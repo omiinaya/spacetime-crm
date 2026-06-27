@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  spacetime:
+    image: spacetimedb/spacetimedb:latest
+    ports:
+      - "3001:3001"
+    volumes:
+      - spacetime_data:/var/lib/spacetimedb
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3001/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      network: host
+    ports:
+      - "${SERVER_PORT:-8723}:8723"
+    environment:
+      - STDB_HOST=spacetime
+      - STDB_PORT=3001
+      - STDB_DB=${STDB_DB:-spacetime-crm}
+      - SERVER_PORT=8723
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8723}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
+    depends_on:
+      spacetime:
+        condition: service_healthy
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8723/api/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  spacetime_data:
