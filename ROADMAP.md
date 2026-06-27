@@ -19,9 +19,9 @@
 - [ ] Customer portal (web login for customers to view tickets/estimates)
 - [ ] Customer map (geographic visualization)
 - [ ] Email notifications (ticket status, invoice reminders)
-- [ ] PDF generation (invoices, estimates, tickets)
-- [ ] Calendar view for appointments
-- [ ] Time tracking dashboard
+- [x] PDF generation (invoices, estimates, tickets)
+- [x] Calendar view for appointments
+- [x] Time tracking dashboard
 - [ ] Inventory adjustments (add/remove stock with reason)
 - [ ] Purchase order receiving (receive against PO, update stock)
 - [ ] Tax rate configuration per location
@@ -37,7 +37,7 @@
 - [ ] Integration API (webhooks for external systems)
 
 ## Phase 4: Production
-- [ ] Authentication (login/password for staff)
+- [x] Authentication (login/password for staff)
 - [ ] Role-based permissions (admin, tech, front-desk)
 - [ ] Audit logging
 - [ ] Data export (CSV, XLSX)

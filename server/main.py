@@ -451,7 +451,7 @@ async def delete_appointment(appt_id: str):
 
 @app.get("/api/products")
 async def list_products(search: str = ""):
-    rows = await _sql("SELECT * FROM product")
+    rows = await _sql("SELECT * FROM products")
     q = search.lower().strip()
     if q:
         rows = [
@@ -485,6 +485,27 @@ async def update_product_quantity(product_id: str, body: dict):
 @app.delete("/api/products/{product_id}")
 async def delete_product(product_id: str):
     await _call("delete_product", [product_id])
+    return {"ok": True}
+
+
+# ── INVENTORY ADJUSTMENT endpoints ────────────────────────────
+
+@app.get("/api/products/{product_id}/adjustments")
+async def get_product_adjustments(product_id: str):
+    rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{product_id}'")
+    return {"adjustments": _sort(rows, "created_at")}
+
+
+@app.post("/api/products/{product_id}/adjustments")
+async def create_adjustment(product_id: str, body: dict):
+    await _call("create_inventory_adjustment", [
+        product_id,
+        body.get("quantity_change", 0),
+        body.get("reason", "other"),
+        body.get("reference_id", ""),
+        body.get("notes", ""),
+        body.get("user_id", ""),
+    ])
     return {"ok": True}
 
 

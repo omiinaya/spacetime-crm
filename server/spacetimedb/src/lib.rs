@@ -8,6 +8,7 @@ mod payment;
 mod appointment;
 mod product;
 mod purchase_order;
+mod inventory;
 mod user;
 
 pub use customer::*;
@@ -16,6 +17,7 @@ pub use payment::*;
 pub use appointment::*;
 pub use product::*;
 pub use purchase_order::*;
+pub use inventory::*;
 pub use user::*;
 
 // ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──

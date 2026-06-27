@@ -120,11 +120,11 @@ export interface Appointment {
   color: string;
   created_at: number;
 }
-
 export interface Product {
   id: string;
   name: string;
   sku: string;
+  barcode: string;
   description: string;
   category: string;
   price: number;
@@ -135,6 +135,17 @@ export interface Product {
   min_stock: number;
   location: string;
   active: boolean;
+  created_at: number;
+}
+
+export interface InventoryAdjustment {
+  id: string;
+  product_id: string;
+  quantity_change: number;
+  reason: string;
+  reference_id: string;
+  notes: string;
+  user_id: string;
   created_at: number;
 }
 
@@ -343,6 +354,17 @@ export const api = {
       }),
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/products/${id}`, { method: "DELETE" }),
+    adjustments: {
+      list: (productId: string) =>
+        apiFetch<{ adjustments: InventoryAdjustment[] }>(
+          `/products/${productId}/adjustments`
+        ),
+      create: (productId: string, data: Partial<InventoryAdjustment>) =>
+        apiFetch<{ ok: boolean }>(`/products/${productId}/adjustments`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+    },
   },
   estimates: {
     list: (status?: string) =>
