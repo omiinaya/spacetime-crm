@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { FileCheck, Plus, Trash2 } from "lucide-react";
+import { FileCheck, Plus, Trash2, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColors: Record<string, "default" | "warning" | "success" | "destructive" | "outline"> = {
@@ -127,7 +127,20 @@ export default function EstimatesPage() {
         {selectedEst && (
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle>#{selectedEst.estimate_number} — ${selectedEst.total.toFixed(2)}</CardTitle></CardHeader>
+              <CardHeader><CardTitle>#{selectedEst.estimate_number} — ${selectedEst.total.toFixed(2)}</CardTitle>
+                {selectedEst.status === "approved" && (
+                  <Button size="sm" variant="default" onClick={async () => {
+                    try {
+                      await api.estimates.convert(selectedEst.id);
+                      toast.success("Converted to invoice!");
+                      setSelectedEst(null);
+                      load();
+                    } catch { toast.error("Failed to convert"); }
+                  }}>
+                    <FileText className="h-3.5 w-3.5 mr-1" /> Convert to Invoice
+                  </Button>
+                )}
+              </CardHeader>
               <CardContent className="space-y-3">
                 <Select value={selectedEst.status} onChange={(e) => { api.estimates.updateStatus(selectedEst.id, e.target.value); selectEst(selectedEst); }}>
                   <option value="draft">Draft</option>

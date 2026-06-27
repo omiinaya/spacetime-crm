@@ -347,6 +347,8 @@ export const api = {
           body: JSON.stringify(data),
         }),
     },
+    convert: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/estimates/${id}/convert`, { method: "POST" }),
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/estimates/${id}`, { method: "DELETE" }),
   },

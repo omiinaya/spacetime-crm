@@ -72,6 +72,7 @@ pub struct Estimate {
     pub discount_amount: f64,
     pub notes: String,
     pub expires_at: u64,
+    pub invoice_id: String,
     pub created_at: u64,
     pub updated_at: u64,
 }
@@ -150,7 +151,7 @@ pub fn create_estimate(ctx: &ReducerContext, customer_id: String, ticket_id: Str
         id, customer_id, ticket_id, estimate_number,
         status: "draft".to_string(),
         subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0, discount_amount: 0.0,
-        notes, expires_at, created_at: now, updated_at: now,
+        notes, expires_at, invoice_id: String::new(), created_at: now, updated_at: now,
     });
 }
 
@@ -178,6 +179,57 @@ pub fn add_estimate_line_item(ctx: &ReducerContext, estimate_id: String, item_ty
 #[spacetimedb::reducer]
 pub fn delete_estimate(ctx: &ReducerContext, id: String) {
     ctx.db.estimates().id().delete(&id);
+}
+
+#[spacetimedb::reducer]
+pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
+    if let Some(est) = ctx.db.estimates().id().find(&estimate_id) {
+        let now = now_ms(ctx);
+        // Create invoice from estimate
+        let inv_id = make_id("inv", ctx);
+        let invoice_number = ctx.db.invoices().iter().count() as u64 + 10001;
+        ctx.db.invoices().insert(Invoice {
+            id: inv_id.clone(),
+            customer_id: est.customer_id.clone(),
+            ticket_id: est.ticket_id.clone(),
+            invoice_number,
+            status: "draft".to_string(),
+            subtotal: est.subtotal,
+            tax_rate: est.tax_rate,
+            tax_amount: est.tax_amount,
+            total: est.total,
+            discount_amount: est.discount_amount,
+            discount_percent: 0.0,
+            notes: est.notes.clone(),
+            terms: String::new(),
+            due_date: 0,
+            created_at: now,
+            updated_at: now,
+        });
+        // Copy line items with unique IDs (add counter to avoid same-tick collision)
+        let mut li_idx = 0u64;
+        for item in ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id) {
+            let li_id = format!("iln_{}_{}_{}", now, li_idx, ctx.sender().to_hex().chars().take(8).collect::<String>());
+            li_idx += 1;
+            ctx.db.invoice_line_items().insert(InvoiceLineItem {
+                id: li_id,
+                invoice_id: inv_id.clone(),
+                item_type: item.item_type.clone(),
+                description: item.description.clone(),
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                total: item.total,
+                sort_order: item.sort_order,
+            });
+        }
+        // Mark estimate as approved and link to invoice
+        ctx.db.estimates().id().update(Estimate {
+            status: "approved".to_string(),
+            invoice_id: inv_id.clone(),
+            updated_at: now,
+            ..est
+        });
+    }
 }
 
 // ─── Helpers ──

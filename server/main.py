@@ -487,6 +487,28 @@ async def delete_estimate(estimate_id: str):
     return {"ok": True}
 
 
+@app.post("/api/estimates/{estimate_id}/convert")
+async def convert_estimate(estimate_id: str):
+    """Convert an approved estimate to an invoice (atomic reducer)."""
+    est_rows = await _sql(f"SELECT * FROM estimates WHERE id = '{estimate_id}'")
+    if not est_rows:
+        raise HTTPException(404, "Estimate not found")
+    est = est_rows[0]
+    if est.get("status") != "approved":
+        raise HTTPException(400, "Only approved estimates can be converted")
+
+    # Call the atomic Rust reducer that creates invoice + copies line items
+    await _call("convert_estimate_to_invoice", [estimate_id])
+
+    # Read back the invoice_id that the reducer stored on the estimate
+    est_rows = await _sql(f"SELECT invoice_id FROM estimates WHERE id = '{estimate_id}'")
+    inv_id = est_rows[0].get("invoice_id", "") if est_rows else ""
+    if not inv_id:
+        raise HTTPException(500, "Failed to get generated invoice ID")
+
+    return {"ok": True, "invoice_id": inv_id}
+
+
 # ── PURCHASE ORDER endpoints ──────────────────────────────────
 
 @app.get("/api/purchase-orders")
