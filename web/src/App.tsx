@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import {
   LayoutDashboard, Users, Ticket, FileText, CreditCard,
   Calendar, Package, FileCheck, ShoppingCart, BarChart3, Settings,
-  Menu, Users as UsersIcon, LogOut, ExternalLink,
+  Menu, Users as UsersIcon, LogOut, ExternalLink, Sun, Moon,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
+import { useTheme } from "./lib/theme";
 import LoginPage from "./pages/LoginPage";
 import PortalLoginPage from "./pages/PortalLoginPage";
 import PortalDashboard from "./pages/PortalDashboard";
@@ -154,6 +155,7 @@ function AppShell() {
   const [page, setPage] = useState<PageId>("dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (user) {
@@ -250,6 +252,13 @@ function AppShell() {
           <ExternalLink className="h-4 w-4" />
           <span>Customer Portal</span>
         </a>
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+        </button>
         <button
           onClick={logout}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

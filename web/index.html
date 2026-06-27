@@ -1,6 +1,17 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
+    <script>
+      (function() {
+        var t = localStorage.getItem("spacetime-crm-theme");
+        if (t === "light") { document.documentElement.classList.remove("dark"); }
+        else if (t !== "dark") {
+          if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+            document.documentElement.classList.remove("dark");
+          }
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
