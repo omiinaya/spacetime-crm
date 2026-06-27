@@ -16,15 +16,15 @@
 - [x] Dashboard stats overview
 
 ## Phase 2: Real-World Features
-- [ ] Customer portal (web login for customers to view tickets/estimates)
+- [x] Customer portal (web login for customers to view tickets/invoices)
 - [ ] Customer map (geographic visualization)
-- [ ] Email notifications (ticket status, invoice reminders)
+- [x] Email notifications (ticket status, invoice reminders)
 - [x] PDF generation (invoices, estimates, tickets)
 - [x] Calendar view for appointments
 - [x] Time tracking dashboard
 - [x] Inventory adjustments (add/remove stock with reason)
-- [ ] Purchase order receiving (receive against PO, update stock)
-- [ ] Tax rate configuration per location
+- [x] Purchase order receiving (receive against PO, update stock)
+- [x] Tax rate configuration
 
 ## Phase 3: Advanced
 - [ ] Multi-tenant support

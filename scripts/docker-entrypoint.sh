@@ -17,26 +17,25 @@ done
 
 # ── Publish STDB Module if not already published ───────────
 DB_NAME="${STDB_DB:-spacetime-crm}"
-WASM_FILE="/app/spacetime_crm.wasm"
+MODULE_DIR="/app/server/spacetimedb"
 
-if [ -f "$WASM_FILE" ]; then
+if [ -d "$MODULE_DIR" ]; then
     echo "📦 Checking if module '$DB_NAME' is published..."
-    # The spacetime CLI outputs "No databases found" or a table with columns
     EXISTING=$(spacetime list --server "http://${STDB_HOST:-spacetime}:${STDB_PORT:-3001}" 2>/dev/null | grep -w "$DB_NAME" || true)
     if [ -z "$EXISTING" ]; then
         echo "📦 Publishing STDB module '$DB_NAME'..."
+        cd "$MODULE_DIR"
         spacetime publish \
             --server "http://${STDB_HOST:-spacetime}:${STDB_PORT:-3001}" \
             --yes \
-            "$DB_NAME" \
-            -f "$WASM_FILE"
+            "$DB_NAME"
         echo "✅ Module published"
     else
         echo "✅ Module '$DB_NAME' already published, skipping"
     fi
 else
-    echo "⚠️  No wasm module found at $WASM_FILE — skipping publish"
-    echo "   Build it with: cd server/spacetimedb && cargo build --release --target wasm32-unknown-unknown"
+    echo "⚠️  No STDB module source found at $MODULE_DIR — skipping publish"
+    echo "   The module directory must be included in the Docker image"
 fi
 
 # ── Wait a moment for STDB to settle ───────────────────────

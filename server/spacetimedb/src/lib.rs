@@ -12,6 +12,7 @@ mod inventory;
 mod tax_rate;
 mod user;
 mod audit;
+mod custom_field;
 
 pub use customer::*;
 pub use ticket::*;
@@ -23,6 +24,7 @@ pub use inventory::*;
 pub use tax_rate::*;
 pub use user::*;
 pub use audit::*;
+pub use custom_field::*;
 
 // ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──
 

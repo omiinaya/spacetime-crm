@@ -19,10 +19,10 @@ if [ ! -f "$WASM_FILE" ]; then
 fi
 
 echo "📦 Publishing '$DB_NAME' to $SERVER..."
+cd server/spacetimedb
 spacetime publish \
     --server "$SERVER" \
     --yes \
-    "$DB_NAME" \
-    -f "$WASM_FILE"
+    "$DB_NAME"
 
 echo "✅ Published '$DB_NAME'"

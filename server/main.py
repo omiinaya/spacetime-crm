@@ -1492,6 +1492,77 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
     return {"imported": count, "errors": errors, "file": file.filename}
 
 
+# ── CUSTOM FIELDS endpoints ───────────────────────────────
+
+
+@app.get("/api/custom-field-definitions")
+async def list_custom_field_definitions(entity_type: str | None = None, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List custom field definitions, optionally filtered by entity_type."""
+    rows = await _sql("SELECT * FROM custom_field_definitions")
+    if entity_type:
+        rows = [r for r in rows if r.get("entity_type") == entity_type]
+    return {"definitions": rows}
+
+
+@app.post("/api/custom-field-definitions")
+async def create_custom_field_definition(body: dict, user: dict = Depends(require_role("admin"))):
+    """Create a custom field definition."""
+    field_id = secrets.token_hex(12)
+    await _call("create_custom_field_definition", [
+        field_id,
+        body.get("entity_type", "customer"),
+        body.get("label", ""),
+        body.get("field_type", "text"),
+        json.dumps(body.get("options", [])),
+        int(body.get("sort_order", 0)),
+        bool(body.get("required", False)),
+        bool(body.get("active", True)),
+    ])
+    await _log_audit(user, "create", "custom_field_definition", field_id, body.get("label", ""))
+    return {"ok": True, "id": field_id}
+
+
+@app.put("/api/custom-field-definitions/{field_id}")
+async def update_custom_field_definition(field_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+    """Update a custom field definition."""
+    await _call("update_custom_field_definition", [
+        field_id,
+        body.get("label", ""),
+        body.get("field_type", "text"),
+        json.dumps(body.get("options", [])),
+        int(body.get("sort_order", 0)),
+        bool(body.get("required", False)),
+        bool(body.get("active", True)),
+    ])
+    await _log_audit(user, "update", "custom_field_definition", field_id, body.get("label", ""))
+    return {"ok": True}
+
+
+@app.delete("/api/custom-field-definitions/{field_id}")
+async def delete_custom_field_definition(field_id: str, user: dict = Depends(require_role("admin"))):
+    """Delete a custom field definition."""
+    await _call("delete_custom_field_definition", [field_id])
+    await _log_audit(user, "delete", "custom_field_definition", field_id, "")
+    return {"ok": True}
+
+
+@app.get("/api/custom-field-values/{entity_id}")
+async def get_custom_field_values(entity_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Get all custom field values for an entity."""
+    rows = await _sql(f"SELECT * FROM custom_field_values WHERE entity_id = '{entity_id}'")
+    return {"values": rows}
+
+
+@app.put("/api/custom-field-values/{entity_id}")
+async def set_custom_field_values(entity_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Set custom field values for an entity. Body: { values: { field_id: value, ... } }"""
+    values = body.get("values", {})
+    for field_id, value in values.items():
+        await _call("set_custom_field_value", [entity_id, field_id, str(value)])
+    await _log_audit(user, "update", "custom_field_values", entity_id, f"{len(values)} fields")
+    return {"ok": True, "count": len(values)}
+
+
 # ── MAIL SETTINGS endpoints ──────────────────────────────
 
 

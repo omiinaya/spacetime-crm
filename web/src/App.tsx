@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Ticket, FileText, CreditCard,
   Calendar, Package, FileCheck, ShoppingCart, BarChart3, Settings,
   Menu, Users as UsersIcon, LogOut, ExternalLink, Sun, Moon,
-  Download, Upload, History, HeartPulse,
+  Download, Upload, History, HeartPulse, ListOrdered,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -33,12 +33,13 @@ import SettingsPage from "./pages/SettingsPage";
 import ImportExportPage from "./pages/ImportExportPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import HealthPage from "./pages/HealthPage";
+import CustomFieldsPage from "./pages/CustomFieldsPage";
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
   | "purchase-orders" | "import-export" | "audit-log"
-  | "health" | "reports" | "settings";
+  | "health" | "custom-fields" | "reports" | "settings";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -60,6 +61,7 @@ const navItems: NavItem[] = [
   { id: "estimates", label: "Estimates", icon: FileCheck },
   { id: "purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
   { id: "import-export", label: "Import/Export", icon: Download },
+  { id: "custom-fields", label: "Custom Fields", icon: ListOrdered },
   { id: "health", label: "Health", icon: HeartPulse },
   { id: "audit-log", label: "Audit Log", icon: History },
   { id: "reports", label: "Reports", icon: BarChart3 },
@@ -209,6 +211,8 @@ function AppShell() {
         return <AuditLogPage />;
       case "health":
         return <HealthPage />;
+      case "custom-fields":
+        return <CustomFieldsPage />;
       case "reports":
         return <ReportsPage />;
       case "settings":
@@ -238,9 +242,9 @@ function AppShell() {
           // Role-based nav filtering
           const role = user?.role || "";
           if (role === "admin") return true;
-          if (role === "tech") return !["health", "settings", "import-export", "audit-log"].includes(item.id);
+          if (role === "tech") return !["health", "custom-fields", "settings", "import-export", "audit-log"].includes(item.id);
           // front_desk
-          return !["health", "products", "purchase-orders", "reports", "settings", "import-export", "audit-log", "estimates"].includes(item.id);
+          return !["health", "custom-fields", "products", "purchase-orders", "reports", "settings", "import-export", "audit-log", "estimates"].includes(item.id);
         }).map((item) => {
           const Icon = item.icon;
           return (
