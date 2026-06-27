@@ -186,6 +186,19 @@ export interface PurchaseOrder {
   total: number;
   notes: string;
   created_at: number;
+  line_items?: PurchaseOrderLineItem[];
+  receipt_progress?: number;
+}
+
+export interface PurchaseOrderLineItem {
+  id: string;
+  purchase_order_id: string;
+  product_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  received_quantity: number;
 }
 
 export interface User {
@@ -400,6 +413,8 @@ export const api = {
   purchaseOrders: {
     list: () =>
       apiFetch<{ purchase_orders: PurchaseOrder[] }>("/purchase-orders"),
+    get: (id: string) =>
+      apiFetch<{ purchase_order: PurchaseOrder }>(`/purchase-orders/${id}`),
     create: (data: Partial<PurchaseOrder>) =>
       apiFetch<{ ok: boolean }>("/purchase-orders", {
         method: "POST",
@@ -408,6 +423,30 @@ export const api = {
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/purchase-orders/${id}`, {
         method: "DELETE",
+      }),
+    lineItems: {
+      create: (poId: string, data: Partial<PurchaseOrderLineItem>) =>
+        apiFetch<{ ok: boolean }>(`/purchase-orders/${poId}/line-items`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+      delete: (poId: string, itemId: string) =>
+        apiFetch<{ ok: boolean }>(
+          `/purchase-orders/${poId}/line-items/${itemId}`,
+          { method: "DELETE" }
+        ),
+    },
+    status: {
+      update: (id: string, status: string) =>
+        apiFetch<{ ok: boolean }>(`/purchase-orders/${id}/status`, {
+          method: "PUT",
+          body: JSON.stringify({ status }),
+        }),
+    },
+    receive: (poId: string, items: { id: string; received_quantity: number }[]) =>
+      apiFetch<{ ok: boolean }>(`/purchase-orders/${poId}/receive`, {
+        method: "POST",
+        body: JSON.stringify({ items }),
       }),
   },
   users: {

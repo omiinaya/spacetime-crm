@@ -605,6 +605,56 @@ async def delete_purchase_order(po_id: str):
     return {"ok": True}
 
 
+@app.get("/api/purchase-orders/{po_id}")
+async def get_purchase_order(po_id: str):
+    rows = await _sql(f"SELECT * FROM purchase_order WHERE id = '{po_id}'")
+    if not rows:
+        raise HTTPException(404, "Purchase order not found")
+    po = rows[0]
+    items = await _sql(f"SELECT * FROM purchase_order_line_item WHERE purchase_order_id = '{po_id}'")
+    po["line_items"] = _sort(items, "description", desc=False)
+    # Calculate receipt progress
+    total_qty = sum(float(i.get("quantity", 0)) for i in items)
+    total_received = sum(float(i.get("received_quantity", 0)) for i in items)
+    po["receipt_progress"] = round((total_received / total_qty * 100) if total_qty > 0 else 0, 1)
+    return {"purchase_order": po}
+
+
+@app.post("/api/purchase-orders/{po_id}/line-items")
+async def add_po_line_item(po_id: str, body: dict):
+    await _call("add_po_line_item", [
+        po_id,
+        body.get("product_id", ""),
+        body.get("description", ""),
+        body.get("quantity", 1),
+        body.get("unit_price", 0),
+    ])
+    return {"ok": True}
+
+
+@app.delete("/api/purchase-orders/{po_id}/line-items/{item_id}")
+async def delete_po_line_item(po_id: str, item_id: str):
+    await _call("delete_po_line_item", [po_id, item_id])
+    return {"ok": True}
+
+
+@app.put("/api/purchase-orders/{po_id}/status")
+async def update_po_status(po_id: str, body: dict):
+    await _call("update_po_status", [po_id, body.get("status", "")])
+    return {"ok": True}
+
+
+@app.post("/api/purchase-orders/{po_id}/receive")
+async def receive_po_items(po_id: str, body: dict):
+    """Receive multiple items on a PO at once.
+    Body: { items: [{ id: string, received_quantity: number }] }
+    """
+    items = body.get("items", [])
+    for item in items:
+        await _call("receive_po_item", [item["id"], item.get("received_quantity", 0)])
+    return {"ok": True}
+
+
 # ── DASHBOARD stats ───────────────────────────────────────────
 
 @app.get("/api/stats")
