@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
@@ -29,9 +29,12 @@ COPY --from=frontend /app/web/dist /app/web/dist
 
 # Install spacetime CLI for publishing
 RUN curl -L -o /tmp/spacetime.tar.gz \
-    "https://github.com/clockworklabs/SpacetimeDB/releases/download/v2.4.0/spacetime-linux-x86_64.tar.gz" && \
+    "https://github.com/clockworklabs/SpacetimeDB/releases/download/v2.4.0/spacetime-x86_64-unknown-linux-gnu.tar.gz" && \
     tar xzf /tmp/spacetime.tar.gz -C /usr/local/bin/ && \
     rm /tmp/spacetime.tar.gz && \
+    if [ -f /usr/local/bin/spacetimedb-cli ] && [ ! -f /usr/local/bin/spacetime ]; then \
+      mv /usr/local/bin/spacetimedb-cli /usr/local/bin/spacetime; \
+    fi && \
     chmod +x /usr/local/bin/spacetime
 
 # Copy entrypoint
