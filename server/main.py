@@ -92,6 +92,21 @@ def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
     return sorted(rows, key=lambda r: r.get(key, 0) or 0, reverse=desc)
 
 
+async def _log_audit(user: dict, action: str, entity: str, entity_id: str, details: str = ""):
+    """Record an audit log entry. Fire-and-forget — never raises."""
+    try:
+        await _call("log_audit", [
+            user.get("id", ""),
+            user.get("name", ""),
+            action,
+            entity,
+            entity_id,
+            details,
+        ])
+    except Exception as e:
+        logger.warning("Audit log failed: %s", e)
+
+
 # ── Jinja2 template loader ────────────────────────────────────
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
@@ -170,6 +185,8 @@ async def create_customer(body: dict, user: dict = Depends(require_role("admin",
         body.get("email", ""),
         body.get("phone", ""),
     ])
+    details = f"{body.get('first_name','')} {body.get('last_name','')}".strip()
+    await _log_audit(user, "create", "customer", details, f"email={body.get('email','')}")
     return {"ok": True}
 
 
@@ -191,12 +208,14 @@ async def update_customer(customer_id: str, body: dict, user: dict = Depends(req
         body.get("notes", ""),
         body.get("tags", ""),
     ])
+    await _log_audit(user, "update", "customer", customer_id)
     return {"ok": True}
 
 
 @app.delete("/api/customers/{customer_id}")
 async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_customer", [customer_id])
+    await _log_audit(user, "delete", "customer", customer_id)
     return {"ok": True}
 
 
@@ -221,6 +240,7 @@ async def create_ticket(body: dict, user: dict = Depends(require_role("admin", "
         body.get("device_serial", ""),
         body.get("priority", "normal"),
     ])
+    await _log_audit(user, "create", "ticket", body.get("title", ""), f"customer={body.get('customer_id','')}")
     return {"ok": True}
 
 
@@ -247,6 +267,7 @@ async def update_ticket_status(ticket_id: str, body: dict, user: dict = Depends(
 @app.put("/api/tickets/{ticket_id}/assign")
 async def assign_ticket(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("assign_ticket", [ticket_id, body.get("assigned_user_id", "")])
+    await _log_audit(user, "assign", "ticket", ticket_id, f"user={body.get('assigned_user_id','')}")
     return {"ok": True}
 
 
@@ -264,12 +285,14 @@ async def add_ticket_note(ticket_id: str, body: dict, user: dict = Depends(requi
         body.get("content", ""),
         body.get("internal", False),
     ])
+    await _log_audit(user, "create", "ticket_note", ticket_id, f"internal={body.get('internal',False)}")
     return {"ok": True}
 
 
 @app.delete("/api/tickets/{ticket_id}")
 async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_ticket", [ticket_id])
+    await _log_audit(user, "delete", "ticket", ticket_id)
     return {"ok": True}
 
 
@@ -345,12 +368,14 @@ async def create_invoice(body: dict, user: dict = Depends(require_role("admin", 
                 _notify_invoice_created(email, inv.get("invoice_number", 0), float(inv.get("total", 0)), link)
     asyncio.ensure_future(_notify())
 
+    await _log_audit(user, "create", "invoice", f"cust={body.get('customer_id','')}")
     return {"ok": True}
 
 
 @app.put("/api/invoices/{invoice_id}/status")
 async def update_invoice_status(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_invoice_status", [invoice_id, body.get("status", "")])
+    await _log_audit(user, "update_status", "invoice", invoice_id, f"status={body.get('status','')}")
     return {"ok": True}
 
 
@@ -369,24 +394,28 @@ async def add_invoice_line_item(invoice_id: str, body: dict, user: dict = Depend
         body.get("quantity", 1),
         body.get("unit_price", 0),
     ])
+    await _log_audit(user, "create", "line_item", invoice_id, body.get("description",""))
     return {"ok": True}
 
 
 @app.delete("/api/invoices/{invoice_id}/line-items/{item_id}")
 async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice_line_item", [item_id])
+    await _log_audit(user, "delete", "line_item", invoice_id)
     return {"ok": True}
 
 
 @app.delete("/api/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice", [invoice_id])
+    await _log_audit(user, "delete", "invoice", invoice_id)
     return {"ok": True}
 
 
 @app.put("/api/invoices/{invoice_id}/tax-rate")
 async def set_invoice_tax_rate(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("set_invoice_tax_rate", [invoice_id, body.get("tax_rate", 0.0)])
+    await _log_audit(user, "update", "invoice_tax", invoice_id, f"rate={body.get('tax_rate',0)}")
     return {"ok": True}
 
 
@@ -490,12 +519,14 @@ async def record_payment(body: dict, user: dict = Depends(require_role("admin", 
                     _notify_payment_received(email, inv.get("invoice_number", 0), float(body.get("amount", 0)), link)
             asyncio.ensure_future(_notify())
 
+    await _log_audit(user, "create", "payment", invoice_id, f"amount={body.get('amount',0)}")
     return {"ok": True}
 
 
 @app.delete("/api/payments/{payment_id}")
 async def delete_payment(payment_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_payment", [payment_id])
+    await _log_audit(user, "delete", "payment", payment_id)
     return {"ok": True}
 
 
@@ -528,18 +559,21 @@ async def create_appointment(body: dict, user: dict = Depends(require_role("admi
             _notify_appointment_created(email, body.get("title", "Appointment"), body.get("start_time", 0), link)
     asyncio.ensure_future(_notify())
 
+    await _log_audit(user, "create", "appointment", body.get("title",""))
     return {"ok": True}
 
 
 @app.put("/api/appointments/{appt_id}/status")
 async def update_appointment_status(appt_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_appointment_status", [appt_id, body.get("status", "")])
+    await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.get('status','')}")
     return {"ok": True}
 
 
 @app.delete("/api/appointments/{appt_id}")
 async def delete_appointment(appt_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_appointment", [appt_id])
+    await _log_audit(user, "delete", "appointment", appt_id)
     return {"ok": True}
 
 
@@ -569,18 +603,21 @@ async def create_product(body: dict, user: dict = Depends(require_role("admin", 
         body.get("cost", 0),
         body.get("quantity_on_hand", 0),
     ])
+    await _log_audit(user, "create", "product", body.get("name",""))
     return {"ok": True}
 
 
 @app.put("/api/products/{product_id}/quantity")
 async def update_product_quantity(product_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
     await _call("update_product_quantity", [product_id, body.get("quantity_on_hand", 0)])
+    await _log_audit(user, "update", "product_qty", product_id, f"qty={body.get('quantity_on_hand',0)}")
     return {"ok": True}
 
 
 @app.delete("/api/products/{product_id}")
 async def delete_product(product_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_product", [product_id])
+    await _log_audit(user, "delete", "product", product_id)
     return {"ok": True}
 
 
@@ -602,6 +639,7 @@ async def create_adjustment(product_id: str, body: dict, user: dict = Depends(re
         body.get("notes", ""),
         body.get("user_id", ""),
     ])
+    await _log_audit(user, "create", "adjustment", product_id, f"qty={body.get('quantity_change',0)}")
     return {"ok": True}
 
 
@@ -620,6 +658,7 @@ async def create_tax_rate(body: dict, user: dict = Depends(require_role("admin")
         body.get("rate", 0.0),
         body.get("is_default", False),
     ])
+    await _log_audit(user, "create", "tax_rate", body.get("name",""), f"rate={body.get('rate',0)}")
     return {"ok": True}
 
 
@@ -631,12 +670,14 @@ async def update_tax_rate(tax_id: str, body: dict, user: dict = Depends(require_
         body.get("rate", 0.0),
         body.get("is_default", False),
     ])
+    await _log_audit(user, "update", "tax_rate", tax_id, f"rate={body.get('rate',0)}")
     return {"ok": True}
 
 
 @app.delete("/api/tax-rates/{tax_id}")
 async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_tax_rate", [tax_id])
+    await _log_audit(user, "delete", "tax_rate", tax_id)
     return {"ok": True}
 
 
@@ -658,12 +699,14 @@ async def create_estimate(body: dict, user: dict = Depends(require_role("admin",
         body.get("notes", ""),
         body.get("expires_at", 0),
     ])
+    await _log_audit(user, "create", "estimate", f"cust={body.get('customer_id','')}")
     return {"ok": True}
 
 
 @app.put("/api/estimates/{estimate_id}/status")
 async def update_estimate_status(estimate_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_estimate_status", [estimate_id, body.get("status", "")])
+    await _log_audit(user, "update_status", "estimate", estimate_id, f"status={body.get('status','')}")
     return {"ok": True}
 
 
@@ -682,12 +725,14 @@ async def add_estimate_line_item(estimate_id: str, body: dict, user: dict = Depe
         body.get("quantity", 1),
         body.get("unit_price", 0),
     ])
+    await _log_audit(user, "create", "est_line_item", estimate_id, body.get("description",""))
     return {"ok": True}
 
 
 @app.delete("/api/estimates/{estimate_id}")
 async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_estimate", [estimate_id])
+    await _log_audit(user, "delete", "estimate", estimate_id)
     return {"ok": True}
 
 
@@ -710,6 +755,7 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
     if not inv_id:
         raise HTTPException(500, "Failed to get generated invoice ID")
 
+    await _log_audit(user, "convert", "estimate", estimate_id, f"invoice_id={inv_id}")
     return {"ok": True, "invoice_id": inv_id}
 
 
@@ -727,12 +773,14 @@ async def create_purchase_order(body: dict, user: dict = Depends(require_role("a
         body.get("vendor_name", ""),
         body.get("notes", ""),
     ])
+    await _log_audit(user, "create", "purchase_order", body.get("vendor_name",""))
     return {"ok": True}
 
 
 @app.delete("/api/purchase-orders/{po_id}")
 async def delete_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_purchase_order", [po_id])
+    await _log_audit(user, "delete", "purchase_order", po_id)
     return {"ok": True}
 
 
@@ -760,18 +808,21 @@ async def add_po_line_item(po_id: str, body: dict, user: dict = Depends(require_
         body.get("quantity", 1),
         body.get("unit_price", 0),
     ])
+    await _log_audit(user, "create", "po_line_item", po_id, body.get("description",""))
     return {"ok": True}
 
 
 @app.delete("/api/purchase-orders/{po_id}/line-items/{item_id}")
 async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_po_line_item", [po_id, item_id])
+    await _log_audit(user, "delete", "po_line_item", po_id)
     return {"ok": True}
 
 
 @app.put("/api/purchase-orders/{po_id}/status")
 async def update_po_status(po_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_po_status", [po_id, body.get("status", "")])
+    await _log_audit(user, "update_status", "purchase_order", po_id, f"status={body.get('status','')}")
     return {"ok": True}
 
 
@@ -783,6 +834,7 @@ async def receive_po_items(po_id: str, body: dict, user: dict = Depends(require_
     items = body.get("items", [])
     for item in items:
         await _call("receive_po_item", [item["id"], item.get("received_quantity", 0)])
+    await _log_audit(user, "receive", "purchase_order", po_id, f"{len(items)} items")
     return {"ok": True}
 
 
@@ -886,6 +938,28 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
             "total_paid": total_paid,
         },
     }
+
+
+# ── AUDIT LOG endpoints ─────────────────────────────────────────
+
+
+@app.get("/api/audit-log")
+async def get_audit_log(
+    limit: int = 100,
+    entity: str = "",
+    action: str = "",
+    user: dict = Depends(require_role("admin")),
+):
+    """Get audit log entries. Admin only. Returns most recent first."""
+    filters = []
+    if entity:
+        filters.append(f"entity = '{entity}'")
+    if action:
+        filters.append(f"action = '{action}'")
+    where = " WHERE " + " AND ".join(filters) if filters else ""
+    rows = await _sql(f"SELECT * FROM audit_log{where}")
+    rows = _sort(rows, "created_at")
+    return {"entries": rows[:limit]}
 
 
 # ── AUTH middleware ────────────────────────────────────────────
@@ -1005,6 +1079,7 @@ async def create_user(body: dict, user: dict = Depends(require_role("admin"))):
         body.get("email", ""),
         body.get("role", "staff"),
     ])
+    await _log_audit(user, "create", "user", body.get("email",""), f"role={body.get('role','')}")
     return {"ok": True}
 
 

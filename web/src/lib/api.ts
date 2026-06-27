@@ -527,6 +527,14 @@ export const api = {
   reports: {
     get: () => apiFetch<ReportsData>("/reports"),
   },
+  auditLog: {
+    list: (limit = 100, entity?: string, action?: string) => {
+      const params = new URLSearchParams({ limit: String(limit) });
+      if (entity) params.set("entity", entity);
+      if (action) params.set("action", action);
+      return apiFetch<{ entries: any[] }>(`/audit-log?${params}`);
+    },
+  },
   export: {
     csv: (entity: string) => {
       const url = `${API_BASE}/export/${entity}`;
