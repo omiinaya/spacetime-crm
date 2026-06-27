@@ -108,10 +108,47 @@ STATUS_CSS = {
 }
 
 
+# ── Role-based permissions ─────────────────────────────────────
+
+
+def require_role(*roles: str):
+    """FastAPI dependency: validate JWT and check role membership."""
+    async def _check(credentials: HTTPAuthorizationCredentials = Depends(security)):
+        if credentials is None:
+            raise HTTPException(401, "Not authenticated")
+        try:
+            payload = jwt.decode(
+                credentials.credentials,
+                settings.jwt_secret,
+                algorithms=[settings.jwt_algorithm],
+            )
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(401, "Token expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(401, "Invalid token")
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(401, "Invalid token: no subject")
+        rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+        if not rows:
+            raise HTTPException(401, "User not found")
+        user = rows[0]
+        if not user.get("active", False):
+            raise HTTPException(403, "User account is disabled")
+        if user.get("role") not in roles:
+            raise HTTPException(
+                403,
+                f"Access denied. Requires one of roles: {', '.join(roles)}. "
+                f"Your role: {user.get('role', 'unknown')}",
+            )
+        return user
+    return _check
+
+
 # ── CUSTOMER endpoints ────────────────────────────────────────
 
 @app.get("/api/customers")
-async def list_customers(search: str = ""):
+async def list_customers(search: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM customer")
     q = search.lower().strip()
     if q:
@@ -126,7 +163,7 @@ async def list_customers(search: str = ""):
 
 
 @app.post("/api/customers")
-async def create_customer(body: dict):
+async def create_customer(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_customer", [
         body.get("first_name", ""),
         body.get("last_name", ""),
@@ -137,7 +174,7 @@ async def create_customer(body: dict):
 
 
 @app.put("/api/customers/{customer_id}")
-async def update_customer(customer_id: str, body: dict):
+async def update_customer(customer_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_customer", [
         customer_id,
         body.get("first_name", ""),
@@ -158,7 +195,7 @@ async def update_customer(customer_id: str, body: dict):
 
 
 @app.delete("/api/customers/{customer_id}")
-async def delete_customer(customer_id: str):
+async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_customer", [customer_id])
     return {"ok": True}
 
@@ -166,7 +203,7 @@ async def delete_customer(customer_id: str):
 # ── TICKET endpoints ──────────────────────────────────────────
 
 @app.get("/api/tickets")
-async def list_tickets(status: str = ""):
+async def list_tickets(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM ticket")
     if status:
         rows = [r for r in rows if r.get("status") == status]
@@ -174,7 +211,7 @@ async def list_tickets(status: str = ""):
 
 
 @app.post("/api/tickets")
-async def create_ticket(body: dict):
+async def create_ticket(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_ticket", [
         body.get("customer_id", ""),
         body.get("title", ""),
@@ -188,7 +225,7 @@ async def create_ticket(body: dict):
 
 
 @app.put("/api/tickets/{ticket_id}/status")
-async def update_ticket_status(ticket_id: str, body: dict):
+async def update_ticket_status(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     status = body.get("status", "")
     await _call("update_ticket_status", [ticket_id, status])
 
@@ -208,19 +245,19 @@ async def update_ticket_status(ticket_id: str, body: dict):
 
 
 @app.put("/api/tickets/{ticket_id}/assign")
-async def assign_ticket(ticket_id: str, body: dict):
+async def assign_ticket(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("assign_ticket", [ticket_id, body.get("assigned_user_id", "")])
     return {"ok": True}
 
 
 @app.get("/api/tickets/{ticket_id}/notes")
-async def get_ticket_notes(ticket_id: str):
+async def get_ticket_notes(ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}'")
     return {"notes": _sort(rows, "created_at", desc=False)}
 
 
 @app.post("/api/tickets/{ticket_id}/notes")
-async def add_ticket_note(ticket_id: str, body: dict):
+async def add_ticket_note(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_ticket_note", [
         ticket_id,
         body.get("author", ""),
@@ -231,7 +268,7 @@ async def add_ticket_note(ticket_id: str, body: dict):
 
 
 @app.delete("/api/tickets/{ticket_id}")
-async def delete_ticket(ticket_id: str):
+async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_ticket", [ticket_id])
     return {"ok": True}
 
@@ -239,13 +276,13 @@ async def delete_ticket(ticket_id: str):
 # ── TICKET TIMER endpoints ────────────────────────────────────
 
 @app.get("/api/tickets/{ticket_id}/timers")
-async def get_ticket_timers(ticket_id: str):
+async def get_ticket_timers(ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{ticket_id}'")
     return {"timers": _sort(rows, "start_time")}
 
 
 @app.get("/api/timers")
-async def list_all_timers(user_id: str = "", running: str = ""):
+async def list_all_timers(user_id: str = "", running: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     query = "SELECT * FROM ticket_timer"
     filters = []
     if user_id:
@@ -259,19 +296,19 @@ async def list_all_timers(user_id: str = "", running: str = ""):
 
 
 @app.post("/api/tickets/{ticket_id}/timers/start")
-async def start_ticket_timer(ticket_id: str, body: dict):
+async def start_ticket_timer(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("start_ticket_timer", [ticket_id, body.get("user_id", "")])
     return {"ok": True}
 
 
 @app.post("/api/timers/{timer_id}/stop")
-async def stop_ticket_timer(timer_id: str):
+async def stop_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("stop_ticket_timer", [timer_id])
     return {"ok": True}
 
 
 @app.delete("/api/timers/{timer_id}")
-async def delete_ticket_timer(timer_id: str):
+async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_ticket_timer", [timer_id])
     return {"ok": True}
 
@@ -279,7 +316,7 @@ async def delete_ticket_timer(timer_id: str):
 # ── INVOICE endpoints ─────────────────────────────────────────
 
 @app.get("/api/invoices")
-async def list_invoices(status: str = ""):
+async def list_invoices(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM invoices")
     if status:
         rows = [r for r in rows if r.get("status") == status]
@@ -287,7 +324,7 @@ async def list_invoices(status: str = ""):
 
 
 @app.post("/api/invoices")
-async def create_invoice(body: dict):
+async def create_invoice(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_invoice", [
         body.get("customer_id", ""),
         body.get("ticket_id", ""),
@@ -312,19 +349,19 @@ async def create_invoice(body: dict):
 
 
 @app.put("/api/invoices/{invoice_id}/status")
-async def update_invoice_status(invoice_id: str, body: dict):
+async def update_invoice_status(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_invoice_status", [invoice_id, body.get("status", "")])
     return {"ok": True}
 
 
 @app.get("/api/invoices/{invoice_id}/line-items")
-async def get_invoice_line_items(invoice_id: str):
+async def get_invoice_line_items(invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
 @app.post("/api/invoices/{invoice_id}/line-items")
-async def add_invoice_line_item(invoice_id: str, body: dict):
+async def add_invoice_line_item(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_invoice_line_item", [
         invoice_id,
         body.get("item_type", "service"),
@@ -336,25 +373,25 @@ async def add_invoice_line_item(invoice_id: str, body: dict):
 
 
 @app.delete("/api/invoices/{invoice_id}/line-items/{item_id}")
-async def delete_invoice_line_item(invoice_id: str, item_id: str):
+async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice_line_item", [item_id])
     return {"ok": True}
 
 
 @app.delete("/api/invoices/{invoice_id}")
-async def delete_invoice(invoice_id: str):
+async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice", [invoice_id])
     return {"ok": True}
 
 
 @app.put("/api/invoices/{invoice_id}/tax-rate")
-async def set_invoice_tax_rate(invoice_id: str, body: dict):
+async def set_invoice_tax_rate(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("set_invoice_tax_rate", [invoice_id, body.get("tax_rate", 0.0)])
     return {"ok": True}
 
 
 @app.get("/api/invoices/{invoice_id}/pdf")
-async def invoice_pdf(invoice_id: str):
+async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
     if not invs:
         raise HTTPException(404, "Invoice not found")
@@ -414,7 +451,7 @@ async def invoice_pdf(invoice_id: str):
 # ── PAYMENT endpoints ─────────────────────────────────────────
 
 @app.get("/api/payments")
-async def list_payments(invoice_id: str = ""):
+async def list_payments(invoice_id: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM payment")
     if invoice_id:
         rows = [r for r in rows if r.get("invoice_id") == invoice_id]
@@ -422,7 +459,7 @@ async def list_payments(invoice_id: str = ""):
 
 
 @app.post("/api/payments")
-async def record_payment(body: dict):
+async def record_payment(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     invoice_id = body.get("invoice_id", "")
     await _call("record_payment", [
         invoice_id,
@@ -457,7 +494,7 @@ async def record_payment(body: dict):
 
 
 @app.delete("/api/payments/{payment_id}")
-async def delete_payment(payment_id: str):
+async def delete_payment(payment_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_payment", [payment_id])
     return {"ok": True}
 
@@ -465,13 +502,13 @@ async def delete_payment(payment_id: str):
 # ── APPOINTMENT endpoints ─────────────────────────────────────
 
 @app.get("/api/appointments")
-async def list_appointments():
+async def list_appointments(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM appointment")
     return {"appointments": _sort(rows, "start_time", desc=False)}
 
 
 @app.post("/api/appointments")
-async def create_appointment(body: dict):
+async def create_appointment(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_appointment", [
         body.get("customer_id", ""),
         body.get("ticket_id", ""),
@@ -495,13 +532,13 @@ async def create_appointment(body: dict):
 
 
 @app.put("/api/appointments/{appt_id}/status")
-async def update_appointment_status(appt_id: str, body: dict):
+async def update_appointment_status(appt_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_appointment_status", [appt_id, body.get("status", "")])
     return {"ok": True}
 
 
 @app.delete("/api/appointments/{appt_id}")
-async def delete_appointment(appt_id: str):
+async def delete_appointment(appt_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_appointment", [appt_id])
     return {"ok": True}
 
@@ -509,7 +546,7 @@ async def delete_appointment(appt_id: str):
 # ── PRODUCT endpoints ─────────────────────────────────────────
 
 @app.get("/api/products")
-async def list_products(search: str = ""):
+async def list_products(search: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM products")
     q = search.lower().strip()
     if q:
@@ -522,7 +559,7 @@ async def list_products(search: str = ""):
 
 
 @app.post("/api/products")
-async def create_product(body: dict):
+async def create_product(body: dict, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_product", [
         body.get("name", ""),
         body.get("sku", ""),
@@ -536,13 +573,13 @@ async def create_product(body: dict):
 
 
 @app.put("/api/products/{product_id}/quantity")
-async def update_product_quantity(product_id: str, body: dict):
+async def update_product_quantity(product_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
     await _call("update_product_quantity", [product_id, body.get("quantity_on_hand", 0)])
     return {"ok": True}
 
 
 @app.delete("/api/products/{product_id}")
-async def delete_product(product_id: str):
+async def delete_product(product_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_product", [product_id])
     return {"ok": True}
 
@@ -550,13 +587,13 @@ async def delete_product(product_id: str):
 # ── INVENTORY ADJUSTMENT endpoints ────────────────────────────
 
 @app.get("/api/products/{product_id}/adjustments")
-async def get_product_adjustments(product_id: str):
+async def get_product_adjustments(product_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{product_id}'")
     return {"adjustments": _sort(rows, "created_at")}
 
 
 @app.post("/api/products/{product_id}/adjustments")
-async def create_adjustment(product_id: str, body: dict):
+async def create_adjustment(product_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_inventory_adjustment", [
         product_id,
         body.get("quantity_change", 0),
@@ -571,13 +608,13 @@ async def create_adjustment(product_id: str, body: dict):
 # ── TAX RATE endpoints ─────────────────────────────────────────
 
 @app.get("/api/tax-rates")
-async def list_tax_rates():
+async def list_tax_rates(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM tax_rates")
     return {"tax_rates": _sort(rows, "name", desc=False)}
 
 
 @app.post("/api/tax-rates")
-async def create_tax_rate(body: dict):
+async def create_tax_rate(body: dict, user: dict = Depends(require_role("admin"))):
     await _call("create_tax_rate", [
         body.get("name", ""),
         body.get("rate", 0.0),
@@ -587,7 +624,7 @@ async def create_tax_rate(body: dict):
 
 
 @app.put("/api/tax-rates/{tax_id}")
-async def update_tax_rate(tax_id: str, body: dict):
+async def update_tax_rate(tax_id: str, body: dict, user: dict = Depends(require_role("admin"))):
     await _call("update_tax_rate", [
         tax_id,
         body.get("name", ""),
@@ -598,7 +635,7 @@ async def update_tax_rate(tax_id: str, body: dict):
 
 
 @app.delete("/api/tax-rates/{tax_id}")
-async def delete_tax_rate(tax_id: str):
+async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_tax_rate", [tax_id])
     return {"ok": True}
 
@@ -606,7 +643,7 @@ async def delete_tax_rate(tax_id: str):
 # ── ESTIMATE endpoints ────────────────────────────────────────
 
 @app.get("/api/estimates")
-async def list_estimates(status: str = ""):
+async def list_estimates(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM estimates")
     if status:
         rows = [r for r in rows if r.get("status") == status]
@@ -614,7 +651,7 @@ async def list_estimates(status: str = ""):
 
 
 @app.post("/api/estimates")
-async def create_estimate(body: dict):
+async def create_estimate(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_estimate", [
         body.get("customer_id", ""),
         body.get("ticket_id", ""),
@@ -625,19 +662,19 @@ async def create_estimate(body: dict):
 
 
 @app.put("/api/estimates/{estimate_id}/status")
-async def update_estimate_status(estimate_id: str, body: dict):
+async def update_estimate_status(estimate_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_estimate_status", [estimate_id, body.get("status", "")])
     return {"ok": True}
 
 
 @app.get("/api/estimates/{estimate_id}/line-items")
-async def get_estimate_line_items(estimate_id: str):
+async def get_estimate_line_items(estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql(f"SELECT * FROM estimate_line_items WHERE estimate_id = '{estimate_id}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
 @app.post("/api/estimates/{estimate_id}/line-items")
-async def add_estimate_line_item(estimate_id: str, body: dict):
+async def add_estimate_line_item(estimate_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_estimate_line_item", [
         estimate_id,
         body.get("item_type", "service"),
@@ -649,13 +686,13 @@ async def add_estimate_line_item(estimate_id: str, body: dict):
 
 
 @app.delete("/api/estimates/{estimate_id}")
-async def delete_estimate(estimate_id: str):
+async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_estimate", [estimate_id])
     return {"ok": True}
 
 
 @app.post("/api/estimates/{estimate_id}/convert")
-async def convert_estimate(estimate_id: str):
+async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Convert an approved estimate to an invoice (atomic reducer)."""
     est_rows = await _sql(f"SELECT * FROM estimates WHERE id = '{estimate_id}'")
     if not est_rows:
@@ -679,13 +716,13 @@ async def convert_estimate(estimate_id: str):
 # ── PURCHASE ORDER endpoints ──────────────────────────────────
 
 @app.get("/api/purchase-orders")
-async def list_purchase_orders():
+async def list_purchase_orders(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM purchase_order")
     return {"purchase_orders": _sort(rows, "created_at")}
 
 
 @app.post("/api/purchase-orders")
-async def create_purchase_order(body: dict):
+async def create_purchase_order(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_purchase_order", [
         body.get("vendor_name", ""),
         body.get("notes", ""),
@@ -694,13 +731,13 @@ async def create_purchase_order(body: dict):
 
 
 @app.delete("/api/purchase-orders/{po_id}")
-async def delete_purchase_order(po_id: str):
+async def delete_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_purchase_order", [po_id])
     return {"ok": True}
 
 
 @app.get("/api/purchase-orders/{po_id}")
-async def get_purchase_order(po_id: str):
+async def get_purchase_order(po_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql(f"SELECT * FROM purchase_order WHERE id = '{po_id}'")
     if not rows:
         raise HTTPException(404, "Purchase order not found")
@@ -715,7 +752,7 @@ async def get_purchase_order(po_id: str):
 
 
 @app.post("/api/purchase-orders/{po_id}/line-items")
-async def add_po_line_item(po_id: str, body: dict):
+async def add_po_line_item(po_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_po_line_item", [
         po_id,
         body.get("product_id", ""),
@@ -727,19 +764,19 @@ async def add_po_line_item(po_id: str, body: dict):
 
 
 @app.delete("/api/purchase-orders/{po_id}/line-items/{item_id}")
-async def delete_po_line_item(po_id: str, item_id: str):
+async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_po_line_item", [po_id, item_id])
     return {"ok": True}
 
 
 @app.put("/api/purchase-orders/{po_id}/status")
-async def update_po_status(po_id: str, body: dict):
+async def update_po_status(po_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_po_status", [po_id, body.get("status", "")])
     return {"ok": True}
 
 
 @app.post("/api/purchase-orders/{po_id}/receive")
-async def receive_po_items(po_id: str, body: dict):
+async def receive_po_items(po_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Receive multiple items on a PO at once.
     Body: { items: [{ id: string, received_quantity: number }] }
     """
@@ -752,7 +789,7 @@ async def receive_po_items(po_id: str, body: dict):
 # ── DASHBOARD stats ───────────────────────────────────────────
 
 @app.get("/api/stats")
-async def dashboard_stats():
+async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     all_customers = await _sql("SELECT * FROM customer")
     all_tickets = await _sql("SELECT * FROM ticket")
     all_invoices = await _sql("SELECT * FROM invoices")
@@ -774,8 +811,8 @@ async def dashboard_stats():
 
 
 @app.get("/api/reports")
-async def reports_data():
-    """Aggregated data for reporting charts."""
+async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Reporting data for charts."""
     now = datetime.utcnow()
 
     # ── All data ──
@@ -956,13 +993,13 @@ async def set_password(body: dict, user: dict = Depends(get_current_user)):
 # ── USER endpoints ────────────────────────────────────────────
 
 @app.get("/api/users")
-async def list_users():
+async def list_users(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     rows = await _sql("SELECT * FROM user")
     return {"users": _sort(rows, "name", desc=False)}
 
 
 @app.post("/api/users")
-async def create_user(body: dict):
+async def create_user(body: dict, user: dict = Depends(require_role("admin"))):
     await _call("create_user", [
         body.get("name", ""),
         body.get("email", ""),
@@ -1234,7 +1271,7 @@ ENTITY_TABLE_MAP = {
 
 
 @app.get("/api/export/{entity}")
-async def export_csv(entity: str):
+async def export_csv(entity: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Export all records of an entity type as CSV. Downloads as attachment."""
     table = ENTITY_TABLE_MAP.get(entity)
     if not table:
@@ -1275,7 +1312,7 @@ async def export_csv(entity: str):
 
 
 @app.post("/api/import/customers")
-async def import_customers_csv(file: UploadFile = File(...)):
+async def import_customers_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
     """Import customers from CSV.
     Required columns: first_name, last_name.
     Optional: email, phone, mobile, company, address_line1, address_line2, city, state, zip, notes, tags.
@@ -1330,7 +1367,7 @@ async def import_customers_csv(file: UploadFile = File(...)):
 
 
 @app.post("/api/import/products")
-async def import_products_csv(file: UploadFile = File(...)):
+async def import_products_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
     """Import products from CSV.
     Required: name. Optional: sku, barcode, description, category, price, cost,
     quantity_on_hand, quantity_committed, min_stock, location, active.
@@ -1384,7 +1421,7 @@ async def import_products_csv(file: UploadFile = File(...)):
 
 
 @app.get("/api/settings/mail")
-async def mail_settings_get():
+async def mail_settings_get(user: dict = Depends(require_role("admin"))):
     """Get current mail settings (without password)."""
     settings = get_mail_settings()
     if settings is None:
@@ -1393,14 +1430,14 @@ async def mail_settings_get():
 
 
 @app.post("/api/settings/mail")
-async def mail_settings_save(body: dict):
+async def mail_settings_save(body: dict, user: dict = Depends(require_role("admin"))):
     """Save mail settings."""
     update_mail_settings(body)
     return {"ok": True}
 
 
 @app.post("/api/settings/mail/test")
-async def mail_settings_test():
+async def mail_settings_test(user: dict = Depends(require_role("admin"))):
     """Test SMTP connection with current settings."""
     result = test_mail_connection()
     return result

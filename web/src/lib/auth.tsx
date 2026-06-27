@@ -100,3 +100,9 @@ export function authHeaders(token: string | null): Record<string, string> {
   if (!token) return {};
   return { Authorization: `Bearer ${token}` };
 }
+
+/** Check if the current user has one of the given roles. */
+export function hasRole(user: { role?: string } | null, ...roles: string[]): boolean {
+  if (!user) return false;
+  return roles.includes(user.role || "");
+}

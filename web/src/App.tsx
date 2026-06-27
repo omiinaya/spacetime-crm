@@ -11,7 +11,7 @@ import { api, DashboardStats } from "./lib/api";
 import { Badge } from "./components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Button } from "./components/ui/button";
-import { AuthProvider, useAuth } from "./lib/auth";
+import { AuthProvider, useAuth, hasRole } from "./lib/auth";
 import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
 import { useTheme } from "./lib/theme";
 import LoginPage from "./pages/LoginPage";
@@ -225,7 +225,14 @@ function AppShell() {
 
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto py-2 space-y-1 px-2">
-        {navItems.map((item) => {
+        {navItems.filter(item => {
+          // Role-based nav filtering
+          const role = user?.role || "";
+          if (role === "admin") return true;
+          if (role === "tech") return !["settings", "import-export"].includes(item.id);
+          // front_desk
+          return !["products", "purchase-orders", "reports", "settings", "import-export", "estimates"].includes(item.id);
+        }).map((item) => {
           const Icon = item.icon;
           return (
             <button
