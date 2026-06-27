@@ -18,6 +18,7 @@ pub struct Customer {
     pub company: String,
     pub notes: String,
     pub tags: String,
+    pub portal_password_hash: String,
     pub created_at: u64,
     pub updated_at: u64,
 }
@@ -41,6 +42,7 @@ pub fn create_customer(ctx: &ReducerContext, first_name: String, last_name: Stri
         company: String::new(),
         notes: String::new(),
         tags: String::new(),
+        portal_password_hash: String::new(),
         created_at: now,
         updated_at: now,
     });
@@ -64,9 +66,31 @@ pub fn update_customer(
     notes: String,
     tags: String,
 ) {
-    let now = super::now_ms(ctx);
     if let Some(c) = ctx.db.customer().id().find(&id) {
-        ctx.db.customer().id().update(Customer { first_name, last_name, email, phone, mobile, address_line1, address_line2, city, state, zip, company, notes, tags, updated_at: now, ..c });
+        ctx.db.customer().id().update(Customer {
+            first_name,
+            last_name,
+            email,
+            phone,
+            mobile,
+            address_line1,
+            address_line2,
+            city,
+            state,
+            zip,
+            company,
+            notes,
+            tags,
+            updated_at: super::now_ms(ctx),
+            ..c
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn set_customer_password(ctx: &ReducerContext, id: String, password_hash: String) {
+    if let Some(c) = ctx.db.customer().id().find(&id) {
+        ctx.db.customer().id().update(Customer { portal_password_hash: password_hash, ..c });
     }
 }
 

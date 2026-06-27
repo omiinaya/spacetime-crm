@@ -799,7 +799,249 @@ async def create_user(body: dict):
     return {"ok": True}
 
 
-# ── STATIC FILE SERVING (SPA) ─────────────────────────────────
+# ── CUSTOMER PORTAL endpoints ────────────────────────────
+
+async def get_current_customer(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """FastAPI dependency that validates customer JWT and returns customer dict."""
+    if credentials is None:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid token")
+
+    if payload.get("type") != "customer":
+        raise HTTPException(401, "Not a customer token")
+
+    customer_id = payload.get("sub")
+    if not customer_id:
+        raise HTTPException(401, "Invalid token: no subject")
+
+    rows = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
+    if not rows:
+        raise HTTPException(401, "Customer not found")
+    return rows[0]
+
+
+@app.post("/api/portal/login")
+async def portal_login(body: dict):
+    """Customer portal login with email + portal password."""
+    email = body.get("email", "")
+    password = body.get("password", "")
+
+    if not email or not password:
+        raise HTTPException(400, "Email and password required")
+
+    rows = await _sql(f"SELECT * FROM customer WHERE email = '{email}'")
+    if not rows:
+        raise HTTPException(401, "Invalid email or password")
+
+    customer = rows[0]
+    pw_hash = customer.get("portal_password_hash", "")
+
+    if not pw_hash or not bcrypt.checkpw(password.encode(), pw_hash.encode()):
+        raise HTTPException(401, "Invalid email or password")
+
+    now = datetime.utcnow()
+    token = jwt.encode(
+        {
+            "sub": customer["id"],
+            "email": customer["email"],
+            "name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            "type": "customer",
+            "iat": now,
+            "exp": now + timedelta(hours=settings.jwt_expire_hours),
+        },
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+
+    return {
+        "token": token,
+        "customer": {
+            "id": customer["id"],
+            "first_name": customer.get("first_name", ""),
+            "last_name": customer.get("last_name", ""),
+            "email": customer["email"],
+            "company": customer.get("company", ""),
+            "phone": customer.get("phone", ""),
+        },
+    }
+
+
+@app.get("/api/portal/me")
+async def portal_me(customer: dict = Depends(get_current_customer)):
+    """Return current customer info (safe fields only)."""
+    return {
+        "id": customer["id"],
+        "first_name": customer.get("first_name", ""),
+        "last_name": customer.get("last_name", ""),
+        "email": customer["email"],
+        "company": customer.get("company", ""),
+        "phone": customer.get("phone", ""),
+        "mobile": customer.get("mobile", ""),
+        "address_line1": customer.get("address_line1", ""),
+        "address_line2": customer.get("address_line2", ""),
+        "city": customer.get("city", ""),
+        "state": customer.get("state", ""),
+        "zip": customer.get("zip", ""),
+    }
+
+
+@app.get("/api/portal/stats")
+async def portal_stats(customer: dict = Depends(get_current_customer)):
+    """Dashboard stats for the customer."""
+    cid = customer["id"]
+    tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{cid}'")
+    invoices = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{cid}'")
+    appointments = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{cid}'")
+    open_tickets = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
+    total_billed = sum(float(i.get("total", 0)) for i in invoices if i.get("status") not in ("cancelled", "draft"))
+    total_paid = sum(float(i.get("total", 0)) for i in invoices if i.get("status") == "paid")
+    upcoming = [a for a in appointments if a.get("start_time", 0) > 0]
+    return {
+        "total_tickets": len(tickets),
+        "open_tickets": open_tickets,
+        "total_invoices": len(invoices),
+        "total_billed": total_billed,
+        "total_paid": total_paid,
+        "balance_due": total_billed - total_paid,
+        "upcoming_appointments": len(upcoming),
+    }
+
+
+@app.get("/api/portal/tickets")
+async def portal_tickets(customer: dict = Depends(get_current_customer)):
+    """Customer's tickets."""
+    rows = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{customer['id']}'")
+    # Also fetch assigned user names
+    users = await _sql("SELECT * FROM user")
+    user_map = {u["id"]: u["name"] for u in users}
+    for t in rows:
+        t["assigned_name"] = user_map.get(t.get("assigned_user_id", ""), "")
+    return {"tickets": _sort(rows, "created_at")}
+
+
+@app.get("/api/portal/tickets/{ticket_id}")
+async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_current_customer)):
+    """Single ticket detail with notes (customer-owned only)."""
+    rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'")
+    if not rows:
+        raise HTTPException(404, "Ticket not found")
+    ticket = rows[0]
+    # Get notes (non-internal only for customer view)
+    notes = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}' AND internal = false")
+    ticket["notes"] = _sort(notes, "created_at", desc=False)
+    # Get user names
+    users = await _sql("SELECT * FROM user")
+    user_map = {u["id"]: u["name"] for u in users}
+    ticket["assigned_name"] = user_map.get(ticket.get("assigned_user_id", ""), "")
+    return {"ticket": ticket}
+
+
+@app.post("/api/portal/tickets/{ticket_id}/notes")
+async def portal_add_note(ticket_id: str, body: dict, customer: dict = Depends(get_current_customer)):
+    """Customer adds a note to their ticket."""
+    # Verify ownership
+    rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'")
+    if not rows:
+        raise HTTPException(404, "Ticket not found")
+    await _call("add_ticket_note", [
+        ticket_id,
+        f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or "Customer",
+        body.get("content", ""),
+        False,  # not internal
+    ])
+    return {"ok": True}
+
+
+@app.get("/api/portal/invoices")
+async def portal_invoices(customer: dict = Depends(get_current_customer)):
+    """Customer's invoices."""
+    rows = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{customer['id']}'")
+    return {"invoices": _sort(rows, "created_at")}
+
+
+@app.get("/api/portal/invoices/{invoice_id}")
+async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_current_customer)):
+    """Single invoice detail with line items (customer-owned only)."""
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    if not rows:
+        raise HTTPException(404, "Invoice not found")
+    inv = rows[0]
+    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    inv["line_items"] = _sort(items, "sort_order", desc=False)
+    # Get payments made on this invoice
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    inv["payments"] = _sort(payments, "created_at")
+    total_paid = sum(float(p.get("amount", 0)) for p in payments)
+    inv["total_paid"] = total_paid
+    inv["balance_due"] = float(inv.get("total", 0)) - total_paid
+    return {"invoice": inv}
+
+
+@app.post("/api/portal/payments")
+async def portal_make_payment(body: dict, customer: dict = Depends(get_current_customer)):
+    """Customer makes a payment on an invoice."""
+    invoice_id = body.get("invoice_id", "")
+    amount = body.get("amount", 0)
+    method = body.get("method", "card")
+
+    # Verify invoice belongs to customer
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    if not rows:
+        raise HTTPException(404, "Invoice not found")
+
+    await _call("record_payment", [
+        invoice_id,
+        customer["id"],
+        amount,
+        method,
+        body.get("reference", ""),
+        "Online payment via customer portal",
+    ])
+
+    # Auto-update invoice status
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    inv = rows[0]
+    total_paid = sum(float(p.get("amount", 0)) for p in payments)
+    inv_total = float(inv.get("total", 0))
+    new_status = "paid" if total_paid >= inv_total else "partial" if total_paid > 0 else inv.get("status", "draft")
+    if new_status != inv.get("status"):
+        await _call("update_invoice_status", [invoice_id, new_status])
+
+    return {"ok": True}
+
+
+@app.get("/api/portal/appointments")
+async def portal_appointments(customer: dict = Depends(get_current_customer)):
+    """Customer's appointments."""
+    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    rows = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{customer['id']}'")
+    upcoming = [a for a in rows if a.get("start_time", 0) > now_ms]
+    past = [a for a in rows if a.get("start_time", 0) <= now_ms]
+    return {
+        "appointments": _sort(rows, "start_time", desc=False),
+        "upcoming": _sort(upcoming, "start_time", desc=False),
+        "past": _sort(past, "start_time", desc=False),
+    }
+
+
+@app.post("/api/portal/customer/set-password")
+async def portal_set_password(body: dict, customer: dict = Depends(get_current_customer)):
+    """Customer sets/changes their portal password."""
+    pw = body.get("password", "")
+    if len(pw) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+    hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    await _call("set_customer_password", [customer["id"], hashed])
+    return {"ok": True}
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT / "web" / "dist"

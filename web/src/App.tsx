@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import {
   LayoutDashboard, Users, Ticket, FileText, CreditCard,
   Calendar, Package, FileCheck, ShoppingCart, Settings,
-  Menu, Users as UsersIcon,
+  Menu, Users as UsersIcon, LogOut, ExternalLink,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -11,7 +11,13 @@ import { Badge } from "./components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { AuthProvider, useAuth } from "./lib/auth";
+import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
 import LoginPage from "./pages/LoginPage";
+import PortalLoginPage from "./pages/PortalLoginPage";
+import PortalDashboard from "./pages/PortalDashboard";
+import PortalTicketsPage from "./pages/PortalTicketsPage";
+import PortalInvoicesPage from "./pages/PortalInvoicesPage";
+import PortalAppointmentsPage from "./pages/PortalAppointmentsPage";
 import CustomersPage from "./pages/CustomersPage";
 import TicketsPage from "./pages/TicketsPage";
 import InvoicesPage from "./pages/InvoicesPage";
@@ -26,6 +32,8 @@ type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
   | "purchase-orders" | "settings";
+
+type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
 interface NavItem {
   id: PageId;
@@ -46,6 +54,98 @@ const navItems: NavItem[] = [
   { id: "purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
   { id: "settings", label: "Settings", icon: Settings },
 ];
+
+// ── Portal App ──
+
+const portalTabs: { id: PortalPage; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "tickets", label: "Tickets", icon: Ticket },
+  { id: "invoices", label: "Invoices", icon: FileText },
+  { id: "appointments", label: "Appointments", icon: Calendar },
+];
+
+function PortalShell() {
+  const { customer, logout, loading } = usePortalAuth();
+  const [page, setPage] = useState<PortalPage>("dashboard");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return <PortalLoginPage onSuccess={() => window.location.reload()} />;
+  }
+
+  const renderPortalPage = () => {
+    switch (page) {
+      case "dashboard": return <PortalDashboard />;
+      case "tickets": return <PortalTicketsPage />;
+      case "invoices": return <PortalInvoicesPage />;
+      case "appointments": return <PortalAppointmentsPage />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Top nav */}
+      <header className="border-b border-border bg-card/80 backdrop-blur sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+              <UsersIcon className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="font-semibold text-sm">Customer Portal</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground hidden sm:inline">
+              {customer.first_name} {customer.last_name}
+            </span>
+            <a href="/" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              <ExternalLink className="h-3 w-3" /> Admin
+            </a>
+            <button onClick={logout} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1">
+              <LogOut className="h-3 w-3" /> Sign Out
+            </button>
+          </div>
+        </div>
+        {/* Tabs */}
+        <div className="max-w-5xl mx-auto px-4 flex gap-1 pb-0">
+          {portalTabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setPage(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm rounded-t-md transition-colors border-b-2",
+                  page === tab.id
+                    ? "border-primary text-foreground font-medium"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-5xl mx-auto px-4 py-6">
+        {renderPortalPage()}
+      </main>
+
+      <Toaster position="bottom-left" theme="dark" />
+    </div>
+  );
+}
+
+// ── Admin App ──
 
 function AppShell() {
   const { user, logout, loading } = useAuth();
@@ -137,16 +237,21 @@ function AppShell() {
         })}
       </div>
 
-      {/* Logout */}
-      <div className="p-2 border-t border-border">
+      {/* Portal link + Logout */}
+      <div className="p-2 border-t border-border space-y-1">
+        <a
+          href="/portal"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <ExternalLink className="h-4 w-4" />
+          <span>Customer Portal</span>
+        </a>
         <button
           onClick={logout}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span className="truncate">Sign out</span>
+          <LogOut className="h-4 w-4" />
+          <span>Sign out</span>
         </button>
       </div>
     </nav>
@@ -193,13 +298,27 @@ function AppShell() {
   );
 }
 
+// ── Root ──
+
 export default function App() {
+  const isPortal = typeof window !== "undefined" && window.location.pathname.startsWith("/portal");
+
+  if (isPortal) {
+    return (
+      <PortalAuthProvider>
+        <PortalShell />
+      </PortalAuthProvider>
+    );
+  }
+
   return (
     <AuthProvider>
       <AppShell />
     </AuthProvider>
   );
 }
+
+// ── Admin Dashboard ──
 
 function DashboardPage({
   stats,
