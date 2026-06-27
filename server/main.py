@@ -1716,6 +1716,81 @@ async def set_custom_field_values(entity_id: str, body: dict, user: dict = Depen
     return {"ok": True, "count": len(values)}
 
 
+# ── CHECKLIST TEMPLATE endpoints ─────────────────────────────
+
+@app.get("/api/checklist-templates")
+async def list_checklist_templates(user: dict = Depends(require_role("admin", "tech"))):
+    """List all checklist templates."""
+    rows = await _sql("SELECT * FROM checklist_templates")
+    return {"templates": _sort(rows, "name")}
+
+
+@app.post("/api/checklist-templates")
+async def create_checklist_template(body: dict, user: dict = Depends(require_role("admin"))):
+    """Create a checklist template. Items: [{\"label\":\"...\",\"order\":1}]"""
+    await _call("create_checklist_template", [
+        body.get("name", ""),
+        body.get("description", ""),
+        json.dumps(body.get("items", [])),
+    ])
+    await _log_audit(user, "create", "checklist_template", body.get("name", ""))
+    return {"ok": True}
+
+
+@app.put("/api/checklist-templates/{template_id}")
+async def update_checklist_template(template_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+    """Update a checklist template."""
+    await _call("update_checklist_template", [
+        template_id,
+        body.get("name", ""),
+        body.get("description", ""),
+        json.dumps(body.get("items", [])),
+    ])
+    await _log_audit(user, "update", "checklist_template", template_id)
+    return {"ok": True}
+
+
+@app.delete("/api/checklist-templates/{template_id}")
+async def delete_checklist_template(template_id: str, user: dict = Depends(require_role("admin"))):
+    """Delete a checklist template."""
+    await _call("delete_checklist_template", [template_id])
+    await _log_audit(user, "delete", "checklist_template", template_id)
+    return {"ok": True}
+
+
+# ── TICKET CHECKLIST endpoints ────────────────────────────────
+
+@app.get("/api/tickets/{ticket_id}/checklist")
+async def get_ticket_checklist(ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Get checklist items for a ticket."""
+    rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{ticket_id}'")
+    return {"items": _sort(rows, "sort_order")}
+
+
+@app.post("/api/tickets/{ticket_id}/checklist/apply")
+async def apply_checklist_to_ticket(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
+    """Apply a checklist template to a ticket."""
+    template_id = body.get("template_id", "")
+    await _call("apply_checklist_template", [ticket_id, template_id])
+    await _log_audit(user, "apply", "checklist", ticket_id, f"template={template_id}")
+    return {"ok": True}
+
+
+@app.put("/api/tickets/{ticket_id}/checklist/{item_id}")
+async def update_checklist_item(ticket_id: str, item_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
+    """Toggle a checklist item completed/uncompleted."""
+    await _call("update_checklist_item", [item_id, bool(body.get("completed", False))])
+    return {"ok": True}
+
+
+@app.delete("/api/tickets/{ticket_id}/checklist")
+async def delete_ticket_checklist(ticket_id: str, user: dict = Depends(require_role("admin", "tech"))):
+    """Remove all checklist items from a ticket."""
+    await _call("delete_ticket_checklist", [ticket_id])
+    await _log_audit(user, "delete", "checklist", ticket_id)
+    return {"ok": True}
+
+
 # ── MAIL SETTINGS endpoints ──────────────────────────────
 
 

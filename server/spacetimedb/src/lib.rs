@@ -14,9 +14,11 @@ mod user;
 mod audit;
 mod custom_field;
 mod customer_geolocation;
+mod checklist;
 
 pub use customer::*;
 pub use customer_geolocation::*;
+pub use checklist::*;
 pub use ticket::*;
 pub use payment::*;
 pub use appointment::*;

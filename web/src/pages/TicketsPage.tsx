@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { api, Ticket, Customer, TicketTimer } from "../lib/api";
+import { api, Ticket, Customer, TicketTimer, ChecklistTemplate, TicketChecklistItem } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { Ticket as TicketIcon, Plus, MessageSquare, Timer, StopCircle, Play } from "lucide-react";
+import { Ticket as TicketIcon, Plus, MessageSquare, Timer, StopCircle, Play, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
 
@@ -37,6 +37,9 @@ export default function TicketsPage() {
   const [newNote, setNewNote] = useState("");
   const [timers, setTimers] = useState<TicketTimer[]>([]);
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [checklist, setChecklist] = useState<TicketChecklistItem[]>([]);
+  const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
+  const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const { user } = useAuth();
 
   const load = async () => {
@@ -138,6 +141,49 @@ export default function TicketsPage() {
       setNotes(noteRes.notes);
       setNewNote("");
     } catch { setNotes([]); }
+    loadChecklist(t.id);
+    loadTemplates();
+  };
+
+  const loadChecklist = async (ticketId: string) => {
+    try {
+      const res = await api.checklist.ticket.list(ticketId);
+      setChecklist(res.items);
+    } catch { setChecklist([]); }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const res = await api.checklist.templates.list();
+      setChecklistTemplates(res.templates);
+    } catch { setChecklistTemplates([]); }
+  };
+
+  const handleApplyTemplate = async (templateId: string) => {
+    if (!selectedTicket) return;
+    try {
+      await api.checklist.ticket.apply(selectedTicket.id, templateId);
+      toast.success("Checklist applied");
+      setShowApplyTemplate(false);
+      loadChecklist(selectedTicket.id);
+    } catch { toast.error("Failed to apply checklist"); }
+  };
+
+  const handleToggleChecklist = async (item: TicketChecklistItem) => {
+    if (!selectedTicket) return;
+    try {
+      await api.checklist.ticket.toggle(selectedTicket.id, item.id, !item.completed);
+      loadChecklist(selectedTicket.id);
+    } catch { toast.error("Failed to update checklist item"); }
+  };
+
+  const handleClearChecklist = async () => {
+    if (!selectedTicket) return;
+    try {
+      await api.checklist.ticket.clear(selectedTicket.id);
+      toast.success("Checklist cleared");
+      setChecklist([]);
+    } catch { toast.error("Failed to clear checklist"); }
   };
 
   const addNote = async () => {
@@ -288,6 +334,66 @@ export default function TicketsPage() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Checklist */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle><ListChecks className="h-4 w-4 inline mr-1.5" />Checklist</CardTitle>
+                  <div className="flex gap-1">
+                    {checklist.some(i => i.template_id) && (
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleClearChecklist}>
+                        Clear
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowApplyTemplate(!showApplyTemplate)}>
+                      Apply Template
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {showApplyTemplate && (
+                  <div className="mb-3 p-2 rounded bg-muted/50 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Choose a template:</p>
+                    {checklistTemplates.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No templates available. Create one in Settings.</p>
+                    ) : (
+                      checklistTemplates.map(t => (
+                        <Button key={t.id} variant="outline" size="sm" className="w-full justify-start text-xs h-7" onClick={() => handleApplyTemplate(t.id)}>
+                          <ListChecks className="h-3 w-3 mr-1.5" />
+                          {t.name}
+                        </Button>
+                      ))
+                    )}
+                  </div>
+                )}
+                {checklist.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No checklist items</p>
+                ) : (
+                  <div className="space-y-1 max-h-64 overflow-y-auto">
+                    {checklist.map(item => (
+                      <div
+                        key={item.id}
+                        className={`flex items-center gap-3 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors hover:bg-muted/50 ${item.completed ? "text-muted-foreground line-through" : ""}`}
+                        onClick={() => handleToggleChecklist(item)}
+                      >
+                        <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${item.completed ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+                          {item.completed && <div className="w-2 h-2 rounded-sm bg-white" />}
+                        </div>
+                        <span className="flex-1">{item.label}</span>
+                        {item.template_name && (
+                          <span className="text-[10px] text-muted-foreground shrink-0">{item.template_name}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {checklist.filter(i => i.completed).length}/{checklist.length} completed
+                </p>
               </CardContent>
             </Card>
 

@@ -30,9 +30,9 @@
 - [ ] Multi-tenant support
 - [ ] SMS notifications
 - [ ] Payment gateway integration (Stripe, Square)
-- [ ] Reporting dashboard (revenue by period, tech productivity)
+- [x] Reporting dashboard (revenue by period, tech productivity)
 - [ ] Barcode scanning for products
-- [ ] Repair checklist templates
+- [x] Repair checklist templates
 - [x] Custom fields per customer/ticket
 - [ ] Integration API (webhooks for external systems)
 
