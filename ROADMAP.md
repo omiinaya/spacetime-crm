@@ -40,7 +40,7 @@
 - [x] Authentication (login/password for staff)
 - [ ] Role-based permissions (admin, tech, front-desk)
 - [ ] Audit logging
-- [ ] Data export (CSV, XLSX)
+- [x] Data export (CSV, XLSX)
 - [ ] Docker Compose for one-command deploy
 - [ ] Backup/restore scripts
 - [ ] Health checks and monitoring
