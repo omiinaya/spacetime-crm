@@ -20,6 +20,9 @@ services:
       context: .
       dockerfile: server/Dockerfile
       network: host
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "${SERVER_PORT:-8723}:8723"
     environment:
