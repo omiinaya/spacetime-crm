@@ -771,6 +771,84 @@ async def dashboard_stats():
     }
 
 
+@app.get("/api/reports")
+async def reports_data():
+    """Aggregated data for reporting charts."""
+    now = datetime.utcnow()
+
+    # ── All data ──
+    all_tickets = await _sql("SELECT * FROM ticket")
+    all_invoices = await _sql("SELECT * FROM invoices")
+    all_payments = await _sql("SELECT * FROM payment")
+    all_appointments = await _sql("SELECT * FROM appointment")
+
+    # ── Revenue by month (last 12 months) ──
+    revenue_by_month = []
+    for i in range(11, -1, -1):
+        month_start = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+        month_start_ts = int(month_start.timestamp() * 1000)
+        month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
+        month_label = month_start.strftime("%b %y")
+        month_revenue = sum(
+            float(p.get("amount", 0))
+            for p in all_payments
+            if month_start_ts <= p.get("created_at", 0) < month_end_ts
+        )
+        revenue_by_month.append({"month": month_label, "revenue": round(month_revenue, 2)})
+
+    # ── Ticket counts by status ──
+    status_counts: dict[str, int] = {}
+    for t in all_tickets:
+        s = t.get("status", "unknown")
+        status_counts[s] = status_counts.get(s, 0) + 1
+    ticket_by_status = [
+        {"status": s, "count": c} for s, c in sorted(status_counts.items())
+    ]
+
+    # ── Invoice by status ──
+    inv_status_counts: dict[str, int] = {}
+    for inv in all_invoices:
+        s = inv.get("status", "draft")
+        inv_status_counts[s] = inv_status_counts.get(s, 0) + 1
+    invoice_by_status = [
+        {"status": s, "count": c} for s, c in sorted(inv_status_counts.items())
+    ]
+
+    # ── Appointments by month (next 3 + past 9) ──
+    appt_by_month = []
+    for i in range(11, -1, -1):
+        month_start = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+        month_start_ts = int(month_start.timestamp() * 1000)
+        month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
+        month_label = month_start.strftime("%b %y")
+        month_count = sum(
+            1 for a in all_appointments
+            if month_start_ts <= a.get("start_time", 0) < month_end_ts
+        )
+        appt_by_month.append({"month": month_label, "appointments": month_count})
+
+    # ── Totals ──
+    total_revenue = sum(float(p.get("amount", 0)) for p in all_payments)
+    total_tickets = len(all_tickets)
+    open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
+    total_sent = sum(1 for inv in all_invoices if inv.get("status") not in ("draft", "cancelled"))
+    total_paid = sum(1 for inv in all_invoices if inv.get("status") == "paid")
+
+    return {
+        "revenue_by_month": revenue_by_month,
+        "ticket_by_status": ticket_by_status,
+        "invoice_by_status": invoice_by_status,
+        "appointments_by_month": appt_by_month,
+        "totals": {
+            "total_revenue": round(total_revenue, 2),
+            "total_tickets": total_tickets,
+            "open_tickets": open_tickets,
+            "total_sent": total_sent,
+            "total_paid": total_paid,
+        },
+    }
+
+
 # ── AUTH middleware ────────────────────────────────────────────
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):

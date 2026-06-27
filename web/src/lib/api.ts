@@ -238,6 +238,20 @@ export interface TaxRate {
   updated_at: number;
 }
 
+export interface ReportsData {
+  revenue_by_month: { month: string; revenue: number }[];
+  ticket_by_status: { status: string; count: number }[];
+  invoice_by_status: { status: string; count: number }[];
+  appointments_by_month: { month: string; appointments: number }[];
+  totals: {
+    total_revenue: number;
+    total_tickets: number;
+    open_tickets: number;
+    total_sent: number;
+    total_paid: number;
+  };
+}
+
 // ── API client ──
 
 export const api = {
@@ -509,5 +523,8 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ tax_rate: taxRate }),
       }),
+  },
+  reports: {
+    get: () => apiFetch<ReportsData>("/reports"),
   },
 };
