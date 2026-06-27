@@ -9,6 +9,7 @@ pub struct User {
     pub email: String,
     pub role: String,
     pub pin: String,
+    pub password_hash: String,
     pub active: bool,
     pub created_at: u64,
 }
@@ -33,6 +34,7 @@ pub fn create_user(ctx: &ReducerContext, name: String, email: String, role: Stri
         email,
         role,
         pin: String::new(),
+        password_hash: String::new(),
         active: true,
         created_at: super::now_ms(ctx),
     });
@@ -42,6 +44,13 @@ pub fn create_user(ctx: &ReducerContext, name: String, email: String, role: Stri
 pub fn update_user(ctx: &ReducerContext, id: String, name: String, email: String, role: String, active: bool) {
     if let Some(u) = ctx.db.user().id().find(&id) {
         ctx.db.user().id().update(User { name, email, role, active, ..u });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn set_user_password(ctx: &ReducerContext, id: String, password_hash: String) {
+    if let Some(u) = ctx.db.user().id().find(&id) {
+        ctx.db.user().id().update(User { password_hash, ..u });
     }
 }
 

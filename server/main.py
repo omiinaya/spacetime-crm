@@ -13,6 +13,18 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from config import settings
+import bcrypt
+import jwt
+from datetime import datetime, timedelta
+import secrets
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+# Generate a default JWT secret on startup if none configured
+if settings.jwt_secret == "change-me-to-a-random-secret":
+    settings.jwt_secret = secrets.token_hex(32)
+
+security = HTTPBearer(auto_error=False)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -554,6 +566,108 @@ async def dashboard_stats():
         "pending_revenue": pending_revenue,
         "upcoming_appointments": upcoming_appointments,
     }
+
+
+# ── AUTH middleware ────────────────────────────────────────────
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """FastAPI dependency that validates JWT and returns user dict."""
+    if credentials is None:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid token")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(401, "Invalid token: no subject")
+
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    if not rows:
+        raise HTTPException(401, "User not found")
+    user = rows[0]
+    if not user.get("active", False):
+        raise HTTPException(403, "User account is disabled")
+
+    return user
+
+
+# ── AUTH endpoints ─────────────────────────────────────────────
+
+@app.post("/api/auth/login")
+async def login(body: dict):
+    """Login with email + password, returns JWT token."""
+    email = body.get("email", "")
+    password = body.get("password", "")
+
+    if not email or not password:
+        raise HTTPException(400, "Email and password required")
+
+    rows = await _sql(f"SELECT * FROM user WHERE email = '{email}'")
+    if not rows:
+        raise HTTPException(401, "Invalid email or password")
+
+    user = rows[0]
+    pw_hash = user.get("password_hash", "")
+
+    if not pw_hash or not bcrypt.checkpw(password.encode(), pw_hash.encode()):
+        raise HTTPException(401, "Invalid email or password")
+
+    if not user.get("active", False):
+        raise HTTPException(403, "Account is disabled")
+
+    now = datetime.utcnow()
+    token = jwt.encode(
+        {
+            "sub": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user["role"],
+            "iat": now,
+            "exp": now + timedelta(hours=settings.jwt_expire_hours),
+        },
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+        },
+    }
+
+
+@app.get("/api/auth/me")
+async def auth_me(user: dict = Depends(get_current_user)):
+    """Return current user info from JWT."""
+    return {
+        "id": user["id"],
+        "name": user["name"],
+        "email": user["email"],
+        "role": user["role"],
+    }
+
+
+@app.post("/api/auth/set-password")
+async def set_password(body: dict, user: dict = Depends(get_current_user)):
+    """Set/change password for current user."""
+    pw = body.get("password", "")
+    if len(pw) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+    hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    await _call("set_user_password", [user["id"], hashed])
+    return {"ok": True}
 
 
 # ── USER endpoints ────────────────────────────────────────────

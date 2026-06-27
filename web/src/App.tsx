@@ -3,13 +3,15 @@ import { Toaster } from "sonner";
 import {
   LayoutDashboard, Users, Ticket, FileText, CreditCard,
   Calendar, Package, FileCheck, ShoppingCart, Settings,
-  Menu, X, ChevronRight,
+  Menu, Users as UsersIcon,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
 import { Badge } from "./components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Button } from "./components/ui/button";
+import { AuthProvider, useAuth } from "./lib/auth";
+import LoginPage from "./pages/LoginPage";
 import CustomersPage from "./pages/CustomersPage";
 import TicketsPage from "./pages/TicketsPage";
 import InvoicesPage from "./pages/InvoicesPage";
@@ -45,14 +47,29 @@ const navItems: NavItem[] = [
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
-export default function App() {
+function AppShell() {
+  const { user, logout, loading } = useAuth();
   const [page, setPage] = useState<PageId>("dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
 
   useEffect(() => {
-    api.stats.get().then(setStats).catch(() => {});
-  }, [page]);
+    if (user) {
+      api.stats.get().then(setStats).catch(() => {});
+    }
+  }, [page, user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   const renderPage = () => {
     switch (page) {
@@ -84,9 +101,15 @@ export default function App() {
       {/* Brand */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border shrink-0">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-          <Users className="h-4 w-4 text-white" />
+          <UsersIcon className="h-4 w-4 text-white" />
         </div>
         <span className="font-semibold text-sm">SpacetimeCRM</span>
+      </div>
+
+      {/* User info */}
+      <div className="px-4 py-3 border-b border-border shrink-0">
+        <p className="text-sm font-medium">{user.name}</p>
+        <p className="text-xs text-muted-foreground">{user.role}</p>
       </div>
 
       {/* Nav items */}
@@ -112,6 +135,19 @@ export default function App() {
             </button>
           );
         })}
+      </div>
+
+      {/* Logout */}
+      <div className="p-2 border-t border-border">
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span className="truncate">Sign out</span>
+        </button>
       </div>
     </nav>
   );
@@ -154,6 +190,14 @@ export default function App() {
 
       <Toaster position="bottom-left" theme="dark" />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   );
 }
 

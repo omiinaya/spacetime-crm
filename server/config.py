@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     stdb_db: str = "spacetime-crm"
     server_port: int = 8723
     cors_origin: str = "http://localhost:5185"
+    jwt_secret: str = "change-me-to-a-random-secret"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_hours: int = 24
 
     @property
     def stdb_sql_url(self) -> str:
