@@ -219,6 +219,16 @@ export interface DashboardStats {
   upcoming_appointments: number;
 }
 
+export interface MailSettings {
+  host: string;
+  port: number;
+  username: string;
+  use_tls: boolean;
+  sender_name: string;
+  sender_email: string;
+  password?: string;
+}
+
 // ── API client ──
 
 export const api = {
@@ -456,5 +466,19 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+  },
+  settings: {
+    mail: {
+      get: () => apiFetch<{ configured: boolean; settings: MailSettings | null }>("/settings/mail"),
+      save: (data: Partial<MailSettings>) =>
+        apiFetch<{ ok: boolean }>("/settings/mail", {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+      test: () =>
+        apiFetch<{ ok: boolean; message?: string; error?: string }>("/settings/mail/test", {
+          method: "POST",
+        }),
+    },
   },
 };

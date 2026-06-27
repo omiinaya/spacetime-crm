@@ -2,8 +2,9 @@ import json
 import logging
 from typing import Any
 from pathlib import Path
-from datetime import datetime
-
+from datetime import datetime, timedelta
+import asyncio
+import secrets
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,9 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from config import settings
+from mail import get_settings as get_mail_settings, update_settings as update_mail_settings, test_connection as test_mail_connection
+from mail import _notify_ticket_status_change, _notify_invoice_created, _notify_appointment_created, _notify_payment_received
+from mail import _customer_email as _mail_customer_email
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
@@ -183,7 +187,21 @@ async def create_ticket(body: dict):
 
 @app.put("/api/tickets/{ticket_id}/status")
 async def update_ticket_status(ticket_id: str, body: dict):
-    await _call("update_ticket_status", [ticket_id, body.get("status", "")])
+    status = body.get("status", "")
+    await _call("update_ticket_status", [ticket_id, status])
+
+    # Notification: ticket status changed
+    async def _notify():
+        rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}'")
+        if rows:
+            t = rows[0]
+            cust = await _sql(f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'")
+            email = _mail_customer_email(cust[0]) if cust else None
+            if email:
+                link = f"http://localhost:{settings.server_port}/portal/"
+                _notify_ticket_status_change(email, t.get("ticket_number", 0), t.get("title", ""), status, link)
+    asyncio.ensure_future(_notify())
+
     return {"ok": True}
 
 
@@ -275,6 +293,19 @@ async def create_invoice(body: dict):
         body.get("terms", ""),
         body.get("due_date", 0),
     ])
+
+    # Notification: invoice created
+    async def _notify():
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.get('customer_id', '')}'")
+        email = _mail_customer_email(cust[0]) if cust else None
+        if email:
+            invs = await _sql("SELECT * FROM invoices ORDER BY created_at DESC LIMIT 1")
+            if invs:
+                inv = invs[0]
+                link = f"http://localhost:{settings.server_port}/portal/"
+                _notify_invoice_created(email, inv.get("invoice_number", 0), float(inv.get("total", 0)), link)
+    asyncio.ensure_future(_notify())
+
     return {"ok": True}
 
 
@@ -404,6 +435,16 @@ async def record_payment(body: dict):
             new_status = "paid" if total_paid >= inv_total else "partial" if total_paid > 0 else inv.get("status", "draft")
             if new_status != inv.get("status"):
                 await _call("update_invoice_status", [invoice_id, new_status])
+
+            # Notification: payment received
+            async def _notify():
+                cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.get('customer_id', '')}'")
+                email = _mail_customer_email(cust[0]) if cust else None
+                if email:
+                    link = f"http://localhost:{settings.server_port}/portal/"
+                    _notify_payment_received(email, inv.get("invoice_number", 0), float(body.get("amount", 0)), link)
+            asyncio.ensure_future(_notify())
+
     return {"ok": True}
 
 
@@ -432,6 +473,16 @@ async def create_appointment(body: dict):
         body.get("end_time", 0),
         body.get("all_day", False),
     ])
+
+    # Notification: appointment created
+    async def _notify():
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.get('customer_id', '')}'")
+        email = _mail_customer_email(cust[0]) if cust else None
+        if email:
+            link = f"http://localhost:{settings.server_port}/portal/"
+            _notify_appointment_created(email, body.get("title", "Appointment"), body.get("start_time", 0), link)
+    asyncio.ensure_future(_notify())
+
     return {"ok": True}
 
 
@@ -1042,6 +1093,33 @@ async def portal_set_password(body: dict, customer: dict = Depends(get_current_c
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
     await _call("set_customer_password", [customer["id"], hashed])
     return {"ok": True}
+
+
+# ── MAIL SETTINGS endpoints ──────────────────────────────
+
+
+@app.get("/api/settings/mail")
+async def mail_settings_get():
+    """Get current mail settings (without password)."""
+    settings = get_mail_settings()
+    if settings is None:
+        return {"configured": False, "settings": None}
+    return {"configured": True, "settings": settings}
+
+
+@app.post("/api/settings/mail")
+async def mail_settings_save(body: dict):
+    """Save mail settings."""
+    update_mail_settings(body)
+    return {"ok": True}
+
+
+@app.post("/api/settings/mail/test")
+async def mail_settings_test():
+    """Test SMTP connection with current settings."""
+    result = test_mail_connection()
+    return result
+
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT / "web" / "dist"
