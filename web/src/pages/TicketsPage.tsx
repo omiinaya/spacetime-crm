@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { api, Ticket, Customer } from "../lib/api";
+import { api, Ticket, Customer, TicketTimer } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { Ticket as TicketIcon, Plus, MessageSquare } from "lucide-react";
+import { Ticket as TicketIcon, Plus, MessageSquare, Timer, StopCircle, Play } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "../lib/auth";
 
 const statusColors: Record<string, "default" | "secondary" | "warning" | "success" | "outline"> = {
   new: "default",
@@ -34,6 +35,9 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
+  const [timers, setTimers] = useState<TicketTimer[]>([]);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const { user } = useAuth();
 
   const load = async () => {
     try {
@@ -51,6 +55,61 @@ export default function TicketsPage() {
   };
 
   useEffect(() => { load(); }, [filter]);
+
+  const loadTimers = async (ticketId: string) => {
+    try {
+      const res = await api.tickets.timers.list(ticketId);
+      setTimers(res.timers);
+      const running = res.timers.find((t) => t.running);
+      if (running) {
+        setTimerSeconds(running.total_seconds + Math.floor((Date.now() - running.start_time) / 1000));
+      } else {
+        setTimerSeconds(0);
+      }
+    } catch { setTimers([]); }
+  };
+
+  // Tick every second for running timer display
+  useEffect(() => {
+    if (!timers.some((t) => t.running)) return;
+    const interval = setInterval(() => {
+      setTimerSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timers]);
+
+  const handleStartTimer = async () => {
+    if (!selectedTicket || !user) return;
+    try {
+      await api.tickets.timers.start(selectedTicket.id, user.id);
+      await loadTimers(selectedTicket.id);
+      toast.success("Timer started");
+    } catch { toast.error("Failed to start timer"); }
+  };
+
+  const handleStopTimer = async () => {
+    const running = timers.find((t) => t.running);
+    if (!running) return;
+    try {
+      await api.tickets.timers.stop(running.id);
+      await loadTimers(selectedTicket!.id);
+      toast.success("Timer stopped");
+    } catch { toast.error("Failed to stop timer"); }
+  };
+
+  const fmtTime = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const totalTrackedTime = () => {
+    return timers.reduce((sum, t) => {
+      if (t.running) return sum + timerSeconds;
+      return sum + t.total_seconds;
+    }, 0);
+  };
 
   const handleCreate = async () => {
     try {
@@ -72,8 +131,11 @@ export default function TicketsPage() {
   const viewTicket = async (t: Ticket) => {
     setSelectedTicket(t);
     try {
-      const res = await api.tickets.notes.list(t.id);
-      setNotes(res.notes);
+      const [noteRes] = await Promise.all([
+        api.tickets.notes.list(t.id),
+        loadTimers(t.id),
+      ]);
+      setNotes(noteRes.notes);
       setNewNote("");
     } catch { setNotes([]); }
   };
@@ -186,6 +248,46 @@ export default function TicketsPage() {
                   <option value="resolved">Resolved</option>
                   <option value="closed">Closed</option>
                 </Select>
+              </CardContent>
+            </Card>
+
+            {/* Timer */}
+            <Card>
+              <CardHeader>
+                <CardTitle><Timer className="h-4 w-4 inline mr-1.5" />Time Tracking</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-2xl font-mono font-bold">{fmtTime(totalTrackedTime())}</span>
+                    <p className="text-xs text-muted-foreground mt-1">Total time logged</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {timers.some((t) => t.running) ? (
+                      <Button size="sm" variant="destructive" onClick={handleStopTimer}>
+                        <StopCircle className="h-4 w-4 mr-1" /> Stop
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="default" onClick={handleStartTimer}>
+                        <Play className="h-4 w-4 mr-1" /> Start Timer
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {timers.length > 0 && (
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {timers.slice().reverse().map((tmr) => (
+                      <div key={tmr.id} className="flex items-center justify-between text-xs p-2 rounded bg-muted/50">
+                        <span className="text-muted-foreground">
+                          {new Date(tmr.start_time).toLocaleString()}
+                        </span>
+                        <span className="font-mono">
+                          {tmr.running ? fmtTime(timerSeconds) : fmtTime(tmr.total_seconds)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

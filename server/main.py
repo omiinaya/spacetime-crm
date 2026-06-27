@@ -216,6 +216,46 @@ async def delete_ticket(ticket_id: str):
     return {"ok": True}
 
 
+# ── TICKET TIMER endpoints ────────────────────────────────────
+
+@app.get("/api/tickets/{ticket_id}/timers")
+async def get_ticket_timers(ticket_id: str):
+    rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{ticket_id}'")
+    return {"timers": _sort(rows, "start_time")}
+
+
+@app.get("/api/timers")
+async def list_all_timers(user_id: str = "", running: str = ""):
+    query = "SELECT * FROM ticket_timer"
+    filters = []
+    if user_id:
+        filters.append(f"user_id = '{user_id}'")
+    if running == "true":
+        filters.append("running = true")
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
+    rows = await _sql(query)
+    return {"timers": _sort(rows, "start_time")}
+
+
+@app.post("/api/tickets/{ticket_id}/timers/start")
+async def start_ticket_timer(ticket_id: str, body: dict):
+    await _call("start_ticket_timer", [ticket_id, body.get("user_id", "")])
+    return {"ok": True}
+
+
+@app.post("/api/timers/{timer_id}/stop")
+async def stop_ticket_timer(timer_id: str):
+    await _call("stop_ticket_timer", [timer_id])
+    return {"ok": True}
+
+
+@app.delete("/api/timers/{timer_id}")
+async def delete_ticket_timer(timer_id: str):
+    await _call("delete_ticket_timer", [timer_id])
+    return {"ok": True}
+
+
 # ── INVOICE endpoints ─────────────────────────────────────────
 
 @app.get("/api/invoices")

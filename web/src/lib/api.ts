@@ -57,6 +57,16 @@ export interface TicketNote {
   created_at: number;
 }
 
+export interface TicketTimer {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  start_time: number;
+  end_time: number;
+  total_seconds: number;
+  running: boolean;
+}
+
 export interface Invoice {
   id: string;
   customer_id: string;
@@ -240,6 +250,19 @@ export const api = {
     },
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/tickets/${id}`, { method: "DELETE" }),
+    timers: {
+      list: (ticketId: string) =>
+        apiFetch<{ timers: TicketTimer[] }>(`/tickets/${ticketId}/timers`),
+      start: (ticketId: string, userId: string) =>
+        apiFetch<{ ok: boolean }>(`/tickets/${ticketId}/timers/start`, {
+          method: "POST",
+          body: JSON.stringify({ user_id: userId }),
+        }),
+      stop: (timerId: string) =>
+        apiFetch<{ ok: boolean }>(`/timers/${timerId}/stop`, { method: "POST" }),
+      delete: (timerId: string) =>
+        apiFetch<{ ok: boolean }>(`/timers/${timerId}`, { method: "DELETE" }),
+    },
   },
   invoices: {
     list: (status?: string) =>

@@ -116,3 +116,48 @@ pub fn add_ticket_note(ctx: &ReducerContext, ticket_id: String, author: String, 
 pub fn delete_ticket(ctx: &ReducerContext, id: String) {
     ctx.db.ticket().id().delete(&id);
 }
+
+#[spacetimedb::reducer]
+pub fn start_ticket_timer(ctx: &ReducerContext, ticket_id: String, user_id: String) {
+    let now = super::now_ms(ctx);
+    // Stop any existing running timer for this user
+    for t in ctx.db.ticket_timer().iter().filter(|t| t.user_id == user_id && t.running) {
+        let elapsed = now.saturating_sub(t.start_time) / 1000;
+        ctx.db.ticket_timer().id().update(TicketTimer {
+            running: false,
+            end_time: now,
+            total_seconds: t.total_seconds + elapsed,
+            ..t
+        });
+    }
+    // Start new timer
+    let id = super::make_id("tmr", ctx);
+    ctx.db.ticket_timer().insert(TicketTimer {
+        id,
+        ticket_id,
+        user_id,
+        start_time: now,
+        end_time: 0,
+        total_seconds: 0,
+        running: true,
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn stop_ticket_timer(ctx: &ReducerContext, id: String) {
+    let now = super::now_ms(ctx);
+    if let Some(t) = ctx.db.ticket_timer().id().find(&id) {
+        let elapsed = now.saturating_sub(t.start_time) / 1000;
+        ctx.db.ticket_timer().id().update(TicketTimer {
+            running: false,
+            end_time: now,
+            total_seconds: t.total_seconds + elapsed,
+            ..t
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn delete_ticket_timer(ctx: &ReducerContext, id: String) {
+    ctx.db.ticket_timer().id().delete(&id);
+}
