@@ -22,7 +22,7 @@
 - [x] PDF generation (invoices, estimates, tickets)
 - [x] Calendar view for appointments
 - [x] Time tracking dashboard
-- [ ] Inventory adjustments (add/remove stock with reason)
+- [x] Inventory adjustments (add/remove stock with reason)
 - [ ] Purchase order receiving (receive against PO, update stock)
 - [ ] Tax rate configuration per location
 
