@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Ticket, FileText, CreditCard,
   Calendar, Package, FileCheck, ShoppingCart, BarChart3, Settings,
   Menu, Users as UsersIcon, LogOut, ExternalLink, Sun, Moon,
-  Download, Upload, History, HeartPulse, ListOrdered,
+  Download, Upload, History, HeartPulse, ListOrdered, Map,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -34,12 +34,13 @@ import ImportExportPage from "./pages/ImportExportPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import HealthPage from "./pages/HealthPage";
 import CustomFieldsPage from "./pages/CustomFieldsPage";
+import MapPage from "./pages/MapPage";
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
   | "purchase-orders" | "import-export" | "audit-log"
-  | "health" | "custom-fields" | "reports" | "settings";
+  | "health" | "custom-fields" | "map" | "reports" | "settings";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -53,6 +54,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "customers", label: "Customers", icon: Users },
+  { id: "map", label: "Map", icon: Map },
   { id: "tickets", label: "Tickets", icon: Ticket },
   { id: "invoices", label: "Invoices", icon: FileText },
   { id: "payments", label: "Payments", icon: CreditCard },
@@ -213,6 +215,8 @@ function AppShell() {
         return <HealthPage />;
       case "custom-fields":
         return <CustomFieldsPage />;
+      case "map":
+        return <MapPage />;
       case "reports":
         return <ReportsPage />;
       case "settings":

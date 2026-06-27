@@ -17,7 +17,7 @@
 
 ## Phase 2: Real-World Features
 - [x] Customer portal (web login for customers to view tickets/invoices)
-- [ ] Customer map (geographic visualization)
+- [x] Customer map (geographic visualization)
 - [x] Email notifications (ticket status, invoice reminders)
 - [x] PDF generation (invoices, estimates, tickets)
 - [x] Calendar view for appointments
@@ -33,7 +33,7 @@
 - [ ] Reporting dashboard (revenue by period, tech productivity)
 - [ ] Barcode scanning for products
 - [ ] Repair checklist templates
-- [ ] Custom fields per customer/ticket
+- [x] Custom fields per customer/ticket
 - [ ] Integration API (webhooks for external systems)
 
 ## Phase 4: Production

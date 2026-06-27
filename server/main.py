@@ -219,6 +219,108 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
+# ── CUSTOMER GEOLOCATION endpoints ─────────────────────────────
+
+@app.get("/api/customers/geolocations")
+async def list_customer_geolocations(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Return all customers with their geolocation data for the map."""
+    customers = await _sql("SELECT * FROM customer")
+    geos = await _sql("SELECT * FROM customer_geolocations")
+    geo_map = {g["customer_id"]: g for g in geos}
+    result = []
+    for c in customers:
+        loc = geo_map.get(c["id"])
+        full_name = f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+        addr_parts = [c.get("address_line1", ""), c.get("city", ""), c.get("state", ""), c.get("zip", "")]
+        address = ", ".join(a for a in addr_parts if a)
+        result.append({
+            "id": c["id"],
+            "name": full_name,
+            "company": c.get("company", ""),
+            "email": c.get("email", ""),
+            "phone": c.get("phone", ""),
+            "address": address,
+            "address_line1": c.get("address_line1", ""),
+            "city": c.get("city", ""),
+            "state": c.get("state", ""),
+            "zip": c.get("zip", ""),
+            "latitude": loc["latitude"] if loc else None,
+            "longitude": loc["longitude"] if loc else None,
+            "has_location": loc is not None,
+        })
+    return {"locations": result}
+
+
+@app.post("/api/customers/{customer_id}/geocode")
+async def geocode_customer(customer_id: str, user: dict = Depends(require_role("admin", "tech"))):
+    """Geocode a single customer's address and store the location."""
+    customers = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
+    if not customers:
+        raise HTTPException(404, "Customer not found")
+    c = customers[0]
+    addr_parts = [c.get("address_line1", ""), c.get("city", ""), c.get("state", ""), c.get("zip", "")]
+    address = ", ".join(a for a in addr_parts if a)
+    if not address:
+        raise HTTPException(400, "Customer has no address to geocode")
+
+    # Use Nominatim (OpenStreetMap free geocoding API)
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={"q": address, "format": "json", "limit": 1},
+            headers={"User-Agent": "SpacetimeCRM/1.0"},
+        )
+    if resp.status_code >= 400:
+        raise HTTPException(502, f"Geocoding failed: {resp.text[:200]}")
+    data = resp.json()
+    if not data:
+        return {"ok": False, "error": "No geocoding result found for address"}
+
+    lat = float(data[0]["lat"])
+    lng = float(data[0]["lon"])
+    await _call("set_customer_geolocation", [customer_id, lat, lng])
+    return {"ok": True, "latitude": lat, "longitude": lng, "display_name": data[0].get("display_name", "")}
+
+
+@app.post("/api/customers/geocode-all")
+async def geocode_all_customers(user: dict = Depends(require_role("admin"))):
+    """Geocode all customers without stored locations."""
+    customers = await _sql("SELECT * FROM customer")
+    geos = await _sql("SELECT * FROM customer_geolocations")
+    geo_ids = {g["customer_id"] for g in geos}
+
+    results = []
+    for c in customers:
+        if c["id"] in geo_ids:
+            continue
+        addr_parts = [c.get("address_line1", ""), c.get("city", ""), c.get("state", ""), c.get("zip", "")]
+        address = ", ".join(a for a in addr_parts if a)
+        if not address:
+            continue
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={"q": address, "format": "json", "limit": 1},
+                    headers={"User-Agent": "SpacetimeCRM/1.0"},
+                )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data:
+                    lat = float(data[0]["lat"])
+                    lng = float(data[0]["lon"])
+                    await _call("set_customer_geolocation", [c["id"], lat, lng])
+                    results.append({"id": c["id"], "name": f"{c['first_name']} {c['last_name']}".strip(), "latitude": lat, "longitude": lng, "status": "geocoded"})
+                else:
+                    results.append({"id": c["id"], "name": f"{c['first_name']} {c['last_name']}".strip(), "status": "not_found"})
+            else:
+                results.append({"id": c["id"], "name": f"{c['first_name']} {c['last_name']}".strip(), "status": "error"})
+        except Exception as e:
+            results.append({"id": c["id"], "name": f"{c['first_name']} {c['last_name']}".strip(), "status": f"error: {str(e)[:50]}"})
+
+    return {"geocoded": len([r for r in results if r.get("latitude")]), "results": results}
+
+
 # ── TICKET endpoints ──────────────────────────────────────────
 
 @app.get("/api/tickets")

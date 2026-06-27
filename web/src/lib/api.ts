@@ -31,6 +31,22 @@ export interface Customer {
   updated_at: number;
 }
 
+export interface CustomerGeoLocation {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  address: string;
+  address_line1: string;
+  city: string;
+  state: string;
+  zip: string;
+  latitude: number | null;
+  longitude: number | null;
+  has_location: boolean;
+}
+
 export interface Ticket {
   id: string;
   customer_id: string;
@@ -275,6 +291,16 @@ export const api = {
       }),
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/customers/${id}`, { method: "DELETE" }),
+    geolocations: {
+      list: () =>
+        apiFetch<{ locations: CustomerGeoLocation[] }>("/customers/geolocations"),
+      geocode: (customerId: string) =>
+        apiFetch<{ ok: boolean; latitude?: number; longitude?: number; display_name?: string; error?: string }>(
+          `/customers/${customerId}/geocode`, { method: "POST" }
+        ),
+      geocodeAll: () =>
+        apiFetch<{ geocoded: number; results: any[] }>("/customers/geocode-all", { method: "POST" }),
+    },
   },
   tickets: {
     list: (status?: string) =>

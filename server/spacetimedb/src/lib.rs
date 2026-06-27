@@ -13,8 +13,10 @@ mod tax_rate;
 mod user;
 mod audit;
 mod custom_field;
+mod customer_geolocation;
 
 pub use customer::*;
+pub use customer_geolocation::*;
 pub use ticket::*;
 pub use payment::*;
 pub use appointment::*;
