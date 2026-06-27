@@ -58,3 +58,43 @@ pub fn update_product_quantity(ctx: &ReducerContext, id: String, quantity_on_han
 pub fn delete_product(ctx: &ReducerContext, id: String) {
     ctx.db.products().id().delete(&id);
 }
+
+#[spacetimedb::reducer]
+pub fn import_product(
+    ctx: &ReducerContext,
+    id: String,
+    name: String,
+    sku: String,
+    barcode: String,
+    description: String,
+    category: String,
+    price: f64,
+    cost: f64,
+    quantity_on_hand: f64,
+    quantity_committed: f64,
+    min_stock: f64,
+    location: String,
+    active: bool,
+    created_at: u64,
+    updated_at: u64,
+) {
+    let quantity_available = quantity_on_hand - quantity_committed;
+    ctx.db.products().insert(Product {
+        id,
+        name,
+        sku,
+        barcode,
+        description,
+        category,
+        price,
+        cost,
+        quantity_on_hand,
+        quantity_committed,
+        quantity_available,
+        min_stock,
+        location,
+        active,
+        created_at,
+        updated_at,
+    });
+}

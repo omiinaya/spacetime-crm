@@ -98,3 +98,44 @@ pub fn set_customer_password(ctx: &ReducerContext, id: String, password_hash: St
 pub fn delete_customer(ctx: &ReducerContext, id: String) {
     ctx.db.customer().id().delete(&id);
 }
+
+#[spacetimedb::reducer]
+pub fn import_customer(
+    ctx: &ReducerContext,
+    id: String,
+    first_name: String,
+    last_name: String,
+    email: String,
+    phone: String,
+    mobile: String,
+    address_line1: String,
+    address_line2: String,
+    city: String,
+    state: String,
+    zip: String,
+    company: String,
+    notes: String,
+    tags: String,
+    created_at: u64,
+    updated_at: u64,
+) {
+    ctx.db.customer().insert(Customer {
+        id,
+        first_name,
+        last_name,
+        email,
+        phone,
+        mobile,
+        address_line1,
+        address_line2,
+        city,
+        state,
+        zip,
+        company,
+        notes,
+        tags,
+        portal_password_hash: String::new(),
+        created_at,
+        updated_at,
+    });
+}

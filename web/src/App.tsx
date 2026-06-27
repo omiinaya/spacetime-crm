@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, Ticket, FileText, CreditCard,
   Calendar, Package, FileCheck, ShoppingCart, BarChart3, Settings,
   Menu, Users as UsersIcon, LogOut, ExternalLink, Sun, Moon,
+  Download, Upload,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -29,11 +30,12 @@ import EstimatesPage from "./pages/EstimatesPage";
 import PurchaseOrdersPage from "./pages/PurchaseOrdersPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
+import ImportExportPage from "./pages/ImportExportPage";
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
-  | "purchase-orders" | "reports" | "settings";
+  | "purchase-orders" | "import-export" | "reports" | "settings";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -54,6 +56,7 @@ const navItems: NavItem[] = [
   { id: "products", label: "Products", icon: Package },
   { id: "estimates", label: "Estimates", icon: FileCheck },
   { id: "purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
+  { id: "import-export", label: "Import/Export", icon: Download },
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: Settings },
 ];
@@ -195,6 +198,8 @@ function AppShell() {
         return <EstimatesPage />;
       case "purchase-orders":
         return <PurchaseOrdersPage />;
+      case "import-export":
+        return <ImportExportPage />;
       case "reports":
         return <ReportsPage />;
       case "settings":

@@ -527,4 +527,28 @@ export const api = {
   reports: {
     get: () => apiFetch<ReportsData>("/reports"),
   },
+  export: {
+    csv: (entity: string) => {
+      const url = `${API_BASE}/export/${entity}`;
+      // Trigger download by creating a temporary anchor
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${entity}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    },
+  },
+  import: {
+    customers: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return fetch(`${API_BASE}/import/customers`, { method: "POST", body: form }).then(r => r.json()) as Promise<{ imported: number; errors: string[]; file: string }>;
+    },
+    products: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return fetch(`${API_BASE}/import/products`, { method: "POST", body: form }).then(r => r.json()) as Promise<{ imported: number; errors: string[]; file: string }>;
+    },
+  },
 };

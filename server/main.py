@@ -17,11 +17,13 @@ from config import settings
 from mail import get_settings as get_mail_settings, update_settings as update_mail_settings, test_connection as test_mail_connection
 from mail import _notify_ticket_status_change, _notify_invoice_created, _notify_appointment_created, _notify_payment_received
 from mail import _customer_email as _mail_customer_email
+import csv
+import io
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
 import secrets
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 # Generate a default JWT secret on startup if none configured
@@ -1212,6 +1214,170 @@ async def portal_set_password(body: dict, customer: dict = Depends(get_current_c
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
     await _call("set_customer_password", [customer["id"], hashed])
     return {"ok": True}
+
+
+# ── CSV EXPORT ──────────────────────────────────────────────
+
+
+ENTITY_TABLE_MAP = {
+    "customers": "customer",
+    "tickets": "tickets",
+    "invoices": "invoices",
+    "payments": "payment",
+    "appointments": "appointment",
+    "products": "products",
+    "estimates": "estimates",
+    "purchase_orders": "purchase_order",
+    "tax_rates": "tax_rate",
+    "users": "users",
+}
+
+
+@app.get("/api/export/{entity}")
+async def export_csv(entity: str):
+    """Export all records of an entity type as CSV. Downloads as attachment."""
+    table = ENTITY_TABLE_MAP.get(entity)
+    if not table:
+        raise HTTPException(400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}")
+
+    rows = await _sql(f"SELECT * FROM {table}")
+    if not rows:
+        return Response(
+            content="",
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={entity}.csv"},
+        )
+
+    output = io.StringIO()
+    fieldnames = sorted(rows[0].keys())
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for r in rows:
+        d = {}
+        for k in fieldnames:
+            v = r.get(k)
+            if v is None:
+                d[k] = ""
+            elif isinstance(v, bool):
+                d[k] = "true" if v else "false"
+            else:
+                d[k] = str(v)
+        writer.writerow(d)
+
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={entity}.csv"},
+    )
+
+
+# ── CSV IMPORT ──────────────────────────────────────────────
+
+
+@app.post("/api/import/customers")
+async def import_customers_csv(file: UploadFile = File(...)):
+    """Import customers from CSV.
+    Required columns: first_name, last_name.
+    Optional: email, phone, mobile, company, address_line1, address_line2, city, state, zip, notes, tags.
+    If id column is provided, uses import_customer reducer to preserve IDs.
+    Otherwise uses create_customer (generates new IDs).
+    """
+    content = await file.read()
+    text = content.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text))
+
+    required = {"first_name", "last_name"}
+    if not required.issubset(reader.fieldnames or []):
+        raise HTTPException(400, f"CSV must contain columns: {', '.join(required)}")
+
+    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    count = 0
+    errors = []
+    has_id = "id" in (reader.fieldnames or [])
+
+    for i, row in enumerate(reader, start=2):
+        try:
+            fn = row.get("first_name", "").strip()
+            ln = row.get("last_name", "").strip()
+            email = row.get("email", "").strip()
+            phone = row.get("phone", "").strip()
+            mobile = row.get("mobile", "").strip()
+            company = row.get("company", "").strip()
+            addr1 = row.get("address_line1", "").strip()
+            addr2 = row.get("address_line2", "").strip()
+            city = row.get("city", "").strip()
+            state = row.get("state", "").strip()
+            zipc = row.get("zip", "").strip()
+            notes = row.get("notes", "").strip()
+            tags = row.get("tags", "").strip()
+
+            if has_id and row.get("id", "").strip():
+                cid = row["id"].strip()
+                created_at = int(row.get("created_at", now_ms) or now_ms)
+                updated_at = int(row.get("updated_at", now_ms) or now_ms)
+                await _call("import_customer", [
+                    cid, fn, ln, email, phone, mobile, addr1, addr2,
+                    city, state, zipc, company, notes, tags,
+                    created_at, updated_at,
+                ])
+            else:
+                await _call("create_customer", [fn, ln, email, phone])
+            count += 1
+        except Exception as e:
+            errors.append(f"Row {i}: {e}")
+
+    return {"imported": count, "errors": errors, "file": file.filename}
+
+
+@app.post("/api/import/products")
+async def import_products_csv(file: UploadFile = File(...)):
+    """Import products from CSV.
+    Required: name. Optional: sku, barcode, description, category, price, cost,
+    quantity_on_hand, quantity_committed, min_stock, location, active.
+    If id column provided, uses import_product reducer to preserve IDs.
+    """
+    content = await file.read()
+    text = content.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text))
+
+    if "name" not in (reader.fieldnames or []):
+        raise HTTPException(400, "CSV must contain 'name' column")
+
+    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    count = 0
+    errors = []
+    has_id = "id" in (reader.fieldnames or [])
+
+    for i, row in enumerate(reader, start=2):
+        try:
+            name = row.get("name", "").strip()
+            sku = row.get("sku", "").strip()
+            barcode = row.get("barcode", "").strip()
+            desc = row.get("description", "").strip()
+            category = row.get("category", "").strip()
+            price = float(row.get("price", 0) or 0)
+            cost = float(row.get("cost", 0) or 0)
+            qoh = float(row.get("quantity_on_hand", 0) or 0)
+            qc = float(row.get("quantity_committed", 0) or 0)
+            min_stock = float(row.get("min_stock", 0) or 0)
+            location = row.get("location", "").strip()
+            active = (row.get("active", "true") or "true").strip().lower() in ("true", "1", "yes")
+
+            if has_id and row.get("id", "").strip():
+                pid = row["id"].strip()
+                created_at = int(row.get("created_at", now_ms) or now_ms)
+                updated_at = int(row.get("updated_at", now_ms) or now_ms)
+                await _call("import_product", [
+                    pid, name, sku, barcode, desc, category, price, cost,
+                    qoh, qc, min_stock, location, active, created_at, updated_at,
+                ])
+            else:
+                await _call("create_product", [name, sku, desc, category, price, cost, qoh])
+            count += 1
+        except Exception as e:
+            errors.append(f"Row {i}: {e}")
+
+    return {"imported": count, "errors": errors, "file": file.filename}
 
 
 # ── MAIL SETTINGS endpoints ──────────────────────────────
