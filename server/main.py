@@ -1027,6 +1027,53 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
     total_sent = sum(1 for inv in all_invoices if inv.get("status") not in ("draft", "cancelled"))
     total_paid = sum(1 for inv in all_invoices if inv.get("status") == "paid")
 
+    # ── Outstanding revenue (sent + overdue, not paid) ──
+    outstanding_revenue = sum(
+        float(inv.get("total", 0)) for inv in all_invoices
+        if inv.get("status") in ("sent", "overdue", "partial")
+    )
+
+    # ── Average resolution time for tickets ──
+    resolution_times = []
+    for t in all_tickets:
+        created = t.get("created_at", 0)
+        updated = t.get("updated_at", 0)
+        if created and updated > created and t.get("status") in ("resolved", "closed"):
+            resolution_times.append((updated - created) / (1000 * 3600))  # hours
+    avg_resolution_hours = round(
+        sum(resolution_times) / len(resolution_times), 1
+    ) if resolution_times else 0
+
+    # ── Tech productivity (tickets closed/resolved per tech) ──
+    tech_ticket_map: dict[str, int] = {}
+    for t in all_tickets:
+        uid = t.get("assigned_user_id", "")
+        if uid and t.get("status") in ("resolved", "closed"):
+            tech_ticket_map[uid] = tech_ticket_map.get(uid, 0) + 1
+
+    all_users = await _sql("SELECT id, name FROM user")
+    user_name_map = {u["id"]: u.get("name", "Unknown") for u in all_users}
+    tech_closed = [
+        {"user_name": user_name_map.get(uid, "Unknown"), "closed_count": count}
+        for uid, count in sorted(tech_ticket_map.items(), key=lambda x: -x[1])
+    ]
+
+    # ── Top customers by revenue ──
+    customer_revenue: dict[str, float] = {}
+    for inv in all_invoices:
+        cid = inv.get("customer_id", "")
+        if inv.get("status") == "paid":
+            customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
+    all_customers = await _sql("SELECT id, first_name, last_name FROM customer")
+    cust_name_map = {
+        c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+        for c in all_customers
+    }
+    top_customers = [
+        {"customer_name": cust_name_map.get(cid, "Unknown"), "revenue": round(rev, 2)}
+        for cid, rev in sorted(customer_revenue.items(), key=lambda x: -x[1])[:10]
+    ]
+
     return {
         "revenue_by_month": revenue_by_month,
         "ticket_by_status": ticket_by_status,
@@ -1038,7 +1085,11 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
             "open_tickets": open_tickets,
             "total_sent": total_sent,
             "total_paid": total_paid,
+            "outstanding_revenue": round(outstanding_revenue, 2),
+            "avg_resolution_hours": avg_resolution_hours,
         },
+        "tech_closed": tech_closed,
+        "top_customers": top_customers,
     }
 
 

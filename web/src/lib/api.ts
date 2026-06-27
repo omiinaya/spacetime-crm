@@ -265,7 +265,11 @@ export interface ReportsData {
     open_tickets: number;
     total_sent: number;
     total_paid: number;
+    outstanding_revenue: number;
+    avg_resolution_hours: number;
   };
+  tech_closed: { user_name: string; closed_count: number }[];
+  top_customers: { customer_name: string; revenue: number }[];
 }
 
 // ── API client ──

@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { TrendingUp, Ticket, FileText, Calendar, DollarSign } from "lucide-react";
+import { TrendingUp, Ticket, FileText, Calendar, DollarSign, Clock, Users, Award } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
   open: "#f59e0b",
@@ -53,10 +53,10 @@ export default function ReportsPage() {
     return <p className="text-sm text-muted-foreground">Failed to load reports.</p>;
   }
 
-  const { revenue_by_month, ticket_by_status, invoice_by_status, appointments_by_month, totals } = data;
+  const { revenue_by_month, ticket_by_status, invoice_by_status, appointments_by_month, tech_closed, top_customers, totals } = data;
 
   return (
-    <>
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <TrendingUp className="h-6 w-6" />
@@ -68,13 +68,12 @@ export default function ReportsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Total Revenue", value: `$${totals.total_revenue.toFixed(2)}`, icon: DollarSign, color: "text-green-400" },
-          { label: "Total Tickets", value: totals.total_tickets, icon: Ticket, color: "text-blue-400" },
-          { label: "Open Tickets", value: totals.open_tickets, icon: Ticket, color: "text-amber-400" },
-          { label: "Invoices Sent", value: totals.total_sent, icon: FileText, color: "text-purple-400" },
-          { label: "Paid Invoices", value: totals.total_paid, icon: FileText, color: "text-green-400" },
+          { label: "Outstanding", value: `$${totals.outstanding_revenue.toFixed(2)}`, icon: Clock, color: "text-amber-400" },
+          { label: "Open Tickets", value: totals.open_tickets, icon: Ticket, color: "text-blue-400" },
+          { label: "Avg Resolution", value: totals.avg_resolution_hours ? `${totals.avg_resolution_hours}h` : "N/A", icon: Award, color: "text-purple-400" },
         ].map((card) => {
           const Icon = card.icon;
           return (
@@ -183,6 +182,57 @@ export default function ReportsPage() {
         </Card>
 
       </div>
-    </>
+
+      {/* Tech Productivity + Top Customers */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Tech Productivity */}
+        <Card>
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4 text-blue-400" /> Tech Productivity — Tickets Closed</CardTitle></CardHeader>
+          <CardContent>
+            {tech_closed.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No closed tickets yet</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(200, tech_closed.length * 50)}>
+                <BarChart data={tech_closed} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
+                  <YAxis type="category" dataKey="user_name" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" width={120} />
+                  <Tooltip
+                    contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px" }}
+                  />
+                  <Bar dataKey="closed_count" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Closed Tickets" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Customers */}
+        <Card>
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Award className="h-4 w-4 text-amber-400" /> Top Customers by Revenue</CardTitle></CardHeader>
+          <CardContent>
+            {top_customers.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No paid invoices yet</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {top_customers.map((c, i) => (
+                  <div key={i} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs font-medium text-muted-foreground w-5 shrink-0">#{i + 1}</span>
+                      <span className="text-sm truncate">{c.customer_name}</span>
+                    </div>
+                    <span className="text-sm font-medium text-green-400 shrink-0">
+                      ${c.revenue.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+    </div>
   );
 }
