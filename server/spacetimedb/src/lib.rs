@@ -9,6 +9,7 @@ mod appointment;
 mod product;
 mod purchase_order;
 mod inventory;
+mod tax_rate;
 mod user;
 
 pub use customer::*;
@@ -18,6 +19,7 @@ pub use appointment::*;
 pub use product::*;
 pub use purchase_order::*;
 pub use inventory::*;
+pub use tax_rate::*;
 pub use user::*;
 
 // ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──
@@ -124,11 +126,22 @@ pub fn add_invoice_line_item(ctx: &ReducerContext, invoice_id: String, item_type
     ctx.db.invoice_line_items().insert(InvoiceLineItem { id, invoice_id: invoice_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
     // Recalc invoice totals
     if let Some(inv) = ctx.db.invoices().id().find(&invoice_id) {
-        let items: Vec<InvoiceLineItem> = ctx.db.invoice_line_items().iter().filter(|i| i.invoice_id == invoice_id).collect();
+        let items: Vec<InvoiceLineItem> = ctx
+            .db
+            .invoice_line_items()
+            .iter()
+            .filter(|i| i.invoice_id == invoice_id)
+            .collect();
         let subtotal: f64 = items.iter().map(|i| i.total).sum();
-        let tax_amount = subtotal * inv.tax_rate;
+        let tax_amount = subtotal * inv.tax_rate / 100.0;
         let total = subtotal + tax_amount - inv.discount_amount;
-        ctx.db.invoices().id().update(Invoice { subtotal, tax_amount, total, updated_at: now_ms(ctx), ..inv });
+        ctx.db.invoices().id().update(Invoice {
+            subtotal,
+            tax_amount,
+            total,
+            updated_at: now_ms(ctx),
+            ..inv
+        });
     }
 }
 
@@ -141,6 +154,22 @@ pub fn delete_invoice_line_item(ctx: &ReducerContext, id: String) {
 pub fn delete_invoice(ctx: &ReducerContext, id: String) {
     ctx.db.invoices().id().delete(&id);
 }
+
+#[spacetimedb::reducer]
+pub fn set_invoice_tax_rate(ctx: &ReducerContext, id: String, tax_rate: f64) {
+    if let Some(inv) = ctx.db.invoices().id().find(&id) {
+        let tax_amount = inv.subtotal * tax_rate / 100.0;
+        let total = inv.subtotal + tax_amount - inv.discount_amount;
+        ctx.db.invoices().id().update(Invoice {
+            tax_rate,
+            tax_amount,
+            total,
+            updated_at: now_ms(ctx),
+            ..inv
+        });
+    }
+}
+
 
 // ─── Estimate reducers ──
 
@@ -173,7 +202,7 @@ pub fn add_estimate_line_item(ctx: &ReducerContext, estimate_id: String, item_ty
     if let Some(est) = ctx.db.estimates().id().find(&estimate_id) {
         let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id).collect();
         let subtotal: f64 = items.iter().map(|i| i.total).sum();
-        let tax_amount = subtotal * est.tax_rate;
+        let tax_amount = subtotal * est.tax_rate / 100.0;
         ctx.db.estimates().id().update(Estimate { subtotal, tax_amount, total: subtotal + tax_amount - est.discount_amount, updated_at: now_ms(ctx), ..est });
     }
 }

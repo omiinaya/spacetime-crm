@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api, Invoice, Customer, InvoiceLineItem } from "../lib/api";
+import { api, Invoice, Customer, InvoiceLineItem, TaxRate } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -27,12 +27,14 @@ export default function InvoicesPage() {
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
 
   const load = async () => {
     try {
-      const [iRes, cRes] = await Promise.all([api.invoices.list(filter), api.customers.list()]);
+      const [iRes, cRes, tRes] = await Promise.all([api.invoices.list(filter), api.customers.list(), api.taxRates.list()]);
       setInvoices(iRes.invoices);
       setCustomers(cRes.customers);
+      setTaxRates(tRes.tax_rates);
     } catch { toast.error("Failed to load invoices"); }
     finally { setLoading(false); }
   };
@@ -160,6 +162,32 @@ export default function InvoicesPage() {
                   <option value="overdue">Overdue</option>
                   <option value="cancelled">Cancelled</option>
                 </Select>
+
+                {/* Tax rate selector */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Tax Rate:</label>
+                  <Select
+                    value={String(selectedInv.tax_rate)}
+                    onChange={async (e) => {
+                      const rate = parseFloat(e.target.value);
+                      try {
+                        await api.taxRates.setInvoiceTaxRate(selectedInv.id, rate);
+                        toast.success("Tax rate updated");
+                        load();
+                        selectInvoice(selectedInv);
+                      } catch { toast.error("Failed to update tax rate"); }
+                    }}
+                    className="flex-1"
+                  >
+                    <option value="0">No tax</option>
+                    {taxRates.map((tr) => (
+                      <option key={tr.id} value={tr.rate}>{tr.name} ({tr.rate}%)</option>
+                    ))}
+                  </Select>
+                  <span className="text-sm font-medium tabular-nums">
+                    ${((selectedInv.subtotal * (selectedInv.tax_rate || 0) / 100)).toFixed(2)}
+                  </span>
+                </div>
 
                 {/* Line items */}
                 <div className="space-y-2">

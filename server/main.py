@@ -345,6 +345,12 @@ async def delete_invoice(invoice_id: str):
     return {"ok": True}
 
 
+@app.put("/api/invoices/{invoice_id}/tax-rate")
+async def set_invoice_tax_rate(invoice_id: str, body: dict):
+    await _call("set_invoice_tax_rate", [invoice_id, body.get("tax_rate", 0.0)])
+    return {"ok": True}
+
+
 @app.get("/api/invoices/{invoice_id}/pdf")
 async def invoice_pdf(invoice_id: str):
     invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
@@ -557,6 +563,41 @@ async def create_adjustment(product_id: str, body: dict):
         body.get("notes", ""),
         body.get("user_id", ""),
     ])
+    return {"ok": True}
+
+
+# ── TAX RATE endpoints ─────────────────────────────────────────
+
+@app.get("/api/tax-rates")
+async def list_tax_rates():
+    rows = await _sql("SELECT * FROM tax_rates")
+    return {"tax_rates": _sort(rows, "name", desc=False)}
+
+
+@app.post("/api/tax-rates")
+async def create_tax_rate(body: dict):
+    await _call("create_tax_rate", [
+        body.get("name", ""),
+        body.get("rate", 0.0),
+        body.get("is_default", False),
+    ])
+    return {"ok": True}
+
+
+@app.put("/api/tax-rates/{tax_id}")
+async def update_tax_rate(tax_id: str, body: dict):
+    await _call("update_tax_rate", [
+        tax_id,
+        body.get("name", ""),
+        body.get("rate", 0.0),
+        body.get("is_default", False),
+    ])
+    return {"ok": True}
+
+
+@app.delete("/api/tax-rates/{tax_id}")
+async def delete_tax_rate(tax_id: str):
+    await _call("delete_tax_rate", [tax_id])
     return {"ok": True}
 
 

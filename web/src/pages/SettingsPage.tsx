@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { api, User, MailSettings } from "../lib/api";
+import { api, User, MailSettings, TaxRate } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { Settings, Plus, User as UserIcon, Mail, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Settings, Plus, User as UserIcon, Mail, CheckCircle, XCircle, Loader2, Percent } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -17,6 +17,7 @@ export default function SettingsPage() {
       </div>
       <UserSettings />
       <MailSettingsSection />
+      <TaxRateSettings />
     </>
   );
 }
@@ -207,6 +208,122 @@ function MailSettingsSection() {
             <strong>Notification triggers:</strong> Ticket status changes, new invoices,
             appointment scheduling, payment receipts, and estimate approvals
             will automatically email the customer when mail is configured.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TaxRateSettings() {
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: "", rate: 0, is_default: false });
+
+  const load = async () => {
+    try {
+      const res = await api.taxRates.list();
+      setTaxRates(res.tax_rates);
+    } catch { /* silently fail */ }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async () => {
+    try {
+      await api.taxRates.create(form);
+      toast.success("Tax rate created");
+      setShowForm(false);
+      setForm({ name: "", rate: 0, is_default: false });
+      load();
+    } catch { toast.error("Failed to create tax rate"); }
+  };
+
+  const handleToggleDefault = async (tr: TaxRate) => {
+    try {
+      await api.taxRates.update(tr.id, { name: tr.name, rate: tr.rate, is_default: !tr.is_default });
+      toast.success("Default updated");
+      load();
+    } catch { toast.error("Failed to update"); }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.taxRates.delete(id);
+      toast.success("Tax rate deleted");
+      load();
+    } catch { toast.error("Failed to delete"); }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <Percent className="h-4 w-4" />
+          Tax Rates
+        </CardTitle>
+        <Button size="sm" onClick={() => setShowForm(true)}><Plus className="h-4 w-4 mr-1" />Add Tax Rate</Button>
+      </CardHeader>
+      <CardContent>
+        {showForm && (
+          <div className="flex gap-2 mb-4 p-3 rounded bg-muted/50">
+            <Input
+              placeholder="Name (e.g. Sales Tax)"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="Rate %"
+              className="w-28"
+              value={form.rate || ""}
+              onChange={(e) => setForm({ ...form, rate: parseFloat(e.target.value) || 0 })}
+            />
+            <label className="flex items-center gap-1.5 text-sm whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={form.is_default}
+                onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
+                className="rounded border-border"
+              />
+              Default
+            </label>
+            <Button size="sm" onClick={handleCreate}>Save</Button>
+            <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+          </div>
+        )}
+        {taxRates.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No tax rates configured.</p>
+        ) : (
+          <div className="space-y-2">
+            {taxRates.map((tr) => (
+              <div key={tr.id} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Percent className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">
+                      {tr.name}
+                      {tr.is_default && <Badge variant="success" className="ml-2 text-xs">Default</Badge>}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{tr.rate}%</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleToggleDefault(tr)}>
+                    {tr.is_default ? "Unset Default" : "Set Default"}
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(tr.id)}>Delete</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="border-t pt-3 mt-3">
+          <p className="text-xs text-muted-foreground">
+            Tax rates are applied to invoices and estimates. The default rate is pre-selected when creating new invoices.
           </p>
         </div>
       </CardContent>

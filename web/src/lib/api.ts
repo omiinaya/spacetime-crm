@@ -229,6 +229,15 @@ export interface MailSettings {
   password?: string;
 }
 
+export interface TaxRate {
+  id: string;
+  name: string;
+  rate: number;
+  is_default: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
 // ── API client ──
 
 export const api = {
@@ -480,5 +489,25 @@ export const api = {
           method: "POST",
         }),
     },
+  },
+  taxRates: {
+    list: () => apiFetch<{ tax_rates: TaxRate[] }>("/tax-rates"),
+    create: (data: { name: string; rate: number; is_default: boolean }) =>
+      apiFetch<{ ok: boolean }>("/tax-rates", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: { name: string; rate: number; is_default: boolean }) =>
+      apiFetch<{ ok: boolean }>(`/tax-rates/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/tax-rates/${id}`, { method: "DELETE" }),
+    setInvoiceTaxRate: (invoiceId: string, taxRate: number) =>
+      apiFetch<{ ok: boolean }>(`/invoices/${invoiceId}/tax-rate`, {
+        method: "PUT",
+        body: JSON.stringify({ tax_rate: taxRate }),
+      }),
   },
 };
