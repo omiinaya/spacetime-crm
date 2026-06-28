@@ -18,6 +18,7 @@ from mail import get_settings as get_mail_settings, update_settings as update_ma
 from mail import _notify_ticket_status_change, _notify_invoice_created, _notify_appointment_created, _notify_payment_received
 from mail import _customer_email as _mail_customer_email
 from stripe_payments import create_checkout_session, verify_webhook, is_configured as stripe_configured
+from webhooks import fire_event as _fire_webhook_event, ALL_EVENTS as WEBHOOK_EVENTS
 import csv
 import io
 import bcrypt
@@ -108,6 +109,27 @@ async def _log_audit(user: dict, action: str, entity: str, entity_id: str, detai
         logger.warning("Audit log failed: %s", e)
 
 
+# ── Webhook helper ─────────────────────────────────────────────
+
+
+async def _get_webhook_subscriptions() -> list[dict[str, Any]]:
+    """Fetch all webhook subscriptions from STDB."""
+    try:
+        return await _sql("SELECT * FROM webhook_subscriptions")
+    except Exception:
+        return []
+
+
+async def _fire_webhook(event_type: str, payload: dict[str, Any]) -> None:
+    """Fire a webhook event to all matching subscriptions. Never raises."""
+    try:
+        subs = await _get_webhook_subscriptions()
+        if subs:
+            await _fire_webhook_event(event_type, payload, subs)
+    except Exception as e:
+        logger.warning("Webhook fire failed (%s): %s", event_type, e)
+
+
 # ── Jinja2 template loader ────────────────────────────────────
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
@@ -188,6 +210,11 @@ async def create_customer(body: dict, user: dict = Depends(require_role("admin",
     ])
     details = f"{body.get('first_name','')} {body.get('last_name','')}".strip()
     await _log_audit(user, "create", "customer", details, f"email={body.get('email','')}")
+    asyncio.ensure_future(_fire_webhook("customer.created", {
+        "entity_type": "customer",
+        "name": details,
+        "email": body.get("email", ""),
+    }))
     return {"ok": True}
 
 
@@ -210,6 +237,10 @@ async def update_customer(customer_id: str, body: dict, user: dict = Depends(req
         body.get("tags", ""),
     ])
     await _log_audit(user, "update", "customer", customer_id)
+    asyncio.ensure_future(_fire_webhook("customer.updated", {
+        "entity_type": "customer",
+        "id": customer_id,
+    }))
     return {"ok": True}
 
 
@@ -217,6 +248,10 @@ async def update_customer(customer_id: str, body: dict, user: dict = Depends(req
 async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_customer", [customer_id])
     await _log_audit(user, "delete", "customer", customer_id)
+    asyncio.ensure_future(_fire_webhook("customer.deleted", {
+        "entity_type": "customer",
+        "id": customer_id,
+    }))
     return {"ok": True}
 
 
@@ -356,6 +391,11 @@ async def create_ticket(body: dict, user: dict = Depends(require_role("admin", "
         body.get("priority", "normal"),
     ])
     await _log_audit(user, "create", "ticket", body.get("title", ""), f"customer={body.get('customer_id','')}")
+    asyncio.ensure_future(_fire_webhook("ticket.created", {
+        "entity_type": "ticket",
+        "title": body.get("title", ""),
+        "customer_id": body.get("customer_id", ""),
+    }))
     return {"ok": True}
 
 
@@ -375,6 +415,13 @@ async def update_ticket_status(ticket_id: str, body: dict, user: dict = Depends(
                 link = f"http://localhost:{settings.server_port}/portal/"
                 _notify_ticket_status_change(email, t.get("ticket_number", 0), t.get("title", ""), status, link)
     asyncio.ensure_future(_notify())
+
+    # Fire webhook
+    asyncio.ensure_future(_fire_webhook("ticket.status_changed", {
+        "entity_type": "ticket",
+        "id": ticket_id,
+        "status": status,
+    }))
 
     return {"ok": True}
 
@@ -484,13 +531,24 @@ async def create_invoice(body: dict, user: dict = Depends(require_role("admin", 
     asyncio.ensure_future(_notify())
 
     await _log_audit(user, "create", "invoice", f"cust={body.get('customer_id','')}")
+    asyncio.ensure_future(_fire_webhook("invoice.created", {
+        "entity_type": "invoice",
+        "customer_id": body.get("customer_id", ""),
+        "ticket_id": body.get("ticket_id", ""),
+    }))
     return {"ok": True}
 
 
 @app.put("/api/invoices/{invoice_id}/status")
 async def update_invoice_status(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_invoice_status", [invoice_id, body.get("status", "")])
-    await _log_audit(user, "update_status", "invoice", invoice_id, f"status={body.get('status','')}")
+    new_status = body.get("status", "")
+    await _log_audit(user, "update_status", "invoice", invoice_id, f"status={new_status}")
+    asyncio.ensure_future(_fire_webhook("invoice.status_changed" if new_status != "paid" else "invoice.paid", {
+        "entity_type": "invoice",
+        "id": invoice_id,
+        "status": new_status,
+    }))
     return {"ok": True}
 
 
@@ -635,6 +693,12 @@ async def record_payment(body: dict, user: dict = Depends(require_role("admin", 
             asyncio.ensure_future(_notify())
 
     await _log_audit(user, "create", "payment", invoice_id, f"amount={body.get('amount',0)}")
+    asyncio.ensure_future(_fire_webhook("payment.created", {
+        "entity_type": "payment",
+        "invoice_id": invoice_id,
+        "customer_id": body.get("customer_id", ""),
+        "amount": body.get("amount", 0),
+    }))
     return {"ok": True}
 
 
@@ -675,6 +739,12 @@ async def create_appointment(body: dict, user: dict = Depends(require_role("admi
     asyncio.ensure_future(_notify())
 
     await _log_audit(user, "create", "appointment", body.get("title",""))
+    asyncio.ensure_future(_fire_webhook("appointment.created", {
+        "entity_type": "appointment",
+        "title": body.get("title", ""),
+        "customer_id": body.get("customer_id", ""),
+        "start_time": body.get("start_time", 0),
+    }))
     return {"ok": True}
 
 
@@ -815,6 +885,11 @@ async def create_estimate(body: dict, user: dict = Depends(require_role("admin",
         body.get("expires_at", 0),
     ])
     await _log_audit(user, "create", "estimate", f"cust={body.get('customer_id','')}")
+    asyncio.ensure_future(_fire_webhook("estimate.created", {
+        "entity_type": "estimate",
+        "customer_id": body.get("customer_id", ""),
+        "ticket_id": body.get("ticket_id", ""),
+    }))
     return {"ok": True}
 
 
@@ -871,6 +946,16 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
         raise HTTPException(500, "Failed to get generated invoice ID")
 
     await _log_audit(user, "convert", "estimate", estimate_id, f"invoice_id={inv_id}")
+    
+    # Fire webhook
+    asyncio.ensure_future(_fire_webhook("estimate.approved", {
+        "entity_type": "estimate",
+        "id": estimate_id,
+        "customer_id": est.get("customer_id", ""),
+        "total": est.get("total", 0),
+        "invoice_id": inv_id,
+    }))
+
     return {"ok": True, "invoice_id": inv_id}
 
 
@@ -1923,6 +2008,95 @@ async def mail_settings_save(body: dict, user: dict = Depends(require_role("admi
 async def mail_settings_test(user: dict = Depends(require_role("admin"))):
     """Test SMTP connection with current settings."""
     result = test_mail_connection()
+    return result
+
+
+# ── WEBHOOK SUBSCRIPTION endpoints ─────────────────────────
+
+
+@app.get("/api/webhook-subscriptions")
+async def list_webhook_subscriptions(user: dict = Depends(require_role("admin"))):
+    """List all webhook subscriptions."""
+    rows = await _get_webhook_subscriptions()
+    return {"subscriptions": rows}
+
+
+@app.post("/api/webhook-subscriptions")
+async def create_webhook_subscription(body: dict, user: dict = Depends(require_role("admin"))):
+    """Create a new webhook subscription."""
+    url = body.get("url", "").strip()
+    events = body.get("events", "").strip()
+    secret = body.get("secret", "").strip()
+
+    if not url:
+        raise HTTPException(400, "url is required")
+    if not events:
+        raise HTTPException(400, "events is required")
+
+    # Validate events
+    valid_events = set(WEBHOOK_EVENTS)
+    given_events = {e.strip() for e in events.split(",") if e.strip()}
+    invalid = given_events - valid_events
+    if invalid:
+        raise HTTPException(400, f"Invalid event(s): {', '.join(invalid)}")
+
+    await _call("create_webhook_subscription", [url, events, secret])
+    await _log_audit(user, "create", "webhook_subscription", url, events)
+    return {"ok": True}
+
+
+@app.put("/api/webhook-subscriptions/{sub_id}")
+async def update_webhook_subscription(sub_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+    """Update a webhook subscription."""
+    url = body.get("url", "").strip()
+    events = body.get("events", "").strip()
+    secret = body.get("secret", "").strip()
+    active = body.get("active", True)
+
+    if not url:
+        raise HTTPException(400, "url is required")
+
+    # Validate events if provided
+    if events:
+        valid_events = set(WEBHOOK_EVENTS)
+        given_events = {e.strip() for e in events.split(",") if e.strip()}
+        invalid = given_events - valid_events
+        if invalid:
+            raise HTTPException(400, f"Invalid event(s): {', '.join(invalid)}")
+
+    await _call("update_webhook_subscription", [sub_id, url, events, secret, active])
+    await _log_audit(user, "update", "webhook_subscription", url, events)
+    return {"ok": True}
+
+
+@app.delete("/api/webhook-subscriptions/{sub_id}")
+async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
+    """Delete a webhook subscription."""
+    await _call("delete_webhook_subscription", [sub_id])
+    await _log_audit(user, "delete", "webhook_subscription", sub_id)
+    return {"ok": True}
+
+
+@app.post("/api/webhook-subscriptions/{sub_id}/test")
+async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
+    """Send a test event to a specific subscription."""
+    rows = await _sql(f"SELECT * FROM webhook_subscriptions WHERE id = '{sub_id}'")
+    if not rows:
+        raise HTTPException(404, "Subscription not found")
+    sub = rows[0]
+    test_payload = {
+        "entity_type": "test",
+        "id": "test_001",
+        "message": "This is a test webhook event from SpacetimeCRM.",
+    }
+    from webhooks import _deliver
+    result = await _deliver(
+        url=sub["url"],
+        event_type="test.ping",
+        payload=test_payload,
+        secret=sub.get("secret", ""),
+        max_retries=1,
+    )
     return result
 
 

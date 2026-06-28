@@ -177,6 +177,7 @@ python3 scripts/restore.py backups/spacetime-crm-backup-<timestamp>.json.gz
 | **Audit Log** | `GET /api/audit-log` (admin only) |
 | **CSV Export** | `GET /api/export/{entity}` (customers, tickets, invoices, etc.) |
 | **CSV Import** | `POST /api/import/customers`, `POST /api/import/products` |
+| **Webhooks** | `GET/POST /api/webhook-subscriptions`, `PUT/DELETE /api/webhook-subscriptions/:id`, `POST /api/webhook-subscriptions/:id/test` |
 
 ## SpacetimeDB Tables
 

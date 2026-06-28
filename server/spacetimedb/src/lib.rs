@@ -15,6 +15,7 @@ mod audit;
 mod custom_field;
 mod customer_geolocation;
 mod checklist;
+mod webhook;
 
 pub use customer::*;
 pub use customer_geolocation::*;
@@ -29,6 +30,7 @@ pub use tax_rate::*;
 pub use user::*;
 pub use audit::*;
 pub use custom_field::*;
+pub use webhook::*;
 
 // ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──
 
