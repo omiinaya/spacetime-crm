@@ -34,7 +34,7 @@
 - [ ] Barcode scanning for products
 - [x] Repair checklist templates
 - [x] Custom fields per customer/ticket
-- [ ] Integration API (webhooks for external systems)
+- [x] Integration API (webhooks for external systems)
 
 ## Phase 4: Production
 - [x] Authentication (login/password for staff)
