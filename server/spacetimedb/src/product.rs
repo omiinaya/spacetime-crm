@@ -23,14 +23,14 @@ pub struct Product {
 }
 
 #[spacetimedb::reducer]
-pub fn create_product(ctx: &ReducerContext, name: String, sku: String, description: String, category: String, price: f64, cost: f64, quantity_on_hand: f64) {
+pub fn create_product(ctx: &ReducerContext, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, quantity_on_hand: f64) {
     let id = super::make_id("prod", ctx);
     let now = super::now_ms(ctx);
     ctx.db.products().insert(Product {
         id,
         name,
         sku,
-        barcode: String::new(),
+        barcode,
         description,
         category,
         price,
