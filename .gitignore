@@ -7,3 +7,4 @@ __pycache__/
 *.lock
 *.tsbuildinfo
 .spacetime-version
+*_settings.json

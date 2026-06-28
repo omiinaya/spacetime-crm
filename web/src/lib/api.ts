@@ -266,6 +266,13 @@ export interface TaxRate {
   updated_at: number;
 }
 
+export interface SmsSettings {
+  account_sid: string;
+  from_number: string;
+  configured: boolean;
+  auth_token?: string;
+}
+
 export interface ReportsData {
   revenue_by_month: { month: string; revenue: number }[];
   ticket_by_status: { status: string; count: number }[];
@@ -634,6 +641,18 @@ export const api = {
         }),
       test: () =>
         apiFetch<{ ok: boolean; message?: string; error?: string }>("/settings/mail/test", {
+          method: "POST",
+        }),
+    },
+    sms: {
+      get: () => apiFetch<{ configured: boolean; settings: SmsSettings | null }>("/settings/sms"),
+      save: (data: { account_sid?: string; auth_token?: string; from_number?: string }) =>
+        apiFetch<{ ok: boolean }>("/settings/sms", {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+      test: () =>
+        apiFetch<{ ok: boolean; message?: string; error?: string }>("/settings/sms/test", {
           method: "POST",
         }),
     },

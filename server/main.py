@@ -17,6 +17,19 @@ from config import settings
 from mail import get_settings as get_mail_settings, update_settings as update_mail_settings, test_connection as test_mail_connection
 from mail import _notify_ticket_status_change, _notify_invoice_created, _notify_appointment_created, _notify_payment_received
 from mail import _customer_email as _mail_customer_email
+from sms import (
+    get_settings as get_sms_settings,
+    update_settings as update_sms_settings,
+    test_connection as test_sms_connection,
+    is_configured as sms_configured,
+    send_sms as _sms_send,
+    _customer_phone as _sms_customer_phone,
+    _notify_ticket_status_change as _sms_ticket_status,
+    _notify_invoice_created as _sms_invoice_created,
+    _notify_payment_received as _sms_payment_received,
+    _notify_appointment_created as _sms_appointment_created,
+    _notify_estimate_approved as _sms_estimate_approved,
+)
 from stripe_payments import create_checkout_session, verify_webhook, is_configured as stripe_configured
 from webhooks import fire_event as _fire_webhook_event, ALL_EVENTS as WEBHOOK_EVENTS
 import csv
@@ -414,6 +427,9 @@ async def update_ticket_status(ticket_id: str, body: dict, user: dict = Depends(
             if email:
                 link = f"http://localhost:{settings.server_port}/portal/"
                 _notify_ticket_status_change(email, t.get("ticket_number", 0), t.get("title", ""), status, link)
+            phone = _sms_customer_phone(cust[0]) if cust else None
+            if phone:
+                _sms_ticket_status(phone, t.get("ticket_number", 0), t.get("title", ""), status)
     asyncio.ensure_future(_notify())
 
     # Fire webhook
@@ -528,6 +544,12 @@ async def create_invoice(body: dict, user: dict = Depends(require_role("admin", 
                 inv = invs[0]
                 link = f"http://localhost:{settings.server_port}/portal/"
                 _notify_invoice_created(email, inv.get("invoice_number", 0), float(inv.get("total", 0)), link)
+        phone = _sms_customer_phone(cust[0]) if cust else None
+        if phone:
+            invs = await _sql("SELECT * FROM invoices ORDER BY created_at DESC LIMIT 1")
+            if invs:
+                inv = invs[0]
+                _sms_invoice_created(phone, inv.get("invoice_number", 0), float(inv.get("total", 0)))
     asyncio.ensure_future(_notify())
 
     await _log_audit(user, "create", "invoice", f"cust={body.get('customer_id','')}")
@@ -690,6 +712,9 @@ async def record_payment(body: dict, user: dict = Depends(require_role("admin", 
                 if email:
                     link = f"http://localhost:{settings.server_port}/portal/"
                     _notify_payment_received(email, inv.get("invoice_number", 0), float(body.get("amount", 0)), link)
+                phone = _sms_customer_phone(cust[0]) if cust else None
+                if phone:
+                    _sms_payment_received(phone, inv.get("invoice_number", 0), float(body.get("amount", 0)))
             asyncio.ensure_future(_notify())
 
     await _log_audit(user, "create", "payment", invoice_id, f"amount={body.get('amount',0)}")
@@ -736,6 +761,9 @@ async def create_appointment(body: dict, user: dict = Depends(require_role("admi
         if email:
             link = f"http://localhost:{settings.server_port}/portal/"
             _notify_appointment_created(email, body.get("title", "Appointment"), body.get("start_time", 0), link)
+        phone = _sms_customer_phone(cust[0]) if cust else None
+        if phone:
+            _sms_appointment_created(phone, body.get("title", "Appointment"), body.get("start_time", 0))
     asyncio.ensure_future(_notify())
 
     await _log_audit(user, "create", "appointment", body.get("title",""))
@@ -955,6 +983,14 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
         "total": est.get("total", 0),
         "invoice_id": inv_id,
     }))
+
+    # Send SMS notification for approved estimate
+    async def _sms_notify():
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{est.get('customer_id', '')}'")
+        phone = _sms_customer_phone(cust[0]) if cust else None
+        if phone:
+            _sms_estimate_approved(phone, est.get("estimate_number", 0), float(est.get("total", 0)))
+    asyncio.ensure_future(_sms_notify())
 
     return {"ok": True, "invoice_id": inv_id}
 
@@ -2008,6 +2044,32 @@ async def mail_settings_save(body: dict, user: dict = Depends(require_role("admi
 async def mail_settings_test(user: dict = Depends(require_role("admin"))):
     """Test SMTP connection with current settings."""
     result = test_mail_connection()
+    return result
+
+
+# ── SMS SETTINGS endpoints ──────────────────────────────
+
+
+@app.get("/api/settings/sms")
+async def sms_settings_get(user: dict = Depends(require_role("admin"))):
+    """Get current SMS settings (without auth token)."""
+    settings = get_sms_settings()
+    if settings is None:
+        return {"configured": False, "settings": None}
+    return {"configured": True, "settings": settings}
+
+
+@app.post("/api/settings/sms")
+async def sms_settings_save(body: dict, user: dict = Depends(require_role("admin"))):
+    """Save SMS settings."""
+    update_sms_settings(body)
+    return {"ok": True}
+
+
+@app.post("/api/settings/sms/test")
+async def sms_settings_test(user: dict = Depends(require_role("admin"))):
+    """Test Twilio connection with current settings."""
+    result = await test_sms_connection()
     return result
 
 
