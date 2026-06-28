@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import asyncio
 import secrets
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
@@ -17,6 +17,7 @@ from config import settings
 from mail import get_settings as get_mail_settings, update_settings as update_mail_settings, test_connection as test_mail_connection
 from mail import _notify_ticket_status_change, _notify_invoice_created, _notify_appointment_created, _notify_payment_received
 from mail import _customer_email as _mail_customer_email
+from stripe_payments import create_checkout_session, verify_webhook, is_configured as stripe_configured
 import csv
 import io
 import bcrypt
@@ -1490,6 +1491,102 @@ async def portal_set_password(body: dict, customer: dict = Depends(get_current_c
         raise HTTPException(400, "Password must be at least 6 characters")
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
     await _call("set_customer_password", [customer["id"], hashed])
+    return {"ok": True}
+
+
+# ── STRIPE PAYMENT endpoints ─────────────────────────────
+
+
+@app.post("/api/portal/payments/create-checkout-session")
+async def portal_create_checkout_session(body: dict, customer: dict = Depends(get_current_customer)):
+    """Create a Stripe Checkout Session for an invoice payment."""
+    if not stripe_configured():
+        raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
+
+    invoice_id = body.get("invoice_id", "")
+    if not invoice_id:
+        raise HTTPException(400, "invoice_id is required")
+
+    # Verify invoice belongs to this customer
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    if not rows:
+        raise HTTPException(404, "Invoice not found")
+    inv = rows[0]
+
+    if inv.get("status") in ("paid", "cancelled"):
+        raise HTTPException(400, f"Invoice is already {inv['status']}")
+
+    total = float(inv.get("total", 0))
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    total_paid = sum(float(p.get("amount", 0)) for p in payments)
+    amount_due = round(total - total_paid, 2)
+
+    if amount_due <= 0:
+        raise HTTPException(400, "Invoice is already fully paid")
+
+    line_items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    items_desc = "; ".join(f"{li.get('description','')} x{li.get('quantity',1)}" for li in line_items)
+
+    result = await create_checkout_session(
+        invoice_id=invoice_id,
+        invoice_number=int(inv.get("invoice_number", 0)),
+        customer_id=customer["id"],
+        customer_email=customer.get("email", ""),
+        amount=amount_due,
+        line_items_desc=items_desc,
+    )
+
+    if not result:
+        raise HTTPException(502, "Failed to create Stripe checkout session")
+
+    return result
+
+
+@app.post("/api/webhooks/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events (checkout.session.completed)."""
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+
+    event = await verify_webhook(payload, sig_header)
+    if not event:
+        raise HTTPException(400, "Invalid webhook signature")
+
+    event_type = event.get("type", "")
+    logger.info("Stripe webhook received: %s", event_type)
+
+    if event_type == "checkout.session.completed":
+        session = event.get("data", {}).get("object", {})
+        metadata = session.get("metadata", {})
+        invoice_id = metadata.get("invoice_id", "")
+        customer_id = metadata.get("customer_id", "")
+        invoice_number = metadata.get("invoice_number", "")
+        amount_total = float(session.get("amount_total", 0)) / 100.0
+        payment_intent = session.get("payment_intent", "")
+        stripe_session_id = session.get("id", "")
+
+        if invoice_id and amount_total > 0:
+            await _call("record_payment", [
+                invoice_id,
+                customer_id,
+                amount_total,
+                "card",
+                f"stripe_{payment_intent}",
+                f"Stripe payment — session {stripe_session_id}",
+            ])
+            # Auto-update invoice status
+            payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+            inv_rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
+            if inv_rows:
+                inv = inv_rows[0]
+                total_paid = sum(float(p.get("amount", 0)) for p in payments)
+                total = float(inv.get("total", 0))
+                new_status = "paid" if total_paid >= total else "partial"
+                if new_status != inv.get("status"):
+                    await _call("update_invoice_status", [invoice_id, new_status])
+
+            logger.info("Stripe payment recorded for invoice %s: $%.2f", invoice_number, amount_total)
+
     return {"ok": True}
 
 
