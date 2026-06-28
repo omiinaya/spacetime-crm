@@ -212,6 +212,14 @@ export const portalApi = {
         method: "POST",
         body: JSON.stringify({ invoice_id: invoiceId, amount, method }),
       }),
+    createCheckoutSession: (invoiceId: string) =>
+      portalApiFetch<{ session_id: string; url: string }>(
+        "/portal/payments/create-checkout-session",
+        {
+          method: "POST",
+          body: JSON.stringify({ invoice_id: invoiceId }),
+        }
+      ),
   },
   appointments: {
     list: () => portalApiFetch<{ appointments: PortalAppointment[]; upcoming: PortalAppointment[]; past: PortalAppointment[] }>("/portal/appointments"),

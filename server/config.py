@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-to-a-random-secret"
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 24
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    app_url: str = "http://localhost:8723"
 
     @property
     def stdb_sql_url(self) -> str:

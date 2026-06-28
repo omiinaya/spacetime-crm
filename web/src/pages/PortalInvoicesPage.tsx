@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, CreditCard } from "lucide-react";
+import { ChevronDown, ChevronUp, CreditCard, ExternalLink } from "lucide-react";
 
 const statusColors: Record<string, "outline" | "default" | "success" | "destructive"> = {
   draft: "outline",
@@ -23,6 +23,7 @@ export default function PortalInvoicesPage() {
   const [detail, setDetail] = useState<PortalInvoice | null>(null);
   const [payAmount, setPayAmount] = useState(0);
   const [paying, setPaying] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -59,6 +60,19 @@ export default function PortalInvoicesPage() {
       setDetail(res.invoice);
     } catch { toast.error("Payment failed"); }
     finally { setPaying(false); }
+  };
+
+  const handleStripeCheckout = async (invoiceId: string) => {
+    setStripeLoading(invoiceId);
+    try {
+      const res = await portalApi.payments.createCheckoutSession(invoiceId);
+      // Redirect to Stripe Checkout
+      window.location.href = res.url;
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to initiate Stripe payment");
+    } finally {
+      setStripeLoading(null);
+    }
   };
 
   return (
@@ -131,16 +145,44 @@ export default function PortalInvoicesPage() {
 
                   {/* Make payment */}
                   {inv.status !== "paid" && inv.status !== "cancelled" && detail.balance_due != null && detail.balance_due > 0 && (
-                    <div className="bg-muted/30 rounded p-3">
-                      <p className="text-sm font-semibold mb-2 flex items-center gap-1">
-                        <CreditCard className="h-3.5 w-3.5" /> Make a Payment
+                    <div className="bg-muted/30 rounded p-3 space-y-3">
+                      <p className="text-sm font-semibold flex items-center gap-1">
+                        <CreditCard className="h-3.5 w-3.5" /> Pay with Card
                       </p>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleStripeCheckout(inv.id)}
+                        disabled={stripeLoading === inv.id}
+                      >
+                        {stripeLoading === inv.id ? (
+                          "Redirecting to Stripe..."
+                        ) : (
+                          <>
+                            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                            Pay ${detail.balance_due.toFixed(2)} with Card
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Secure payment powered by Stripe
+                      </p>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t border-muted" />
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                          <span className="bg-muted/30 px-2 text-muted-foreground">or pay manually</span>
+                        </div>
+                      </div>
+
                       <div className="flex gap-2 items-center">
                         <span className="text-sm">$</span>
                         <Input type="number" className="w-32" step="0.01" min={0.01}
                           value={payAmount} onChange={(e) => setPayAmount(Number(e.target.value))} />
-                        <Button size="sm" onClick={() => handlePayment(inv.id)} disabled={paying || payAmount <= 0}>
-                          {paying ? "Processing..." : "Pay Now"}
+                        <Button size="sm" variant="outline" onClick={() => handlePayment(inv.id)} disabled={paying || payAmount <= 0}>
+                          {paying ? "Processing..." : "Record Payment"}
                         </Button>
                       </div>
                     </div>
