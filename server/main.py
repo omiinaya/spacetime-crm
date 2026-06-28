@@ -219,6 +219,18 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
+@app.post("/api/customers/{customer_id}/portal-password")
+async def set_customer_portal_password(customer_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+    """Admin sets/resets a customer's portal password."""
+    pw = body.get("password", "")
+    if len(pw) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+    hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    await _call("set_customer_password", [customer_id, hashed])
+    await _log_audit(user, "update", "customer_portal_password", customer_id)
+    return {"ok": True}
+
+
 # ── CUSTOMER GEOLOCATION endpoints ─────────────────────────────
 
 @app.get("/api/customers/geolocations")
@@ -1486,7 +1498,7 @@ async def portal_set_password(body: dict, customer: dict = Depends(get_current_c
 
 ENTITY_TABLE_MAP = {
     "customers": "customer",
-    "tickets": "tickets",
+    "tickets": "ticket",
     "invoices": "invoices",
     "payments": "payment",
     "appointments": "appointment",
@@ -1494,7 +1506,7 @@ ENTITY_TABLE_MAP = {
     "estimates": "estimates",
     "purchase_orders": "purchase_order",
     "tax_rates": "tax_rate",
-    "users": "users",
+    "users": "user",
 }
 
 
