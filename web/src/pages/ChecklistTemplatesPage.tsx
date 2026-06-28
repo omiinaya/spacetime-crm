@@ -1,3 +1,95 @@
+import { useState, useEffect } from "react";
+import { api, ChecklistTemplate, ChecklistItem } from "../lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { ListChecks, Plus, Pencil, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+
+interface TemplateEditorProps {
+  template?: ChecklistTemplate;
+  onSave: (name: string, description: string, items: ChecklistItem[]) => Promise<void>;
+  onCancel: () => void;
+}
+
+function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
+  const [name, setName] = useState(template?.name ?? "");
+  const [desc, setDesc] = useState(template?.description ?? "");
+  const [items, setItems] = useState<ChecklistItem[]>(() => {
+    if (template) {
+      try { return JSON.parse(template.items); } catch { return []; }
+    }
+    return [{ label: "", sort_order: 0 }];
+  });
+
+  const addItem = () => setItems([...items, { label: "", sort_order: items.length }]);
+  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
+  const updateItem = (i: number, label: string) => {
+    const next = [...items];
+    next[i] = { ...next[i], label };
+    setItems(next);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    await onSave(name.trim(), desc.trim(), items.filter(i => i.label.trim()));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-sm font-medium mb-1 block">Template Name</label>
+        <input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          placeholder="e.g. Standard PC Repair"
+          required
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium mb-1 block">Description (optional)</label>
+        <input
+          value={desc}
+          onChange={e => setDesc(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+          placeholder="Brief description of this template"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium mb-1 block">Checklist Items</label>
+        <div className="space-y-2">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                value={item.label}
+                onChange={e => updateItem(i, e.target.value)}
+                className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder={`Item ${i + 1}`}
+              />
+              {items.length > 1 && (
+                <button type="button" onClick={() => removeItem(i)} className="text-muted-foreground hover:text-destructive p-1">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={addItem} className="text-xs text-primary hover:underline mt-2">
+          + Add item
+        </button>
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" size="sm" disabled={!name.trim()}>
+          {template ? "Update" : "Create"} Template
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function ChecklistTemplatesPage() {
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
   const [loading, setLoading] = useState(true);

@@ -4,15 +4,6 @@ type Theme = "dark" | "light";
 
 const STORAGE_KEY = "spacetime-crm-theme";
 
-function getSystemTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
-function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-}
-
 function getStoredTheme(): Theme | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -26,28 +17,27 @@ function storeTheme(theme: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    return getStoredTheme() || getSystemTheme();
-  });
+  const [theme, setThemeState] = useState<Theme>("dark");
 
   useEffect(() => {
-    applyTheme(theme);
+    const stored = getStoredTheme();
+    const t = stored || "dark";
+    setThemeState(t);
+    if (t === "light") {
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.remove("light");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (theme === "light") {
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.remove("light");
+    }
     storeTheme(theme);
   }, [theme]);
-
-  // Listen for system preference changes when no stored preference
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: light)");
-    const handler = () => {
-      if (!getStoredTheme()) {
-        const sys = getSystemTheme();
-        setThemeState(sys);
-        applyTheme(sys);
-      }
-    };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   const toggleTheme = useCallback(() => {
     setThemeState((prev) => (prev === "dark" ? "light" : "dark"));

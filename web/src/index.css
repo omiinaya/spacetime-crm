@@ -4,22 +4,8 @@
   --radius: 0.5rem;
 }
 
+/* ── Dark as default ── */
 :root {
-  --color-background: oklch(0.98 0.01 286);
-  --color-foreground: oklch(0.12 0.01 286);
-  --color-card: oklch(0.95 0.008 286);
-  --color-primary: oklch(0.55 0.19 262.881);
-  --color-secondary: oklch(0.85 0.02 286);
-  --color-muted: oklch(0.87 0.015 286);
-  --color-muted-foreground: oklch(0.45 0.015 286);
-  --color-border: oklch(0.82 0.01 286);
-  --color-sidebar: oklch(0.93 0.01 286);
-  --color-destructive: oklch(0.52 0.21 21.519);
-  --color-success: oklch(0.45 0.18 146.7);
-  --color-warning: oklch(0.6 0.19 75.0);
-}
-
-.dark {
   --color-background: oklch(0.09 0.004 285.823);
   --color-foreground: oklch(0.97 0 0);
   --color-card: oklch(0.13 0.005 285.885);
@@ -34,11 +20,33 @@
   --color-warning: oklch(0.68 0.19 75.0);
 }
 
+/* ── Light mode override ── */
+.light {
+  --color-background: oklch(0.98 0.01 286);
+  --color-foreground: oklch(0.12 0.01 286);
+  --color-card: oklch(0.95 0.008 286);
+  --color-primary: oklch(0.55 0.19 262.881);
+  --color-secondary: oklch(0.85 0.02 286);
+  --color-muted: oklch(0.87 0.015 286);
+  --color-muted-foreground: oklch(0.45 0.015 286);
+  --color-border: oklch(0.82 0.01 286);
+  --color-sidebar: oklch(0.93 0.01 286);
+  --color-destructive: oklch(0.52 0.21 21.519);
+  --color-success: oklch(0.45 0.18 146.7);
+  --color-warning: oklch(0.6 0.19 75.0);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
 body {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
 }
 
 ::-webkit-scrollbar { width: 6px; }
