@@ -344,6 +344,11 @@ export const api = {
       geocodeAll: () =>
         apiFetch<{ geocoded: number; results: any[] }>("/customers/geocode-all", { method: "POST" }),
     },
+    setPortalPassword: (id: string, password: string) =>
+      apiFetch<{ ok: boolean }>(`/customers/${id}/portal-password`, {
+        method: "POST",
+        body: JSON.stringify({ password }),
+      }),
   },
   checklist: {
     templates: {

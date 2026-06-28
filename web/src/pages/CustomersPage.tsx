@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import {
-  Users, Plus, Search, Mail, Phone, MapPin, Edit2, Trash2,
+  Users, Plus, Search, Mail, Phone, MapPin, Edit2, Trash2, Key,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +22,9 @@ export default function CustomersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Customer>>({ ...emptyForm });
+  const [pwCustomer, setPwCustomer] = useState<Customer | null>(null);
+  const [pwPassword, setPwPassword] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
 
   const load = async () => {
     try {
@@ -67,6 +70,29 @@ export default function CustomersPage() {
       load();
     } catch {
       toast.error("Failed to delete");
+    }
+  };
+
+  const openPwDialog = (c: Customer) => {
+    setPwCustomer(c);
+    setPwPassword("");
+  };
+
+  const handleSetPortalPassword = async () => {
+    if (!pwCustomer || pwPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setPwLoading(true);
+    try {
+      await api.customers.setPortalPassword(pwCustomer.id, pwPassword);
+      toast.success(`Portal password set for ${pwCustomer.first_name} ${pwCustomer.last_name}`);
+      setPwCustomer(null);
+      setPwPassword("");
+    } catch {
+      toast.error("Failed to set portal password");
+    } finally {
+      setPwLoading(false);
     }
   };
 
@@ -146,6 +172,9 @@ export default function CustomersPage() {
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
+                  <Button size="icon" variant="ghost" onClick={() => openPwDialog(c)} title="Set Portal Password">
+                    <Key className="h-3.5 w-3.5" />
+                  </Button>
                   <Button size="icon" variant="ghost" onClick={() => handleEdit(c)}>
                     <Edit2 className="h-3.5 w-3.5" />
                   </Button>
@@ -184,6 +213,37 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      {/* Portal Password Dialog */}
+      {pwCustomer && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setPwCustomer(null)}>
+          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <CardTitle>Set Portal Password</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Set password for {pwCustomer.first_name} {pwCustomer.last_name}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                type="password"
+                placeholder="Min. 6 characters"
+                value={pwPassword}
+                onChange={(e) => setPwPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSetPortalPassword()}
+              />
+              <div className="flex gap-2">
+                <Button onClick={handleSetPortalPassword} disabled={pwLoading}>
+                  {pwLoading ? "Setting..." : "Set Password"}
+                </Button>
+                <Button variant="outline" onClick={() => setPwCustomer(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </>
   );
 }
