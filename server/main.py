@@ -801,6 +801,7 @@ async def list_products(search: str = "", user: dict = Depends(require_role("adm
             r for r in rows
             if q in (r.get("name") or "").lower()
             or q in (r.get("sku") or "").lower()
+            or q in (r.get("barcode") or "").lower()
         ]
     return {"products": _sort(rows, "name", desc=False)}
 
@@ -810,6 +811,7 @@ async def create_product(body: dict, user: dict = Depends(require_role("admin", 
     await _call("create_product", [
         body.get("name", ""),
         body.get("sku", ""),
+        body.get("barcode", ""),
         body.get("description", ""),
         body.get("category", ""),
         body.get("price", 0),
@@ -1867,7 +1869,7 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
                     qoh, qc, min_stock, location, active, created_at, updated_at,
                 ])
             else:
-                await _call("create_product", [name, sku, desc, category, price, cost, qoh])
+                await _call("create_product", [name, sku, barcode, desc, category, price, cost, qoh])
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")

@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api, Product, InventoryAdjustment } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { Package, Plus, Search, ClipboardList } from "lucide-react";
+import { Package, Plus, Search, ClipboardList, Scan, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
 
-const emptyForm: Partial<Product> = { name: "", sku: "", description: "", category: "", price: 0, cost: 0, quantity_on_hand: 0 };
+const emptyForm: Partial<Product> = { name: "", sku: "", barcode: "", description: "", category: "", price: 0, cost: 0, quantity_on_hand: 0 };
 
 const reasonColors: Record<string, string> = {
   received: "text-green-400",
@@ -31,6 +31,60 @@ export default function ProductsPage() {
   const [adjustments, setAdjustments] = useState<InventoryAdjustment[]>([]);
   const [adjForm, setAdjForm] = useState({ quantity_change: 0, reason: "received", reference_id: "", notes: "" });
   const { user } = useAuth();
+  const [scanning, setScanning] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const barcodeDetectorSupported = typeof window !== "undefined" && "BarcodeDetector" in window;
+
+  const startScanner = async () => {
+    setScanning(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        scanLoop();
+      }
+    } catch {
+      toast.error("Camera access denied or unavailable");
+      setScanning(false);
+    }
+  };
+
+  const stopScanner = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setScanning(false);
+  };
+
+  const scanLoop = () => {
+    if (!scanning || !videoRef.current || !barcodeDetectorSupported) return;
+    const detector = new (window as any).BarcodeDetector({ formats: ["qr_code", "ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e", "codabar", "data_matrix"] });
+    detector.detect(videoRef.current).then((barcodes: any[]) => {
+      if (barcodes.length > 0) {
+        const code = barcodes[0].rawValue;
+        setForm({ ...form, barcode: code });
+        toast.success("Barcode detected: " + code);
+        stopScanner();
+        return;
+      }
+      if (scanning) requestAnimationFrame(scanLoop);
+    }).catch(() => {
+      if (scanning) requestAnimationFrame(scanLoop);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
 
   const load = async () => {
     try {
@@ -114,6 +168,40 @@ export default function ProductsPage() {
             <Input placeholder="Cost" type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: parseFloat(e.target.value) || 0 })} />
             <Input placeholder="Qty on hand" type="number" value={form.quantity_on_hand} onChange={(e) => setForm({ ...form, quantity_on_hand: parseFloat(e.target.value) || 0 })} />
             <div className="col-span-2 flex gap-2">
+              <div className="flex-1 flex gap-2">
+                <Input
+                  placeholder="Barcode"
+                  value={form.barcode}
+                  onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                  className="flex-1"
+                />
+                {barcodeDetectorSupported && (
+                  <Button type="button" variant="outline" size="icon" onClick={startScanner} title="Scan barcode">
+                    <Scan className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            {scanning && (
+              <div className="col-span-2 relative rounded-lg overflow-hidden bg-black">
+                <video ref={videoRef} className="w-full h-48 object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <ScanLine className="h-16 w-16 text-white/40" />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="absolute top-2 right-2 bg-black/50 text-white border-white/30"
+                  onClick={stopScanner}
+                >
+                  Cancel
+                </Button>
+                <p className="absolute bottom-2 left-2 text-xs text-white/60 bg-black/40 px-2 py-1 rounded">
+                  Point camera at barcode
+                </p>
+              </div>
+            )}
+            <div className="col-span-2 flex gap-2">
               <Button onClick={handleSubmit}>{editId ? "Update" : "Create"}</Button>
               <Button variant="outline" onClick={() => { setShowForm(false); setEditId(null); }}>Cancel</Button>
             </div>
@@ -177,6 +265,9 @@ export default function ProductsPage() {
                   </div>
                 </div>
                 <p className="text-sm">Price: <span className="font-medium">${selectedProduct.price.toFixed(2)}</span> &middot; Cost: <span className="font-medium">${selectedProduct.cost.toFixed(2)}</span></p>
+                {selectedProduct.barcode && (
+                  <p className="text-sm">Barcode: <span className="font-mono text-xs text-muted-foreground">{selectedProduct.barcode}</span></p>
+                )}
                 {selectedProduct.description && <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>}
               </CardContent>
             </Card>

@@ -29,9 +29,9 @@
 ## Phase 3: Advanced
 - [ ] Multi-tenant support
 - [x] SMS notifications (Twilio)
-- [ ] Payment gateway integration (Stripe, Square)
+- [x] Payment gateway integration (Stripe, Square)
 - [x] Reporting dashboard (revenue by period, tech productivity)
-- [ ] Barcode scanning for products
+- [x] Barcode scanning for products
 - [x] Repair checklist templates
 - [x] Custom fields per customer/ticket
 - [x] Integration API (webhooks for external systems)
