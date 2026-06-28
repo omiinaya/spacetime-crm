@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { api, User, MailSettings, TaxRate, WebhookSubscription, WEBHOOK_EVENTS } from "../lib/api";
+import { api, User, MailSettings, TaxRate, WebhookSubscription, WEBHOOK_EVENTS, SmsSettings } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { Settings, Plus, User as UserIcon, Mail, CheckCircle, XCircle, Loader2, Percent, Webhook, Globe, Trash2, Play, ToggleLeft, ToggleRight } from "lucide-react";
+import { Settings, Plus, User as UserIcon, Mail, CheckCircle, XCircle, Loader2, Percent, Webhook, Globe, Trash2, Play, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -17,6 +17,7 @@ export default function SettingsPage() {
       </div>
       <UserSettings />
       <MailSettingsSection />
+      <SmsSettingsSection />
       <TaxRateSettings />
       <WebhookSettings />
     </>
@@ -209,6 +210,109 @@ function MailSettingsSection() {
             <strong>Notification triggers:</strong> Ticket status changes, new invoices,
             appointment scheduling, payment receipts, and estimate approvals
             will automatically email the customer when mail is configured.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SmsSettingsSection() {
+  const [smsConfig, setSmsConfig] = useState({ account_sid: "", from_number: "", auth_token: "" });
+  const [configured, setConfigured] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message?: string; error?: string } | null>(null);
+
+  useEffect(() => {
+    api.settings.sms.get().then((res) => {
+      setConfigured(res.configured);
+      if (res.settings) {
+        setSmsConfig({ ...smsConfig, account_sid: res.settings.account_sid || "", from_number: res.settings.from_number || "" });
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    const data = { ...smsConfig };
+    if (!data.auth_token) delete data.auth_token;
+    try {
+      await api.settings.sms.save(data);
+      toast.success("SMS settings saved");
+      setConfigured(true);
+    } catch { toast.error("Failed to save SMS settings"); }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const data = { ...smsConfig };
+      if (!data.auth_token) delete data.auth_token;
+      await api.settings.sms.save(data);
+      const res = await api.settings.sms.test();
+      setTestResult(res);
+      if (res.ok) {
+        toast.success("Twilio connection successful");
+      } else {
+        toast.error("Twilio test failed");
+      }
+    } catch { toast.error("Test failed"); }
+    finally { setTesting(false); }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Phone className="h-4 w-4" />
+          SMS Notifications (Twilio)
+          {configured && <Badge variant="success" className="ml-2 text-xs">Configured</Badge>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Configure Twilio to send SMS notifications to customers when tickets are updated,
+          invoices are created, payments are received, appointments are scheduled, or estimates are approved.
+          Messages are sent to the customer's <strong>mobile</strong> phone number.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">Twilio Account SID</label>
+            <Input placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" value={smsConfig.account_sid}
+              onChange={(e) => setSmsConfig({ ...smsConfig, account_sid: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">Auth Token</label>
+            <Input type="password" placeholder="xxxxxxxxxxxxxxxxxxxxxxxx" value={smsConfig.auth_token}
+              onChange={(e) => setSmsConfig({ ...smsConfig, auth_token: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">From Number</label>
+            <Input placeholder="+15551234567" value={smsConfig.from_number}
+              onChange={(e) => setSmsConfig({ ...smsConfig, from_number: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button onClick={handleSave}>Save Settings</Button>
+          <Button variant="outline" onClick={handleTest} disabled={testing}>
+            {testing ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Testing...</> : "Test Connection"}
+          </Button>
+        </div>
+
+        {testResult && (
+          <div className={`flex items-center gap-2 text-sm p-3 rounded ${testResult.ok ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-500"}`}>
+            {testResult.ok ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+            <span>{testResult.ok ? testResult.message || "Connected!" : testResult.error || "Connection failed"}</span>
+          </div>
+        )}
+
+        <div className="border-t pt-3">
+          <p className="text-xs text-muted-foreground">
+            <strong>Notification triggers:</strong> Ticket status changes, new invoices,
+            payment receipts, appointment scheduling, and estimate approvals
+            will automatically send an SMS to the customer's mobile number when Twilio is configured.
           </p>
         </div>
       </CardContent>
