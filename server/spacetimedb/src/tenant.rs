@@ -8,6 +8,7 @@ pub struct Tenant {
     /// Display name (e.g. "Joe's Repair Shop")
     pub name: String,
     /// URL-safe slug (e.g. "joes-repair")
+    #[unique]
     pub slug: String,
     /// Optional logo URL
     pub logo_url: String,

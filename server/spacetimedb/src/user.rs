@@ -5,7 +5,9 @@ use spacetimedb::*;
 pub struct User {
     #[primary_key]
     pub id: String,
+    #[unique]
     pub name: String,
+    #[unique]
     pub email: String,
     pub role: String,
     pub pin: String,
