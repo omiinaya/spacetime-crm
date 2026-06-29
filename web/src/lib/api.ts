@@ -1,5 +1,27 @@
 const API_BASE = "/api";
 
+// ── Pagination types ──
+
+export interface PaginationParams {
+  offset?: number;
+  limit?: number;
+}
+
+export interface PaginatedResponse<T> {
+  total: number;
+  offset: number;
+  limit: number;
+  [key: string]: T[] | number;
+}
+
+function buildPaginationParams(offset?: number, limit?: number): string {
+  if (offset === undefined && limit === undefined) return "";
+  const p = new URLSearchParams();
+  if (offset !== undefined) p.set("offset", String(offset));
+  if (limit !== undefined) p.set("limit", String(limit));
+  return "?" + p.toString();
+}
+
 function getApiToken(): string | null {
   try {
     return localStorage.getItem("crm_token");
@@ -351,10 +373,16 @@ export const api = {
     get: () => apiFetch<DashboardStats>("/stats"),
   },
   customers: {
-    list: (search?: string) =>
-      apiFetch<{ customers: Customer[] }>(
-        `/customers${search ? `?search=${encodeURIComponent(search)}` : ""}`
-      ),
+    list: (search?: string, offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (search) p.set("search", search);
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ customers: Customer[]; total: number; offset: number; limit: number }>(
+        `/customers${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: Partial<Customer>) =>
       apiFetch<{ ok: boolean }>("/customers", {
         method: "POST",
@@ -385,8 +413,15 @@ export const api = {
   },
   checklist: {
     templates: {
-      list: () =>
-        apiFetch<{ templates: ChecklistTemplate[] }>("/checklist-templates"),
+      list: (offset?: number, limit?: number) => {
+        const p = new URLSearchParams();
+        if (offset !== undefined) p.set("offset", String(offset));
+        if (limit !== undefined) p.set("limit", String(limit));
+        const qs = p.toString();
+        return apiFetch<{ templates: ChecklistTemplate[]; total: number; offset: number; limit: number }>(
+          `/checklist-templates${qs ? `?${qs}` : ""}`
+        );
+      },
       create: (data: { name: string; description?: string; items?: any[] }) =>
         apiFetch<{ ok: boolean }>("/checklist-templates", {
           method: "POST",
@@ -418,10 +453,16 @@ export const api = {
     },
   },
   tickets: {
-    list: (status?: string) =>
-      apiFetch<{ tickets: Ticket[] }>(
-        `/tickets${status ? `?status=${status}` : ""}`
-      ),
+    list: (status?: string, offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (status) p.set("status", status);
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ tickets: Ticket[]; total: number; offset: number; limit: number }>(
+        `/tickets${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: Partial<Ticket>) =>
       apiFetch<{ ok: boolean }>("/tickets", {
         method: "POST",
@@ -463,10 +504,16 @@ export const api = {
     },
   },
   invoices: {
-    list: (status?: string) =>
-      apiFetch<{ invoices: Invoice[] }>(
-        `/invoices${status ? `?status=${status}` : ""}`
-      ),
+    list: (status?: string, offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (status) p.set("status", status);
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ invoices: Invoice[]; total: number; offset: number; limit: number }>(
+        `/invoices${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: Partial<Invoice>) =>
       apiFetch<{ ok: boolean }>("/invoices", {
         method: "POST",
@@ -497,10 +544,16 @@ export const api = {
       apiFetch<{ ok: boolean }>(`/invoices/${id}`, { method: "DELETE" }),
   },
   payments: {
-    list: (invoiceId?: string) =>
-      apiFetch<{ payments: Payment[] }>(
-        `/payments${invoiceId ? `?invoice_id=${invoiceId}` : ""}`
-      ),
+    list: (invoiceId?: string, offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (invoiceId) p.set("invoice_id", invoiceId);
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ payments: Payment[]; total: number; offset: number; limit: number }>(
+        `/payments${qs ? `?${qs}` : ""}`
+      );
+    },
     record: (data: Partial<Payment>) =>
       apiFetch<{ ok: boolean }>("/payments", {
         method: "POST",
@@ -510,7 +563,15 @@ export const api = {
       apiFetch<{ ok: boolean }>(`/payments/${id}`, { method: "DELETE" }),
   },
   appointments: {
-    list: () => apiFetch<{ appointments: Appointment[] }>("/appointments"),
+    list: (offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ appointments: Appointment[]; total: number; offset: number; limit: number }>(
+        `/appointments${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: Partial<Appointment>) =>
       apiFetch<{ ok: boolean }>("/appointments", {
         method: "POST",
@@ -525,10 +586,16 @@ export const api = {
       apiFetch<{ ok: boolean }>(`/appointments/${id}`, { method: "DELETE" }),
   },
   products: {
-    list: (search?: string) =>
-      apiFetch<{ products: Product[] }>(
-        `/products${search ? `?search=${encodeURIComponent(search)}` : ""}`
-      ),
+    list: (search?: string, offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (search) p.set("search", search);
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ products: Product[]; total: number; offset: number; limit: number }>(
+        `/products${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: Partial<Product>) =>
       apiFetch<{ ok: boolean }>("/products", {
         method: "POST",
@@ -554,10 +621,16 @@ export const api = {
     },
   },
   estimates: {
-    list: (status?: string) =>
-      apiFetch<{ estimates: Estimate[] }>(
-        `/estimates${status ? `?status=${status}` : ""}`
-      ),
+    list: (status?: string, offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (status) p.set("status", status);
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ estimates: Estimate[]; total: number; offset: number; limit: number }>(
+        `/estimates${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: Partial<Estimate>) =>
       apiFetch<{ ok: boolean }>("/estimates", {
         method: "POST",
@@ -585,8 +658,15 @@ export const api = {
       apiFetch<{ ok: boolean }>(`/estimates/${id}`, { method: "DELETE" }),
   },
   purchaseOrders: {
-    list: () =>
-      apiFetch<{ purchase_orders: PurchaseOrder[] }>("/purchase-orders"),
+    list: (offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ purchase_orders: PurchaseOrder[]; total: number; offset: number; limit: number }>(
+        `/purchase-orders${qs ? `?${qs}` : ""}`
+      );
+    },
     get: (id: string) =>
       apiFetch<{ purchase_order: PurchaseOrder }>(`/purchase-orders/${id}`),
     create: (data: Partial<PurchaseOrder>) =>
@@ -624,7 +704,15 @@ export const api = {
       }),
   },
   users: {
-    list: () => apiFetch<{ users: User[] }>("/users"),
+    list: (offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ users: User[]; total: number; offset: number; limit: number }>(
+        `/users${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: Partial<User>) =>
       apiFetch<{ ok: boolean }>("/users", {
         method: "POST",
@@ -658,7 +746,15 @@ export const api = {
     },
   },
   taxRates: {
-    list: () => apiFetch<{ tax_rates: TaxRate[] }>("/tax-rates"),
+    list: (offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ tax_rates: TaxRate[]; total: number; offset: number; limit: number }>(
+        `/tax-rates${qs ? `?${qs}` : ""}`
+      );
+    },
     create: (data: { name: string; rate: number; is_default: boolean }) =>
       apiFetch<{ ok: boolean }>("/tax-rates", {
         method: "POST",

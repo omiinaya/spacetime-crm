@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { api, Estimate, Customer, EstimateLineItem } from "../lib/api";
+import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
+import Pagination from "../components/Pagination";
 import { FileCheck, Plus, Trash2, FileText } from "lucide-react";
+
+const PAGE_SIZE = 25;
 import { toast } from "sonner";
 
 const statusColors: Record<string, "default" | "warning" | "success" | "destructive" | "outline"> = {
@@ -16,6 +20,7 @@ const statusColors: Record<string, "default" | "warning" | "success" | "destruct
 };
 
 export default function EstimatesPage() {
+  const pag = usePagination(PAGE_SIZE);
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,16 +31,17 @@ export default function EstimatesPage() {
   const [lineItems, setLineItems] = useState<EstimateLineItem[]>([]);
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
 
-  const load = async () => {
+  const load = async (offset: number) => {
     try {
-      const [eRes, cRes] = await Promise.all([api.estimates.list(filter), api.customers.list()]);
+      const [eRes, cRes] = await Promise.all([api.estimates.list(filter, offset, PAGE_SIZE), api.customers.list()]);
       setEstimates(eRes.estimates);
       setCustomers(cRes.customers);
+      pag.setTotal(eRes.total);
     } catch { toast.error("Failed to load estimates"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(pag.offset); }, [filter, pag.offset]);
 
   const handleCreate = async () => {
     try {
@@ -46,7 +52,7 @@ export default function EstimatesPage() {
       toast.success("Estimate created");
       setShowForm(false);
       setForm({ customer_id: "", ticket_id: "", notes: "", expires_at: "" });
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to create estimate"); }
   };
 
@@ -66,7 +72,7 @@ export default function EstimatesPage() {
       const res = await api.estimates.lineItems.list(selectedEst.id);
       setLineItems(res.line_items);
       setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to add item"); }
   };
 
@@ -82,7 +88,7 @@ export default function EstimatesPage() {
 
       <div className="flex gap-2 flex-wrap">
         {["", "draft", "sent", "approved", "declined"].map((s) => (
-          <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => setFilter(s)}>{s || "All"}</Button>
+          <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => { setFilter(s); pag.reset(); }}>{s || "All"}</Button>
         ))}
       </div>
 
@@ -134,7 +140,7 @@ export default function EstimatesPage() {
                       await api.estimates.convert(selectedEst.id);
                       toast.success("Converted to invoice!");
                       setSelectedEst(null);
-                      load();
+                      load(pag.offset);
                     } catch { toast.error("Failed to convert"); }
                   }}>
                     <FileText className="h-3.5 w-3.5 mr-1" /> Convert to Invoice
@@ -171,6 +177,17 @@ export default function EstimatesPage() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={pag.page}
+        totalPages={pag.totalPages}
+        total={pag.total}
+        hasPrev={pag.hasPrev}
+        hasNext={pag.hasNext}
+        onPrev={pag.prevPage}
+        onNext={pag.nextPage}
+        onGoToPage={pag.goToPage}
+      />
     </>
   );
 }

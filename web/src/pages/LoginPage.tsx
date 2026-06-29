@@ -75,6 +75,12 @@ export default function LoginPage() {
             {busy ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <div className="mt-4 text-center">
+          <a href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Forgot password?
+          </a>
+        </div>
       </div>
     </div>
   );

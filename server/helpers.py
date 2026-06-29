@@ -9,12 +9,12 @@ import logging
 from typing import Any
 from pathlib import Path
 import asyncio
-import httpx
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from jinja2 import Environment, FileSystemLoader
 
+from client import get_http_client
 from config import settings
 from webhooks import fire_event as _fire_webhook_event, ALL_EVENTS as WEBHOOK_EVENTS
 
@@ -42,12 +42,12 @@ STATUS_CSS = {
 
 
 async def _sql(query: str) -> list[dict[str, Any]]:
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            settings.stdb_sql_url,
-            content=query,
-            headers={"Content-Type": "application/sql"},
-        )
+    client = get_http_client()
+    resp = await client.post(
+        settings.stdb_sql_url,
+        content=query,
+        headers={"Content-Type": "application/sql"},
+    )
     if resp.status_code >= 400:
         logger.error("STDB SQL error: %s | query: %.200s", resp.text, query)
         raise HTTPException(502, f"SQL query failed: {resp.text[:200]}")
@@ -129,11 +129,11 @@ async def _paginated(
 
 
 async def _call(reducer: str, args: list[Any] | None = None) -> Any:
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{settings.stdb_call_url}/{reducer}",
-            json=args or [],
-        )
+    client = get_http_client()
+    resp = await client.post(
+        f"{settings.stdb_call_url}/{reducer}",
+        json=args or [],
+    )
     if resp.status_code >= 400:
         logger.error("STDB call error (%s): %s", reducer, resp.text[:200])
         raise HTTPException(502, f"Reducer call failed: {resp.text[:200]}")

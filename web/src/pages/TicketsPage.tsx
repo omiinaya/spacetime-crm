@@ -8,6 +8,10 @@ import { Badge } from "../components/ui/badge";
 import { Ticket as TicketIcon, Plus, MessageSquare, Timer, StopCircle, Play, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
+import { usePagination } from "../lib/usePagination";
+import Pagination from "../components/Pagination";
+
+const PAGE_SIZE = 25;
 
 const statusColors: Record<string, "default" | "secondary" | "warning" | "success" | "outline"> = {
   new: "default",
@@ -26,6 +30,7 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function TicketsPage() {
+  const pag = usePagination(PAGE_SIZE);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,14 +47,15 @@ export default function TicketsPage() {
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const { user } = useAuth();
 
-  const load = async () => {
+  const load = async (offset: number) => {
     try {
       const [tRes, cRes] = await Promise.all([
-        api.tickets.list(filter),
+        api.tickets.list(filter, offset, PAGE_SIZE),
         api.customers.list(),
       ]);
       setTickets(tRes.tickets);
       setCustomers(cRes.customers);
+      pag.setTotal(tRes.total);
     } catch {
       toast.error("Failed to load tickets");
     } finally {
@@ -57,7 +63,12 @@ export default function TicketsPage() {
     }
   };
 
-  useEffect(() => { load(); }, [filter]);
+  const handleFilter = (val: string) => {
+    setFilter(val);
+    pag.reset();
+  };
+
+  useEffect(() => { load(pag.offset); }, [filter, pag.offset]);
 
   const loadTimers = async (ticketId: string) => {
     try {
@@ -120,7 +131,7 @@ export default function TicketsPage() {
       toast.success("Ticket created");
       setShowForm(false);
       setForm({ customer_id: "", title: "", description: "", device_type: "", device_model: "", device_serial: "", priority: "medium" });
-      load();
+      load(pag.offset);
     } catch {
       toast.error("Failed to create ticket");
     }
@@ -128,7 +139,7 @@ export default function TicketsPage() {
 
   const handleStatusChange = async (id: string, status: string) => {
     await api.tickets.updateStatus(id, status);
-    load();
+    load(pag.offset);
   };
 
   const viewTicket = async (t: Ticket) => {
@@ -212,7 +223,7 @@ export default function TicketsPage() {
 
       <div className="flex gap-2">
         {["", "new", "assigned", "in_progress", "waiting_on_customer", "resolved", "closed"].map((s) => (
-          <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => setFilter(s)}>
+          <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => handleFilter(s)}>
             {s || "All"}
           </Button>
         ))}
@@ -418,6 +429,17 @@ export default function TicketsPage() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={pag.page}
+        totalPages={pag.totalPages}
+        total={pag.total}
+        hasPrev={pag.hasPrev}
+        hasNext={pag.hasNext}
+        onPrev={pag.prevPage}
+        onNext={pag.nextPage}
+        onGoToPage={pag.goToPage}
+      />
     </>
   );
 }

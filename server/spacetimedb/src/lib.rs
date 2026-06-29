@@ -17,6 +17,7 @@ mod customer_geolocation;
 mod checklist;
 mod webhook;
 mod tenant;
+mod customer_test;
 
 pub use customer::*;
 pub use customer_geolocation::*;

@@ -8,3 +8,8 @@ __pycache__/
 *.tsbuildinfo
 .spacetime-version
 *_settings.json
+
+# Playwright E2E test artifacts
+web/playwright-report/
+web/test-results/
+web/.auth/
