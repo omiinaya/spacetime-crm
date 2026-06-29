@@ -139,6 +139,48 @@ async def _sql_t(query: str, tenant_id: str) -> list[dict[str, Any]]:
 
 
 
+
+
+async def _paginated(
+    tenant_id: str,
+    table: str,
+    offset: int = 0,
+    limit: int = 50,
+    order_by: str = "created_at",
+    order_desc: bool = True,
+    where_extra: str = "",
+    max_fetch: int = 1000,
+) -> tuple[list[dict], int]:
+    """Paginated list with tenant isolation.
+
+    STDB SQL is limited (no ORDER BY, no OFFSET) so we fetch up to
+    `max_fetch` records, sort in-memory, and apply offset/limit.
+
+    Returns (rows_slice, total_count).
+    """
+    conditions = [f"tenant_id = '{tenant_id}'"] if tenant_id else []
+    if where_extra:
+        conditions.append(where_extra)
+    where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+
+    # Count
+    count_result = await _sql(f"SELECT count(*) AS cnt FROM {table}{where_clause}")
+    total = count_result[0]["cnt"] if count_result else 0
+
+    # Fetch (capped)
+    fetch_n = min(max_fetch, total) if max_fetch else total
+    query = f"SELECT * FROM {table}{where_clause}"
+    if fetch_n > 0:
+        query += f" LIMIT {fetch_n}"
+    rows = await _sql(query)
+
+    # Sort in-memory
+    rows.sort(key=lambda r: (r.get(order_by) or ""), reverse=order_desc)
+
+    # Apply offset/limit
+    return rows[offset:offset + limit], total
+
+
 async def _call(reducer: str, args: list[Any] | None = None) -> Any:
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
@@ -258,10 +300,16 @@ def require_role(*roles: str):
 # ── CUSTOMER endpoints ────────────────────────────────────────
 
 @app.get("/api/customers")
-async def list_customers(search: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM customer", user["tenant_id"])
+async def list_customers(search: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List customers with pagination and optional search."""
+    rows, total = await _paginated(
+        user["tenant_id"], "customer",
+        offset=offset, limit=limit,
+        order_by="created_at", order_desc=True,
+    )
     q = search.lower().strip()
     if q:
+        # Filter in-memory (STDB SQL has no ILIKE)
         rows = [
             r for r in rows
             if q in (r.get("first_name") or "").lower()
@@ -269,7 +317,9 @@ async def list_customers(search: str = "", user: dict = Depends(require_role("ad
             or q in (r.get("email") or "").lower()
             or q in (r.get("phone") or "")
         ]
-    return {"customers": _sort(rows, "created_at")}
+        total = len(rows)
+        rows = rows[offset:offset + limit]
+    return {"customers": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/customers")
@@ -445,11 +495,16 @@ async def geocode_all_customers(user: dict = Depends(require_role("admin"))):
 # ── TICKET endpoints ──────────────────────────────────────────
 
 @app.get("/api/tickets")
-async def list_tickets(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
-    if status:
-        rows = [r for r in rows if r.get("status") == status]
-    return {"tickets": _sort(rows, "created_at")}
+async def list_tickets(status: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List tickets with pagination and optional status filter."""
+    where = f"status = '{status}'" if status else ""
+    rows, total = await _paginated(
+        user["tenant_id"], "ticket",
+        offset=offset, limit=limit,
+        where_extra=where,
+        order_by="created_at", order_desc=True,
+    )
+    return {"tickets": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/tickets")
@@ -573,11 +628,16 @@ async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("
 # ── INVOICE endpoints ─────────────────────────────────────────
 
 @app.get("/api/invoices")
-async def list_invoices(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
-    if status:
-        rows = [r for r in rows if r.get("status") == status]
-    return {"invoices": _sort(rows, "created_at")}
+async def list_invoices(status: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List invoices with pagination and optional status filter."""
+    where = f"status = '{status}'" if status else ""
+    rows, total = await _paginated(
+        user["tenant_id"], "invoices",
+        offset=offset, limit=limit,
+        where_extra=where,
+        order_by="created_at", order_desc=True,
+    )
+    return {"invoices": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/invoices")
@@ -732,11 +792,16 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
 # ── PAYMENT endpoints ─────────────────────────────────────────
 
 @app.get("/api/payments")
-async def list_payments(invoice_id: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM payment", user["tenant_id"])
-    if invoice_id:
-        rows = [r for r in rows if r.get("invoice_id") == invoice_id]
-    return {"payments": _sort(rows, "created_at")}
+async def list_payments(invoice_id: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List payments with pagination and optional invoice_id filter."""
+    where = f"invoice_id = '{invoice_id}'" if invoice_id else ""
+    rows, total = await _paginated(
+        user["tenant_id"], "payment",
+        offset=offset, limit=limit,
+        where_extra=where,
+        order_by="created_at", order_desc=True,
+    )
+    return {"payments": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/payments")
@@ -795,9 +860,14 @@ async def delete_payment(payment_id: str, user: dict = Depends(require_role("adm
 # ── APPOINTMENT endpoints ─────────────────────────────────────
 
 @app.get("/api/appointments")
-async def list_appointments(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM appointment", user["tenant_id"])
-    return {"appointments": _sort(rows, "start_time", desc=False)}
+async def list_appointments(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List appointments with pagination."""
+    rows, total = await _paginated(
+        user["tenant_id"], "appointment",
+        offset=offset, limit=limit,
+        order_by="start_time", order_desc=False,
+    )
+    return {"appointments": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/appointments")
@@ -852,16 +922,23 @@ async def delete_appointment(appt_id: str, user: dict = Depends(require_role("ad
 # ── PRODUCT endpoints ─────────────────────────────────────────
 
 @app.get("/api/products")
-async def list_products(search: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM products", user["tenant_id"])
+async def list_products(search: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
+    """List products with pagination and optional search."""
+    rows, total = await _paginated(
+        user["tenant_id"], "products",
+        offset=offset, limit=limit,
+        order_by="name", order_desc=False,
+    )
     q = search.lower().strip()
     if q:
         rows = [
             r for r in rows
             if q in (r.get("name") or "").lower()
             or q in (r.get("sku") or "").lower()
-            or q in (r.get("barcode") or "").lower()
         ]
+        total = len(rows)
+        rows = rows[offset:offset + limit]
+    return {"products": rows, "total": total, "offset": offset, "limit": limit}
     return {"products": _sort(rows, "name", desc=False)}
 
 
@@ -922,9 +999,14 @@ async def create_adjustment(product_id: str, body: InventoryAdjustmentCreate, us
 # ── TAX RATE endpoints ─────────────────────────────────────────
 
 @app.get("/api/tax-rates")
-async def list_tax_rates(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM tax_rates", user["tenant_id"])
-    return {"tax_rates": _sort(rows, "name", desc=False)}
+async def list_tax_rates(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List tax rates with pagination."""
+    rows, total = await _paginated(
+        user["tenant_id"], "tax_rates",
+        offset=offset, limit=limit,
+        order_by="name", order_desc=False,
+    )
+    return {"tax_rates": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/tax-rates")
@@ -961,11 +1043,16 @@ async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"
 # ── ESTIMATE endpoints ────────────────────────────────────────
 
 @app.get("/api/estimates")
-async def list_estimates(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM estimates", user["tenant_id"])
-    if status:
-        rows = [r for r in rows if r.get("status") == status]
-    return {"estimates": _sort(rows, "created_at")}
+async def list_estimates(status: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List estimates with pagination and optional status filter."""
+    where = f"status = '{status}'" if status else ""
+    rows, total = await _paginated(
+        user["tenant_id"], "estimates",
+        offset=offset, limit=limit,
+        where_extra=where,
+        order_by="created_at", order_desc=True,
+    )
+    return {"estimates": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/estimates")
@@ -1063,9 +1150,14 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
 # ── PURCHASE ORDER endpoints ──────────────────────────────────
 
 @app.get("/api/purchase-orders")
-async def list_purchase_orders(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql_t("SELECT * FROM purchase_order", user["tenant_id"])
-    return {"purchase_orders": _sort(rows, "created_at")}
+async def list_purchase_orders(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
+    """List purchase orders with pagination."""
+    rows, total = await _paginated(
+        user["tenant_id"], "purchase_order",
+        offset=offset, limit=limit,
+        order_by="created_at", order_desc=True,
+    )
+    return {"purchase_orders": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/purchase-orders")
@@ -1298,21 +1390,25 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
 
 @app.get("/api/audit-log")
 async def get_audit_log(
-    limit: int = 100,
+    offset: int = 0,
+    limit: int = 50,
     entity: str = "",
     action: str = "",
     user: dict = Depends(require_role("admin")),
 ):
-    """Get audit log entries. Admin only. Returns most recent first."""
-    filters = []
+    """Get audit log entries with pagination. Admin only."""
+    where = ""
     if entity:
-        filters.append(f"entity = '{entity}'")
+        where += f"entity = '{entity}'"
     if action:
-        filters.append(f"action = '{action}'")
-    where = " WHERE " + " AND ".join(filters) if filters else ""
-    rows = await _sql(f"SELECT * FROM audit_log{where}")
-    rows = _sort(rows, "created_at")
-    return {"entries": rows[:limit]}
+        where += (" AND " if where else "") + f"action = '{action}'"
+    rows, total = await _paginated(
+        "", "audit_log",
+        offset=offset, limit=limit,
+        where_extra=where,
+        order_by="created_at", order_desc=True,
+    )
+    return {"entries": rows, "total": total, "offset": offset, "limit": limit}
 
 
 # ── AUTH middleware ────────────────────────────────────────────
@@ -1441,11 +1537,11 @@ def _safe_id(id_str: str) -> str:
 
 
 @app.get("/api/tenants")
-async def list_tenants(user: dict = Depends(require_role("admin"))):
-    """List all tenants."""
+async def list_tenants(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin"))):
+    """List all tenants with pagination."""
     try:
-        rows = await _sql("SELECT * FROM tenants")
-        return {"tenants": rows}
+        rows, total = await _paginated("", "tenants", offset=offset, limit=limit, order_by="name")
+        return {"tenants": rows, "total": total, "offset": offset, "limit": limit}
     except Exception as e:
         logger.warning("Failed to list tenants: %s", e)
         return {"tenants": []}
@@ -1614,9 +1710,14 @@ async def set_password(body: SetPasswordRequest, user: dict = Depends(get_curren
 # ── USER endpoints ────────────────────────────────────────────
 
 @app.get("/api/users")
-async def list_users(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM user")
-    return {"users": _sort(rows, "name", desc=False)}
+async def list_users(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List users with pagination."""
+    rows, total = await _paginated(
+        "", "user",
+        offset=offset, limit=limit,
+        order_by="name", order_desc=False,
+    )
+    return {"users": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/users")
@@ -2140,9 +2241,14 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
 
 
 @app.get("/api/custom-field-definitions")
-async def list_custom_field_definitions(entity_type: str | None = None, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    """List custom field definitions, optionally filtered by entity_type."""
-    rows = await _sql_t("SELECT * FROM custom_field_definitions", user["tenant_id"])
+async def list_custom_field_definitions(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List custom field definitions with pagination."""
+    rows, total = await _paginated(
+        user["tenant_id"], "custom_field_definitions",
+        offset=offset, limit=limit,
+        order_by="name", order_desc=False,
+    )
+    return {"custom_fields": rows, "total": total, "offset": offset, "limit": limit}
     if entity_type:
         rows = [r for r in rows if r.get("entity_type") == entity_type]
     return {"definitions": rows}
@@ -2211,10 +2317,14 @@ async def set_custom_field_values(entity_id: str, body: CustomFieldValuesUpdate,
 # ── CHECKLIST TEMPLATE endpoints ─────────────────────────────
 
 @app.get("/api/checklist-templates")
-async def list_checklist_templates(user: dict = Depends(require_role("admin", "tech"))):
-    """List all checklist templates."""
-    rows = await _sql_t("SELECT * FROM checklist_templates", user["tenant_id"])
-    return {"templates": _sort(rows, "name")}
+async def list_checklist_templates(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
+    """List all checklist templates with pagination."""
+    rows, total = await _paginated(
+        user["tenant_id"], "checklist_templates",
+        offset=offset, limit=limit,
+        order_by="name", order_desc=False,
+    )
+    return {"templates": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/checklist-templates")
@@ -2356,10 +2466,12 @@ async def sms_settings_test(user: dict = Depends(require_role("admin"))):
 
 
 @app.get("/api/webhook-subscriptions")
-async def list_webhook_subscriptions(user: dict = Depends(require_role("admin"))):
-    """List all webhook subscriptions."""
+async def list_webhook_subscriptions(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin"))):
+    """List all webhook subscriptions with pagination."""
     rows = await _get_webhook_subscriptions()
-    return {"subscriptions": rows}
+    total = len(rows)
+    rows = rows[offset:offset + limit]
+    return {"subscriptions": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @app.post("/api/webhook-subscriptions")
