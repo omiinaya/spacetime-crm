@@ -234,7 +234,7 @@ function SmsSettingsSection() {
 
   const handleSave = async () => {
     const data = { ...smsConfig };
-    if (!data.auth_token) delete data.auth_token;
+    if (!data.auth_token) (data as any).auth_token = undefined;
     try {
       await api.settings.sms.save(data);
       toast.success("SMS settings saved");
@@ -247,7 +247,7 @@ function SmsSettingsSection() {
     setTestResult(null);
     try {
       const data = { ...smsConfig };
-      if (!data.auth_token) delete data.auth_token;
+      if (!data.auth_token) (data as any).auth_token = undefined;
       await api.settings.sms.save(data);
       const res = await api.settings.sms.test();
       setTestResult(res);
