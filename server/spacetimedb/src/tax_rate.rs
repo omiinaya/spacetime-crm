@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct TaxRate {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub name: String,
     pub rate: f64,
     pub is_default: bool,
@@ -13,7 +14,7 @@ pub struct TaxRate {
 }
 
 #[spacetimedb::reducer]
-pub fn create_tax_rate(ctx: &ReducerContext, name: String, rate: f64, is_default: bool) {
+pub fn create_tax_rate(ctx: &ReducerContext, tenant_id: String, name: String, rate: f64, is_default: bool) {
     let id = super::make_id("tax", ctx);
     let now = super::now_ms(ctx);
     if is_default {
@@ -21,7 +22,7 @@ pub fn create_tax_rate(ctx: &ReducerContext, name: String, rate: f64, is_default
             ctx.db.tax_rates().id().update(TaxRate { is_default: false, ..tr });
         }
     }
-    ctx.db.tax_rates().insert(TaxRate { id, name, rate, is_default, created_at: now, updated_at: now });
+    ctx.db.tax_rates().insert(TaxRate { id, tenant_id, name, rate, is_default, created_at: now, updated_at: now });
 }
 
 #[spacetimedb::reducer]

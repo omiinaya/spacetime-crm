@@ -88,6 +88,32 @@ async def _sql(query: str) -> list[dict[str, Any]]:
     return result
 
 
+async def _sql_t(query: str, tenant_id: str) -> list[dict[str, Any]]:
+    """Run a SELECT query with tenant_id filter automatically appended.
+    Adds `AND tenant_id = '{tid}'` before any LIMIT clause, or at the end of the query."""
+    if not tenant_id:
+        return await _sql(query)
+    lowered = query.lower()
+    if "where" in lowered:
+        for marker in (" order by", " limit", " group by", " having"):
+            idx = lowered.find(marker)
+            if idx != -1:
+                query = query[:idx] + f" AND tenant_id = '{tenant_id}'" + query[idx:]
+                return await _sql(query)
+        query += f" AND tenant_id = '{tenant_id}'"
+    else:
+        query = query.rstrip(";")
+        lowered = query.lower()
+        for marker in (" order by", " limit", " group by", " having"):
+            idx = lowered.find(marker)
+            if idx != -1:
+                query = query[:idx] + f" WHERE tenant_id = '{tenant_id}'" + query[idx:]
+                return await _sql(query)
+        query += f" WHERE tenant_id = '{tenant_id}'"
+    return await _sql(query)
+
+
+
 async def _call(reducer: str, args: list[Any] | None = None) -> Any:
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(
@@ -111,6 +137,7 @@ async def _log_audit(user: dict, action: str, entity: str, entity_id: str, detai
     """Record an audit log entry. Fire-and-forget — never raises."""
     try:
         await _call("log_audit", [
+            user.get("tenant_id", ""),
             user.get("id", ""),
             user.get("name", ""),
             action,
@@ -184,6 +211,7 @@ def require_role(*roles: str):
         if not rows:
             raise HTTPException(401, "User not found")
         user = rows[0]
+        user["tenant_id"] = payload.get("tenant_id", "")
         if not user.get("active", False):
             raise HTTPException(403, "User account is disabled")
         if user.get("role") not in roles:
@@ -200,7 +228,7 @@ def require_role(*roles: str):
 
 @app.get("/api/customers")
 async def list_customers(search: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM customer")
+    rows = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     q = search.lower().strip()
     if q:
         rows = [
@@ -216,6 +244,7 @@ async def list_customers(search: str = "", user: dict = Depends(require_role("ad
 @app.post("/api/customers")
 async def create_customer(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_customer", [
+        user["tenant_id"],
         body.get("first_name", ""),
         body.get("last_name", ""),
         body.get("email", ""),
@@ -285,8 +314,8 @@ async def set_customer_portal_password(customer_id: str, body: dict, user: dict 
 @app.get("/api/customers/geolocations")
 async def list_customer_geolocations(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Return all customers with their geolocation data for the map."""
-    customers = await _sql("SELECT * FROM customer")
-    geos = await _sql("SELECT * FROM customer_geolocations")
+    customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
+    geos = await _sql_t("SELECT * FROM customer_geolocations", user["tenant_id"])
     geo_map = {g["customer_id"]: g for g in geos}
     result = []
     for c in customers:
@@ -339,15 +368,15 @@ async def geocode_customer(customer_id: str, user: dict = Depends(require_role("
 
     lat = float(data[0]["lat"])
     lng = float(data[0]["lon"])
-    await _call("set_customer_geolocation", [customer_id, lat, lng])
+    await _call("set_customer_geolocation", [user["tenant_id"], customer_id, lat, lng])
     return {"ok": True, "latitude": lat, "longitude": lng, "display_name": data[0].get("display_name", "")}
 
 
 @app.post("/api/customers/geocode-all")
 async def geocode_all_customers(user: dict = Depends(require_role("admin"))):
     """Geocode all customers without stored locations."""
-    customers = await _sql("SELECT * FROM customer")
-    geos = await _sql("SELECT * FROM customer_geolocations")
+    customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
+    geos = await _sql_t("SELECT * FROM customer_geolocations", user["tenant_id"])
     geo_ids = {g["customer_id"] for g in geos}
 
     results = []
@@ -370,7 +399,7 @@ async def geocode_all_customers(user: dict = Depends(require_role("admin"))):
                 if data:
                     lat = float(data[0]["lat"])
                     lng = float(data[0]["lon"])
-                    await _call("set_customer_geolocation", [c["id"], lat, lng])
+                    await _call("set_customer_geolocation", [user["tenant_id"], c["id"], lat, lng])
                     results.append({"id": c["id"], "name": f"{c['first_name']} {c['last_name']}".strip(), "latitude": lat, "longitude": lng, "status": "geocoded"})
                 else:
                     results.append({"id": c["id"], "name": f"{c['first_name']} {c['last_name']}".strip(), "status": "not_found"})
@@ -386,7 +415,7 @@ async def geocode_all_customers(user: dict = Depends(require_role("admin"))):
 
 @app.get("/api/tickets")
 async def list_tickets(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM ticket")
+    rows = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
     if status:
         rows = [r for r in rows if r.get("status") == status]
     return {"tickets": _sort(rows, "created_at")}
@@ -395,6 +424,7 @@ async def list_tickets(status: str = "", user: dict = Depends(require_role("admi
 @app.post("/api/tickets")
 async def create_ticket(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_ticket", [
+        user["tenant_id"],
         body.get("customer_id", ""),
         body.get("title", ""),
         body.get("description", ""),
@@ -518,7 +548,7 @@ async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("
 
 @app.get("/api/invoices")
 async def list_invoices(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM invoices")
+    rows = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
     if status:
         rows = [r for r in rows if r.get("status") == status]
     return {"invoices": _sort(rows, "created_at")}
@@ -527,6 +557,7 @@ async def list_invoices(status: str = "", user: dict = Depends(require_role("adm
 @app.post("/api/invoices")
 async def create_invoice(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_invoice", [
+        user["tenant_id"],
         body.get("customer_id", ""),
         body.get("ticket_id", ""),
         body.get("notes", ""),
@@ -539,14 +570,14 @@ async def create_invoice(body: dict, user: dict = Depends(require_role("admin", 
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.get('customer_id', '')}'")
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
-            invs = await _sql("SELECT * FROM invoices ORDER BY created_at DESC LIMIT 1")
+            invs = await _sql("SELECT * FROM invoices LIMIT 1")
             if invs:
                 inv = invs[0]
                 link = f"http://localhost:{settings.server_port}/portal/"
                 _notify_invoice_created(email, inv.get("invoice_number", 0), float(inv.get("total", 0)), link)
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
-            invs = await _sql("SELECT * FROM invoices ORDER BY created_at DESC LIMIT 1")
+            invs = await _sql("SELECT * FROM invoices LIMIT 1")
             if invs:
                 inv = invs[0]
                 _sms_invoice_created(phone, inv.get("invoice_number", 0), float(inv.get("total", 0)))
@@ -676,7 +707,7 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
 
 @app.get("/api/payments")
 async def list_payments(invoice_id: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM payment")
+    rows = await _sql_t("SELECT * FROM payment", user["tenant_id"])
     if invoice_id:
         rows = [r for r in rows if r.get("invoice_id") == invoice_id]
     return {"payments": _sort(rows, "created_at")}
@@ -686,6 +717,7 @@ async def list_payments(invoice_id: str = "", user: dict = Depends(require_role(
 async def record_payment(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     invoice_id = body.get("invoice_id", "")
     await _call("record_payment", [
+        user["tenant_id"],
         invoice_id,
         body.get("customer_id", ""),
         body.get("amount", 0),
@@ -738,13 +770,14 @@ async def delete_payment(payment_id: str, user: dict = Depends(require_role("adm
 
 @app.get("/api/appointments")
 async def list_appointments(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM appointment")
+    rows = await _sql_t("SELECT * FROM appointment", user["tenant_id"])
     return {"appointments": _sort(rows, "start_time", desc=False)}
 
 
 @app.post("/api/appointments")
 async def create_appointment(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_appointment", [
+        user["tenant_id"],
         body.get("customer_id", ""),
         body.get("ticket_id", ""),
         body.get("title", ""),
@@ -794,7 +827,7 @@ async def delete_appointment(appt_id: str, user: dict = Depends(require_role("ad
 
 @app.get("/api/products")
 async def list_products(search: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM products")
+    rows = await _sql_t("SELECT * FROM products", user["tenant_id"])
     q = search.lower().strip()
     if q:
         rows = [
@@ -809,6 +842,7 @@ async def list_products(search: str = "", user: dict = Depends(require_role("adm
 @app.post("/api/products")
 async def create_product(body: dict, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_product", [
+        user["tenant_id"],
         body.get("name", ""),
         body.get("sku", ""),
         body.get("barcode", ""),
@@ -847,6 +881,7 @@ async def get_product_adjustments(product_id: str, user: dict = Depends(require_
 @app.post("/api/products/{product_id}/adjustments")
 async def create_adjustment(product_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_inventory_adjustment", [
+        user["tenant_id"],
         product_id,
         body.get("quantity_change", 0),
         body.get("reason", "other"),
@@ -862,13 +897,14 @@ async def create_adjustment(product_id: str, body: dict, user: dict = Depends(re
 
 @app.get("/api/tax-rates")
 async def list_tax_rates(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM tax_rates")
+    rows = await _sql_t("SELECT * FROM tax_rates", user["tenant_id"])
     return {"tax_rates": _sort(rows, "name", desc=False)}
 
 
 @app.post("/api/tax-rates")
 async def create_tax_rate(body: dict, user: dict = Depends(require_role("admin"))):
     await _call("create_tax_rate", [
+        user["tenant_id"],
         body.get("name", ""),
         body.get("rate", 0.0),
         body.get("is_default", False),
@@ -900,7 +936,7 @@ async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"
 
 @app.get("/api/estimates")
 async def list_estimates(status: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM estimates")
+    rows = await _sql_t("SELECT * FROM estimates", user["tenant_id"])
     if status:
         rows = [r for r in rows if r.get("status") == status]
     return {"estimates": _sort(rows, "created_at")}
@@ -909,6 +945,7 @@ async def list_estimates(status: str = "", user: dict = Depends(require_role("ad
 @app.post("/api/estimates")
 async def create_estimate(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_estimate", [
+        user["tenant_id"],
         body.get("customer_id", ""),
         body.get("ticket_id", ""),
         body.get("notes", ""),
@@ -1001,13 +1038,14 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
 
 @app.get("/api/purchase-orders")
 async def list_purchase_orders(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql("SELECT * FROM purchase_order")
+    rows = await _sql_t("SELECT * FROM purchase_order", user["tenant_id"])
     return {"purchase_orders": _sort(rows, "created_at")}
 
 
 @app.post("/api/purchase-orders")
 async def create_purchase_order(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_purchase_order", [
+        user["tenant_id"],
         body.get("vendor_name", ""),
         body.get("notes", ""),
     ])
@@ -1080,10 +1118,10 @@ async def receive_po_items(po_id: str, body: dict, user: dict = Depends(require_
 
 @app.get("/api/stats")
 async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    all_customers = await _sql("SELECT * FROM customer")
-    all_tickets = await _sql("SELECT * FROM ticket")
-    all_invoices = await _sql("SELECT * FROM invoices")
-    all_appointments = await _sql("SELECT * FROM appointment")
+    all_customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
+    all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
+    all_invoices = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
+    all_appointments = await _sql_t("SELECT * FROM appointment", user["tenant_id"])
     total_customers = len(all_customers)
     total_tickets = len(all_tickets)
     open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
@@ -1106,10 +1144,10 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
     now = datetime.utcnow()
 
     # ── All data ──
-    all_tickets = await _sql("SELECT * FROM ticket")
-    all_invoices = await _sql("SELECT * FROM invoices")
-    all_payments = await _sql("SELECT * FROM payment")
-    all_appointments = await _sql("SELECT * FROM appointment")
+    all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
+    all_invoices = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
+    all_payments = await _sql_t("SELECT * FROM payment", user["tenant_id"])
+    all_appointments = await _sql_t("SELECT * FROM appointment", user["tenant_id"])
 
     # ── Revenue by month (last 12 months) ──
     revenue_by_month = []
@@ -1276,6 +1314,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if not rows:
         raise HTTPException(401, "User not found")
     user = rows[0]
+    # Extract tenant_id from JWT payload
+    user["tenant_id"] = payload.get("tenant_id", "")
     if not user.get("active", False):
         raise HTTPException(403, "User account is disabled")
 
@@ -1307,12 +1347,23 @@ async def login(body: dict):
         raise HTTPException(403, "Account is disabled")
 
     now = datetime.utcnow()
+
+    # Look up tenant membership
+    tenant_id = ""
+    try:
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        if tm_rows:
+            tenant_id = tm_rows[0]["tenant_id"]
+    except Exception:
+        pass
+
     token = jwt.encode(
         {
             "sub": user["id"],
             "email": user["email"],
             "name": user["name"],
             "role": user["role"],
+            "tenant_id": tenant_id,
             "iat": now,
             "exp": now + timedelta(hours=settings.jwt_expire_hours),
         },
@@ -1327,6 +1378,7 @@ async def login(body: dict):
             "name": user["name"],
             "email": user["email"],
             "role": user["role"],
+            "tenant_id": tenant_id,
         },
     }
 
@@ -1334,12 +1386,183 @@ async def login(body: dict):
 @app.get("/api/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     """Return current user info from JWT."""
+    # Include tenant info
+    tenant_info = {}
+    if user.get("tenant_id"):
+        try:
+            trows = await _sql(f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'")
+            if trows:
+                tenant_info = trows[0]
+        except Exception:
+            pass
     return {
         "id": user["id"],
         "name": user["name"],
         "email": user["email"],
         "role": user["role"],
+        "tenant_id": user.get("tenant_id", ""),
+        "tenant": tenant_info,
     }
+
+# ── TENANT endpoints ─────────────────────────────────────────
+
+
+@app.get("/api/tenants")
+async def list_tenants(user: dict = Depends(require_role("admin"))):
+    """List all tenants."""
+    try:
+        rows = await _sql("SELECT * FROM tenants")
+        return {"tenants": rows}
+    except Exception as e:
+        logger.warning("Failed to list tenants: %s", e)
+        return {"tenants": []}
+
+
+@app.post("/api/tenants")
+async def create_tenant(body: dict, user: dict = Depends(require_role("admin"))):
+    """Create a new tenant."""
+    name = body.get("name", "").strip()
+    slug = body.get("slug", "").strip()
+    if not name:
+        raise HTTPException(400, "name is required")
+    if not slug:
+        slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
+    result = await _call("create_tenant", [name, slug])
+    await _log_audit(user, "create", "tenant", name, f"slug={slug}")
+    return {"ok": True}
+
+
+@app.get("/api/tenants/{tenant_id}")
+async def get_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))):
+    """Get single tenant with member info."""
+    rows = await _sql(f"SELECT * FROM tenants WHERE id = '{tenant_id}'")
+    if not rows:
+        raise HTTPException(404, "Tenant not found")
+    tenant = rows[0]
+    members = await _sql(f"SELECT * FROM tenant_members WHERE tenant_id = '{tenant_id}'")
+    tenant["members"] = members
+    return {"tenant": tenant}
+
+
+@app.put("/api/tenants/{tenant_id}")
+async def update_tenant(tenant_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+    """Update tenant settings."""
+    name = body.get("name", "")
+    slug = body.get("slug", "").strip()
+    if not slug:
+        slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
+    logo_url = body.get("logo_url", "")
+    settings = body.get("settings", "{}")
+    await _call("update_tenant", [tenant_id, name, slug, logo_url, settings])
+    await _log_audit(user, "update", "tenant", name)
+    return {"ok": True}
+
+
+@app.delete("/api/tenants/{tenant_id}")
+async def delete_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))):
+    """Delete a tenant and all its data."""
+    await _call("delete_tenant", [tenant_id])
+    await _log_audit(user, "delete", "tenant", tenant_id)
+    return {"ok": True}
+
+
+@app.post("/api/tenants/{tenant_id}/members")
+async def add_tenant_member(tenant_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+    """Add a member to a tenant."""
+    username = body.get("username", "").strip()
+    role = body.get("role", "user").strip()
+    if not username:
+        raise HTTPException(400, "username is required")
+    await _call("add_tenant_member", [tenant_id, username, role])
+    await _log_audit(user, "add_member", "tenant_member", username, f"tenant={tenant_id}")
+    return {"ok": True}
+
+
+@app.delete("/api/tenants/{tenant_id}/members/{member_id}")
+async def remove_tenant_member(tenant_id: str, member_id: str, user: dict = Depends(require_role("admin"))):
+    """Remove a member from a tenant."""
+    await _call("remove_tenant_member", [member_id])
+    await _log_audit(user, "remove_member", "tenant_member", member_id)
+    return {"ok": True}
+
+
+@app.put("/api/tenants/{tenant_id}/members/{member_id}")
+async def update_tenant_member_role(tenant_id: str, member_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+    """Update member role within a tenant."""
+    role = body.get("role", "user").strip()
+    await _call("update_tenant_member_role", [member_id, role])
+    await _log_audit(user, "update_member", "tenant_member", member_id, f"role={role}")
+    return {"ok": True}
+
+
+@app.post("/api/tenants/migrate")
+async def migrate_to_tenant(body: dict, user: dict = Depends(require_role("admin"))):
+    """One-time migration: create a default tenant and assign all existing users to it."""
+    existing = await _sql("SELECT * FROM tenants")
+    if existing:
+        raise HTTPException(400, "Migration already completed - tenants exist")
+    name = body.get("name", "Default").strip()
+    slug = body.get("slug", "").strip()
+    if not slug:
+        slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
+    await _call("create_tenant", [name, slug])
+    rows = await _sql(f"SELECT * FROM tenants WHERE slug = '{slug}'")
+    if not rows:
+        raise HTTPException(500, "Failed to find created tenant")
+    tid = rows[0]["id"]
+    users = await _sql("SELECT * FROM user")
+    count = 0
+    for u in users:
+        await _call("add_tenant_member", [tid, u["name"], "admin" if u.get("role") == "admin" else "user"])
+        count += 1
+    tables = [
+        "customer", "ticket", "ticket_note", "ticket_timer",
+        "invoices", "invoice_line_items", "estimates", "estimate_line_items",
+        "payment", "appointment", "products", "purchase_order",
+        "purchase_order_line_item", "inventory_adjustment", "tax_rates",
+        "audit_log", "custom_field_definitions", "customer_geolocations",
+        "checklist_templates", "ticket_checklist_items", "webhook_subscriptions"
+    ]
+    updated = {}
+    for tbl in tables:
+        try:
+            await _sql(f"UPDATE {tbl} SET tenant_id = '{tid}' WHERE tenant_id = ''")
+            updated[tbl] = True
+        except Exception as e:
+            logger.warning("Migration update failed for %s: %s", tbl, e)
+            updated[tbl] = False
+    await _log_audit(user, "migrate", "tenant", name, f"users={count}")
+    return {"ok": True, "tenant_id": tid, "users_migrated": count, "tables_updated": updated}
+
+
+@app.post("/api/auth/refresh-tenant")
+async def refresh_token_tenant(user: dict = Depends(get_current_user)):
+    """Refresh the JWT token with latest tenant_id from DB."""
+    # Look up current tenant membership from DB
+    tid = ""
+    try:
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        if tm_rows:
+            tid = tm_rows[0]["tenant_id"]
+    except Exception:
+        pass
+    now = datetime.utcnow()
+    token = jwt.encode(
+        {
+            "sub": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user["role"],
+            "tenant_id": tid,
+            "iat": now,
+            "exp": now + timedelta(hours=settings.jwt_expire_hours),
+        },
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+    return {"token": token, "tenant_id": tid}
+
+
 
 
 @app.post("/api/auth/set-password")
@@ -1572,6 +1795,7 @@ async def portal_make_payment(body: dict, customer: dict = Depends(get_current_c
         raise HTTPException(404, "Invoice not found")
 
     await _call("record_payment", [
+        customer.get("tenant_id", ""),
         invoice_id,
         customer["id"],
         amount,
@@ -1689,7 +1913,11 @@ async def stripe_webhook(request: Request):
         stripe_session_id = session.get("id", "")
 
         if invoice_id and amount_total > 0:
+            # Look up tenant_id from the invoice
+            inv_rows = await _sql(f"SELECT tenant_id FROM invoices WHERE id = '{invoice_id}'")
+            tid = inv_rows[0]["tenant_id"] if inv_rows else ""
             await _call("record_payment", [
+                tid,
                 invoice_id,
                 customer_id,
                 amount_total,
@@ -1813,12 +2041,13 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
                 created_at = int(row.get("created_at", now_ms) or now_ms)
                 updated_at = int(row.get("updated_at", now_ms) or now_ms)
                 await _call("import_customer", [
+                    user["tenant_id"],
                     cid, fn, ln, email, phone, mobile, addr1, addr2,
                     city, state, zipc, company, notes, tags,
                     created_at, updated_at,
                 ])
             else:
-                await _call("create_customer", [fn, ln, email, phone])
+                await _call("create_customer", [user["tenant_id"], fn, ln, email, phone])
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")
@@ -1865,11 +2094,12 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
                 created_at = int(row.get("created_at", now_ms) or now_ms)
                 updated_at = int(row.get("updated_at", now_ms) or now_ms)
                 await _call("import_product", [
+                    user["tenant_id"],
                     pid, name, sku, barcode, desc, category, price, cost,
                     qoh, qc, min_stock, location, active, created_at, updated_at,
                 ])
             else:
-                await _call("create_product", [name, sku, barcode, desc, category, price, cost, qoh])
+                await _call("create_product", [user["tenant_id"], name, sku, barcode, desc, category, price, cost, qoh])
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")
@@ -1883,7 +2113,7 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
 @app.get("/api/custom-field-definitions")
 async def list_custom_field_definitions(entity_type: str | None = None, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """List custom field definitions, optionally filtered by entity_type."""
-    rows = await _sql("SELECT * FROM custom_field_definitions")
+    rows = await _sql_t("SELECT * FROM custom_field_definitions", user["tenant_id"])
     if entity_type:
         rows = [r for r in rows if r.get("entity_type") == entity_type]
     return {"definitions": rows}
@@ -1894,6 +2124,7 @@ async def create_custom_field_definition(body: dict, user: dict = Depends(requir
     """Create a custom field definition."""
     field_id = secrets.token_hex(12)
     await _call("create_custom_field_definition", [
+        user["tenant_id"],
         field_id,
         body.get("entity_type", "customer"),
         body.get("label", ""),
@@ -1953,7 +2184,7 @@ async def set_custom_field_values(entity_id: str, body: dict, user: dict = Depen
 @app.get("/api/checklist-templates")
 async def list_checklist_templates(user: dict = Depends(require_role("admin", "tech"))):
     """List all checklist templates."""
-    rows = await _sql("SELECT * FROM checklist_templates")
+    rows = await _sql_t("SELECT * FROM checklist_templates", user["tenant_id"])
     return {"templates": _sort(rows, "name")}
 
 
@@ -1961,6 +2192,7 @@ async def list_checklist_templates(user: dict = Depends(require_role("admin", "t
 async def create_checklist_template(body: dict, user: dict = Depends(require_role("admin"))):
     """Create a checklist template. Items: [{\"label\":\"...\",\"order\":1}]"""
     await _call("create_checklist_template", [
+        user["tenant_id"],
         body.get("name", ""),
         body.get("description", ""),
         json.dumps(body.get("items", [])),
@@ -2104,7 +2336,7 @@ async def create_webhook_subscription(body: dict, user: dict = Depends(require_r
     if invalid:
         raise HTTPException(400, f"Invalid event(s): {', '.join(invalid)}")
 
-    await _call("create_webhook_subscription", [url, events, secret])
+    await _call("create_webhook_subscription", [user["tenant_id"], url, events, secret])
     await _log_audit(user, "create", "webhook_subscription", url, events)
     return {"ok": True}
 
@@ -2246,4 +2478,4 @@ async def spa_fallback(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=False)

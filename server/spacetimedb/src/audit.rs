@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct AuditLog {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub user_id: String,
     pub user_name: String,
     pub action: String,
@@ -17,6 +18,7 @@ pub struct AuditLog {
 #[reducer]
 pub fn log_audit(
     ctx: &ReducerContext,
+    tenant_id: String,
     user_id: String,
     user_name: String,
     action: String,
@@ -28,6 +30,7 @@ pub fn log_audit(
     let now = super::now_ms(ctx);
     ctx.db.audit_log().insert(AuditLog {
         id,
+        tenant_id,
         user_id,
         user_name,
         action,
