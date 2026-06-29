@@ -1,13 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { api, Customer } from "../lib/api";
+import { usePagination } from "../lib/usePagination";
+import { queryClient } from "../lib/query-client";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import Pagination from "../components/Pagination";
 import {
   Users, Plus, Search, Mail, Phone, MapPin, Edit2, Trash2, Key,
 } from "lucide-react";
 import { toast } from "sonner";
+
+const PAGE_SIZE = 25;
 
 const emptyForm: Partial<Customer> = {
   first_name: "", last_name: "", email: "", phone: "", mobile: "",
@@ -16,8 +22,7 @@ const emptyForm: Partial<Customer> = {
 };
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const pag = usePagination(PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -26,36 +31,40 @@ export default function CustomersPage() {
   const [pwPassword, setPwPassword] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
 
-  const load = async () => {
-    try {
-      const res = await api.customers.list(search);
-      setCustomers(res.customers);
-    } catch (e) {
-      toast.error("Failed to load customers");
-    } finally {
-      setLoading(false);
-    }
+  const { data, isLoading } = useQuery({
+    queryKey: ["customers", { search, offset: pag.offset }],
+    queryFn: () => api.customers.list(search, pag.offset, PAGE_SIZE),
+    select: (res) => {
+      pag.setTotal(res.total);
+      return res.customers;
+    },
+  });
+
+  const customers = data ?? [];
+  const loading = isLoading;
+
+  // Reset to page 1 when search changes
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    pag.reset();
   };
 
-  useEffect(() => { load(); }, [search]);
-
-  const handleSubmit = async () => {
-    try {
-      if (editId) {
-        await api.customers.update(editId, form);
-        toast.success("Customer updated");
-      } else {
-        await api.customers.create(form);
-        toast.success("Customer created");
-      }
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      editId
+        ? api.customers.update(editId, form)
+        : api.customers.create(form),
+    onSuccess: () => {
+      toast.success(editId ? "Customer updated" : "Customer created");
       setShowForm(false);
       setEditId(null);
       setForm({ ...emptyForm });
-      load();
-    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: () => {
       toast.error("Failed to save customer");
-    }
-  };
+    },
+  });
 
   const handleEdit = (c: Customer) => {
     setForm(c);
@@ -63,15 +72,16 @@ export default function CustomersPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await api.customers.delete(id);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.customers.delete(id),
+    onSuccess: () => {
       toast.success("Customer deleted");
-      load();
-    } catch {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: () => {
       toast.error("Failed to delete");
-    }
-  };
+    },
+  });
 
   const openPwDialog = (c: Customer) => {
     setPwCustomer(c);
@@ -118,7 +128,7 @@ export default function CustomersPage() {
         <Input
           placeholder="Search customers..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           className="pl-9"
         />
       </div>
@@ -147,7 +157,7 @@ export default function CustomersPage() {
               <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="md:col-span-2" />
             </div>
             <div className="flex gap-2 mt-4">
-              <Button onClick={handleSubmit}>{editId ? "Update" : "Create"}</Button>
+              <Button onClick={() => saveMutation.mutate()}>{editId ? "Update" : "Create"}</Button>
               <Button variant="outline" onClick={() => { setShowForm(false); setEditId(null); }}>Cancel</Button>
             </div>
           </CardContent>
@@ -178,7 +188,7 @@ export default function CustomersPage() {
                   <Button size="icon" variant="ghost" onClick={() => handleEdit(c)}>
                     <Edit2 className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(c.id)}>
+                  <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(c.id)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
@@ -213,6 +223,17 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={pag.page}
+        totalPages={pag.totalPages}
+        total={pag.total}
+        hasPrev={pag.hasPrev}
+        hasNext={pag.hasNext}
+        onPrev={pag.prevPage}
+        onNext={pag.nextPage}
+        onGoToPage={pag.goToPage}
+      />
 
       {/* Portal Password Dialog */}
       {pwCustomer && (

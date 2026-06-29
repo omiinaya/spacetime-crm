@@ -21,10 +21,9 @@ build-web: ## Build only the frontend
 
 # ── Test ──────────────────────────────────────────────────────────────
 
-test: ## Run all tests (currently none exist — placeholder)
-	@echo "⚠️  No test suite configured yet. Add pytest and vitest targets."
-	@echo "   Python:  pytest server/"
-	@echo "   Frontend: vitest run (requires @vitest/runner dependency)"
+test: ## Run all tests
+	@echo "Running backend integration tests..."
+	@cd server && python3 -m pytest tests/ -v --tb=short 2>&1
 
 test-server: ## Run Python backend tests (if pytest configured)
 	@if command -v pytest >/dev/null 2>&1; then \
@@ -33,11 +32,19 @@ test-server: ## Run Python backend tests (if pytest configured)
 		echo "⚠️  pytest not installed. Run: pip install pytest"; \
 	fi
 
-test-web: ## Run frontend tests (if vitest configured)
+test-web: ## Run frontend tests (vitest + playwright e2e)
+	@echo "--- Vitest unit tests ---"
 	@if [ -f web/node_modules/.bin/vitest ]; then \
 		cd web && npx vitest run; \
 	else \
 		echo "⚠️  vitest not found. Install: cd web && npm install -D vitest"; \
+	fi
+	@echo "--- Playwright E2E tests ---"
+	@if [ -f web/node_modules/.bin/playwright ]; then \
+		echo "Running E2E tests (chromium-only, 1 worker)..."; \
+		cd web && npx playwright test --workers=1; \
+	else \
+		echo "⚠️  playwright not found. Install: cd web && npm install -D @playwright/test && npx playwright install chromium"; \
 	fi
 
 # ── Lint ──────────────────────────────────────────────────────────────

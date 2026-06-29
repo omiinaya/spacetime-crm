@@ -1,12 +1,17 @@
 import { useState, useEffect } from "react";
 import { api, Appointment, Customer } from "../lib/api";
+import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
+import Pagination from "../components/Pagination";
 import MonthCalendar from "../components/MonthCalendar";
 import { Plus, Trash2, ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
+
+const PAGE_SIZE = 25;
+
 import { toast } from "sonner";
 
 const statusColors: Record<string, "default" | "secondary" | "warning" | "success" | "destructive" | "outline"> = {
@@ -19,6 +24,7 @@ const statusColors: Record<string, "default" | "secondary" | "warning" | "succes
 };
 
 export default function AppointmentsPage() {
+  const pag = usePagination(PAGE_SIZE);
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,16 +37,17 @@ export default function AppointmentsPage() {
   const [calMonth, setCalMonth] = useState(now.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
 
-  const load = async () => {
+  const load = async (offset: number) => {
     try {
-      const [aRes, cRes] = await Promise.all([api.appointments.list(), api.customers.list()]);
+      const [aRes, cRes] = await Promise.all([api.appointments.list(offset, PAGE_SIZE), api.customers.list()]);
       setAppts(aRes.appointments);
       setCustomers(cRes.customers);
+      pag.setTotal(aRes.total);
     } catch { toast.error("Failed to load appointments"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(pag.offset); }, [pag.offset]);
 
   const handleCreate = async () => {
     try {
@@ -52,19 +59,19 @@ export default function AppointmentsPage() {
       toast.success("Appointment created");
       setShowForm(false);
       setForm({ customer_id: "", ticket_id: "", title: "", description: "", start_time: "", end_time: "", all_day: false });
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to create appointment"); }
   };
 
   const handleStatus = async (id: string, status: string) => {
     await api.appointments.updateStatus(id, status);
-    load();
+    load(pag.offset);
   };
 
   const handleDelete = async (id: string) => {
     await api.appointments.delete(id);
     toast.success("Appointment deleted");
-    load();
+    load(pag.offset);
   };
 
   const setFormDate = (day: number) => {
@@ -228,6 +235,17 @@ export default function AppointmentsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Pagination
+        page={pag.page}
+        totalPages={pag.totalPages}
+        total={pag.total}
+        hasPrev={pag.hasPrev}
+        hasNext={pag.hasNext}
+        onPrev={pag.prevPage}
+        onNext={pag.nextPage}
+        onGoToPage={pag.goToPage}
+      />
     </>
   );
 }

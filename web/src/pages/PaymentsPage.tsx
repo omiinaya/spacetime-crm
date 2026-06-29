@@ -1,13 +1,19 @@
 import { useState, useEffect } from "react";
 import { api, Payment, Invoice, Customer } from "../lib/api";
+import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
+import Pagination from "../components/Pagination";
 import { CreditCard, Plus, Trash2 } from "lucide-react";
+
+const PAGE_SIZE = 25;
+
 import { toast } from "sonner";
 
 export default function PaymentsPage() {
+  const pag = usePagination(PAGE_SIZE);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -15,21 +21,22 @@ export default function PaymentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "" });
 
-  const load = async () => {
+  const load = async (offset: number) => {
     try {
       const [pRes, iRes, cRes] = await Promise.all([
-        api.payments.list(),
+        api.payments.list(undefined, offset, PAGE_SIZE),
         api.invoices.list(),
         api.customers.list(),
       ]);
       setPayments(pRes.payments);
       setInvoices(iRes.invoices);
       setCustomers(cRes.customers);
+      pag.setTotal(pRes.total);
     } catch { toast.error("Failed to load payments"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(pag.offset); }, [pag.offset]);
 
   const handleRecord = async () => {
     try {
@@ -37,7 +44,7 @@ export default function PaymentsPage() {
       toast.success("Payment recorded");
       setShowForm(false);
       setForm({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "" });
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to record payment"); }
   };
 
@@ -45,7 +52,7 @@ export default function PaymentsPage() {
     try {
       await api.payments.delete(id);
       toast.success("Payment deleted");
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to delete"); }
   };
 
@@ -119,6 +126,17 @@ export default function PaymentsPage() {
           </Card>
         ))}
       </div>
+
+      <Pagination
+        page={pag.page}
+        totalPages={pag.totalPages}
+        total={pag.total}
+        hasPrev={pag.hasPrev}
+        hasNext={pag.hasNext}
+        onPrev={pag.prevPage}
+        onNext={pag.nextPage}
+        onGoToPage={pag.goToPage}
+      />
     </>
   );
 }

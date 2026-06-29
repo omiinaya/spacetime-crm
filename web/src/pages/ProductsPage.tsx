@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { api, Product, InventoryAdjustment } from "../lib/api";
+import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
+import Pagination from "../components/Pagination";
 import { Package, Plus, Search, ClipboardList, Scan, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
+
+const PAGE_SIZE = 25;
 
 const emptyForm: Partial<Product> = { name: "", sku: "", barcode: "", description: "", category: "", price: 0, cost: 0, quantity_on_hand: 0 };
 
@@ -21,6 +25,7 @@ const reasonColors: Record<string, string> = {
 };
 
 export default function ProductsPage() {
+  const pag = usePagination(PAGE_SIZE);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -37,6 +42,22 @@ export default function ProductsPage() {
 
   const barcodeDetectorSupported = typeof window !== "undefined" && "BarcodeDetector" in window;
 
+  const load = async (offset: number) => {
+    try {
+      const res = await api.products.list(search, offset, PAGE_SIZE);
+      setProducts(res.products);
+      pag.setTotal(res.total);
+    } catch { toast.error("Failed to load products"); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(pag.offset); }, [search, pag.offset]);
+
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    pag.reset();
+  };
+
   const startScanner = async () => {
     setScanning(true);
     try {
@@ -44,7 +65,6 @@ export default function ProductsPage() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
         scanLoop();
       }
     } catch {
@@ -86,16 +106,6 @@ export default function ProductsPage() {
     };
   }, []);
 
-  const load = async () => {
-    try {
-      const res = await api.products.list(search);
-      setProducts(res.products);
-    } catch { toast.error("Failed to load products"); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { load(); }, [search]);
-
   const loadAdjustments = async (productId: string) => {
     try {
       const res = await api.products.adjustments.list(productId);
@@ -109,7 +119,7 @@ export default function ProductsPage() {
       toast.success("Product created");
       setShowForm(false);
       setForm({ ...emptyForm });
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to save product"); }
   };
 
@@ -122,7 +132,7 @@ export default function ProductsPage() {
       });
       toast.success("Stock adjusted");
       setAdjForm({ quantity_change: 0, reason: "received", reference_id: "", notes: "" });
-      load();
+      load(pag.offset);
       loadAdjustments(selectedProduct.id);
     } catch { toast.error("Failed to adjust stock"); }
   };
@@ -150,7 +160,7 @@ export default function ProductsPage() {
       <Input
         placeholder="Search products..."
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => handleSearch(e.target.value)}
         className="max-w-sm"
       />
 
@@ -333,6 +343,17 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={pag.page}
+        totalPages={pag.totalPages}
+        total={pag.total}
+        hasPrev={pag.hasPrev}
+        hasNext={pag.hasNext}
+        onPrev={pag.prevPage}
+        onNext={pag.nextPage}
+        onGoToPage={pag.goToPage}
+      />
     </>
   );
 }

@@ -1,11 +1,14 @@
 """SMS notification utility for SpacetimeCRM.
 Uses Twilio REST API with configurable settings stored in a JSON file.
 """
+from __future__ import annotations
+
 import json
 import logging
 from pathlib import Path
 from typing import Any, Optional
 
+from client import get_http_client
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -96,23 +99,24 @@ async def send_sms(to: str, body: str) -> bool:
     url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
 
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(
-                url,
-                auth=(account_sid, auth_token),
-                data={"From": from_number, "To": to, "Body": body},
+        client = get_http_client()
+        resp = await client.post(
+            url,
+            auth=(account_sid, auth_token),
+            data={"From": from_number, "To": to, "Body": body},
+            timeout=15,
+        )
+        if resp.status_code < 400:
+            logger.info("SMS sent to %s: %.60s", to, body)
+            return True
+        else:
+            error_data = resp.json()
+            logger.error(
+                "Twilio API error: %s — %s",
+                resp.status_code,
+                error_data.get("message", resp.text[:200]),
             )
-            if resp.status_code < 400:
-                logger.info("SMS sent to %s: %.60s", to, body)
-                return True
-            else:
-                error_data = resp.json()
-                logger.error(
-                    "Twilio API error: %s — %s",
-                    resp.status_code,
-                    error_data.get("message", resp.text[:200]),
-                )
-                return False
+            return False
     except Exception as e:
         logger.error("Failed to send SMS to %s: %s", to, e)
         return False
@@ -132,21 +136,22 @@ async def test_connection() -> dict:
         return {"ok": False, "error": "Account SID and Auth Token required"}
 
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(
-                f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}.json",
-                auth=(account_sid, auth_token),
-            )
-            if resp.status_code < 400:
-                data = resp.json()
-                friendly_name = data.get("friendly_name", "Twilio Account")
-                return {
-                    "ok": True,
-                    "message": f"Connected: {friendly_name}",
-                    "from_number": from_number,
-                }
-            else:
-                return {"ok": False, "error": f"Twilio API error: {resp.status_code}"}
+        client = get_http_client()
+        resp = await client.get(
+            f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}.json",
+            auth=(account_sid, auth_token),
+            timeout=10,
+        )
+        if resp.status_code < 400:
+            data = resp.json()
+            friendly_name = data.get("friendly_name", "Twilio Account")
+            return {
+                "ok": True,
+                "message": f"Connected: {friendly_name}",
+                "from_number": from_number,
+            }
+        else:
+            return {"ok": False, "error": f"Twilio API error: {resp.status_code}"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

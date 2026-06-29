@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -12,5 +13,12 @@ export default defineConfig({
   },
   resolve: {
     alias: { "@": new URL("./src", import.meta.url).pathname },
+  },
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
+    css: false,
+    exclude: ["**/e2e/**", "**/node_modules/**"],
   },
 });

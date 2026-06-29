@@ -5,6 +5,11 @@ This provides type validation, clear error messages (422), and API docs.
 """
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
+from sanitize import SanitizedModel
+
+# Make BaseModel an alias for SanitizedModel so ALL existing models
+# automatically get HTML stripping without individual changes.
+BaseModel = SanitizedModel
 
 
 # ─── Auth ────────────────────────────────────────────────────────
@@ -55,7 +60,7 @@ class CustomerUpdate(BaseModel):
 # ─── Tickets ─────────────────────────────────────────────────────
 
 class TicketCreate(BaseModel):
-    customer_id: str = Field(..., min_length=1)
+    customer_id: str = Field(..., min_length=1, max_length=100)
     title: str = Field(..., min_length=1, max_length=500)
     description: str = Field(default="", max_length=5000)
     device_type: str = Field(default="", max_length=100)
@@ -73,7 +78,7 @@ class TicketStatusUpdate(BaseModel):
 
 
 class TicketAssign(BaseModel):
-    assigned_user_id: str = Field(..., min_length=1)
+    assigned_user_id: str = Field(..., min_length=1, max_length=100)
 
 
 class TicketNoteCreate(BaseModel):
@@ -85,8 +90,8 @@ class TicketNoteCreate(BaseModel):
 # ─── Invoices ────────────────────────────────────────────────────
 
 class InvoiceCreate(BaseModel):
-    customer_id: str = Field(..., min_length=1)
-    ticket_id: str = Field(default="")
+    customer_id: str = Field(..., min_length=1, max_length=100)
+    ticket_id: str = Field(default="", max_length=100)
     notes: str = Field(default="", max_length=2000)
     terms: str = Field(default="", max_length=500)
     due_date: int = Field(default=0, ge=0)
@@ -110,8 +115,8 @@ class InvoiceTaxRateUpdate(BaseModel):
 # ─── Payments ────────────────────────────────────────────────────
 
 class PaymentCreate(BaseModel):
-    invoice_id: str = Field(..., min_length=1)
-    customer_id: str = Field(..., min_length=1)
+    invoice_id: str = Field(..., min_length=1, max_length=100)
+    customer_id: str = Field(..., min_length=1, max_length=100)
     amount: float = Field(..., gt=0)
     method: str = Field(default="cash", max_length=50)
     reference: str = Field(default="", max_length=255)
@@ -121,8 +126,8 @@ class PaymentCreate(BaseModel):
 # ─── Appointments ────────────────────────────────────────────────
 
 class AppointmentCreate(BaseModel):
-    customer_id: str = Field(..., min_length=1)
-    ticket_id: str = Field(default="")
+    customer_id: str = Field(..., min_length=1, max_length=100)
+    ticket_id: str = Field(default="", max_length=100)
     title: str = Field(..., min_length=1, max_length=500)
     description: str = Field(default="", max_length=2000)
     start_time: int = Field(..., ge=0)
@@ -180,8 +185,8 @@ class POReceiveItem(BaseModel):
 # ─── Estimates ───────────────────────────────────────────────────
 
 class EstimateCreate(BaseModel):
-    customer_id: str = Field(..., min_length=1)
-    ticket_id: str = Field(default="")
+    customer_id: str = Field(..., min_length=1, max_length=100)
+    ticket_id: str = Field(default="", max_length=100)
     notes: str = Field(default="", max_length=2000)
     expires_at: int = Field(default=0, ge=0)
 
@@ -358,6 +363,15 @@ class PortalSetPassword(BaseModel):
 
 class PortalCheckoutSessionCreate(BaseModel):
     invoice_id: str = Field(..., min_length=1)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=255)
+
+
+class ResetPasswordRequest(BaseModel):
+    password: str = Field(..., min_length=6, max_length=255)
+    token: str = Field(..., min_length=1)
 
 
 class TenantMigrate(BaseModel):

@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { api, PurchaseOrder, PurchaseOrderLineItem } from "../lib/api";
+import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import Pagination from "../components/Pagination";
 import { ShoppingCart, Plus, Trash2, SendHorizontal, PackageCheck, X, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+
+const PAGE_SIZE = 25;
 import { toast } from "sonner";
 
 const statusColors: Record<string, "outline" | "default" | "success" | "destructive"> = {
@@ -16,6 +20,7 @@ const statusColors: Record<string, "outline" | "default" | "success" | "destruct
 };
 
 export default function PurchaseOrdersPage() {
+  const pag = usePagination(PAGE_SIZE);
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -27,15 +32,16 @@ export default function PurchaseOrdersPage() {
   const [receiveMode, setReceiveMode] = useState<string | null>(null);
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, number>>({});
 
-  const load = async () => {
+  const load = async (offset: number) => {
     try {
-      const res = await api.purchaseOrders.list();
+      const res = await api.purchaseOrders.list(offset, PAGE_SIZE);
       setPos(res.purchase_orders);
+      pag.setTotal(res.total);
     } catch { toast.error("Failed to load purchase orders"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(pag.offset); }, [pag.offset]);
 
   const loadDetail = async (id: string) => {
     setDetailLoading(true);
@@ -59,7 +65,7 @@ export default function PurchaseOrdersPage() {
       toast.success("Purchase order created");
       setShowForm(false);
       setForm({ vendor_name: "", notes: "" });
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to create purchase order"); }
   };
 
@@ -67,7 +73,7 @@ export default function PurchaseOrdersPage() {
     await api.purchaseOrders.delete(id);
     toast.success("Purchase order deleted");
     if (selectedPo === id) { setSelectedPo(null); setPoDetail(null); }
-    load();
+    load(pag.offset);
   };
 
   const handleAddItem = async () => {
@@ -78,7 +84,7 @@ export default function PurchaseOrdersPage() {
       toast.success("Line item added");
       setNewItemForm({ product_id: "", description: "", quantity: 1, unit_price: 0 });
       loadDetail(selectedPo);
-      load();
+      load(pag.offset);
     } catch { toast.error("Failed to add line item"); }
   };
 
@@ -87,7 +93,7 @@ export default function PurchaseOrdersPage() {
     await api.purchaseOrders.lineItems.delete(selectedPo, itemId);
     toast.success("Line item removed");
     loadDetail(selectedPo);
-    load();
+    load(pag.offset);
   };
 
   const handleStatusChange = async (status: string) => {
@@ -95,7 +101,7 @@ export default function PurchaseOrdersPage() {
     await api.purchaseOrders.status.update(selectedPo, status);
     toast.success(`PO marked as ${status}`);
     loadDetail(selectedPo);
-    load();
+    load(pag.offset);
   };
 
   const handleReceive = async () => {
@@ -108,7 +114,7 @@ export default function PurchaseOrdersPage() {
     toast.success("Items received");
     setReceiveMode(null);
     loadDetail(selectedPo);
-    load();
+    load(pag.offset);
   };
 
   return (
@@ -165,6 +171,17 @@ export default function PurchaseOrdersPage() {
             <p className="text-sm text-muted-foreground text-center py-8">No purchase orders yet</p>
           )}
         </div>
+
+        <Pagination
+          page={pag.page}
+          totalPages={pag.totalPages}
+          total={pag.total}
+          hasPrev={pag.hasPrev}
+          hasNext={pag.hasNext}
+          onPrev={pag.prevPage}
+          onNext={pag.nextPage}
+          onGoToPage={pag.goToPage}
+        />
       </div>
 
       {/* ── PO Detail Panel ── */}

@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { api, Invoice, Customer, InvoiceLineItem, TaxRate } from "../lib/api";
+import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
+import Pagination from "../components/Pagination";
 import { FileText, Plus, Trash2, FileDown } from "lucide-react";
 import { toast } from "sonner";
+
+const PAGE_SIZE = 25;
 
 const statusColors: Record<string, "default" | "warning" | "success" | "destructive" | "outline"> = {
   draft: "outline",
@@ -18,6 +22,7 @@ const statusColors: Record<string, "default" | "warning" | "success" | "destruct
 };
 
 export default function InvoicesPage() {
+  const pag = usePagination(PAGE_SIZE);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,17 +34,23 @@ export default function InvoicesPage() {
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
 
-  const load = async () => {
+  const load = async (search: string, offset: number) => {
     try {
-      const [iRes, cRes, tRes] = await Promise.all([api.invoices.list(filter), api.customers.list(), api.taxRates.list()]);
+      const [iRes, cRes, tRes] = await Promise.all([api.invoices.list(search, offset, PAGE_SIZE), api.customers.list(), api.taxRates.list()]);
       setInvoices(iRes.invoices);
       setCustomers(cRes.customers);
       setTaxRates(tRes.tax_rates);
+      pag.setTotal(iRes.total);
     } catch { toast.error("Failed to load invoices"); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => { load(filter, pag.offset); }, [filter, pag.offset]);
+
+  const handleFilter = (val: string) => {
+    setFilter(val);
+    pag.reset();
+  };
 
   const handleCreate = async () => {
     try {
@@ -53,7 +64,7 @@ export default function InvoicesPage() {
       toast.success("Invoice created");
       setShowForm(false);
       setForm({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "" });
-      load();
+      load(filter, pag.offset);
     } catch { toast.error("Failed to create invoice"); }
   };
 
@@ -73,7 +84,7 @@ export default function InvoicesPage() {
       const res = await api.invoices.lineItems.list(selectedInv.id);
       setLineItems(res.line_items);
       setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
-      load();
+      load(filter, pag.offset);
     } catch { toast.error("Failed to add item"); }
   };
 
@@ -83,7 +94,7 @@ export default function InvoicesPage() {
       await api.invoices.lineItems.delete(selectedInv.id, itemId);
       const res = await api.invoices.lineItems.list(selectedInv.id);
       setLineItems(res.line_items);
-      load();
+      load(filter, pag.offset);
     } catch { toast.error("Failed to remove item"); }
   };
 
@@ -99,7 +110,7 @@ export default function InvoicesPage() {
 
       <div className="flex gap-2 flex-wrap">
         {["", "draft", "sent", "paid", "overdue", "cancelled"].map((s) => (
-          <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => setFilter(s)}>{s || "All"}</Button>
+          <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => handleFilter(s)}>{s || "All"}</Button>
         ))}
       </div>
 
@@ -155,7 +166,7 @@ export default function InvoicesPage() {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Select value={selectedInv.status} onChange={async (e) => { await api.invoices.updateStatus(selectedInv.id, e.target.value); load(); selectInvoice(selectedInv); }}>
+                <Select value={selectedInv.status} onChange={async (e) => { await api.invoices.updateStatus(selectedInv.id, e.target.value); load(filter, pag.offset); selectInvoice(selectedInv); }}>
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
                   <option value="paid">Paid</option>
@@ -173,7 +184,7 @@ export default function InvoicesPage() {
                       try {
                         await api.taxRates.setInvoiceTaxRate(selectedInv.id, rate);
                         toast.success("Tax rate updated");
-                        load();
+                        load(filter, pag.offset);
                         selectInvoice(selectedInv);
                       } catch { toast.error("Failed to update tax rate"); }
                     }}
@@ -220,6 +231,17 @@ export default function InvoicesPage() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={pag.page}
+        totalPages={pag.totalPages}
+        total={pag.total}
+        hasPrev={pag.hasPrev}
+        hasNext={pag.hasNext}
+        onPrev={pag.prevPage}
+        onNext={pag.nextPage}
+        onGoToPage={pag.goToPage}
+      />
     </>
   );
 }

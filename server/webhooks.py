@@ -9,6 +9,7 @@ from typing import Any, Optional
 from datetime import datetime, timezone
 
 import httpx
+from client import get_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -74,27 +75,28 @@ async def _deliver(
 
     for attempt in range(1, max_retries + 1):
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(
-                    url,
-                    content=body_bytes,
-                    headers={
-                        "Content-Type": "application/json",
-                        "X-Webhook-Signature": signature,
-                        "X-Webhook-Event": event_type,
-                        "User-Agent": "SpacetimeCRM-Webhook/1.0",
-                    },
-                )
-                status_code = resp.status_code
-                if status_code is not None and status_code < 500:
-                    # Success or client error — don't retry
-                    return {
-                        "ok": 200 <= status_code < 300,
-                        "status_code": status_code,
-                        "attempt": attempt,
-                        "error": None if 200 <= status_code < 300 else f"HTTP {status_code}",
-                    }
-                last_error = f"HTTP {status_code}" if status_code else "No response"
+            client = get_http_client()
+            resp = await client.post(
+                url,
+                content=body_bytes,
+                timeout=10.0,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Webhook-Signature": signature,
+                    "X-Webhook-Event": event_type,
+                    "User-Agent": "SpacetimeCRM-Webhook/1.0",
+                },
+            )
+            status_code = resp.status_code
+            if status_code is not None and status_code < 500:
+                # Success or client error — don't retry
+                return {
+                    "ok": 200 <= status_code < 300,
+                    "status_code": status_code,
+                    "attempt": attempt,
+                    "error": None if 200 <= status_code < 300 else f"HTTP {status_code}",
+                }
+            last_error = f"HTTP {status_code}" if status_code else "No response"
         except httpx.TimeoutException:
             last_error = "timeout"
         except httpx.RequestError as e:

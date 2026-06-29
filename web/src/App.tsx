@@ -15,7 +15,11 @@ import { Button } from "./components/ui/button";
 import { AuthProvider, useAuth, hasRole } from "./lib/auth";
 import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
 import { useTheme } from "./lib/theme";
-import LoginPage from "./pages/LoginPage";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { QueryProvider } from "./lib/query-client";
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const PortalLoginPage = lazy(() => import("./pages/PortalLoginPage"));
 const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
 const PortalTicketsPage = lazy(() => import("./pages/PortalTicketsPage"));
@@ -102,8 +106,9 @@ function PortalShell() {
 
   const renderPortalPage = () => {
     return (
-      <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
-        {(() => {
+      <ErrorBoundary>
+        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+          {(() => {
           switch (page) {
             case "dashboard": return <PortalDashboard />;
             case "tickets": return <PortalTicketsPage />;
@@ -112,6 +117,7 @@ function PortalShell() {
           }
         })()}
       </Suspense>
+      </ErrorBoundary>
     );
   };
 
@@ -200,8 +206,9 @@ function AppShell() {
 
   const renderPage = () => {
     return (
-      <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
-        {(() => {
+      <ErrorBoundary>
+        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+          {(() => {
           switch (page) {
             case "dashboard":
               return <DashboardPage stats={stats} onNavigate={setPage} />;
@@ -242,6 +249,7 @@ function AppShell() {
           }
         })()}
       </Suspense>
+      </ErrorBoundary>
     );
   };
 
@@ -364,20 +372,51 @@ function AppShell() {
 // ── Root ──
 
 export default function App() {
-  const isPortal = typeof window !== "undefined" && window.location.pathname.startsWith("/portal");
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+
+  // Standalone auth pages
+  if (pathname === "/forgot-password") {
+    return (
+      <QueryProvider>
+      <ErrorBoundary>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+        <ForgotPasswordPage />
+      </Suspense>
+      </ErrorBoundary>
+      </QueryProvider>
+    );
+  }
+
+  if (pathname === "/reset-password") {
+    return (
+      <QueryProvider>
+      <ErrorBoundary>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+        <ResetPasswordPage />
+      </Suspense>
+      </ErrorBoundary>
+      </QueryProvider>
+    );
+  }
+
+  const isPortal = pathname.startsWith("/portal");
 
   if (isPortal) {
     return (
+      <QueryProvider>
       <PortalAuthProvider>
         <PortalShell />
       </PortalAuthProvider>
+      </QueryProvider>
     );
   }
 
   return (
+    <QueryProvider>
     <AuthProvider>
       <AppShell />
     </AuthProvider>
+    </QueryProvider>
   );
 }
 
