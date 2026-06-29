@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-06-30
-| Overall completeness: ~87% (+2% since last assessment)
+| Overall completeness: ~92% (+5% since last assessment)
 
 ---
 
@@ -18,21 +18,20 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
-- **Input sanitization — ADDED** — HTML stripping on all 40+ Pydantic models via `SanitizedModel` base class. Password/token/secret fields excluded. Missing `max_length` constraints added (10 fields).
-- **E2E tests — ADDED** — 33 Playwright tests across 5 suites (navigation, dashboard, customers, invoices, tickets). Fake JWT auth, no backend needed.
-- **Frontend TypeScript tests — ADDED** — 52 tests across 8 test suites: Button (10), Card (7), Badge (5), Input (5), Pagination (8), ErrorBoundary (3), Auth (9), Utils (5).
-- **CI pipeline expanded** — frontend vitest + Playwright E2E steps added to GitHub Actions workflow.
-
-- **Exception handlers — ADDED** — all unhandled errors now return JSON 500 with no stack-trace leak, plus structured 422 validation errors
-- **Shared httpx client — ADDED** — `client.get_http_client()` replaces 9 inline `httpx.AsyncClient()` instances; single connection pool shared across STDB queries, Twilio, webhooks, geocoding, and health checks
-- **SQL injection in `_sql_t()` — FIXED** — `tenant_id` is now validated for UUID format before interpolation
-- **9 blank `tenant_id` gaps — FIXED** — all nested reducers (notes, timers, line items, adjustments, checklists, custom fields) propagate tenant_id from parent entity
-- [x] **Pydantic input validation** — **all 49 endpoints** now reject invalid input with 422
-- [x] **Input validation — ACTIVE** — 422 responses with field-level detail for invalid data
-- [x] **CORS wildcard `["*"]` — FIXED** — locked to `settings.cors_origin`
-- **Frontend code-splitting — DONE** — `React.lazy()` for all 23 pages, main bundle 980KB → 249KB (75% drop)
-- **Tests — CREATED** — 39 integration tests across 5 test files, all passing
-- **STDB module — PUBLISHED** — tenant_id fixes + `#[unique]` constraints on User.email, User.name, Tenant.slug
+- **React Query — WIRED** — QueryProvider wraps the entire app. CustomersPage converted to useQuery/useMutation (cache invalidation, dedup, stale-while-revalidate). Template for further page conversions.
+- **Route splitting — COMPLETED** — main.py 2,390→55 lines, 20 APIRouter modules in routes/ package. All 52 backend tests pass.
+- **Frontend code-splitting — COMPLETED** — React.lazy() for all 23 pages, main bundle 980KB→249KB (75% drop)
+- **Frontend TypeScript tests — ADDED** — 52 tests across 8 suites
+- **E2E tests — ADDED** — 33 Playwright tests across 5 suites
+- **CI/CD pipeline — ADDED** — GitHub Actions: build STDB, seed, test, lint
+- **Password recovery — ADDED** — forgot-password + reset-password flows
+- **Tenant management UI — ADDED** — TenantsPage with create/edit/delete/members
+- **Pagination — ADDED** — offset/limit + total on all 15 list endpoints
+- **Pydantic validation — ADDED** — all 49 POST/PUT endpoints use typed models (0 remaining body: dict)
+- **Rate limiting — ADDED** — slowapi middleware (100/min default, 10/min auth)
+- **Input sanitization — ADDED** — HTML strip on all Pydantic models via SanitizedModel
+- **Exception handlers — ADDED** — JSON error responses with no stack-trace leak
+- **Shared httpx client — ADDED** — single connection pool replaces 9 inline AsyncClient() instances
 
 ---
 
