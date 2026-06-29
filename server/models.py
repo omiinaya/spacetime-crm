@@ -61,9 +61,11 @@ class TicketCreate(BaseModel):
     device_type: str = Field(default="", max_length=100)
     device_model: str = Field(default="", max_length=100)
     device_serial: str = Field(default="", max_length=100)
-    device_imei: str = Field(default="", max_length=100)
-    device_password: str = Field(default="", max_length=500)
-    priority: str = Field(default="medium", max_length=50)
+    priority: str = Field(default="normal", max_length=50)
+
+
+class TicketTimerStart(BaseModel):
+    user_id: str = Field(default="", max_length=100)
 
 
 class TicketStatusUpdate(BaseModel):
@@ -335,3 +337,28 @@ class SMSSettingsUpdate(BaseModel):
 class PortalLoginRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=1, max_length=255)
+
+
+class PortalNoteCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
+
+
+class PortalPaymentCreate(BaseModel):
+    invoice_id: str = Field(..., min_length=1)
+    amount: float = Field(..., gt=0)
+    method: str = Field(default="card", max_length=50)
+    reference: str = Field(default="", max_length=255)
+    notes: str = Field(default="", max_length=2000)
+
+
+class PortalSetPassword(BaseModel):
+    password: str = Field(..., min_length=6, max_length=255)
+
+
+class PortalCheckoutSessionCreate(BaseModel):
+    invoice_id: str = Field(..., min_length=1)
+
+
+class TenantMigrate(BaseModel):
+    name: str = Field(default="Default", max_length=255)
+    slug: str = Field(default="", max_length=255)

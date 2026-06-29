@@ -17,7 +17,7 @@ from config import settings
 from models import (
     LoginRequest, SetPasswordRequest,
     CustomerCreate, CustomerUpdate,
-    TicketCreate, TicketStatusUpdate, TicketAssign, TicketNoteCreate,
+    TicketCreate, TicketStatusUpdate, TicketAssign, TicketNoteCreate, TicketTimerStart,
     InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate,
     PaymentCreate,
     AppointmentCreate, AppointmentStatusUpdate,
@@ -26,13 +26,13 @@ from models import (
     EstimateCreate, EstimateStatusUpdate, EstimateLineItemCreate,
     TaxRateCreate, TaxRateUpdate,
     InventoryAdjustmentCreate,
-    TenantCreate, TenantUpdate, TenantMemberAdd, TenantMemberRoleUpdate,
+    TenantCreate, TenantUpdate, TenantMemberAdd, TenantMemberRoleUpdate, TenantMigrate,
     CustomFieldDefinitionCreate, CustomFieldValuesUpdate,
     ChecklistTemplateCreate, ChecklistTemplateUpdate, ChecklistApply, ChecklistToggle,
     WebhookSubscriptionCreate, WebhookSubscriptionUpdate,
     UserCreate, UserUpdate,
     MailSettingsUpdate, SMSSettingsUpdate,
-    PortalLoginRequest,
+    PortalLoginRequest, PortalNoteCreate, PortalPaymentCreate, PortalSetPassword, PortalCheckoutSessionCreate,
 )
 from mail import get_settings as get_mail_settings, update_settings as update_mail_settings, test_connection as test_mail_connection
 from mail import _notify_ticket_status_change, _notify_invoice_created, _notify_appointment_created, _notify_payment_received
@@ -292,22 +292,22 @@ async def create_customer(body: CustomerCreate, user: dict = Depends(require_rol
 
 
 @app.put("/api/customers/{customer_id}")
-async def update_customer(customer_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def update_customer(customer_id: str, body: CustomerUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_customer", [
         customer_id,
-        body.get("first_name", ""),
-        body.get("last_name", ""),
-        body.get("email", ""),
-        body.get("phone", ""),
-        body.get("mobile", ""),
-        body.get("address_line1", ""),
-        body.get("address_line2", ""),
-        body.get("city", ""),
-        body.get("state", ""),
-        body.get("zip", ""),
-        body.get("company", ""),
-        body.get("notes", ""),
-        body.get("tags", ""),
+        body.first_name,
+        body.last_name,
+        body.email,
+        body.phone,
+        body.mobile,
+        body.address_line1,
+        body.address_line2,
+        body.city,
+        body.state,
+        body.zip,
+        body.company,
+        body.notes,
+        body.tags,
     ])
     await _log_audit(user, "update", "customer", customer_id)
     asyncio.ensure_future(_fire_webhook("customer.updated", {
@@ -329,9 +329,9 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
 
 
 @app.post("/api/customers/{customer_id}/portal-password")
-async def set_customer_portal_password(customer_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def set_customer_portal_password(customer_id: str, body: SetPasswordRequest, user: dict = Depends(require_role("admin"))):
     """Admin sets/resets a customer's portal password."""
-    pw = body.get("password", "")
+    pw = body.password
     if len(pw) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
@@ -453,29 +453,29 @@ async def list_tickets(status: str = "", user: dict = Depends(require_role("admi
 
 
 @app.post("/api/tickets")
-async def create_ticket(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_ticket", [
         user["tenant_id"],
-        body.get("customer_id", ""),
-        body.get("title", ""),
-        body.get("description", ""),
-        body.get("device_type", ""),
-        body.get("device_model", ""),
-        body.get("device_serial", ""),
-        body.get("priority", "normal"),
+        body.customer_id,
+        body.title,
+        body.description,
+        body.device_type,
+        body.device_model,
+        body.device_serial,
+        body.priority,
     ])
-    await _log_audit(user, "create", "ticket", body.get("title", ""), f"customer={body.get('customer_id','')}")
+    await _log_audit(user, "create", "ticket", body.title, f"customer={body.customer_id}")
     asyncio.ensure_future(_fire_webhook("ticket.created", {
         "entity_type": "ticket",
-        "title": body.get("title", ""),
-        "customer_id": body.get("customer_id", ""),
+        "title": body.title,
+        "customer_id": body.customer_id,
     }))
     return {"ok": True}
 
 
 @app.put("/api/tickets/{ticket_id}/status")
-async def update_ticket_status(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    status = body.get("status", "")
+async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    status = body.status
     await _call("update_ticket_status", [ticket_id, status])
 
     # Notification: ticket status changed
@@ -504,9 +504,9 @@ async def update_ticket_status(ticket_id: str, body: dict, user: dict = Depends(
 
 
 @app.put("/api/tickets/{ticket_id}/assign")
-async def assign_ticket(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("assign_ticket", [ticket_id, body.get("assigned_user_id", "")])
-    await _log_audit(user, "assign", "ticket", ticket_id, f"user={body.get('assigned_user_id','')}")
+async def assign_ticket(ticket_id: str, body: TicketAssign, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    await _call("assign_ticket", [ticket_id, body.assigned_user_id])
+    await _log_audit(user, "assign", "ticket", ticket_id, f"user={body.assigned_user_id}")
     return {"ok": True}
 
 
