@@ -1,0 +1,23 @@
+You are an AI coding assistant working on SpacetimeCRM.
+
+## Stack
+FastAPI (Python) + React 19 + Vite 8 + Supabase + SpacetimeDB
+
+## Build & Test
+- Build: `cd web && npm run build`
+- Test: `cd web && npm test && cd ../server && python -m pytest`
+- Lint: check for warnings before committing
+
+## Conventions
+- Supabase for auth + database (project ref in .env)
+- IPv6-only Supabase — use pooler for connections
+- STDB for kanban data
+
+## Ports
+- 5185 Vite dev server
+- 3001 SpacetimeDB
+
+## Documentation
+- AGENTS.md — full agent onboarding
+- CLAUDE.md — Claude Code quickstart
+- Makefile — build/test/lint targets (`make help`)
