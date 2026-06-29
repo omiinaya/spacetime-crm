@@ -8,6 +8,17 @@ RepairShopr-inspired CRM built on SpacetimeDB — customers, tickets, invoicing,
 - **Frontend**: React 18 + Vite 6 + TailwindCSS v4 + shadcn-style components + Lucide icons
 - **Database**: SpacetimeDB (local:3001)
 
+## Documentation
+
+| File | Purpose |
+|------|---------|
+| [README.md](./README.md) | This file — project overview, quick start, API endpoints, STDB tables |
+| [AGENTS.md](./AGENTS.md) | Full agent onboarding — task-to-file mapping, architecture, pitfalls |
+| [CLAUDE.md](./CLAUDE.md) | Quick signpost for Claude/Codex AI agents |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines (human + AI agent) |
+| [ROADMAP.md](./ROADMAP.md) | Phase progress and completed features |
+| [Makefile](./Makefile) | Build, test, lint, fmt, dev commands |
+
 ## Project Structure
 
 ```
