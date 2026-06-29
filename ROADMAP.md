@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-**Last assessed:** 2026-06-28
-**Overall completeness:** ~65%
+**Last assessed:** 2026-06-29
+**Overall completeness:** ~75% (+10% since last assessment)
 
 ---
 
@@ -9,197 +9,239 @@
 
 | Layer | Lines | Completeness | Test Coverage | Anti-Patterns |
 |-------|-------|:------------:|:-------------:|:-------------:|
-| STDB Module (Rust) | 1,693 | 80% | 0% | 5 major |
-| Backend API (Python) | 3,201 | 75% | 0% | 7 major |
-| Frontend (TypeScript) | 7,268 | 70% | 0% | 3 major |
-| Infra (Docker/scripts) | — | 85% | N/A | 2 minor |
-| **Overall** | **12,162** | **65%** | **0%** | **17 items** |
+| STDB Module (Rust) | 1,708 | 85% | 0% (unit) | 3 major, 4 minor |
+| Backend API (Python) | 3,578 | 78% | 22% (API paths) | 5 major, 3 minor |
+| Frontend (TypeScript) | 7,469 | 75% | 0% | 3 major, 3 minor |
+| Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
+| **Tests** | **624 (39 tests)** | **Added this sprint** | **N/A** | **6 gaps** |
+| **Overall** | **13,853** | **~75%** | **35% API paths** | **17+ items** |
+
+### 🟢 Sprint Wins (since last assessment)
+
+- **SQL injection in `_sql_t()` — FIXED** — `tenant_id` is now validated for UUID format before interpolation
+- **9 blank `tenant_id` gaps — FIXED** — all nested reducers (notes, timers, line items, adjustments, checklists, custom fields) propagate tenant_id from parent entity
+- **Pydantic models — CREATED** — `server/models.py` with 40+ typed request models, login + customer endpoints converted
+- **Input validation — ACTIVE** — 422 responses with field-level detail for invalid data
+- **CORS wildcard `["*"]` — FIXED** — locked to `settings.cors_origin`
+- **Frontend code-splitting — DONE** — `React.lazy()` for all 23 pages, main bundle 980KB → 249KB (75% drop)
+- **Tests — CREATED** — 39 integration tests across 5 test files, all passing
+- **STDB module — PUBLISHED** — tenant_id fixes deployed to `spacetime-crm` on localhost:3001
 
 ---
 
-## Phase 1: Foundation ✅ (95% complete)
+## Phase 1: Foundation ✅✅ (97% complete)
 
-- [x] SpacetimeDB module with 26 tables and reducers
-- [x] FastAPI REST server with all CRUD endpoints
+- [x] SpacetimeDB module with 25 tables and 70 reducers
+- [x] FastAPI REST server with 91 endpoints
 - [x] React dashboard with sidebar navigation and dark theme
 - [x] Customers page (list, create, edit, delete, search)
 - [x] Tickets page (list, create, status workflow, notes)
 - [x] Invoices page (list, create, status, line items)
 - [x] Payments page (list, record payments)
-- [x] Appointments page (schedule, status, CRUD)
+- [x] Appointments page (schedule with calendar, status CRUD)
 - [x] Products page (inventory tracking, low stock alerts)
 - [x] Estimates page (quotes with line items)
-- [x] Purchase Orders page (vendor ordering)
+- [x] Purchase Orders page (vendor ordering + receiving)
 - [x] Users page (staff management)
 - [x] Dashboard stats overview
-
-✅ All core entities have full CRUD. BUT: no pagination on any endpoint, no request validation models, no bulk operations.
+- [x] **Pydantic input validation** — models created, proof-of-concept endpoints converted
+- [x] **Frontend code-splitting** — `React.lazy()` for all 23 pages
+- [x] **Integration tests** — 39 tests covering auth, customers, tickets, tenants, validation
+- [ ] 📌 **Pagination** — all list endpoints return everything (no offset/limit/cursor)
+- [ ] 📌 **All 49 endpoints** still use `body: dict` (only login + create_customer converted)
 
 ---
 
 ## Phase 2: Real-World Features ✅ (80% complete)
 
 - [x] Customer portal (web login for customers to view tickets/invoices)
-- [x] Customer map (geographic visualization)
-- [x] Email notifications (ticket status, invoice reminders)
-- [x] PDF generation (invoices, estimates, tickets)
+- [x] Customer map (geographic visualization with Leaflet)
+- [x] Email notifications (ticket status, invoice reminders, payment confirmations)
+- [x] PDF generation (invoices, estimates, tickets with WeasyPrint)
 - [x] Calendar view for appointments
 - [x] Time tracking with ticket timers
 - [x] Inventory adjustments (add/remove stock with reason)
-- [x] Purchase order receiving (receive against PO, update stock)
+- [x] Purchase order receiving (receive against PO, auto-update stock)
 - [x] Tax rate configuration
-
-✅ All Phase 2 features built and wired. BUT: no email templates customization, no recurring appointments, no inventory low-stock alerts (thresholds exist but no notification).
+- [ ] 📌 **Email templates** — all hardcoded in `mail.py`, no customization
+- [ ] 📌 **Recurring appointments** — no repeat/schedule pattern
+- [ ] 📌 **Low stock alerts** — threshold exists in DB, no notification triggers
 
 ---
 
-## Phase 3: Advanced ✅ (70% complete)
+## Phase 3: Advanced ⚠️ (65% complete)
 
-- [x] Multi-tenant support
-- [x] SMS notifications (Twilio)
-- [x] Stripe payment processing
+- [x] Multi-tenant support (25 tables with `tenant_id`)
+- [x] SMS notifications (Twilio — API integration works)
+- [x] Stripe payment processing (checkout sessions)
 - [x] Reporting dashboard (revenue by period, tech productivity)
 - [x] Barcode scanning for products
 - [x] Repair checklist templates
 - [x] Custom fields per customer/ticket
-- [x] Webhook integration (HMAC-signed, 13 events)
-- [ ] 📌 Customer payment methods / saved cards — **NOT IMPLEMENTED**
-- [ ] 📌 Portal payment UX — checkout session creates but UI not fully polished
-- [ ] 📌 Report scheduling / exports — **NOT IMPLEMENTED**
+- [x] Webhook integration (HMAC-SHA256 signed, 13 events)
+- [ ] 📌 **Saved customer payment methods** — not implemented
+- [ ] 📌 **Portal payment UX** — checkout session creates but UI is basic
+- [ ] 📌 **Report scheduling/exports** — no saved reports, no email reports
+- [ ] 📌 **Recurring invoices** — no auto-generation or scheduling
 
 ---
 
-## Phase 4: Production Readiness ⚠️ (40% complete)
+## Phase 4: Production Readiness ⚠️ (50% complete)
 
-- [x] Authentication (JWT login for staff)
-- [x] Role-based permissions (admin, tech, front-desk)
+- [x] Authentication (JWT login for staff + customer portal)
+- [x] Role-based permissions (admin, tech, front_desk)
 - [x] Audit logging (58 calls across all endpoints)
 - [x] Data export (CSV)
 - [x] Docker Compose for one-command deploy
-- [x] Backup/restore scripts
+- [x] Backup/restore scripts (`scripts/publish-stdb.sh`)
 - [x] Health checks and monitoring
-- [ ] 🔴 **Tests** — ZERO test files across the entire codebase
-- [ ] 🔴 **API input validation** — no Pydantic models anywhere, raw `body: dict`
-- [ ] 🔴 **SQL injection risk** — `tenant_id` interpolated via f-strings in 7 `_sql_t()` paths
-- [ ] 🔴 **Rate limiting** — none on any endpoint
-- [ ] 🔴 **CORS** — set to `["*"]` (too permissive for production)
+- [x] **SQL injection fix** — `_sql_t()` validates tenant_id format
+- [x] **Input validation** — Pydantic models created, login + customers converted
+- [x] **Frontend code-splitting** — 980KB → 249KB main bundle
+- [x] **Integration tests** — 39 tests covering auth, CRUD, security, tenant isolation
+- [x] **CORS locked** — `allow_origins=[settings.cors_origin]`
+- [ ] 🔴 **Pydantic conversion** — 49/51 POST/PUT endpoints still on `body: dict`
+- [ ] 🔴 **Rate limiting** — zero on any endpoint
 - [ ] 🔴 **Password recovery** — no forgot-password flow
-- [ ] 🟡 **Frontend chunk size** — 980KB single bundle (needs code-splitting)
-- [ ] 🟡 **Pagination** — only LIMIT clauses, no offset-based or cursor-based pagination
-- [ ] 🟡 **Global exception handlers** — none registered
-- [ ] 🟡 **Input sanitization** — raw body passthrough to STDB
+- [ ] 🔴 **Rust unit tests** — zero tests for 70 reducers
+- [ ] 🔴 **Frontend TypeScript tests** — zero tests
+- [ ] 🔴 **E2E tests** — zero tests
+- [ ] 🔴 **CI/CD pipeline** — no GitHub Actions or other CI
+- [ ] 🟡 **Pagination** — no offset/cursor/page on any list endpoint
+- [ ] 🟡 **Exception handlers** — none registered (default FastAPI 500s)
+- [ ] 🟡 **Input sanitization** — no XSS/strip_tags on any endpoint
+- [ ] 🟡 **Backend monolith** — `main.py` is 2,521 lines (needs route splitting)
+- [ ] 🟡 **Test coverage** — only 9/26 API route groups tested (35%)
 
 ---
 
 ## 🧪 Testing Report
 
-| Area | Status |
-|------|--------|
-| Rust unit tests | ❌ 0 tests |
-| Python backend tests | ❌ 0 tests |
-| TypeScript frontend tests | ❌ 0 tests |
-| Integration tests | ❌ 0 tests |
-| E2E tests | ❌ 0 tests |
-| **Total** | **0 tests across 12,162 lines of code** |
+| Area | Status | Details |
+|------|--------|---------|
+| Rust unit tests | ❌ 0 tests | 70 reducers, 25 tables — zero validation |
+| Python backend tests | ✅ 39 tests (624 lines) | Auth, customer CRUD, tickets, tenants, validation |
+| TypeScript frontend tests | ❌ 0 tests | 7,469 lines of TS, zero coverage |
+| E2E tests | ❌ 0 tests | No Playwright/Cypress |
+| CI/CD pipeline | ❌ Not configured | No GitHub Actions |
+| **API path coverage** | **9/26 (35%)** | Auth, customers, tickets, invoices, products, tenants, health, portal, validation |
+| **Endpoint coverage** | **~22%** | 39 tests for 123 endpoint registrations |
+
+### Test quality assessment
+
+✅ Positive: tests exercise real API with live STDB, verify actual HTTP responses
+✅ Positive: SQL injection, malformed JSON, wrong HTTP methods, and auth gaps tested
+⚠️ Negative: no negative tests for business logic (e.g. creating invoice without customer)
+⚠️ Negative: no concurrent/multi-user tests for tenant isolation
+⚠️ Negative: no performance/load tests for pagination gaps
+⚠️ Negative: no test isolation — tests share STDB state (no fresh DB per run)
+⚠️ Negative: no contract/API spec tests (no OpenAPI generation)
 
 ---
 
 ## 🚨 Known Anti-Patterns & Technical Debt
 
-### CRITICAL (fix before production)
+### 🔴 CRITICAL (fix within 2 sprints)
 
-1. **SQL injection in `_sql_t()`** — `tenant_id` is interpolated directly into SQL via f-strings (`f"AND tenant_id = '{tenant_id}'"`). If tenant_id ever comes from user-controlled input, this is exploitable. Currently tenant_id comes from JWT payload (server-signed), so exposure is limited, but it's still a bad pattern.
+1. **49 POST/PUT endpoints use `body: dict`** — no schema validation. 2 of 51 converted. Validates this sprint but bulk remains. Any typo in field names passes silently to STDB.
 
-2. **No tests** — 12KLOC with zero automated validation. Every deploy is a manual prayer.
+2. **Zero Rust unit tests** — 70 reducers with zero validation. Each reducer is a potential regression vector.
 
-3. **No request validation** — every FastAPI endpoint accepts `body: dict` with no schema validation. Malformed payloads pass through to STDB and produce 502 errors instead of 400s.
+3. **Zero frontend tests** — 7,469 lines of TypeScript with zero automated verification. UI breaks are invisible until someone clicks.
 
-4. **Incomplete tenant isolation** — 9 places in STDB reducers use `tenant_id: String::new()` instead of propagating the caller's tenant_id:
-   - `add_ticket_note`, `start_ticket_timer` (ticket.rs)
-   - `add_invoice_line_item`, `add_estimate_line_item`, `convert_estimate_to_invoice` (lib.rs)
-   - `add_po_line_item`, `receive_po_item` (purchase_order.rs)
-   - `set_custom_field_value` (custom_field.rs)
-   - `apply_checklist_template` (checklist.rs)
-   
-   These create records with blank tenant_id that won't show up in tenant-filtered queries.
+4. **No rate limiting** — any endpoint can be hammered by one user degrading all tenants.
 
-5. **CORS `["*"]`** — acceptable for dev, dangerous for production deployment.
+5. **No CI/CD** — every deploy is manual `docker compose up` or SSH + restart. No automated safety net.
 
-### HIGH
+### 🟡 HIGH (fix this sprint)
 
-6. **Backend is a single 2,481-line file** — `main.py` holds every endpoint, helper, auth function, and middleware. Needs splitting into routes modules.
+6. **Pagination — missing everywhere** — no list endpoint has offset/limit/cursor. 100K customers → OOM on both server and client.
 
-7. **No pagination** — list endpoints return all rows. With 10K customers this will be a problem.
+7. **No exception handlers** — FastAPI's default 500 HTML on unhandled exceptions leaks stack traces.
 
-8. **Frontend chunk size** — 980KB single bundle. Needs React.lazy + Suspense code-splitting per page.
+8. **`main.py` is 2,521 lines** — auth, every endpoint, helpers, webhook dispatch, geocoding, PDF generation all in one file. Needs route splitting (`routes/auth.py`, `routes/customers.py`, etc.)
 
-9. **No input sanitization** — raw request bodies go directly to STDB. At minimum SQL escape should be applied.
+9. **10 inline `httpx.AsyncClient()` instances** — new connection pool per call in 10 places across `main.py`, `sms.py`, `webhooks.py`. Should share a session.
 
-### MEDIUM
+### 🟠 MEDIUM
 
-10. **`User` table has no `tenant_id`** — users are not tenant-scoped, which is correct for shared admin users, but inconsistent with every other entity. May cause confusion.
+10. **No `#[unique]` constraints on any STDB table** — email uniqueness, slug uniqueness, etc. enforced only at app level. Race conditions possible.
 
-11. **`UserSettings` uses `user_id` as primary key** — fine, but then it _also_ has no `tenant_id`. Settings are per-user so this works, but breaks the pattern.
+11. **No explicit indexes beyond primary key** — `tenant_id` filters on every query, but no index on `tenant_id` column. O(n) scans per tenant.
 
-12. **No `is_default` unique constraint on TaxRate** — default is managed at app level, not enforced by STDB.
+12. **User table has no `tenant_id`** — deliberate (cross-tenant admin users) but inconsistent with every other entity. Portal users (customers) have no STDB table.
 
-13. **No STDB `#[unique]` constraints** — uniqueness for email, slug, etc. is not enforced at the database level.
+13. **WeasyPrint adds 200MB+ to Docker image** — depends on pango/cairo system libs. Alternative: chromium headless HTML→PDF or wkhtmltopdf.
 
-14. **`webhooks.py` and `mail.py` and `sms.py` use `httpx` inline** — they re-create `AsyncClient` per call instead of sharing a session.
+14. **Frontend has no error boundaries** — one uncaught render error = white screen. Every page should have one.
 
-15. **`.cursorrules` still references Supabase** — stale config from before the STDB migration.
+15. **Frontend uses bare `fetch()` calls** — no React Query/SWR/tanstack-query. Data refetches on every navigation. No caching, no dedup, no optimistic updates.
 
-16. **Backend uses `jinja2` + `weasyprint` for PDFs** — works but weasyprint is heavy (depends on pango/cairo system libs), Docker image is 200MB+ partly because of this.
+16. **Input sanitization — zero** — no strip_tags, no XSS protection, no field-length enforcement in endpoints (lengths go as-is to STDB). Some protection exists at Pydantic layer (when used).
 
-17. **No password recovery** — admin passwords can only be set manually.
+17. **`AGENTS.md` references Supabase** — stale .cursorrules from pre-STDB era.
+
+### 🟢 MINOR / Cosmetic
+
+18. **6 `hidden_glob_reexports` warnings** in `lib.rs` — `mod X` shadows `pub use X::*`. No functional impact.
+
+19. **No `Result` return in any reducer** — reducers don't signal success/failure to caller. The API layer infers from HTTP status.
+
+20. **Docker Compose uses `network: host`** — bypasses Docker networking. Works locally but won't scale to multi-host.
 
 ---
 
 ## 🏆 Feature Gap Analysis vs. RepairShopr / Competitors
 
-| Feature | Our Status | Competitor Status | Gap |
-|---------|:----------:|:-----------------:|:---:|
-| Customer management | ✅ | ✅ | Parity |
-| Ticket/repair tracking | ✅ | ✅ | Parity |
-| Invoicing + line items | ✅ | ✅ | Parity |
-| Estimates + conversion | ✅ | ✅ | Parity |
-| Payment recording | ✅ | ✅ | Parity |
-| Appointment scheduling | ✅ | ✅ | Parity |
-| Inventory tracking | ✅ | ✅ | Parity |
-| Purchase orders | ✅ | ✅ | Parity |
-| Time tracking | ✅ | ✅ | Parity |
-| Customer portal | ✅ | ✅ | Parity |
-| Email notifications | ✅ | ✅ | Parity |
-| SMS notifications | ✅ | ✅ | Parity |
-| Stripe payments | ✅ (basic) | ✅ | Partial — no saved cards, no ACH |
-| Webhook API | ✅ | ✅ | Parity |
-| Reporting | ✅ (basic) | ⭐ | Partial — no saved reports, no scheduling, no drill-down |
-| Custom fields | ✅ | ✅ | Parity |
-| Check lists | ✅ | ✅ | Parity |
-| Barcode scanning | ✅ | ✅ | Parity |
-| Data import/export | ✅ (CSV) | ✅ | Parity |
-| Multi-tenant | ✅ | ✅ | Parity |
-| Mobile app | ❌ | ⭐ | Gap |
-| POS / counter sale | ❌ | ⭐ | Gap |
-| Purchase order approvals | ❌ | ⭐ | Gap |
-| Automated recurring invoices | ❌ | ✅ | Gap |
-| Customer payment methods | ❌ | ✅ | Gap |
-| Inventory barcode labels | ❌ | ✅ | Gap |
-| Multi-currency | ❌ | ⭐ | Gap |
-| 2FA / SSO | ❌ | ⭐ | Gap |
-| Offline mode | ❌ | ❌ | Not a priority |
-| API rate limiting | ❌ | ⭐ | Gap |
-| SLA tracking | ❌ | ⭐ | Gap |
+| Feature | Our Status | Competitor Status | Our Count |
+|---------|:----------:|:-----------------:|:---------:|
+| Customer management | ✅ Complete | ✅ Parity | 25 tables |
+| Ticket/repair tracking | ✅ Complete | ✅ Parity | 10 endpoints |
+| Invoicing + line items | ✅ Complete | ✅ Parity | Full CRUD |
+| Estimates + conversion | ✅ Complete | ✅ Parity | Full CRUD |
+| Payment recording | ✅ Complete | ✅ Parity | Stripe + manual |
+| Appointment scheduling | ✅ Complete | ✅ Parity | Calendar view |
+| Inventory tracking | ✅ Complete | ✅ Parity | Adjustments |
+| Purchase orders | ✅ Complete | ✅ Parity | Receiving |
+| Time tracking | ✅ Complete | ✅ Parity | Ticket timers |
+| Customer portal | ✅ Complete | ✅ Parity | 4 pages |
+| Email notifications | ✅ Complete | ✅ Parity | 4 event types |
+| SMS notifications | ✅ Configured | ✅ Parity | Twilio |
+| Stripe payments | ✅ Basic | ✅ Parity | No saved cards |
+| Webhook API | ✅ Complete | ⭐ Ahead | HMAC-signed |
+| Reporting | ✅ Basic | ⭐ Partial | No drill-down |
+| Custom fields | ✅ Complete | ✅ Parity | Per entity type |
+| Repair checklists | ✅ Complete | ✅ Parity | Templates |
+| Barcode scanning | ✅ Complete | ✅ Parity | Product lookup |
+| Data import/export | ✅ CSV | ✅ Parity | CSV only |
+| Multi-tenant | ✅ Complete | ✅ Parity | 25 tables scoped |
+| **Tests** | **🟢 Added (39)** | ✅ Expected | **First sprint** |
+| **Pydantic validation** | **🟢 Started** | ✅ Expected | **2/51 endpoints** |
+| Mobile app | ❌ Not started | ⭐ Gap | — |
+| POS / counter sale | ❌ Not started | ⭐ Gap | — |
+| Purchase order approvals | ❌ Not started | ⭐ Gap | — |
+| Automated recurring invoices | ❌ Not started | ✅ Gap | — |
+| Customer payment methods | ❌ Not started | ✅ Gap | — |
+| Inventory barcode labels | ❌ Not started | ✅ Gap | — |
+| Multi-currency | ❌ Not started | ⭐ Gap | — |
+| 2FA / SSO | ❌ Not started | ⭐ Gap | — |
+| API rate limiting | ❌ Not started | ⭐ Gap | — |
+| SLA tracking | ❌ Not started | ⭐ Gap | — |
+| Offline mode | ❌ Not started | ❌ Not priority | — |
 
-**Verdict:** We have broad feature parity with RepairShopr's core offering (~80% of features covered), but lack depth in some areas (reporting, payments UX, mobile) and are missing a few key items (recurring invoices, saved payment methods, counter POS).
+### Verdict
+
+**Feature parity: ~75% vs RepairShopr core.** The gap is in depth, not breadth — we have most features but they're thinner. The biggest production gaps (tests, validation, pagination) are being closed this sprint.
 
 ---
 
 ## 🎯 Recommended Next Priority
 
-1. **Add tests** — this is the single biggest risk. Start with API integration tests (they exercise the most code per test).
-2. **Fix SQL injection** in `_sql_t()` — use parameterized queries.
-3. **Add Pydantic request models** — stop accepting `body: dict` everywhere.
-4. **Fix tenant isolation gaps** — propagate `tenant_id` to nested creates.
-5. **Code-split frontend** — reduce bundle size from 980KB.
-6. **Add pagination** to all list endpoints.
+1. **Convert remaining 49 endpoints to Pydantic models** — highest impact per line changed. Each conversion adds validation + docs + safety.
+2. **Add STDB `#[unique]` constraints** — enforce email/slug uniqueness at DB level.
+3. **Add Rust unit tests** — at minimum test each reducer with known inputs.
+4. **Split `main.py` into route modules** — `routes/customers.py`, `routes/tickets.py`, etc.
+5. **Add pagination** to all list endpoints (offset/limit with 100 default).
+6. **Add CI/CD** — GitHub Actions that run tests on push.
+7. **Add error boundaries** to every frontend page.
+8. **Add React Query** for data fetching with caching.
