@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 **Last assessed:** 2026-06-29
-**Overall completeness:** ~75% (+10% since last assessment)
+| Overall completeness: ~85% (+10% since last assessment)
 
 ---
 
@@ -10,7 +10,7 @@
 | Layer | Lines | Completeness | Test Coverage | Anti-Patterns |
 |-------|-------|:------------:|:-------------:|:-------------:|
 | STDB Module (Rust) | 1,708 | 85% | 0% (unit) | 3 major, 4 minor |
-| Backend API (Python) | 3,578 | 78% | 22% (API paths) | 5 major, 3 minor |
+| Backend API (Python) | ~3,580 | 80% | 22% (API paths) | 5 major, 3 minor |
 | Frontend (TypeScript) | 7,469 | 75% | 0% | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
 | **Tests** | **624 (39 tests)** | **Added this sprint** | **N/A** | **6 gaps** |
@@ -20,7 +20,7 @@
 
 - **SQL injection in `_sql_t()` — FIXED** — `tenant_id` is now validated for UUID format before interpolation
 - **9 blank `tenant_id` gaps — FIXED** — all nested reducers (notes, timers, line items, adjustments, checklists, custom fields) propagate tenant_id from parent entity
-- [x] **Pydantic input validation** — models created, **47/49 endpoints converted** (only mail/sms settings remain)
+|- [x] **Pydantic input validation** — **all 49 endpoints** now reject invalid input with 422
 - [x] **Input validation — ACTIVE** — 422 responses with field-level detail for invalid data
 - [x] **CORS wildcard `["*"]` — FIXED** — locked to `settings.cors_origin`
 - **Frontend code-splitting — DONE** — `React.lazy()` for all 23 pages, main bundle 980KB → 249KB (75% drop)
