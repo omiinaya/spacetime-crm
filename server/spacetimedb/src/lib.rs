@@ -16,6 +16,7 @@ mod custom_field;
 mod customer_geolocation;
 mod checklist;
 mod webhook;
+mod tenant;
 
 pub use customer::*;
 pub use customer_geolocation::*;
@@ -39,6 +40,7 @@ pub use webhook::*;
 pub struct Invoice {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub customer_id: String,
     pub ticket_id: String,
     pub invoice_number: u64,
@@ -61,6 +63,7 @@ pub struct Invoice {
 pub struct InvoiceLineItem {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub invoice_id: String,
     pub item_type: String,
     pub description: String,
@@ -75,6 +78,7 @@ pub struct InvoiceLineItem {
 pub struct Estimate {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub customer_id: String,
     pub ticket_id: String,
     pub estimate_number: u64,
@@ -96,6 +100,7 @@ pub struct Estimate {
 pub struct EstimateLineItem {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub estimate_id: String,
     pub item_type: String,
     pub description: String,
@@ -108,12 +113,12 @@ pub struct EstimateLineItem {
 // ─── Reducers ──
 
 #[spacetimedb::reducer]
-pub fn create_invoice(ctx: &ReducerContext, customer_id: String, ticket_id: String, notes: String, terms: String, due_date: u64) {
+pub fn create_invoice(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, notes: String, terms: String, due_date: u64) {
     let id = make_id("inv", ctx);
     let now = now_ms(ctx);
     let invoice_number = ctx.db.invoices().iter().count() as u64 + 10001;
     ctx.db.invoices().insert(Invoice {
-        id, customer_id, ticket_id, invoice_number,
+        id, tenant_id, customer_id, ticket_id, invoice_number,
         status: "draft".to_string(),
         subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0,
         discount_amount: 0.0, discount_percent: 0.0,
@@ -133,7 +138,7 @@ pub fn add_invoice_line_item(ctx: &ReducerContext, invoice_id: String, item_type
     let id = make_id("iln", ctx);
     let total = quantity * unit_price;
     let sort = ctx.db.invoice_line_items().iter().filter(|i| i.invoice_id == invoice_id).count() as u32;
-    ctx.db.invoice_line_items().insert(InvoiceLineItem { id, invoice_id: invoice_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
+    ctx.db.invoice_line_items().insert(InvoiceLineItem { id, tenant_id: String::new(), invoice_id: invoice_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
     // Recalc invoice totals
     if let Some(inv) = ctx.db.invoices().id().find(&invoice_id) {
         let items: Vec<InvoiceLineItem> = ctx
@@ -184,12 +189,12 @@ pub fn set_invoice_tax_rate(ctx: &ReducerContext, id: String, tax_rate: f64) {
 // ─── Estimate reducers ──
 
 #[spacetimedb::reducer]
-pub fn create_estimate(ctx: &ReducerContext, customer_id: String, ticket_id: String, notes: String, expires_at: u64) {
+pub fn create_estimate(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, notes: String, expires_at: u64) {
     let id = make_id("est", ctx);
     let now = now_ms(ctx);
     let estimate_number = ctx.db.estimates().iter().count() as u64 + 1001;
     ctx.db.estimates().insert(Estimate {
-        id, customer_id, ticket_id, estimate_number,
+        id, tenant_id, customer_id, ticket_id, estimate_number,
         status: "draft".to_string(),
         subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0, discount_amount: 0.0,
         notes, expires_at, invoice_id: String::new(), created_at: now, updated_at: now,
@@ -208,7 +213,7 @@ pub fn add_estimate_line_item(ctx: &ReducerContext, estimate_id: String, item_ty
     let id = make_id("eln", ctx);
     let total = quantity * unit_price;
     let sort = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id).count() as u32;
-    ctx.db.estimate_line_items().insert(EstimateLineItem { id, estimate_id: estimate_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
+    ctx.db.estimate_line_items().insert(EstimateLineItem { id, tenant_id: String::new(), estimate_id: estimate_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
     if let Some(est) = ctx.db.estimates().id().find(&estimate_id) {
         let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id).collect();
         let subtotal: f64 = items.iter().map(|i| i.total).sum();
@@ -231,6 +236,7 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
         let invoice_number = ctx.db.invoices().iter().count() as u64 + 10001;
         ctx.db.invoices().insert(Invoice {
             id: inv_id.clone(),
+            tenant_id: est.tenant_id.clone(),
             customer_id: est.customer_id.clone(),
             ticket_id: est.ticket_id.clone(),
             invoice_number,
@@ -254,6 +260,7 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
             li_idx += 1;
             ctx.db.invoice_line_items().insert(InvoiceLineItem {
                 id: li_id,
+                tenant_id: String::new(),
                 invoice_id: inv_id.clone(),
                 item_type: item.item_type.clone(),
                 description: item.description.clone(),

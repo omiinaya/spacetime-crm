@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Appointment {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub customer_id: String,
     pub ticket_id: String,
     pub title: String,
@@ -19,11 +20,12 @@ pub struct Appointment {
 }
 
 #[spacetimedb::reducer]
-pub fn create_appointment(ctx: &ReducerContext, customer_id: String, ticket_id: String, title: String, description: String, start_time: u64, end_time: u64, all_day: bool) {
+pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, title: String, description: String, start_time: u64, end_time: u64, all_day: bool) {
     let id = super::make_id("appt", ctx);
     let now = super::now_ms(ctx);
     ctx.db.appointment().insert(Appointment {
         id,
+        tenant_id,
         customer_id,
         ticket_id,
         title,

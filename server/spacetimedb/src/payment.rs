@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Payment {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub invoice_id: String,
     pub customer_id: String,
     pub amount: f64,
@@ -17,6 +18,7 @@ pub struct Payment {
 #[spacetimedb::reducer]
 pub fn record_payment(
     ctx: &ReducerContext,
+    tenant_id: String,
     invoice_id: String,
     customer_id: String,
     amount: f64,
@@ -28,6 +30,7 @@ pub fn record_payment(
     let now = super::now_ms(ctx);
     ctx.db.payment().insert(Payment {
         id,
+        tenant_id,
         invoice_id,
         customer_id,
         amount,

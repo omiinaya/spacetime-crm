@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct WebhookSubscription {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     /// URL to send POST requests to
     pub url: String,
     /// Comma-separated event types (e.g. "ticket.created,ticket.updated")
@@ -37,6 +38,7 @@ pub const SUPPORTED_EVENTS: [&str; 13] = [
 #[spacetimedb::reducer]
 pub fn create_webhook_subscription(
     ctx: &ReducerContext,
+    tenant_id: String,
     url: String,
     events: String,
     secret: String,
@@ -45,6 +47,7 @@ pub fn create_webhook_subscription(
     let now = now_ms(ctx);
     ctx.db.webhook_subscriptions().insert(WebhookSubscription {
         id,
+        tenant_id,
         url,
         events,
         secret,

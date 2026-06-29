@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Product {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub name: String,
     pub sku: String,
     pub barcode: String,
@@ -23,11 +24,12 @@ pub struct Product {
 }
 
 #[spacetimedb::reducer]
-pub fn create_product(ctx: &ReducerContext, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, quantity_on_hand: f64) {
+pub fn create_product(ctx: &ReducerContext, tenant_id: String, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, quantity_on_hand: f64) {
     let id = super::make_id("prod", ctx);
     let now = super::now_ms(ctx);
     ctx.db.products().insert(Product {
         id,
+        tenant_id,
         name,
         sku,
         barcode,
@@ -62,6 +64,7 @@ pub fn delete_product(ctx: &ReducerContext, id: String) {
 #[spacetimedb::reducer]
 pub fn import_product(
     ctx: &ReducerContext,
+    tenant_id: String,
     id: String,
     name: String,
     sku: String,
@@ -81,6 +84,7 @@ pub fn import_product(
     let quantity_available = quantity_on_hand - quantity_committed;
     ctx.db.products().insert(Product {
         id,
+        tenant_id,
         name,
         sku,
         barcode,

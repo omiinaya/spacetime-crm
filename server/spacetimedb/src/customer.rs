@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Customer {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub first_name: String,
     pub last_name: String,
     pub email: String,
@@ -24,11 +25,12 @@ pub struct Customer {
 }
 
 #[spacetimedb::reducer]
-pub fn create_customer(ctx: &ReducerContext, first_name: String, last_name: String, email: String, phone: String) {
+pub fn create_customer(ctx: &ReducerContext, tenant_id: String, first_name: String, last_name: String, email: String, phone: String) {
     let id = super::make_id("cust", ctx);
     let now = super::now_ms(ctx);
     ctx.db.customer().insert(Customer {
         id,
+        tenant_id,
         first_name,
         last_name,
         email,
@@ -102,6 +104,7 @@ pub fn delete_customer(ctx: &ReducerContext, id: String) {
 #[spacetimedb::reducer]
 pub fn import_customer(
     ctx: &ReducerContext,
+    tenant_id: String,
     id: String,
     first_name: String,
     last_name: String,
@@ -121,6 +124,7 @@ pub fn import_customer(
 ) {
     ctx.db.customer().insert(Customer {
         id,
+        tenant_id,
         first_name,
         last_name,
         email,

@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct ChecklistTemplate {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub name: String,
     pub description: String,
     /// JSON array: [{"label":"Check power","order":1}]
@@ -18,6 +19,7 @@ pub struct ChecklistTemplate {
 pub struct TicketChecklistItem {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub ticket_id: String,
     pub template_id: String,
     pub template_name: String,
@@ -30,11 +32,11 @@ pub struct TicketChecklistItem {
 }
 
 #[spacetimedb::reducer]
-pub fn create_checklist_template(ctx: &ReducerContext, name: String, description: String, items: String) {
+pub fn create_checklist_template(ctx: &ReducerContext, tenant_id: String, name: String, description: String, items: String) {
     let id = super::make_id("clt", ctx);
     let now = super::now_ms(ctx);
     ctx.db.checklist_templates().insert(ChecklistTemplate {
-        id, name, description, items,
+        id, tenant_id, name, description, items,
         created_at: now, updated_at: now,
     });
 }
@@ -75,6 +77,7 @@ pub fn apply_checklist_template(ctx: &ReducerContext, ticket_id: String, templat
         let ci_id = format!("tci_{}_{}_{}", now, i, ctx.sender().to_hex().chars().take(6).collect::<String>());
         ctx.db.ticket_checklist_items().insert(TicketChecklistItem {
             id: ci_id,
+            tenant_id: String::new(),
             ticket_id: ticket_id.clone(),
             template_id: template_id.clone(),
             template_name: tmpl.name.clone(),

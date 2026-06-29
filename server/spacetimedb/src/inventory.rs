@@ -7,6 +7,7 @@ use crate::product::products;
 pub struct InventoryAdjustment {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub product_id: String,
     pub quantity_change: f64,
     pub reason: String, // received, sold, damaged, returned, counted, transferred
@@ -19,6 +20,7 @@ pub struct InventoryAdjustment {
 #[spacetimedb::reducer]
 pub fn create_inventory_adjustment(
     ctx: &ReducerContext,
+    tenant_id: String,
     product_id: String,
     quantity_change: f64,
     reason: String,
@@ -30,6 +32,7 @@ pub fn create_inventory_adjustment(
     let now = super::now_ms(ctx);
     ctx.db.inventory_adjustment().insert(InventoryAdjustment {
         id,
+        tenant_id,
         product_id: product_id.clone(),
         quantity_change,
         reason,

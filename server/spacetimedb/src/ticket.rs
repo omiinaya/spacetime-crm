@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Ticket {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub customer_id: String,
     pub ticket_number: u64,
     pub title: String,
@@ -29,6 +30,7 @@ pub struct Ticket {
 pub struct TicketNote {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub ticket_id: String,
     pub author: String,
     pub content: String,
@@ -41,6 +43,7 @@ pub struct TicketNote {
 pub struct TicketTimer {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub ticket_id: String,
     pub user_id: String,
     pub start_time: u64,
@@ -52,6 +55,7 @@ pub struct TicketTimer {
 #[spacetimedb::reducer]
 pub fn create_ticket(
     ctx: &ReducerContext,
+    tenant_id: String,
     customer_id: String,
     title: String,
     description: String,
@@ -65,6 +69,7 @@ pub fn create_ticket(
     let ticket_number = ctx.db.ticket().iter().count() as u64 + 1001;
     ctx.db.ticket().insert(Ticket {
         id,
+        tenant_id,
         customer_id,
         ticket_number,
         title,
@@ -104,6 +109,7 @@ pub fn add_ticket_note(ctx: &ReducerContext, ticket_id: String, author: String, 
     let id = super::make_id("tnote", ctx);
     ctx.db.ticket_note().insert(TicketNote {
         id,
+        tenant_id: String::new(),
         ticket_id,
         author,
         content,
@@ -134,6 +140,7 @@ pub fn start_ticket_timer(ctx: &ReducerContext, ticket_id: String, user_id: Stri
     let id = super::make_id("tmr", ctx);
     ctx.db.ticket_timer().insert(TicketTimer {
         id,
+        tenant_id: String::new(),
         ticket_id,
         user_id,
         start_time: now,

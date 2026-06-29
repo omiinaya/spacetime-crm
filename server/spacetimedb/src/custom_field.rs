@@ -7,6 +7,7 @@ use spacetimedb::*;
 pub struct CustomFieldDefinition {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     /// Which entity this field applies to: "customer", "ticket", "invoice", "product"
     pub entity_type: String,
     /// Human-readable label shown on the form
@@ -28,6 +29,7 @@ pub struct CustomFieldDefinition {
 #[spacetimedb::reducer]
 pub fn create_custom_field_definition(
     ctx: &ReducerContext,
+    tenant_id: String,
     id: String,
     entity_type: String,
     label: String,
@@ -40,6 +42,7 @@ pub fn create_custom_field_definition(
     let now = now_ms(ctx);
     ctx.db.custom_field_definitions().insert(CustomFieldDefinition {
         id,
+        tenant_id,
         entity_type,
         label,
         field_type,
@@ -89,6 +92,7 @@ pub fn delete_custom_field_definition(ctx: &ReducerContext, id: String) {
 pub struct CustomFieldValue {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     /// The entity this value belongs to (e.g. customer_<id>)
     pub entity_id: String,
     /// Which field definition this value is for
@@ -124,6 +128,7 @@ pub fn set_custom_field_value(
         let id = format!("cfv_{}_{}", now, ctx.sender().to_hex().chars().take(8).collect::<String>());
         ctx.db.custom_field_values().insert(CustomFieldValue {
             id,
+            tenant_id: String::new(), // Tenant assigned at insert time by the caller
             entity_id,
             field_id,
             value,

@@ -7,6 +7,7 @@ use crate::product::products;
 pub struct PurchaseOrder {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub vendor_name: String,
     pub po_number: u64,
     pub status: String, // draft → sent → partial → received → cancelled
@@ -24,6 +25,7 @@ pub struct PurchaseOrder {
 pub struct PurchaseOrderLineItem {
     #[primary_key]
     pub id: String,
+    pub tenant_id: String,
     pub purchase_order_id: String,
     pub product_id: String,
     pub description: String,
@@ -34,12 +36,13 @@ pub struct PurchaseOrderLineItem {
 }
 
 #[spacetimedb::reducer]
-pub fn create_purchase_order(ctx: &ReducerContext, vendor_name: String, notes: String) {
+pub fn create_purchase_order(ctx: &ReducerContext, tenant_id: String, vendor_name: String, notes: String) {
     let id = super::make_id("po", ctx);
     let now = super::now_ms(ctx);
     let po_number = ctx.db.purchase_order().iter().count() as u64 + 1001;
     ctx.db.purchase_order().insert(PurchaseOrder {
         id,
+        tenant_id,
         vendor_name,
         po_number,
         status: "draft".to_string(),
@@ -83,6 +86,7 @@ pub fn add_po_line_item(ctx: &ReducerContext, purchase_order_id: String, product
     let total = quantity * unit_price;
     ctx.db.purchase_order_line_item().insert(PurchaseOrderLineItem {
         id,
+        tenant_id: String::new(),
         purchase_order_id: purchase_order_id.clone(),
         product_id,
         description,
@@ -129,6 +133,7 @@ pub fn receive_po_item(ctx: &ReducerContext, id: String, received_quantity: f64)
                 let adj_id = super::make_id("adj", ctx);
                 ctx.db.inventory_adjustment().insert(super::InventoryAdjustment {
                     id: adj_id,
+                    tenant_id: String::new(),
                     product_id: item.product_id.clone(),
                     quantity_change: qty_change,
                     reason: "received".to_string(),
