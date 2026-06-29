@@ -25,10 +25,11 @@ class TestTenants:
 
     def test_create_tenant(self, auth_headers: dict):
         """Create a new tenant."""
-        name = "Test Tenant"
+        import uuid
+        slug = f"test-tenant-{uuid.uuid4().hex[:8]}"
         resp = httpx.post(
             f"{SERVER_URL}/api/tenants",
-            json={"name": name, "slug": "test-tenant"},
+            json={"name": "Test Tenant", "slug": slug},
             headers=auth_headers, timeout=10,
         )
         data = assert_ok(resp)
