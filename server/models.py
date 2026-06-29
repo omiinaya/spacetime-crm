@@ -215,9 +215,10 @@ class TaxRateUpdate(BaseModel):
 
 class InventoryAdjustmentCreate(BaseModel):
     quantity_change: float = Field(...)
-    reason: str = Field(default="adjustment", max_length=100)
+    reason: str = Field(default="other", max_length=100)
     reference_id: str = Field(default="", max_length=255)
     notes: str = Field(default="", max_length=2000)
+    user_id: str = Field(default="", max_length=100)
 
 
 # ─── Tenants ─────────────────────────────────────────────────────
@@ -250,7 +251,7 @@ class CustomFieldDefinitionCreate(BaseModel):
     entity_type: str = Field(..., pattern=r"^(customer|ticket|invoice|product)$")
     label: str = Field(..., min_length=1, max_length=255)
     field_type: str = Field(..., pattern=r"^(text|number|date|select|multiselect|checkbox|textarea)$")
-    options: str = Field(default="", max_length=5000)
+    options: list[str] = Field(default=[])
     sort_order: int = Field(default=0, ge=0)
     required: bool = False
     active: bool = True
