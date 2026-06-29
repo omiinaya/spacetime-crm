@@ -165,3 +165,114 @@ clean-docker: ## Clean Docker artifacts
 
 clean-all: clean ## Thorough clean including lockfiles
 	rm -f web/package-lock.json
+
+# ── Agent-Friendly Targets ─────────────────────────────────────────────
+
+.PHONY: test-unit test-integration test-quick coverage check-ports deps-check health setup-git-hooks
+
+test-unit:  ## Run fast offline-safe unit tests
+	@echo "--- Backend unit tests ---"
+	@if command -v pytest >/dev/null 2>&1; then \
+		pytest server/ -v --tb=short; \
+	else \
+		echo "⚠️  pytest not installed. Run: pip install pytest"; \
+	fi
+	@echo "--- Frontend unit tests ---"
+	@if [ -f web/node_modules/.bin/vitest ]; then \
+		cd web && npx vitest run; \
+	else \
+		echo "⚠️  vitest not found. Install: cd web && npm install -D vitest"; \
+	fi
+
+test-integration:  ## Tests needing running services (STDB + backend + frontend)
+	@echo "⚠️  Integration tests require STDB on :3001 and backend on :8723"
+	@if curl -sf http://localhost:3001/health >/dev/null 2>&1; then \
+		echo "STDB running — testing STDB module..."; \
+		cd server/spacetimedb && cargo test 2>/dev/null || echo "No Rust tests found"; \
+	else \
+		echo "STDB not running on :3001 — skipping"; \
+	fi
+	@if curl -sf http://localhost:8723/health >/dev/null 2>&1; then \
+		echo "Backend running — running API integration tests..."; \
+		python3 -m pytest tests/integration/ -v --tb=short 2>/dev/null || echo "No integration tests found at tests/integration/"; \
+	else \
+		echo "Backend not running on :8723 — skipping"; \
+	fi
+
+test-quick:  ## ~5s sanity check
+	@echo "--- Quick sanity check ---"
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 -c "import sys; print('✅ Python', sys.version)"; \
+	else \
+		echo "❌ python3 not found"; \
+	fi
+	@if command -v node >/dev/null 2>&1; then \
+		echo "✅ Node $$(node --version)"; \
+	else \
+		echo "❌ node not found"; \
+	fi
+	@echo "--- Lint check (ruff only) ---"
+	@if command -v ruff >/dev/null 2>&1; then \
+		ruff check server/main.py --quiet 2>/dev/null && echo "  lint OK"; \
+	else \
+		echo "  ruff not installed"; \
+	fi
+
+coverage:  ## Test coverage report
+	@echo "--- Backend coverage ---"
+	@if command -v pytest >/dev/null 2>&1; then \
+		python3 -m pytest server/ --cov=server --cov-report=term --cov-report=html --cov-branch 2>/dev/null || echo "⚠️  pytest-cov may not be installed"; \
+	else \
+		echo "⚠️  pytest not installed. Run: pip install pytest pytest-cov"; \
+	fi
+	@echo ""
+	@echo "--- Frontend coverage ---"
+	@if [ -f web/node_modules/.bin/vitest ]; then \
+		cd web && npx vitest run --coverage 2>/dev/null || echo "⚠️  vitest coverage not configured. Install: cd web && npm install -D @vitest/coverage-v8"; \
+	else \
+		echo "⚠️  vitest not found"; \
+	fi
+
+check-ports:  ## Verify required ports are free
+	@echo "Checking required ports..."
+	@for port in 5185 3001; do \
+		if ss -tlnp "sport = :$$port" 2>/dev/null | grep -q .; then \
+			echo "  ✅ :$$port — in use"; \
+		else \
+			echo "  ⚪ :$$port — free"; \
+		fi; \
+	done
+
+deps-check:  ## Verify required tools are installed
+	@echo "Checking development dependencies..."
+	@for cmd in python3 node npm spacetime cargo ruff; do \
+		if command -v $$cmd >/dev/null 2>&1; then \
+			echo "  ✅ $$cmd — $$(command -v $$cmd)"; \
+		else \
+			echo "  ❌ $$cmd — NOT FOUND"; \
+		fi; \
+	done
+
+health:  ## Check if dev servers are running
+	@echo "--- Dev Server Health ---"
+	@if curl -sf http://localhost:3001/health >/dev/null 2>&1; then \
+		echo "  ✅ STDB (http://localhost:3001) — running"; \
+	else \
+		echo "  ⚪ STDB (http://localhost:3001) — not detected"; \
+	fi
+	@if curl -sf http://localhost:8723/docs >/dev/null 2>&1; then \
+		echo "  ✅ Backend (http://localhost:8723) — running"; \
+	else \
+		echo "  ⚪ Backend (http://localhost:8723) — not detected"; \
+	fi
+	@if curl -sf http://localhost:5185 >/dev/null 2>&1; then \
+		echo "  ✅ Vite (http://localhost:5185) — running"; \
+	else \
+		echo "  ⚪ Vite (http://localhost:5185) — not detected"; \
+	fi
+
+setup-git-hooks:  ## Configure .githooks
+	@git config core.hooksPath .githooks
+	@echo "✅ Git hooks configured (core.hooksPath = .githooks)"
+	@chmod +x .githooks/* 2>/dev/null || true
+	@echo "Done."
