@@ -5,6 +5,7 @@ import {
   Calendar, Package, FileCheck, ShoppingCart, BarChart3, Settings,
   Menu, Users as UsersIcon, LogOut, ExternalLink, Sun, Moon,
   Download, Upload, History, HeartPulse, ListOrdered, Map, ListChecks,
+  Building2,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -36,12 +37,13 @@ import HealthPage from "./pages/HealthPage";
 import CustomFieldsPage from "./pages/CustomFieldsPage";
 import MapPage from "./pages/MapPage";
 import ChecklistTemplatesPage from "./pages/ChecklistTemplatesPage";
+import TenantsPage from "./pages/TenantsPage";
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
   | "purchase-orders" | "import-export" | "audit-log"
-  | "health" | "custom-fields" | "checklist" | "map" | "reports" | "settings";
+  | "health" | "custom-fields" | "checklist" | "map" | "reports" | "settings" | "tenants";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -70,6 +72,7 @@ const navItems: NavItem[] = [
   { id: "audit-log", label: "Audit Log", icon: History },
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: Settings },
+  { id: "tenants", label: "Tenants", icon: Building2 },
 ];
 
 // ── Portal App ──
@@ -225,6 +228,8 @@ function AppShell() {
         return <ReportsPage />;
       case "settings":
         return <SettingsPage />;
+      case "tenants":
+        return <TenantsPage />;
     }
   };
 

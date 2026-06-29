@@ -7,6 +7,8 @@ interface AuthUser {
   name: string;
   email: string;
   role: string;
+  tenant_id?: string;
+  tenant?: Record<string, any>;
 }
 
 interface AuthContextType {
@@ -15,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshTenant: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -34,7 +37,7 @@ function clearToken() {
 function decodeUser(token: string): AuthUser | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return { id: payload.sub, name: payload.name, email: payload.email, role: payload.role };
+    return { id: payload.sub, name: payload.name, email: payload.email, role: payload.role, tenant_id: payload.tenant_id || "" };
   } catch {
     return null;
   }
@@ -73,7 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     storeToken(data.token);
     setToken(data.token);
-    setUser(data.user);
+    // Use the full user object from the response if available, otherwise decode JWT
+    if (data.user) {
+      setUser(data.user);
+    } else {
+      const u = decodeUser(data.token);
+      setUser(u);
+    }
   };
 
   const logout = () => {
@@ -82,8 +91,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const refreshTenant = async () => {
+    const t = token || getStoredToken();
+    if (!t) return null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh-tenant`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      storeToken(data.token);
+      setToken(data.token);
+      const u = decodeUser(data.token);
+      if (u) setUser(u);
+      return data.tenant_id || null;
+    } catch {
+      return null;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshTenant }}>
       {children}
     </AuthContext.Provider>
   );
