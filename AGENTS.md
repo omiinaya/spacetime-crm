@@ -1,7 +1,7 @@
 ---
 name: SpacetimeCRM
 description: "RepairShopr-inspired CRM built on SpacetimeDB — customers, tickets, invoicing, appointments"
-stack: [python, fastapi, react, typescript, supabase]
+stack: [python, fastapi, react, typescript, spacetimedb]
 ports:
   frontend: 5185
   stdb: 3001

@@ -109,6 +109,7 @@ pub fn set_custom_field_value(
     entity_id: String,
     field_id: String,
     value: String,
+    tenant_id: String,
 ) -> Result<(), String> {
     let now = now_ms(ctx);
     // Check if a value already exists for this entity+field combo
@@ -128,7 +129,7 @@ pub fn set_custom_field_value(
         let id = format!("cfv_{}_{}", now, ctx.sender().to_hex().chars().take(8).collect::<String>());
         ctx.db.custom_field_values().insert(CustomFieldValue {
             id,
-            tenant_id: String::new(), // Tenant assigned at insert time by the caller
+            tenant_id,
             entity_id,
             field_id,
             value,

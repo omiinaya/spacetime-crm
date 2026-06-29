@@ -84,9 +84,11 @@ fn recalc_po(ctx: &ReducerContext, po_id: &str) {
 pub fn add_po_line_item(ctx: &ReducerContext, purchase_order_id: String, product_id: String, description: String, quantity: f64, unit_price: f64) {
     let id = super::make_id("poli", ctx);
     let total = quantity * unit_price;
+    // Derive tenant_id from the parent PO
+    let tenant_id = ctx.db.purchase_order().id().find(&purchase_order_id).map_or(String::new(), |po| po.tenant_id.clone());
     ctx.db.purchase_order_line_item().insert(PurchaseOrderLineItem {
         id,
-        tenant_id: String::new(),
+        tenant_id,
         purchase_order_id: purchase_order_id.clone(),
         product_id,
         description,
@@ -129,11 +131,13 @@ pub fn receive_po_item(ctx: &ReducerContext, id: String, received_quantity: f64)
                     p.updated_at = super::now_ms(ctx);
                     ctx.db.products().id().update(p);
                 }
-                // Create inventory adjustment record
+    let po_id = item.purchase_order_id.clone();
+    let po_tenant_id = ctx.db.purchase_order().id().find(&po_id).map_or(String::new(), |po| po.tenant_id.clone());
+                // Create inventory adjustment record using PO's tenant_id
                 let adj_id = super::make_id("adj", ctx);
                 ctx.db.inventory_adjustment().insert(super::InventoryAdjustment {
                     id: adj_id,
-                    tenant_id: String::new(),
+                    tenant_id: po_tenant_id,
                     product_id: item.product_id.clone(),
                     quantity_change: qty_change,
                     reason: "received".to_string(),

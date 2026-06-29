@@ -138,7 +138,9 @@ pub fn add_invoice_line_item(ctx: &ReducerContext, invoice_id: String, item_type
     let id = make_id("iln", ctx);
     let total = quantity * unit_price;
     let sort = ctx.db.invoice_line_items().iter().filter(|i| i.invoice_id == invoice_id).count() as u32;
-    ctx.db.invoice_line_items().insert(InvoiceLineItem { id, tenant_id: String::new(), invoice_id: invoice_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
+    // Derive tenant_id from the parent invoice
+    let tenant_id = ctx.db.invoices().id().find(&invoice_id).map_or(String::new(), |inv| inv.tenant_id.clone());
+    ctx.db.invoice_line_items().insert(InvoiceLineItem { id, tenant_id, invoice_id: invoice_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
     // Recalc invoice totals
     if let Some(inv) = ctx.db.invoices().id().find(&invoice_id) {
         let items: Vec<InvoiceLineItem> = ctx
@@ -213,7 +215,8 @@ pub fn add_estimate_line_item(ctx: &ReducerContext, estimate_id: String, item_ty
     let id = make_id("eln", ctx);
     let total = quantity * unit_price;
     let sort = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id).count() as u32;
-    ctx.db.estimate_line_items().insert(EstimateLineItem { id, tenant_id: String::new(), estimate_id: estimate_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
+    let tenant_id = ctx.db.estimates().id().find(&estimate_id).map_or(String::new(), |est| est.tenant_id.clone());
+    ctx.db.estimate_line_items().insert(EstimateLineItem { id, tenant_id, estimate_id: estimate_id.clone(), item_type, description, quantity, unit_price, total, sort_order: sort });
     if let Some(est) = ctx.db.estimates().id().find(&estimate_id) {
         let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == estimate_id).collect();
         let subtotal: f64 = items.iter().map(|i| i.total).sum();
@@ -260,7 +263,7 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
             li_idx += 1;
             ctx.db.invoice_line_items().insert(InvoiceLineItem {
                 id: li_id,
-                tenant_id: String::new(),
+                tenant_id: est.tenant_id.clone(),
                 invoice_id: inv_id.clone(),
                 item_type: item.item_type.clone(),
                 description: item.description.clone(),

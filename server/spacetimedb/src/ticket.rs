@@ -107,9 +107,11 @@ pub fn assign_ticket(ctx: &ReducerContext, id: String, assigned_user_id: String)
 #[spacetimedb::reducer]
 pub fn add_ticket_note(ctx: &ReducerContext, ticket_id: String, author: String, content: String, internal: bool) {
     let id = super::make_id("tnote", ctx);
+    // Derive tenant_id from the parent ticket
+    let tenant_id = ctx.db.ticket().id().find(&ticket_id).map_or(String::new(), |t| t.tenant_id.clone());
     ctx.db.ticket_note().insert(TicketNote {
         id,
-        tenant_id: String::new(),
+        tenant_id,
         ticket_id,
         author,
         content,
@@ -138,9 +140,11 @@ pub fn start_ticket_timer(ctx: &ReducerContext, ticket_id: String, user_id: Stri
     }
     // Start new timer
     let id = super::make_id("tmr", ctx);
+    // Derive tenant_id from the parent ticket
+    let tenant_id = ctx.db.ticket().id().find(&ticket_id).map_or(String::new(), |t| t.tenant_id.clone());
     ctx.db.ticket_timer().insert(TicketTimer {
         id,
-        tenant_id: String::new(),
+        tenant_id,
         ticket_id,
         user_id,
         start_time: now,
