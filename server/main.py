@@ -2297,9 +2297,19 @@ async def mail_settings_get(user: dict = Depends(require_role("admin"))):
 
 
 @app.post("/api/settings/mail")
-async def mail_settings_save(body: dict, user: dict = Depends(require_role("admin"))):
+async def mail_settings_save(body: MailSettingsUpdate, user: dict = Depends(require_role("admin"))):
     """Save mail settings."""
-    update_mail_settings(body)
+    # Map Pydantic field names to mail.py helper-expected keys
+    data = {
+        "host": body.smtp_host,
+        "port": body.smtp_port,
+        "username": body.smtp_user,
+        "password": body.smtp_password,
+        "sender_email": body.smtp_from_email,
+        "sender_name": body.smtp_from_name,
+        "use_tls": body.smtp_tls,
+    }
+    update_mail_settings(data)
     return {"ok": True}
 
 
@@ -2323,9 +2333,15 @@ async def sms_settings_get(user: dict = Depends(require_role("admin"))):
 
 
 @app.post("/api/settings/sms")
-async def sms_settings_save(body: dict, user: dict = Depends(require_role("admin"))):
+async def sms_settings_save(body: SMSSettingsUpdate, user: dict = Depends(require_role("admin"))):
     """Save SMS settings."""
-    update_sms_settings(body)
+    # Map Pydantic field names to sms.py helper-expected keys
+    data = {
+        "account_sid": body.twilio_account_sid,
+        "auth_token": body.twilio_auth_token,
+        "from_number": body.twilio_from_number,
+    }
+    update_sms_settings(data)
     return {"ok": True}
 
 
