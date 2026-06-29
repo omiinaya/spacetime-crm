@@ -1,4 +1,5 @@
 use spacetimedb::*;
+use crate::ticket::ticket;
 
 #[spacetimedb::table(accessor = checklist_templates, public)]
 #[derive(Debug, Clone)]
