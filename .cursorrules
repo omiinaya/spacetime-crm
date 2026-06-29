@@ -1,20 +1,23 @@
 You are an AI coding assistant working on SpacetimeCRM.
 
 ## Stack
-FastAPI (Python) + React 19 + Vite 8 + Supabase + SpacetimeDB
+FastAPI (Python) + React 18 + Vite 6 + SpacetimeDB
 
 ## Build & Test
 - Build: `cd web && npm run build`
-- Test: `cd web && npm test && cd ../server && python -m pytest`
-- Lint: check for warnings before committing
+- Test: No tests yet — add `pytest server/` for backend, `vitest run` for frontend
+- Lint: `cd web && npx tsc --noEmit`
 
 ## Conventions
-- Supabase for auth + database (project ref in .env)
-- IPv6-only Supabase — use pooler for connections
-- STDB for kanban data
+- SpacetimeDB for all data (no Supabase)
+- All mutations go through STDB reducers via `_call()`
+- All queries go through `_sql()` or `_sql_t()` (tenant-filtered)
+- Every mutation audits via `_log_audit()`
+- Role-based access via `require_role()` FastAPI dependency
 
 ## Ports
-- 5185 Vite dev server
+- 5185 Vite dev server (no longer in use — API serves built frontend)
+- 8723 FastAPI backend (serves API + static frontend from web/dist/)
 - 3001 SpacetimeDB
 
 ## Documentation

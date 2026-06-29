@@ -75,9 +75,11 @@ pub fn apply_checklist_template(ctx: &ReducerContext, ticket_id: String, templat
         let label = item.get("label").and_then(|v| v.as_str()).unwrap_or("Item").to_string();
         let order = item.get("order").and_then(|v| v.as_u64()).unwrap_or(i as u64) as u32;
         let ci_id = format!("tci_{}_{}_{}", now, i, ctx.sender().to_hex().chars().take(6).collect::<String>());
+    // Derive tenant_id from the parent ticket
+    let ticket_tenant_id = ctx.db.ticket().id().find(&ticket_id).map_or(String::new(), |t| t.tenant_id.clone());
         ctx.db.ticket_checklist_items().insert(TicketChecklistItem {
             id: ci_id,
-            tenant_id: String::new(),
+            tenant_id: ticket_tenant_id,
             ticket_id: ticket_id.clone(),
             template_id: template_id.clone(),
             template_name: tmpl.name.clone(),

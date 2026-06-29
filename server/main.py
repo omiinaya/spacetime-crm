@@ -14,6 +14,26 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 from config import settings
+from models import (
+    LoginRequest, SetPasswordRequest,
+    CustomerCreate, CustomerUpdate,
+    TicketCreate, TicketStatusUpdate, TicketAssign, TicketNoteCreate,
+    InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate,
+    PaymentCreate,
+    AppointmentCreate, AppointmentStatusUpdate,
+    ProductCreate, ProductQuantityUpdate,
+    PurchaseOrderCreate, PurchaseOrderStatusUpdate, POLineItemCreate, POReceiveItem,
+    EstimateCreate, EstimateStatusUpdate, EstimateLineItemCreate,
+    TaxRateCreate, TaxRateUpdate,
+    InventoryAdjustmentCreate,
+    TenantCreate, TenantUpdate, TenantMemberAdd, TenantMemberRoleUpdate,
+    CustomFieldDefinitionCreate, CustomFieldValuesUpdate,
+    ChecklistTemplateCreate, ChecklistTemplateUpdate, ChecklistApply, ChecklistToggle,
+    WebhookSubscriptionCreate, WebhookSubscriptionUpdate,
+    UserCreate, UserUpdate,
+    MailSettingsUpdate, SMSSettingsUpdate,
+    PortalLoginRequest,
+)
 from mail import get_settings as get_mail_settings, update_settings as update_mail_settings, test_connection as test_mail_connection
 from mail import _notify_ticket_status_change, _notify_invoice_created, _notify_appointment_created, _notify_payment_received
 from mail import _customer_email as _mail_customer_email
@@ -54,7 +74,7 @@ app = FastAPI(title="SpacetimeCRM")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[settings.cors_origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -90,9 +110,14 @@ async def _sql(query: str) -> list[dict[str, Any]]:
 
 async def _sql_t(query: str, tenant_id: str) -> list[dict[str, Any]]:
     """Run a SELECT query with tenant_id filter automatically appended.
-    Adds `AND tenant_id = '{tid}'` before any LIMIT clause, or at the end of the query."""
+    Adds `AND tenant_id = '{tid}'` before any LIMIT clause, or at the end of the query.
+    Validates tenant_id format to prevent SQL injection.
+    """
     if not tenant_id:
         return await _sql(query)
+    # Validate tenant_id is safe — alphanumeric, underscores, hyphens only
+    if not tenant_id.replace("_", "").replace("-", "").isalnum():
+        raise HTTPException(400, "Invalid tenant_id format")
     lowered = query.lower()
     if "where" in lowered:
         for marker in (" order by", " limit", " group by", " having"):
@@ -130,7 +155,13 @@ async def _call(reducer: str, args: list[Any] | None = None) -> Any:
 
 
 def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
-    return sorted(rows, key=lambda r: r.get(key, 0) or 0, reverse=desc)
+    """Sort rows by key, handling mixed types without crashing."""
+    def sort_key(r):
+        val = r.get(key)
+        if val is None:
+            return ("", 0) if desc else ("zzzz", 999999)
+        return (str(val), val)
+    return sorted(rows, key=sort_key, reverse=desc)
 
 
 async def _log_audit(user: dict, action: str, entity: str, entity_id: str, details: str = ""):
@@ -242,20 +273,20 @@ async def list_customers(search: str = "", user: dict = Depends(require_role("ad
 
 
 @app.post("/api/customers")
-async def create_customer(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_customer(body: CustomerCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_customer", [
         user["tenant_id"],
-        body.get("first_name", ""),
-        body.get("last_name", ""),
-        body.get("email", ""),
-        body.get("phone", ""),
+        body.first_name,
+        body.last_name,
+        body.email,
+        body.phone,
     ])
-    details = f"{body.get('first_name','')} {body.get('last_name','')}".strip()
-    await _log_audit(user, "create", "customer", details, f"email={body.get('email','')}")
+    details = f"{body.first_name} {body.last_name}".strip()
+    await _log_audit(user, "create", "customer", details, f"email={body.email}")
     asyncio.ensure_future(_fire_webhook("customer.created", {
         "entity_type": "customer",
         "name": details,
-        "email": body.get("email", ""),
+        "email": body.email,
     }))
     return {"ok": True}
 
@@ -1325,10 +1356,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 # ── AUTH endpoints ─────────────────────────────────────────────
 
 @app.post("/api/auth/login")
-async def login(body: dict):
+async def login(body: LoginRequest):
     """Login with email + password, returns JWT token."""
-    email = body.get("email", "")
-    password = body.get("password", "")
+    email = body.email
+    password = body.password
 
     if not email or not password:
         raise HTTPException(400, "Email and password required")
@@ -1407,6 +1438,13 @@ async def auth_me(user: dict = Depends(get_current_user)):
 # ── TENANT endpoints ─────────────────────────────────────────
 
 
+def _safe_id(id_str: str) -> str:
+    """Validate an ID is safe for SQL interpolation. Raises 400 if not."""
+    if not id_str or not id_str.replace("_", "").replace("-", "").isalnum():
+        raise HTTPException(400, "Invalid ID format")
+    return id_str
+
+
 @app.get("/api/tenants")
 async def list_tenants(user: dict = Depends(require_role("admin"))):
     """List all tenants."""
@@ -1435,6 +1473,7 @@ async def create_tenant(body: dict, user: dict = Depends(require_role("admin")))
 @app.get("/api/tenants/{tenant_id}")
 async def get_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))):
     """Get single tenant with member info."""
+    _safe_id(tenant_id)
     rows = await _sql(f"SELECT * FROM tenants WHERE id = '{tenant_id}'")
     if not rows:
         raise HTTPException(404, "Tenant not found")
@@ -1505,6 +1544,7 @@ async def migrate_to_tenant(body: dict, user: dict = Depends(require_role("admin
     slug = body.get("slug", "").strip()
     if not slug:
         slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
+    _safe_id(slug)
     await _call("create_tenant", [name, slug])
     rows = await _sql(f"SELECT * FROM tenants WHERE slug = '{slug}'")
     if not rows:
@@ -2174,7 +2214,7 @@ async def set_custom_field_values(entity_id: str, body: dict, user: dict = Depen
     """Set custom field values for an entity. Body: { values: { field_id: value, ... } }"""
     values = body.get("values", {})
     for field_id, value in values.items():
-        await _call("set_custom_field_value", [entity_id, field_id, str(value)])
+        await _call("set_custom_field_value", [entity_id, field_id, str(value), user.get("tenant_id", "")])
     await _log_audit(user, "update", "custom_field_values", entity_id, f"{len(values)} fields")
     return {"ok": True, "count": len(values)}
 

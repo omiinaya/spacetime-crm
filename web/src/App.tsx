@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { Toaster } from "sonner";
 import {
   LayoutDashboard, Users, Ticket, FileText, CreditCard,
@@ -16,28 +16,28 @@ import { AuthProvider, useAuth, hasRole } from "./lib/auth";
 import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
 import { useTheme } from "./lib/theme";
 import LoginPage from "./pages/LoginPage";
-import PortalLoginPage from "./pages/PortalLoginPage";
-import PortalDashboard from "./pages/PortalDashboard";
-import PortalTicketsPage from "./pages/PortalTicketsPage";
-import PortalInvoicesPage from "./pages/PortalInvoicesPage";
-import PortalAppointmentsPage from "./pages/PortalAppointmentsPage";
-import CustomersPage from "./pages/CustomersPage";
-import TicketsPage from "./pages/TicketsPage";
-import InvoicesPage from "./pages/InvoicesPage";
-import PaymentsPage from "./pages/PaymentsPage";
-import AppointmentsPage from "./pages/AppointmentsPage";
-import ProductsPage from "./pages/ProductsPage";
-import EstimatesPage from "./pages/EstimatesPage";
-import PurchaseOrdersPage from "./pages/PurchaseOrdersPage";
-import ReportsPage from "./pages/ReportsPage";
-import SettingsPage from "./pages/SettingsPage";
-import ImportExportPage from "./pages/ImportExportPage";
-import AuditLogPage from "./pages/AuditLogPage";
-import HealthPage from "./pages/HealthPage";
-import CustomFieldsPage from "./pages/CustomFieldsPage";
-import MapPage from "./pages/MapPage";
-import ChecklistTemplatesPage from "./pages/ChecklistTemplatesPage";
-import TenantsPage from "./pages/TenantsPage";
+const PortalLoginPage = lazy(() => import("./pages/PortalLoginPage"));
+const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
+const PortalTicketsPage = lazy(() => import("./pages/PortalTicketsPage"));
+const PortalInvoicesPage = lazy(() => import("./pages/PortalInvoicesPage"));
+const PortalAppointmentsPage = lazy(() => import("./pages/PortalAppointmentsPage"));
+const CustomersPage = lazy(() => import("./pages/CustomersPage"));
+const TicketsPage = lazy(() => import("./pages/TicketsPage"));
+const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
+const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
+const AppointmentsPage = lazy(() => import("./pages/AppointmentsPage"));
+const ProductsPage = lazy(() => import("./pages/ProductsPage"));
+const EstimatesPage = lazy(() => import("./pages/EstimatesPage"));
+const PurchaseOrdersPage = lazy(() => import("./pages/PurchaseOrdersPage"));
+const ReportsPage = lazy(() => import("./pages/ReportsPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const ImportExportPage = lazy(() => import("./pages/ImportExportPage"));
+const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
+const HealthPage = lazy(() => import("./pages/HealthPage"));
+const CustomFieldsPage = lazy(() => import("./pages/CustomFieldsPage"));
+const MapPage = lazy(() => import("./pages/MapPage"));
+const ChecklistTemplatesPage = lazy(() => import("./pages/ChecklistTemplatesPage"));
+const TenantsPage = lazy(() => import("./pages/TenantsPage"));
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
@@ -101,12 +101,18 @@ function PortalShell() {
   }
 
   const renderPortalPage = () => {
-    switch (page) {
-      case "dashboard": return <PortalDashboard />;
-      case "tickets": return <PortalTicketsPage />;
-      case "invoices": return <PortalInvoicesPage />;
-      case "appointments": return <PortalAppointmentsPage />;
-    }
+    return (
+      <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+        {(() => {
+          switch (page) {
+            case "dashboard": return <PortalDashboard />;
+            case "tickets": return <PortalTicketsPage />;
+            case "invoices": return <PortalInvoicesPage />;
+            case "appointments": return <PortalAppointmentsPage />;
+          }
+        })()}
+      </Suspense>
+    );
   };
 
   return (
@@ -193,44 +199,50 @@ function AppShell() {
   }
 
   const renderPage = () => {
-    switch (page) {
-      case "dashboard":
-        return <DashboardPage stats={stats} onNavigate={setPage} />;
-      case "customers":
-        return <CustomersPage />;
-      case "tickets":
-        return <TicketsPage />;
-      case "invoices":
-        return <InvoicesPage />;
-      case "payments":
-        return <PaymentsPage />;
-      case "appointments":
-        return <AppointmentsPage />;
-      case "products":
-        return <ProductsPage />;
-      case "estimates":
-        return <EstimatesPage />;
-      case "purchase-orders":
-        return <PurchaseOrdersPage />;
-      case "import-export":
-        return <ImportExportPage />;
-      case "audit-log":
-        return <AuditLogPage />;
-      case "health":
-        return <HealthPage />;
-      case "custom-fields":
-        return <CustomFieldsPage />;
-      case "map":
-        return <MapPage />;
-      case "checklist":
-        return <ChecklistTemplatesPage />;
-      case "reports":
-        return <ReportsPage />;
-      case "settings":
-        return <SettingsPage />;
-      case "tenants":
-        return <TenantsPage />;
-    }
+    return (
+      <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+        {(() => {
+          switch (page) {
+            case "dashboard":
+              return <DashboardPage stats={stats} onNavigate={setPage} />;
+            case "customers":
+              return <CustomersPage />;
+            case "tickets":
+              return <TicketsPage />;
+            case "invoices":
+              return <InvoicesPage />;
+            case "payments":
+              return <PaymentsPage />;
+            case "appointments":
+              return <AppointmentsPage />;
+            case "products":
+              return <ProductsPage />;
+            case "estimates":
+              return <EstimatesPage />;
+            case "purchase-orders":
+              return <PurchaseOrdersPage />;
+            case "import-export":
+              return <ImportExportPage />;
+            case "audit-log":
+              return <AuditLogPage />;
+            case "health":
+              return <HealthPage />;
+            case "custom-fields":
+              return <CustomFieldsPage />;
+            case "map":
+              return <MapPage />;
+            case "checklist":
+              return <ChecklistTemplatesPage />;
+            case "reports":
+              return <ReportsPage />;
+            case "settings":
+              return <SettingsPage />;
+            case "tenants":
+              return <TenantsPage />;
+          }
+        })()}
+      </Suspense>
+    );
   };
 
   const sidebar = (
