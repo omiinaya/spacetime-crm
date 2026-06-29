@@ -49,6 +49,7 @@
 - [x] **Integration tests** — 39 tests covering auth, customers, tickets, tenants, validation
 |- [x] **Pagination** — offset/limit + total on all 15 list endpoints
 |- [x] **Pydantic input validation** — **all 49 endpoints** now use typed models
+|- [x] **Helpers extraction** — `helpers.py` created, main.py -260 lines
 
 ---
 
