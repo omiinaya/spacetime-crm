@@ -10,11 +10,11 @@
 | Layer | Lines | Completeness | Test Coverage | Anti-Patterns |
 |-------|-------|:------------:|:-------------:|:-------------:|
 | STDB Module (Rust) | 1,711 | 86% | 0% (unit) | 3 major, 4 minor |
-| Backend API (Python) | ~3,580 | 80% | 22% (API paths) | 5 major, 3 minor |
+| Backend API (Python) | ~3,750 | 82% | 22% (API paths) | 5 major, 3 minor |
 | Frontend (TypeScript) | 7,469 | 75% | 0% | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
 | **Tests** | **624 (39 tests)** | **Added this sprint** | **N/A** | **6 gaps** |
-| **Overall** | **13,853** | **~75%** | **35% API paths** | **17+ items** |
+| **Overall** | **~15,700** | **~78%** | **35% API paths** | **17+ items** |
 
 ### 🟢 Sprint Wins (since last assessment)
 
@@ -47,8 +47,8 @@
 - [x] **Pydantic input validation** — models created, proof-of-concept endpoints converted
 - [x] **Frontend code-splitting** — `React.lazy()` for all 23 pages
 - [x] **Integration tests** — 39 tests covering auth, customers, tickets, tenants, validation
-- [ ] 📌 **Pagination** — all list endpoints return everything (no offset/limit/cursor)
-- [ ] 📌 **All 49 endpoints** still use `body: dict` (only login + create_customer converted)
+|- [x] **Pagination** — offset/limit + total on all 15 list endpoints
+|- [x] **Pydantic input validation** — **all 49 endpoints** now use typed models
 
 ---
 
