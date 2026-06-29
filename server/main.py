@@ -517,14 +517,14 @@ async def get_ticket_notes(ticket_id: str, user: dict = Depends(require_role("ad
 
 
 @app.post("/api/tickets/{ticket_id}/notes")
-async def add_ticket_note(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def add_ticket_note(ticket_id: str, body: TicketNoteCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_ticket_note", [
         ticket_id,
-        body.get("author", ""),
-        body.get("content", ""),
-        body.get("internal", False),
+        body.author or user.get("name", ""),
+        body.content,
+        body.internal,
     ])
-    await _log_audit(user, "create", "ticket_note", ticket_id, f"internal={body.get('internal',False)}")
+    await _log_audit(user, "add_note", "ticket", ticket_id)
     return {"ok": True}
 
 
@@ -537,8 +537,9 @@ async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin
 
 # ── TICKET TIMER endpoints ────────────────────────────────────
 
-@app.get("/api/tickets/{ticket_id}/timers")
-async def get_ticket_timers(ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+@app.post("/api/tickets/{ticket_id}/timers/start")
+async def start_ticket_timer(ticket_id: str, body: TicketTimerStart, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    await _call("start_ticket_timer", [ticket_id, body.user_id])
     rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{ticket_id}'")
     return {"timers": _sort(rows, "start_time")}
 
@@ -555,12 +556,6 @@ async def list_all_timers(user_id: str = "", running: str = "", user: dict = Dep
         query += " WHERE " + " AND ".join(filters)
     rows = await _sql(query)
     return {"timers": _sort(rows, "start_time")}
-
-
-@app.post("/api/tickets/{ticket_id}/timers/start")
-async def start_ticket_timer(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("start_ticket_timer", [ticket_id, body.get("user_id", "")])
-    return {"ok": True}
 
 
 @app.post("/api/timers/{timer_id}/stop")
@@ -586,19 +581,19 @@ async def list_invoices(status: str = "", user: dict = Depends(require_role("adm
 
 
 @app.post("/api/invoices")
-async def create_invoice(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_invoice", [
         user["tenant_id"],
-        body.get("customer_id", ""),
-        body.get("ticket_id", ""),
-        body.get("notes", ""),
-        body.get("terms", ""),
-        body.get("due_date", 0),
+        body.customer_id,
+        body.ticket_id,
+        body.notes,
+        body.terms,
+        body.due_date,
     ])
 
     # Notification: invoice created
     async def _notify():
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.get('customer_id', '')}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
             invs = await _sql("SELECT * FROM invoices LIMIT 1")
@@ -614,19 +609,19 @@ async def create_invoice(body: dict, user: dict = Depends(require_role("admin", 
                 _sms_invoice_created(phone, inv.get("invoice_number", 0), float(inv.get("total", 0)))
     asyncio.ensure_future(_notify())
 
-    await _log_audit(user, "create", "invoice", f"cust={body.get('customer_id','')}")
+    await _log_audit(user, "create", "invoice", f"cust={body.customer_id}")
     asyncio.ensure_future(_fire_webhook("invoice.created", {
         "entity_type": "invoice",
-        "customer_id": body.get("customer_id", ""),
-        "ticket_id": body.get("ticket_id", ""),
+        "customer_id": body.customer_id,
+        "ticket_id": body.ticket_id,
     }))
     return {"ok": True}
 
 
 @app.put("/api/invoices/{invoice_id}/status")
-async def update_invoice_status(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("update_invoice_status", [invoice_id, body.get("status", "")])
-    new_status = body.get("status", "")
+async def update_invoice_status(invoice_id: str, body: InvoiceStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    await _call("update_invoice_status", [invoice_id, body.status])
+    new_status = body.status
     await _log_audit(user, "update_status", "invoice", invoice_id, f"status={new_status}")
     asyncio.ensure_future(_fire_webhook("invoice.status_changed" if new_status != "paid" else "invoice.paid", {
         "entity_type": "invoice",
@@ -643,15 +638,15 @@ async def get_invoice_line_items(invoice_id: str, user: dict = Depends(require_r
 
 
 @app.post("/api/invoices/{invoice_id}/line-items")
-async def add_invoice_line_item(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def add_invoice_line_item(invoice_id: str, body: InvoiceLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_invoice_line_item", [
         invoice_id,
-        body.get("item_type", "service"),
-        body.get("description", ""),
-        body.get("quantity", 1),
-        body.get("unit_price", 0),
+        body.item_type,
+        body.description,
+        body.quantity,
+        body.unit_price,
     ])
-    await _log_audit(user, "create", "line_item", invoice_id, body.get("description",""))
+    await _log_audit(user, "create", "line_item", invoice_id, body.description)
     return {"ok": True}
 
 
@@ -670,9 +665,9 @@ async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("adm
 
 
 @app.put("/api/invoices/{invoice_id}/tax-rate")
-async def set_invoice_tax_rate(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("set_invoice_tax_rate", [invoice_id, body.get("tax_rate", 0.0)])
-    await _log_audit(user, "update", "invoice_tax", invoice_id, f"rate={body.get('tax_rate',0)}")
+async def set_invoice_tax_rate(invoice_id: str, body: InvoiceTaxRateUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    await _call("set_invoice_tax_rate", [invoice_id, body.tax_rate])
+    await _log_audit(user, "update", "invoice_tax", invoice_id, f"rate={body.tax_rate}")
     return {"ok": True}
 
 
@@ -745,16 +740,16 @@ async def list_payments(invoice_id: str = "", user: dict = Depends(require_role(
 
 
 @app.post("/api/payments")
-async def record_payment(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    invoice_id = body.get("invoice_id", "")
+async def record_payment(body: PaymentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    invoice_id = body.invoice_id
     await _call("record_payment", [
         user["tenant_id"],
         invoice_id,
-        body.get("customer_id", ""),
-        body.get("amount", 0),
-        body.get("method", "cash"),
-        body.get("reference", ""),
-        body.get("notes", ""),
+        body.customer_id,
+        body.amount,
+        body.method,
+        body.reference,
+        body.notes,
     ])
     # Auto-update invoice status based on total payments
     if invoice_id:
@@ -770,22 +765,22 @@ async def record_payment(body: dict, user: dict = Depends(require_role("admin", 
 
             # Notification: payment received
             async def _notify():
-                cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.get('customer_id', '')}'")
+                cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
                 email = _mail_customer_email(cust[0]) if cust else None
                 if email:
                     link = f"http://localhost:{settings.server_port}/portal/"
-                    _notify_payment_received(email, inv.get("invoice_number", 0), float(body.get("amount", 0)), link)
+                    _notify_payment_received(email, inv.get("invoice_number", 0), float(body.amount), link)
                 phone = _sms_customer_phone(cust[0]) if cust else None
                 if phone:
-                    _sms_payment_received(phone, inv.get("invoice_number", 0), float(body.get("amount", 0)))
+                    _sms_payment_received(phone, inv.get("invoice_number", 0), float(body.amount))
             asyncio.ensure_future(_notify())
 
-    await _log_audit(user, "create", "payment", invoice_id, f"amount={body.get('amount',0)}")
+    await _log_audit(user, "create", "payment", invoice_id, f"amount={body.amount}")
     asyncio.ensure_future(_fire_webhook("payment.created", {
         "entity_type": "payment",
         "invoice_id": invoice_id,
-        "customer_id": body.get("customer_id", ""),
-        "amount": body.get("amount", 0),
+        "customer_id": body.customer_id,
+        "amount": body.amount,
     }))
     return {"ok": True}
 
