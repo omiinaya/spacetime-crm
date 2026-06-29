@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api, Ticket, Customer, TicketTimer, ChecklistTemplate, TicketChecklistItem } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -31,14 +33,10 @@ const priorityColors: Record<string, string> = {
 
 export default function TicketsPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ customer_id: "", title: "", description: "", device_type: "", device_model: "", device_serial: "", priority: "medium" });
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
   const [timers, setTimers] = useState<TicketTimer[]>([]);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -47,28 +45,39 @@ export default function TicketsPage() {
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const { user } = useAuth();
 
-  const load = async (offset: number) => {
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ["tickets", { filter, offset: pag.offset }],
+    queryFn: async () => {
       const [tRes, cRes] = await Promise.all([
-        api.tickets.list(filter, offset, PAGE_SIZE),
+        api.tickets.list(filter, pag.offset, PAGE_SIZE),
         api.customers.list(),
       ]);
-      setTickets(tRes.tickets);
-      setCustomers(cRes.customers);
-      pag.setTotal(tRes.total);
-    } catch {
-      toast.error("Failed to load tickets");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { tickets: tRes.tickets, customers: cRes.customers, total: tRes.total };
+    },
+    select: (res) => {
+      pag.setTotal(res.total);
+      return { tickets: res.tickets, customers: res.customers };
+    },
+  });
+
+  const tickets = data?.tickets ?? [];
+  const customers = data?.customers ?? [];
+
+  // Notes query — only active when a ticket is selected
+  const { data: notesData } = useQuery({
+    queryKey: ["ticket-notes", selectedTicket?.id],
+    queryFn: async () => {
+      const res = await api.tickets.notes.list(selectedTicket!.id);
+      return res.notes;
+    },
+    enabled: !!selectedTicket,
+  });
+  const notes = notesData ?? [];
 
   const handleFilter = (val: string) => {
     setFilter(val);
     pag.reset();
   };
-
-  useEffect(() => { load(pag.offset); }, [filter, pag.offset]);
 
   const loadTimers = async (ticketId: string) => {
     try {
@@ -125,33 +134,26 @@ export default function TicketsPage() {
     }, 0);
   };
 
-  const handleCreate = async () => {
-    try {
-      await api.tickets.create(form);
+  const createMutation = useMutation({
+    mutationFn: () => api.tickets.create(form),
+    onSuccess: () => {
       toast.success("Ticket created");
       setShowForm(false);
       setForm({ customer_id: "", title: "", description: "", device_type: "", device_model: "", device_serial: "", priority: "medium" });
-      load(pag.offset);
-    } catch {
-      toast.error("Failed to create ticket");
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    },
+    onError: () => toast.error("Failed to create ticket"),
+  });
 
-  const handleStatusChange = async (id: string, status: string) => {
-    await api.tickets.updateStatus(id, status);
-    load(pag.offset);
-  };
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.tickets.updateStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+  });
 
   const viewTicket = async (t: Ticket) => {
     setSelectedTicket(t);
-    try {
-      const [noteRes] = await Promise.all([
-        api.tickets.notes.list(t.id),
-        loadTimers(t.id),
-      ]);
-      setNotes(noteRes.notes);
-      setNewNote("");
-    } catch { setNotes([]); }
+    setNewNote("");
+    loadTimers(t.id);
     loadChecklist(t.id);
     loadTemplates();
   };
@@ -197,16 +199,19 @@ export default function TicketsPage() {
     } catch { toast.error("Failed to clear checklist"); }
   };
 
-  const addNote = async () => {
-    if (!newNote.trim() || !selectedTicket) return;
-    try {
-      await api.tickets.notes.create(selectedTicket.id, { author: "User", content: newNote, internal: false });
-      const res = await api.tickets.notes.list(selectedTicket.id);
-      setNotes(res.notes);
+  const noteMutation = useMutation({
+    mutationFn: ({ ticketId, content }: { ticketId: string; content: string }) =>
+      api.tickets.notes.create(ticketId, { author: "User", content, internal: false }),
+    onSuccess: (_, { ticketId }) => {
       setNewNote("");
-    } catch {
-      toast.error("Failed to add note");
-    }
+      queryClient.invalidateQueries({ queryKey: ["ticket-notes", ticketId] });
+    },
+    onError: () => toast.error("Failed to add note"),
+  });
+
+  const addNote = () => {
+    if (!newNote.trim() || !selectedTicket) return;
+    noteMutation.mutate({ ticketId: selectedTicket.id, content: newNote });
   };
 
   return (
@@ -253,7 +258,7 @@ export default function TicketsPage() {
               <option value="urgent">Urgent</option>
             </Select>
             <div className="flex gap-2">
-              <Button onClick={handleCreate}>Create</Button>
+              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Create</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
             </div>
           </CardContent>
@@ -297,7 +302,7 @@ export default function TicketsPage() {
                 {selectedTicket.device_type && (
                   <p className="text-xs text-muted-foreground">Device: {selectedTicket.device_type} {selectedTicket.device_model} ({selectedTicket.device_serial})</p>
                 )}
-                <Select value={selectedTicket.status} onChange={(e) => handleStatusChange(selectedTicket.id, e.target.value)}>
+                <Select value={selectedTicket.status} onChange={(e) => statusMutation.mutate({ id: selectedTicket.id, status: e.target.value })}>
                   <option value="new">New</option>
                   <option value="assigned">Assigned</option>
                   <option value="in_progress">In Progress</option>
