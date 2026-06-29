@@ -801,44 +801,44 @@ async def list_appointments(user: dict = Depends(require_role("admin", "tech", "
 
 
 @app.post("/api/appointments")
-async def create_appointment(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_appointment(body: AppointmentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_appointment", [
         user["tenant_id"],
-        body.get("customer_id", ""),
-        body.get("ticket_id", ""),
-        body.get("title", ""),
-        body.get("description", ""),
-        body.get("start_time", 0),
-        body.get("end_time", 0),
-        body.get("all_day", False),
+        body.customer_id,
+        body.ticket_id,
+        body.title,
+        body.description,
+        body.start_time,
+        body.end_time,
+        body.all_day,
     ])
 
     # Notification: appointment created
     async def _notify():
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.get('customer_id', '')}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
             link = f"http://localhost:{settings.server_port}/portal/"
-            _notify_appointment_created(email, body.get("title", "Appointment"), body.get("start_time", 0), link)
+            _notify_appointment_created(email, body.title, body.start_time, link)
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
-            _sms_appointment_created(phone, body.get("title", "Appointment"), body.get("start_time", 0))
+            _sms_appointment_created(phone, body.title, body.start_time)
     asyncio.ensure_future(_notify())
 
-    await _log_audit(user, "create", "appointment", body.get("title",""))
+    await _log_audit(user, "create", "appointment", body.title)
     asyncio.ensure_future(_fire_webhook("appointment.created", {
         "entity_type": "appointment",
-        "title": body.get("title", ""),
-        "customer_id": body.get("customer_id", ""),
-        "start_time": body.get("start_time", 0),
+        "title": body.title,
+        "customer_id": body.customer_id,
+        "start_time": body.start_time,
     }))
     return {"ok": True}
 
 
 @app.put("/api/appointments/{appt_id}/status")
-async def update_appointment_status(appt_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("update_appointment_status", [appt_id, body.get("status", "")])
-    await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.get('status','')}")
+async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    await _call("update_appointment_status", [appt_id, body.status])
+    await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.status}")
     return {"ok": True}
 
 
@@ -866,26 +866,26 @@ async def list_products(search: str = "", user: dict = Depends(require_role("adm
 
 
 @app.post("/api/products")
-async def create_product(body: dict, user: dict = Depends(require_role("admin", "tech"))):
+async def create_product(body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_product", [
         user["tenant_id"],
-        body.get("name", ""),
-        body.get("sku", ""),
-        body.get("barcode", ""),
-        body.get("description", ""),
-        body.get("category", ""),
-        body.get("price", 0),
-        body.get("cost", 0),
-        body.get("quantity_on_hand", 0),
+        body.name,
+        body.sku,
+        body.barcode,
+        body.description,
+        body.category,
+        body.price,
+        body.cost,
+        body.quantity_on_hand,
     ])
-    await _log_audit(user, "create", "product", body.get("name",""))
+    await _log_audit(user, "create", "product", body.name)
     return {"ok": True}
 
 
 @app.put("/api/products/{product_id}/quantity")
-async def update_product_quantity(product_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
-    await _call("update_product_quantity", [product_id, body.get("quantity_on_hand", 0)])
-    await _log_audit(user, "update", "product_qty", product_id, f"qty={body.get('quantity_on_hand',0)}")
+async def update_product_quantity(product_id: str, body: ProductQuantityUpdate, user: dict = Depends(require_role("admin", "tech"))):
+    await _call("update_product_quantity", [product_id, body.quantity_on_hand])
+    await _log_audit(user, "update", "product_qty", product_id, f"qty={body.quantity_on_hand}")
     return {"ok": True}
 
 
@@ -905,17 +905,17 @@ async def get_product_adjustments(product_id: str, user: dict = Depends(require_
 
 
 @app.post("/api/products/{product_id}/adjustments")
-async def create_adjustment(product_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
+async def create_adjustment(product_id: str, body: InventoryAdjustmentCreate, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_inventory_adjustment", [
         user["tenant_id"],
         product_id,
-        body.get("quantity_change", 0),
-        body.get("reason", "other"),
-        body.get("reference_id", ""),
-        body.get("notes", ""),
-        body.get("user_id", ""),
+        body.quantity_change,
+        body.reason,
+        body.reference_id,
+        body.notes,
+        body.user_id,
     ])
-    await _log_audit(user, "create", "adjustment", product_id, f"qty={body.get('quantity_change',0)}")
+    await _log_audit(user, "create", "adjustment", product_id, f"qty={body.quantity_change}")
     return {"ok": True}
 
 
@@ -928,26 +928,26 @@ async def list_tax_rates(user: dict = Depends(require_role("admin", "tech", "fro
 
 
 @app.post("/api/tax-rates")
-async def create_tax_rate(body: dict, user: dict = Depends(require_role("admin"))):
+async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role("admin"))):
     await _call("create_tax_rate", [
         user["tenant_id"],
-        body.get("name", ""),
-        body.get("rate", 0.0),
-        body.get("is_default", False),
+        body.name,
+        body.rate,
+        body.is_default,
     ])
-    await _log_audit(user, "create", "tax_rate", body.get("name",""), f"rate={body.get('rate',0)}")
+    await _log_audit(user, "create", "tax_rate", body.name, f"rate={body.rate}")
     return {"ok": True}
 
 
 @app.put("/api/tax-rates/{tax_id}")
-async def update_tax_rate(tax_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: dict = Depends(require_role("admin"))):
     await _call("update_tax_rate", [
         tax_id,
-        body.get("name", ""),
-        body.get("rate", 0.0),
-        body.get("is_default", False),
+        body.name,
+        body.rate,
+        body.is_default,
     ])
-    await _log_audit(user, "update", "tax_rate", tax_id, f"rate={body.get('rate',0)}")
+    await _log_audit(user, "update", "tax_rate", tax_id, f"rate={body.rate}")
     return {"ok": True}
 
 
@@ -969,27 +969,27 @@ async def list_estimates(status: str = "", user: dict = Depends(require_role("ad
 
 
 @app.post("/api/estimates")
-async def create_estimate(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_estimate(body: EstimateCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_estimate", [
         user["tenant_id"],
-        body.get("customer_id", ""),
-        body.get("ticket_id", ""),
-        body.get("notes", ""),
-        body.get("expires_at", 0),
+        body.customer_id,
+        body.ticket_id,
+        body.notes,
+        body.expires_at,
     ])
-    await _log_audit(user, "create", "estimate", f"cust={body.get('customer_id','')}")
+    await _log_audit(user, "create", "estimate", f"cust={body.customer_id}")
     asyncio.ensure_future(_fire_webhook("estimate.created", {
         "entity_type": "estimate",
-        "customer_id": body.get("customer_id", ""),
-        "ticket_id": body.get("ticket_id", ""),
+        "customer_id": body.customer_id,
+        "ticket_id": body.ticket_id,
     }))
     return {"ok": True}
 
 
 @app.put("/api/estimates/{estimate_id}/status")
-async def update_estimate_status(estimate_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("update_estimate_status", [estimate_id, body.get("status", "")])
-    await _log_audit(user, "update_status", "estimate", estimate_id, f"status={body.get('status','')}")
+async def update_estimate_status(estimate_id: str, body: EstimateStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    await _call("update_estimate_status", [estimate_id, body.status])
+    await _log_audit(user, "update_status", "estimate", estimate_id, f"status={body.status}")
     return {"ok": True}
 
 
@@ -1000,15 +1000,15 @@ async def get_estimate_line_items(estimate_id: str, user: dict = Depends(require
 
 
 @app.post("/api/estimates/{estimate_id}/line-items")
-async def add_estimate_line_item(estimate_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def add_estimate_line_item(estimate_id: str, body: EstimateLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_estimate_line_item", [
         estimate_id,
-        body.get("item_type", "service"),
-        body.get("description", ""),
-        body.get("quantity", 1),
-        body.get("unit_price", 0),
+        body.item_type,
+        body.description,
+        body.quantity,
+        body.unit_price,
     ])
-    await _log_audit(user, "create", "est_line_item", estimate_id, body.get("description",""))
+    await _log_audit(user, "create", "est_line_item", estimate_id, body.description)
     return {"ok": True}
 
 
@@ -1069,13 +1069,13 @@ async def list_purchase_orders(user: dict = Depends(require_role("admin", "tech"
 
 
 @app.post("/api/purchase-orders")
-async def create_purchase_order(body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_purchase_order(body: PurchaseOrderCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_purchase_order", [
         user["tenant_id"],
-        body.get("vendor_name", ""),
-        body.get("notes", ""),
+        body.vendor_name,
+        body.notes,
     ])
-    await _log_audit(user, "create", "purchase_order", body.get("vendor_name",""))
+    await _log_audit(user, "create", "purchase_order", body.vendor_name)
     return {"ok": True}
 
 
@@ -1102,15 +1102,15 @@ async def get_purchase_order(po_id: str, user: dict = Depends(require_role("admi
 
 
 @app.post("/api/purchase-orders/{po_id}/line-items")
-async def add_po_line_item(po_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def add_po_line_item(po_id: str, body: POLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_po_line_item", [
         po_id,
-        body.get("product_id", ""),
-        body.get("description", ""),
-        body.get("quantity", 1),
-        body.get("unit_price", 0),
+        body.product_id,
+        body.description,
+        body.quantity,
+        body.unit_price,
     ])
-    await _log_audit(user, "create", "po_line_item", po_id, body.get("description",""))
+    await _log_audit(user, "create", "po_line_item", po_id, body.description)
     return {"ok": True}
 
 
@@ -1122,18 +1122,18 @@ async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(req
 
 
 @app.put("/api/purchase-orders/{po_id}/status")
-async def update_po_status(po_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("update_po_status", [po_id, body.get("status", "")])
-    await _log_audit(user, "update_status", "purchase_order", po_id, f"status={body.get('status','')}")
+async def update_po_status(po_id: str, body: PurchaseOrderStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    await _call("update_po_status", [po_id, body.status])
+    await _log_audit(user, "update_status", "purchase_order", po_id, f"status={body.status}")
     return {"ok": True}
 
 
 @app.post("/api/purchase-orders/{po_id}/receive")
-async def receive_po_items(po_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def receive_po_items(po_id: str, body: POReceiveItem, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Receive multiple items on a PO at once.
     Body: { items: [{ id: string, received_quantity: number }] }
     """
-    items = body.get("items", [])
+    items = body.items
     for item in items:
         await _call("receive_po_item", [item["id"], item.get("received_quantity", 0)])
     await _log_audit(user, "receive", "purchase_order", po_id, f"{len(items)} items")
@@ -1452,10 +1452,10 @@ async def list_tenants(user: dict = Depends(require_role("admin"))):
 
 
 @app.post("/api/tenants")
-async def create_tenant(body: dict, user: dict = Depends(require_role("admin"))):
+async def create_tenant(body: TenantCreate, user: dict = Depends(require_role("admin"))):
     """Create a new tenant."""
-    name = body.get("name", "").strip()
-    slug = body.get("slug", "").strip()
+    name = body.name.strip()
+    slug = body.slug.strip()
     if not name:
         raise HTTPException(400, "name is required")
     if not slug:
@@ -1479,14 +1479,14 @@ async def get_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))
 
 
 @app.put("/api/tenants/{tenant_id}")
-async def update_tenant(tenant_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def update_tenant(tenant_id: str, body: TenantUpdate, user: dict = Depends(require_role("admin"))):
     """Update tenant settings."""
-    name = body.get("name", "")
-    slug = body.get("slug", "").strip()
+    name = body.name
+    slug = body.slug.strip()
     if not slug:
         slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
-    logo_url = body.get("logo_url", "")
-    settings = body.get("settings", "{}")
+    logo_url = body.logo_url
+    settings = body.settings
     await _call("update_tenant", [tenant_id, name, slug, logo_url, settings])
     await _log_audit(user, "update", "tenant", name)
     return {"ok": True}
@@ -1501,10 +1501,10 @@ async def delete_tenant(tenant_id: str, user: dict = Depends(require_role("admin
 
 
 @app.post("/api/tenants/{tenant_id}/members")
-async def add_tenant_member(tenant_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def add_tenant_member(tenant_id: str, body: TenantMemberAdd, user: dict = Depends(require_role("admin"))):
     """Add a member to a tenant."""
-    username = body.get("username", "").strip()
-    role = body.get("role", "user").strip()
+    username = body.username.strip()
+    role = body.role.strip()
     if not username:
         raise HTTPException(400, "username is required")
     await _call("add_tenant_member", [tenant_id, username, role])
@@ -1521,22 +1521,22 @@ async def remove_tenant_member(tenant_id: str, member_id: str, user: dict = Depe
 
 
 @app.put("/api/tenants/{tenant_id}/members/{member_id}")
-async def update_tenant_member_role(tenant_id: str, member_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def update_tenant_member_role(tenant_id: str, member_id: str, body: TenantMemberRoleUpdate, user: dict = Depends(require_role("admin"))):
     """Update member role within a tenant."""
-    role = body.get("role", "user").strip()
+    role = body.role.strip()
     await _call("update_tenant_member_role", [member_id, role])
     await _log_audit(user, "update_member", "tenant_member", member_id, f"role={role}")
     return {"ok": True}
 
 
 @app.post("/api/tenants/migrate")
-async def migrate_to_tenant(body: dict, user: dict = Depends(require_role("admin"))):
+async def migrate_to_tenant(body: TenantMigrate, user: dict = Depends(require_role("admin"))):
     """One-time migration: create a default tenant and assign all existing users to it."""
     existing = await _sql("SELECT * FROM tenants")
     if existing:
         raise HTTPException(400, "Migration already completed - tenants exist")
-    name = body.get("name", "Default").strip()
-    slug = body.get("slug", "").strip()
+    name = body.name.strip()
+    slug = body.slug.strip()
     if not slug:
         slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
     _safe_id(slug)
@@ -1601,9 +1601,9 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
 
 
 @app.post("/api/auth/set-password")
-async def set_password(body: dict, user: dict = Depends(get_current_user)):
+async def set_password(body: SetPasswordRequest, user: dict = Depends(get_current_user)):
     """Set/change password for current user."""
-    pw = body.get("password", "")
+    pw = body.password
     if len(pw) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
@@ -1620,13 +1620,13 @@ async def list_users(user: dict = Depends(require_role("admin", "tech", "front_d
 
 
 @app.post("/api/users")
-async def create_user(body: dict, user: dict = Depends(require_role("admin"))):
+async def create_user(body: UserCreate, user: dict = Depends(require_role("admin"))):
     await _call("create_user", [
-        body.get("name", ""),
-        body.get("email", ""),
-        body.get("role", "staff"),
+        body.name,
+        body.email,
+        body.role,
     ])
-    await _log_audit(user, "create", "user", body.get("email",""), f"role={body.get('role','')}")
+    await _log_audit(user, "create", "user", body.email, f"role={body.role}")
     return {"ok": True}
 
 
@@ -1661,10 +1661,10 @@ async def get_current_customer(credentials: HTTPAuthorizationCredentials = Depen
 
 
 @app.post("/api/portal/login")
-async def portal_login(body: dict):
+async def portal_login(body: PortalLoginRequest):
     """Customer portal login with email + portal password."""
-    email = body.get("email", "")
-    password = body.get("password", "")
+    email = body.email
+    password = body.password
 
     if not email or not password:
         raise HTTPException(400, "Email and password required")
@@ -1680,28 +1680,22 @@ async def portal_login(body: dict):
         raise HTTPException(401, "Invalid email or password")
 
     now = datetime.utcnow()
-    token = jwt.encode(
-        {
-            "sub": customer["id"],
-            "email": customer["email"],
-            "name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
-            "type": "customer",
-            "iat": now,
-            "exp": now + timedelta(hours=settings.jwt_expire_hours),
-        },
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm,
-    )
-
+    payload = {
+        "sub": customer["id"],
+        "tenant_id": customer.get("tenant_id", ""),
+        "exp": now + timedelta(days=settings.jwt_expiry_days),
+        "iat": now,
+        "type": "portal",
+    }
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return {
         "token": token,
         "customer": {
             "id": customer["id"],
             "first_name": customer.get("first_name", ""),
             "last_name": customer.get("last_name", ""),
-            "email": customer["email"],
-            "company": customer.get("company", ""),
-            "phone": customer.get("phone", ""),
+            "email": customer.get("email", ""),
+            "tenant_id": customer.get("tenant_id", ""),
         },
     }
 
@@ -1777,7 +1771,7 @@ async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_curr
 
 
 @app.post("/api/portal/tickets/{ticket_id}/notes")
-async def portal_add_note(ticket_id: str, body: dict, customer: dict = Depends(get_current_customer)):
+async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: dict = Depends(get_current_customer)):
     """Customer adds a note to their ticket."""
     # Verify ownership
     rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'")
@@ -1786,7 +1780,7 @@ async def portal_add_note(ticket_id: str, body: dict, customer: dict = Depends(g
     await _call("add_ticket_note", [
         ticket_id,
         f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or "Customer",
-        body.get("content", ""),
+        body.content,
         False,  # not internal
     ])
     return {"ok": True}
@@ -1818,11 +1812,11 @@ async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_cu
 
 
 @app.post("/api/portal/payments")
-async def portal_make_payment(body: dict, customer: dict = Depends(get_current_customer)):
+async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depends(get_current_customer)):
     """Customer makes a payment on an invoice."""
-    invoice_id = body.get("invoice_id", "")
-    amount = body.get("amount", 0)
-    method = body.get("method", "card")
+    invoice_id = body.invoice_id
+    amount = body.amount
+    method = body.method
 
     # Verify invoice belongs to customer
     rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
@@ -1835,7 +1829,7 @@ async def portal_make_payment(body: dict, customer: dict = Depends(get_current_c
         customer["id"],
         amount,
         method,
-        body.get("reference", ""),
+        body.reference,
         "Online payment via customer portal",
     ])
 
@@ -1866,9 +1860,9 @@ async def portal_appointments(customer: dict = Depends(get_current_customer)):
 
 
 @app.post("/api/portal/customer/set-password")
-async def portal_set_password(body: dict, customer: dict = Depends(get_current_customer)):
+async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(get_current_customer)):
     """Customer sets/changes their portal password."""
-    pw = body.get("password", "")
+    pw = body.password
     if len(pw) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
@@ -1880,12 +1874,12 @@ async def portal_set_password(body: dict, customer: dict = Depends(get_current_c
 
 
 @app.post("/api/portal/payments/create-checkout-session")
-async def portal_create_checkout_session(body: dict, customer: dict = Depends(get_current_customer)):
+async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, customer: dict = Depends(get_current_customer)):
     """Create a Stripe Checkout Session for an invoice payment."""
     if not stripe_configured():
         raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
 
-    invoice_id = body.get("invoice_id", "")
+    invoice_id = body.invoice_id
     if not invoice_id:
         raise HTTPException(400, "invoice_id is required")
 
@@ -2155,37 +2149,37 @@ async def list_custom_field_definitions(entity_type: str | None = None, user: di
 
 
 @app.post("/api/custom-field-definitions")
-async def create_custom_field_definition(body: dict, user: dict = Depends(require_role("admin"))):
+async def create_custom_field_definition(body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
     """Create a custom field definition."""
     field_id = secrets.token_hex(12)
     await _call("create_custom_field_definition", [
         user["tenant_id"],
         field_id,
-        body.get("entity_type", "customer"),
-        body.get("label", ""),
-        body.get("field_type", "text"),
-        json.dumps(body.get("options", [])),
-        int(body.get("sort_order", 0)),
-        bool(body.get("required", False)),
-        bool(body.get("active", True)),
+        body.entity_type,
+        body.label,
+        body.field_type,
+        json.dumps(body.options),
+        body.sort_order,
+        body.required,
+        body.active,
     ])
-    await _log_audit(user, "create", "custom_field_definition", field_id, body.get("label", ""))
+    await _log_audit(user, "create", "custom_field_definition", field_id, body.label)
     return {"ok": True, "id": field_id}
 
 
 @app.put("/api/custom-field-definitions/{field_id}")
-async def update_custom_field_definition(field_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def update_custom_field_definition(field_id: str, body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
     """Update a custom field definition."""
     await _call("update_custom_field_definition", [
         field_id,
-        body.get("label", ""),
-        body.get("field_type", "text"),
-        json.dumps(body.get("options", [])),
-        int(body.get("sort_order", 0)),
-        bool(body.get("required", False)),
-        bool(body.get("active", True)),
+        body.label,
+        body.field_type,
+        json.dumps(body.options),
+        body.sort_order,
+        body.required,
+        body.active,
     ])
-    await _log_audit(user, "update", "custom_field_definition", field_id, body.get("label", ""))
+    await _log_audit(user, "update", "custom_field_definition", field_id, body.label)
     return {"ok": True}
 
 
@@ -2205,9 +2199,9 @@ async def get_custom_field_values(entity_id: str, user: dict = Depends(require_r
 
 
 @app.put("/api/custom-field-values/{entity_id}")
-async def set_custom_field_values(entity_id: str, body: dict, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def set_custom_field_values(entity_id: str, body: CustomFieldValuesUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Set custom field values for an entity. Body: { values: { field_id: value, ... } }"""
-    values = body.get("values", {})
+    values = body.values
     for field_id, value in values.items():
         await _call("set_custom_field_value", [entity_id, field_id, str(value), user.get("tenant_id", "")])
     await _log_audit(user, "update", "custom_field_values", entity_id, f"{len(values)} fields")
@@ -2224,26 +2218,26 @@ async def list_checklist_templates(user: dict = Depends(require_role("admin", "t
 
 
 @app.post("/api/checklist-templates")
-async def create_checklist_template(body: dict, user: dict = Depends(require_role("admin"))):
-    """Create a checklist template. Items: [{\"label\":\"...\",\"order\":1}]"""
+async def create_checklist_template(body: ChecklistTemplateCreate, user: dict = Depends(require_role("admin"))):
+    """Create a checklist template. Items: [{"label":"...","order":1}]"""
     await _call("create_checklist_template", [
         user["tenant_id"],
-        body.get("name", ""),
-        body.get("description", ""),
-        json.dumps(body.get("items", [])),
+        body.name,
+        body.description,
+        json.dumps(body.items),
     ])
-    await _log_audit(user, "create", "checklist_template", body.get("name", ""))
+    await _log_audit(user, "create", "checklist_template", body.name)
     return {"ok": True}
 
 
 @app.put("/api/checklist-templates/{template_id}")
-async def update_checklist_template(template_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def update_checklist_template(template_id: str, body: ChecklistTemplateUpdate, user: dict = Depends(require_role("admin"))):
     """Update a checklist template."""
     await _call("update_checklist_template", [
         template_id,
-        body.get("name", ""),
-        body.get("description", ""),
-        json.dumps(body.get("items", [])),
+        body.name,
+        body.description,
+        json.dumps(body.items),
     ])
     await _log_audit(user, "update", "checklist_template", template_id)
     return {"ok": True}
@@ -2267,18 +2261,18 @@ async def get_ticket_checklist(ticket_id: str, user: dict = Depends(require_role
 
 
 @app.post("/api/tickets/{ticket_id}/checklist/apply")
-async def apply_checklist_to_ticket(ticket_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
+async def apply_checklist_to_ticket(ticket_id: str, body: ChecklistApply, user: dict = Depends(require_role("admin", "tech"))):
     """Apply a checklist template to a ticket."""
-    template_id = body.get("template_id", "")
+    template_id = body.template_id
     await _call("apply_checklist_template", [ticket_id, template_id])
     await _log_audit(user, "apply", "checklist", ticket_id, f"template={template_id}")
     return {"ok": True}
 
 
 @app.put("/api/tickets/{ticket_id}/checklist/{item_id}")
-async def update_checklist_item(ticket_id: str, item_id: str, body: dict, user: dict = Depends(require_role("admin", "tech"))):
+async def update_checklist_item(ticket_id: str, item_id: str, body: ChecklistToggle, user: dict = Depends(require_role("admin", "tech"))):
     """Toggle a checklist item completed/uncompleted."""
-    await _call("update_checklist_item", [item_id, bool(body.get("completed", False))])
+    await _call("update_checklist_item", [item_id, body.completed])
     return {"ok": True}
 
 
@@ -2353,11 +2347,11 @@ async def list_webhook_subscriptions(user: dict = Depends(require_role("admin"))
 
 
 @app.post("/api/webhook-subscriptions")
-async def create_webhook_subscription(body: dict, user: dict = Depends(require_role("admin"))):
+async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dict = Depends(require_role("admin"))):
     """Create a new webhook subscription."""
-    url = body.get("url", "").strip()
-    events = body.get("events", "").strip()
-    secret = body.get("secret", "").strip()
+    url = body.url.strip()
+    events = body.events.strip()
+    secret = body.secret.strip()
 
     if not url:
         raise HTTPException(400, "url is required")
@@ -2377,12 +2371,12 @@ async def create_webhook_subscription(body: dict, user: dict = Depends(require_r
 
 
 @app.put("/api/webhook-subscriptions/{sub_id}")
-async def update_webhook_subscription(sub_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def update_webhook_subscription(sub_id: str, body: WebhookSubscriptionUpdate, user: dict = Depends(require_role("admin"))):
     """Update a webhook subscription."""
-    url = body.get("url", "").strip()
-    events = body.get("events", "").strip()
-    secret = body.get("secret", "").strip()
-    active = body.get("active", True)
+    url = body.url.strip()
+    events = body.events.strip()
+    secret = body.secret.strip()
+    active = body.active
 
     if not url:
         raise HTTPException(400, "url is required")
