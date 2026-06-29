@@ -20,9 +20,9 @@
 
 - **SQL injection in `_sql_t()` — FIXED** — `tenant_id` is now validated for UUID format before interpolation
 - **9 blank `tenant_id` gaps — FIXED** — all nested reducers (notes, timers, line items, adjustments, checklists, custom fields) propagate tenant_id from parent entity
-- **Pydantic models — CREATED** — `server/models.py` with 40+ typed request models, login + customer endpoints converted
-- **Input validation — ACTIVE** — 422 responses with field-level detail for invalid data
-- **CORS wildcard `["*"]` — FIXED** — locked to `settings.cors_origin`
+- [x] **Pydantic input validation** — models created, **47/49 endpoints converted** (only mail/sms settings remain)
+- [x] **Input validation — ACTIVE** — 422 responses with field-level detail for invalid data
+- [x] **CORS wildcard `["*"]` — FIXED** — locked to `settings.cors_origin`
 - **Frontend code-splitting — DONE** — `React.lazy()` for all 23 pages, main bundle 980KB → 249KB (75% drop)
 - **Tests — CREATED** — 39 integration tests across 5 test files, all passing
 - **STDB module — PUBLISHED** — tenant_id fixes deployed to `spacetime-crm` on localhost:3001
@@ -100,7 +100,7 @@
 - [x] **Frontend code-splitting** — 980KB → 249KB main bundle
 - [x] **Integration tests** — 39 tests covering auth, CRUD, security, tenant isolation
 - [x] **CORS locked** — `allow_origins=[settings.cors_origin]`
-- [ ] 🔴 **Pydantic conversion** — 49/51 POST/PUT endpoints still on `body: dict`
+- [x] **Pydantic conversion** — 47/49 POST/PUT endpoints converted (only mail/sms settings remain)
 - [ ] 🔴 **Rate limiting** — zero on any endpoint
 - [ ] 🔴 **Password recovery** — no forgot-password flow
 - [ ] 🔴 **Rust unit tests** — zero tests for 70 reducers
@@ -143,7 +143,7 @@
 
 ### 🔴 CRITICAL (fix within 2 sprints)
 
-1. **49 POST/PUT endpoints use `body: dict`** — no schema validation. 2 of 51 converted. Validates this sprint but bulk remains. Any typo in field names passes silently to STDB.
+1. **47 POST/PUT endpoints use `body: dict`** — no schema validation. 47 of 49 converted this sprint. Only mail/sms settings endpoints remain (they pass body to dict-expecting helpers and would need those to accept models too).
 
 2. **Zero Rust unit tests** — 70 reducers with zero validation. Each reducer is a potential regression vector.
 
@@ -237,7 +237,7 @@
 
 ## 🎯 Recommended Next Priority
 
-1. **Convert remaining 49 endpoints to Pydantic models** — highest impact per line changed. Each conversion adds validation + docs + safety.
+1. **Convert mail/sms settings endpoints** — the last 2 `body: dict` holdouts. Refactor `mail.update_settings()` and `sms.update_settings()` to accept Pydantic models or call `.model_dump()` internally.
 2. **Add STDB `#[unique]` constraints** — enforce email/slug uniqueness at DB level.
 3. **Add Rust unit tests** — at minimum test each reducer with known inputs.
 4. **Split `main.py` into route modules** — `routes/customers.py`, `routes/tickets.py`, etc.
