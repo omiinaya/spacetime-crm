@@ -14,9 +14,11 @@
 | Frontend (TypeScript) | 7,530 | 76% | 7% (unit) | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
 | **Tests** | **~6,800 (367 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
-| **Overall** | **~17,900** | **~89%** | **40%** | **9 items** |
+| **Overall** | **~19,000** | **~91%** | **41%** | **9 items** |
 
 ### 🟢 Sprint Wins (since last assessment)
+
+- **POS / Counter Sale — ADDED** — Full kiosk module: STDB counter_sale + counter_sale_line_item tables, reducers, 6 REST API endpoints, and a kiosk-style frontend with barcode scanner, product search, real-time cart/tax/total, cash/card payment, change calculation, receipt view with print support, and sale history. 10 new backend tests. Total coverage: 280 backend + 94 frontend = 374 tests.
 
 - **Purchase order approvals — ADDED** — New approval workflow for POs: submit-for-approval, approve, and reject functions. Status flow: draft → pending_approval → approved → sent → partial → received → cancelled. Approved PO shows approver name and timestamp. 6 new backend tests. Total coverage: 268 backend + 94 frontend = 362 tests.
 
@@ -218,7 +220,7 @@
 | **Tests** | **🟢 Added (124)** | ✅ Expected | **Second sprint** |
 | **Pydantic validation** | **🟢 Started** | ✅ Expected | **2/51 endpoints** |
 | Mobile app | ❌ Not started | ⭐ Gap | — |
-| POS / counter sale | ❌ Not started | ⭐ Gap | — |
+| POS / counter sale | ✅ Complete | ✅ Parity | Kiosk UI with barcode scan, cart, tax, payment, receipt, refund |
 | Purchase order approvals | ✅ Complete | ✅ Parity | Submit/approve/reject |
 | Automated recurring invoices | ✅ Complete | ✅ Parity | HTML generation |
 | Customer payment methods | ✅ Complete | ✅ Parity | Stripe SetupIntent |
