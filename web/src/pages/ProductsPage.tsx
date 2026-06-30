@@ -9,7 +9,8 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { Package, Plus, Search, ClipboardList, Scan, ScanLine, AlertTriangle } from "lucide-react";
+import { Package, Plus, Search, ClipboardList, Scan, ScanLine, AlertTriangle, Printer } from "lucide-react";
+import { printBarcodeLabel } from "../components/BarcodeLabel";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
 
@@ -311,6 +312,17 @@ export default function ProductsPage() {
                       {p.quantity_on_hand} in stock
                     </p>
                   </div>
+                  {p.barcode && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ml-2 shrink-0"
+                      onClick={(e) => { e.stopPropagation(); printBarcodeLabel(p.barcode, p.name, p.price, p.sku); }}
+                      title="Print barcode label"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -351,7 +363,13 @@ export default function ProductsPage() {
                 )}
                 <p className="text-sm">Price: <span className="font-medium">${selectedProduct.price.toFixed(2)}</span> &middot; Cost: <span className="font-medium">${selectedProduct.cost.toFixed(2)}</span></p>
                 {selectedProduct.barcode && (
-                  <p className="text-sm">Barcode: <span className="font-mono text-xs text-muted-foreground">{selectedProduct.barcode}</span></p>
+                  <p className="text-sm">Barcode: <span className="font-mono text-xs text-muted-foreground">{selectedProduct.barcode}</span>
+                    <Button variant="ghost" size="icon" className="ml-1 inline-flex h-5 w-5 align-middle"
+                      onClick={() => printBarcodeLabel(selectedProduct.barcode, selectedProduct.name, selectedProduct.price, selectedProduct.sku)}
+                      title="Print barcode label">
+                      <Printer className="h-3 w-3" />
+                    </Button>
+                  </p>
                 )}
                 {selectedProduct.description && <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>}
               </CardContent>
