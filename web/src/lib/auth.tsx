@@ -16,8 +16,10 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  complete2FA: (code: string) => Promise<void>;
   logout: () => void;
   refreshTenant: () => Promise<string | null>;
+  pending2FA: { tempToken: string; user: Partial<AuthUser> } | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pending2FA, setPending2FA] = useState<{ tempToken: string; user: Partial<AuthUser> } | null>(null);
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -64,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
+    setPending2FA(null);
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -74,9 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(text.slice(0, 200));
     }
     const data = await res.json();
+
+    if (data.requires_2fa) {
+      // Store temp token and show 2FA challenge
+      setPending2FA({
+        tempToken: data.temp_token,
+        user: data.user || { id: data.user_id, name: data.user_name, email },
+      });
+      return; // Don't complete login yet
+    }
+
+    // Normal login
     storeToken(data.token);
     setToken(data.token);
-    // Use the full user object from the response if available, otherwise decode JWT
     if (data.user) {
       setUser(data.user);
     } else {
@@ -85,10 +99,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const complete2FA = async (code: string) => {
+    if (!pending2FA) throw new Error("No pending 2FA challenge");
+    const res = await fetch(`${API_BASE}/auth/complete-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ temp_token: pending2FA.tempToken, code }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text.slice(0, 200));
+    }
+    const data = await res.json();
+    storeToken(data.token);
+    setToken(data.token);
+    if (data.user) {
+      setUser(data.user);
+    } else {
+      const u = decodeUser(data.token);
+      setUser(u);
+    }
+    setPending2FA(null);
+  };
+
   const logout = () => {
     clearToken();
     setToken(null);
     setUser(null);
+    setPending2FA(null);
   };
 
   const refreshTenant = async () => {
@@ -112,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshTenant }}>
+    <AuthContext.Provider value={{ user, token, loading, login, complete2FA, logout, refreshTenant, pending2FA }}>
       {children}
     </AuthContext.Provider>
   );

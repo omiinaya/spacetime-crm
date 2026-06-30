@@ -13,6 +13,8 @@ pub struct User {
     pub pin: String,
     pub password_hash: String,
     pub active: bool,
+    pub totp_secret: String,
+    pub totp_enabled: bool,
     pub created_at: u64,
 }
 
@@ -38,6 +40,8 @@ pub fn create_user(ctx: &ReducerContext, name: String, email: String, role: Stri
         pin: String::new(),
         password_hash: String::new(),
         active: true,
+        totp_secret: String::new(),
+        totp_enabled: false,
         created_at: super::now_ms(ctx),
     });
 }
@@ -53,6 +57,27 @@ pub fn update_user(ctx: &ReducerContext, id: String, name: String, email: String
 pub fn set_user_password(ctx: &ReducerContext, id: String, password_hash: String) {
     if let Some(u) = ctx.db.user().id().find(&id) {
         ctx.db.user().id().update(User { password_hash, ..u });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn set_user_totp_secret(ctx: &ReducerContext, id: String, totp_secret: String) {
+    if let Some(u) = ctx.db.user().id().find(&id) {
+        ctx.db.user().id().update(User { totp_secret, totp_enabled: false, ..u });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn enable_user_totp(ctx: &ReducerContext, id: String) {
+    if let Some(u) = ctx.db.user().id().find(&id) {
+        ctx.db.user().id().update(User { totp_enabled: true, ..u });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn disable_user_totp(ctx: &ReducerContext, id: String) {
+    if let Some(u) = ctx.db.user().id().find(&id) {
+        ctx.db.user().id().update(User { totp_secret: String::new(), totp_enabled: false, ..u });
     }
 }
 

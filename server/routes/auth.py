@@ -1,4 +1,4 @@
-"""Auth routes — login, me, set-password, refresh-tenant."""
+"""Auth routes — login, me, set-password, refresh-tenant, 2FA/TOTP."""
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
@@ -8,16 +8,78 @@ from config import settings
 from helpers import (
     _sql, _call, require_role, get_current_user, logger,
 )
-from models import LoginRequest, SetPasswordRequest, ForgotPasswordRequest, ResetPasswordRequest
+from models import (
+    LoginRequest, SetPasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
+    Setup2FARequest, CompleteLoginRequest, Disable2FARequest,
+)
 from rate_limit import limiter
+
+import pyotp
+import base64
+import os
+import json
 
 router = APIRouter()
 
 
+TEMP_TOKEN_EXPIRE_MINUTES = 5
+
+
+def _make_full_token(user: dict, tenant_id: str, now: datetime) -> str:
+    """Generate a full JWT token for an authenticated user."""
+    return jwt.encode(
+        {
+            "sub": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user["role"],
+            "tenant_id": tenant_id,
+            "iat": now,
+            "exp": now + timedelta(hours=settings.jwt_expire_hours),
+        },
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def _make_temp_token(user: dict, now: datetime) -> str:
+    """Generate a short-lived temporary token for 2FA challenge."""
+    return jwt.encode(
+        {
+            "sub": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user["role"],
+            "purpose": "2fa_challenge",
+            "iat": now,
+            "exp": now + timedelta(minutes=TEMP_TOKEN_EXPIRE_MINUTES),
+        },
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def _decode_temp_token(token: str) -> dict:
+    """Decode and validate a temporary 2FA token. Returns payload or raises."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+        if payload.get("purpose") != "2fa_challenge":
+            raise HTTPException(400, "Invalid token purpose")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Temporary token expired. Please log in again.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(400, "Invalid temporary token.")
+
+
 @router.post("/api/auth/login")
-@limiter.limit("10/minute")
+@limiter.limit("30/minute")
 async def login(request: Request, login_data: LoginRequest):
-    """Login with email + password, returns JWT token."""
+    """Login with email + password. Returns JWT or 2FA challenge."""
     email = login_data.email
     password = login_data.password
 
@@ -39,6 +101,21 @@ async def login(request: Request, login_data: LoginRequest):
 
     now = datetime.utcnow()
 
+    # Check if 2FA is enabled
+    if user.get("totp_enabled", False):
+        temp_token = _make_temp_token(user, now)
+        return {
+            "requires_2fa": True,
+            "temp_token": temp_token,
+            "user": {
+                "id": user["id"],
+                "name": user["name"],
+                "email": user["email"],
+                "role": user["role"],
+            },
+        }
+
+    # No 2FA — return full token
     tenant_id = ""
     try:
         tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
@@ -47,19 +124,54 @@ async def login(request: Request, login_data: LoginRequest):
     except Exception:
         pass
 
-    token = jwt.encode(
-        {
-            "sub": user["id"],
-            "email": user["email"],
+    token = _make_full_token(user, tenant_id, now)
+
+    return {
+        "token": token,
+        "requires_2fa": False,
+        "user": {
+            "id": user["id"],
             "name": user["name"],
+            "email": user["email"],
             "role": user["role"],
             "tenant_id": tenant_id,
-            "iat": now,
-            "exp": now + timedelta(hours=settings.jwt_expire_hours),
         },
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm,
-    )
+    }
+
+
+@router.post("/api/auth/complete-login")
+@limiter.limit("30/minute")
+async def complete_login(request: Request, body: CompleteLoginRequest):
+    """Complete 2FA challenge and receive full JWT token."""
+    payload = _decode_temp_token(body.temp_token)
+    user_id = payload["sub"]
+
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    if not rows:
+        raise HTTPException(401, "User not found")
+
+    user = rows[0]
+    if not user.get("totp_enabled", False):
+        raise HTTPException(400, "2FA is not enabled for this user")
+
+    secret = user.get("totp_secret", "")
+    if not secret:
+        raise HTTPException(500, "TOTP secret not found for user with 2FA enabled")
+
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(body.code, valid_window=1):
+        raise HTTPException(401, "Invalid verification code")
+
+    now = datetime.utcnow()
+    tenant_id = ""
+    try:
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        if tm_rows:
+            tenant_id = tm_rows[0]["tenant_id"]
+    except Exception:
+        pass
+
+    token = _make_full_token(user, tenant_id, now)
 
     return {
         "token": token,
@@ -84,14 +196,89 @@ async def auth_me(user: dict = Depends(get_current_user)):
                 tenant_info = trows[0]
         except Exception:
             pass
-    return {
+
+    # Check 2FA status from DB
+    totp_enabled = False
+    try:
+        rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+        if rows:
+            totp_enabled = rows[0].get("totp_enabled", False)
+    except Exception:
+        pass
+
+    result = {
         "id": user["id"],
         "name": user["name"],
         "email": user["email"],
         "role": user["role"],
         "tenant_id": user.get("tenant_id", ""),
         "tenant": tenant_info,
+        "totp_enabled": totp_enabled,
     }
+    return result
+
+
+@router.post("/api/auth/setup-2fa")
+async def setup_2fa(user: dict = Depends(get_current_user)):
+    """Generate TOTP secret and return provisioning URI for QR code."""
+    # Check if already enabled
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+    if rows and rows[0].get("totp_enabled", False):
+        raise HTTPException(400, "2FA is already enabled. Disable it first to re-setup.")
+
+    # Generate new secret
+    secret = pyotp.random_base32()
+    issuer = "SpacetimeCRM"
+    provisioning_uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name=user["email"],
+        issuer_name=issuer,
+    )
+
+    # Store secret in DB (not yet enabled)
+    await _call("set_user_totp_secret", [user["id"], secret])
+
+    return {
+        "secret": secret,
+        "provisioning_uri": provisioning_uri,
+    }
+
+
+@router.post("/api/auth/verify-2fa")
+async def verify_2fa(body: Setup2FARequest, user: dict = Depends(get_current_user)):
+    """Verify a TOTP code and enable 2FA."""
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+    if not rows:
+        raise HTTPException(404, "User not found")
+
+    secret = rows[0].get("totp_secret", "")
+    if not secret:
+        raise HTTPException(400, "TOTP secret not found. Please run setup first.")
+
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(body.code, valid_window=1):
+        raise HTTPException(401, "Invalid verification code")
+
+    await _call("enable_user_totp", [user["id"]])
+    return {"ok": True, "message": "2FA has been enabled."}
+
+
+@router.post("/api/auth/disable-2fa")
+async def disable_2fa(body: Disable2FARequest, user: dict = Depends(get_current_user)):
+    """Verify current TOTP code and disable 2FA."""
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+    if not rows:
+        raise HTTPException(404, "User not found")
+
+    secret = rows[0].get("totp_secret", "")
+    if not secret:
+        raise HTTPException(400, "2FA is not set up")
+
+    totp = pyotp.TOTP(secret)
+    if not totp.verify(body.code, valid_window=1):
+        raise HTTPException(401, "Invalid verification code")
+
+    await _call("disable_user_totp", [user["id"]])
+    return {"ok": True, "message": "2FA has been disabled."}
 
 
 @router.post("/api/auth/refresh-tenant")
@@ -105,19 +292,7 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
     except Exception:
         pass
     now = datetime.utcnow()
-    token = jwt.encode(
-        {
-            "sub": user["id"],
-            "email": user["email"],
-            "name": user["name"],
-            "role": user["role"],
-            "tenant_id": tid,
-            "iat": now,
-            "exp": now + timedelta(hours=settings.jwt_expire_hours),
-        },
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm,
-    )
+    token = _make_full_token(user, tid, now)
     return {"token": token, "tenant_id": tid}
 
 
@@ -128,7 +303,7 @@ async def set_password(body: SetPasswordRequest, user: dict = Depends(get_curren
     if len(pw) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
-    await _call("set_user_password", [user["id"], hashed])  # noqa: F821
+    await _call("set_user_password", [user["id"], hashed])
     return {"ok": True}
 
 
@@ -136,7 +311,7 @@ async def set_password(body: SetPasswordRequest, user: dict = Depends(get_curren
 
 
 @router.post("/api/auth/forgot-password")
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def forgot_password(request: Request, body: ForgotPasswordRequest):
     """Send a password-reset email if the email exists.
 
@@ -146,7 +321,6 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
     if not email:
         raise HTTPException(400, "Email is required")
 
-    # Find user (staff or customer)
     user = None
     user_type = None
     rows = await _sql(f"SELECT * FROM user WHERE email = '{email}'")
@@ -163,7 +337,6 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
         logger.info("Password reset requested for unknown email: %s", email)
         return {"ok": True, "message": "If that email exists, a reset link has been sent."}
 
-    # Generate short-lived JWT reset token (15 minutes)
     now = datetime.utcnow()
     token = jwt.encode(
         {
@@ -198,7 +371,7 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 
 
 @router.post("/api/auth/reset-password")
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def reset_password(request: Request, body: ResetPasswordRequest):
     """Reset password using a valid reset token."""
     token = body.token.strip()

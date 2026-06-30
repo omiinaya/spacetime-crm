@@ -464,3 +464,17 @@ class POSAddItem(BaseModel):
     sku: str = Field(default="", max_length=100)
     quantity: float = Field(..., gt=0)
     unit_price: float = Field(..., ge=0)
+
+# ─── 2FA / TOTP ─────────────────────────────────────────────────
+
+class Setup2FARequest(BaseModel):
+    code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class CompleteLoginRequest(BaseModel):
+    temp_token: str = Field(..., min_length=1)
+    code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class Disable2FARequest(BaseModel):
+    code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
