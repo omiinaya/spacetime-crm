@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-07-02
-| Overall completeness: ~90% (Phase 4 complete, PO approvals, barcode labels, SLA tracking, breach detection)
+|| Overall completeness: ~92% (Phase 4 complete, PO approvals, barcode labels, SLA tracking & config UI, breach detection)
 
 ---
 
@@ -13,8 +13,8 @@
 | Backend API (Python) | ~3,960 | 91% | 22% (API paths) | 3 major, 2 minor |
 | Frontend (TypeScript) | 7,530 | 76% | 7% (unit) | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
-| **Tests** | **~6,800 (367 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
-| **Overall** | **~19,000** | **~91%** | **41%** | **9 items** |
+| **Tests** | **~7,100 (378 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
+| **Overall** | **~19,200** | **~92%** | **41%** | **9 items** |
 
 ### 🟢 Sprint Wins (since last assessment)
 
@@ -33,6 +33,8 @@
 - **Ticket SLA urgency — ADDED** — Live color-coded urgency indicators on ticket cards: green (<4h), amber (4-24h), red (24-72h), dark red (>72h) with hours/days label. Hover shows exact timestamp.
 
 - **SLA breach detection — ADDED** — `GET /api/tickets/sla-breached` finds open tickets past their priority-based thresholds (urgent=4h, high=24h, medium=72h, low=120h). Frontend: pulsing red badge counter in header + red left border on breached ticket cards. Auto-refreshes every 60s. 3 new backend tests.
+
+- **SLA config UI — ADDED** — Editable SLA thresholds from SettingsPage. STDB: `sla_configs` table with upsert. Backend: GET/POST `/api/tickets/sla-settings` with validation. Reads from DB with fallback to defaults. Frontend: inline edit controls in SettingsPage with save/cancel. 5 new backend tests.
 
 - **`server/main.py`: reload=True** — uvicorn hot-reload for faster dev iteration.
 
