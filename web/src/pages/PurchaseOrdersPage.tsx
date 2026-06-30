@@ -6,6 +6,7 @@ import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
 import { ShoppingCart, Plus, Trash2, SendHorizontal, PackageCheck, X, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
@@ -26,7 +27,7 @@ const statusColors: Record<string, "outline" | "default" | "success" | "destruct
 export default function PurchaseOrdersPage() {
   const pag = usePagination(PAGE_SIZE);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ vendor_name: "", notes: "" });
+  const [form, setForm] = useState({ vendor_name: "", notes: "", currency: "USD" });
   const [selectedPo, setSelectedPo] = useState<string | null>(null);
   const [newItemForm, setNewItemForm] = useState({ product_id: "", description: "", quantity: 1, unit_price: 0 });
   const [receiveMode, setReceiveMode] = useState<string | null>(null);
@@ -61,7 +62,7 @@ export default function PurchaseOrdersPage() {
     onSuccess: () => {
       toast.success("Purchase order created");
       setShowForm(false);
-      setForm({ vendor_name: "", notes: "" });
+      setForm({ vendor_name: "", notes: "", currency: "USD" });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
     },
     onError: () => toast.error("Failed to create purchase order"),
@@ -215,6 +216,14 @@ export default function PurchaseOrdersPage() {
                 onChange={(e) => setForm({ ...form, vendor_name: e.target.value })} />
               <Input placeholder="Notes" value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="CAD">CAD (C$)</option>
+                <option value="AUD">AUD (A$)</option>
+                <option value="JPY">JPY (¥)</option>
+              </Select>
               <div className="flex gap-2">
                 <Button onClick={handleCreate}>Create</Button>
                 <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
@@ -235,7 +244,7 @@ export default function PurchaseOrdersPage() {
                     <Badge variant={statusColors[po.status] || "outline"}>{po.status}</Badge>
                   </div>
                   <p className="font-medium mt-1">{po.vendor_name}</p>
-                  <p className="text-sm text-muted-foreground">${po.total.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">{po.currency || "USD"} {po.total.toFixed(2)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedPo === po.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -347,11 +356,11 @@ export default function PurchaseOrdersPage() {
                 <CardContent className="pt-4 space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>${poDetail.subtotal.toFixed(2)}</span>
+                    <span>{poDetail.currency || "USD"} {poDetail.subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
                     <span>Total</span>
-                    <span>${poDetail.total.toFixed(2)}</span>
+                    <span>{poDetail.currency || "USD"} {poDetail.total.toFixed(2)}</span>
                   </div>
                   {poDetail.status === "approved" && poDetail.approved_by && (
                     <div className="flex justify-between text-green-600 border-t pt-2 mt-2">
@@ -408,7 +417,7 @@ export default function PurchaseOrdersPage() {
                           <div className="flex-1">
                             <p className="font-medium">{item.description}</p>
                             <p className="text-sm text-muted-foreground">
-                              {item.quantity} × ${item.unit_price.toFixed(2)} = ${item.total.toFixed(2)}
+                              {item.quantity} × {poDetail.currency || "USD"} {item.unit_price.toFixed(2)} = {poDetail.currency || "USD"} {item.total.toFixed(2)}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                               <span>Received: {item.received_quantity}/{item.quantity}</span>

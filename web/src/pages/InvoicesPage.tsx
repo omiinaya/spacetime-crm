@@ -27,7 +27,7 @@ export default function InvoicesPage() {
   const pag = usePagination(PAGE_SIZE);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "" });
+  const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" });
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
@@ -59,11 +59,12 @@ export default function InvoicesPage() {
       notes: form.notes,
       terms: form.terms,
       due_date: form.due_date ? new Date(form.due_date).getTime() : 0,
+      currency: form.currency,
     }),
     onSuccess: () => {
       toast.success("Invoice created");
       setShowForm(false);
-      setForm({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "" });
+      setForm({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
     onError: () => toast.error("Failed to create invoice"),
@@ -162,6 +163,14 @@ export default function InvoicesPage() {
             <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             <Input placeholder="Terms" value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} />
             <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+            <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="CAD">CAD (C$)</option>
+              <option value="AUD">AUD (A$)</option>
+              <option value="JPY">JPY (¥)</option>
+            </Select>
             <div className="flex gap-2">
               <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Create</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>

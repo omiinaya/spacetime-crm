@@ -25,7 +25,7 @@ export default function EstimatesPage() {
   const pag = usePagination(PAGE_SIZE);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", expires_at: "" });
+  const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", expires_at: "", currency: "USD" });
   const [selectedEst, setSelectedEst] = useState<Estimate | null>(null);
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
 
@@ -66,11 +66,12 @@ export default function EstimatesPage() {
         ticket_id: form.ticket_id,
         notes: form.notes,
         expires_at: form.expires_at ? new Date(form.expires_at).getTime() : 0,
+        currency: form.currency,
       }),
     onSuccess: () => {
       toast.success("Estimate created");
       setShowForm(false);
-      setForm({ customer_id: "", ticket_id: "", notes: "", expires_at: "" });
+      setForm({ customer_id: "", ticket_id: "", notes: "", expires_at: "", currency: "USD" });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
     },
     onError: () => toast.error("Failed to create estimate"),
@@ -146,6 +147,14 @@ export default function EstimatesPage() {
             <Input placeholder="Ticket ID (optional)" value={form.ticket_id} onChange={(e) => setForm({ ...form, ticket_id: e.target.value })} />
             <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             <Input type="date" placeholder="Expires" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })} />
+            <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="CAD">CAD (C$)</option>
+              <option value="AUD">AUD (A$)</option>
+              <option value="JPY">JPY (¥)</option>
+            </Select>
             <div className="flex gap-2">
               <Button onClick={handleCreate}>Create</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
@@ -165,7 +174,7 @@ export default function EstimatesPage() {
                     <span className="text-xs text-muted-foreground">#{est.estimate_number}</span>
                     <Badge variant={statusColors[est.status] || "outline"}>{est.status}</Badge>
                   </div>
-                  <p className="font-medium mt-1">${est.total.toFixed(2)}</p>
+                  <p className="font-medium mt-1">{est.currency || "USD"} {est.total.toFixed(2)}</p>
                   {cust && <p className="text-xs text-muted-foreground">{cust.first_name} {cust.last_name}</p>}
                 </CardContent>
               </Card>
