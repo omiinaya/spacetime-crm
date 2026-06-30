@@ -1,6 +1,4 @@
 """Auth routes — login, me, set-password, refresh-tenant."""
-from __future__ import annotations
-
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
@@ -18,10 +16,10 @@ router = APIRouter()
 
 @router.post("/api/auth/login")
 @limiter.limit("10/minute")
-async def login(request: Request, body: LoginRequest):
+async def login(request: Request, login_data: LoginRequest):
     """Login with email + password, returns JWT token."""
-    email = body.email
-    password = body.password
+    email = login_data.email
+    password = login_data.password
 
     if not email or not password:
         raise HTTPException(400, "Email and password required")

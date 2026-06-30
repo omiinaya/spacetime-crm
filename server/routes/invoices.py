@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
-from weasyprint import HTML
+from pdf import html_to_pdf
 
 from helpers import (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
@@ -171,7 +171,7 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
         ],
     )
 
-    pdf = HTML(string=html).write_pdf()
+    pdf = await html_to_pdf(html)
     filename = f"invoice_{inv.get('invoice_number', 'unknown')}.pdf"
     return Response(
         content=pdf,

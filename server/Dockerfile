@@ -3,25 +3,22 @@ FROM node:22-alpine AS frontend
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json* ./
 RUN npm ci
-COPY web/ .
+COPY web/ ./
 RUN npm run build
 
 # ── Runtime ────────────────────────────────────────────────
 FROM python:3.12-slim
 
-# Install runtime deps (weasyprint needs pango/cairo/etc.)
+# Minimal system deps — Playwright install --with-deps handles Chromium deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libgdk-pixbuf-2.0-0 \
-    libffi-dev \
-    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/server
 COPY server/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Install Chromium for PDF generation (replaces weasyprint — smaller, modern CSS)
+RUN python3 -m playwright install chromium --with-deps 2>&1 | tail -5
 COPY server/ .
 
 # Copy frontend dist
