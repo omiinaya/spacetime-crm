@@ -223,7 +223,7 @@
 | Automated recurring invoices | ✅ Complete | ✅ Parity | HTML generation |
 | Customer payment methods | ✅ Complete | ✅ Parity | Stripe SetupIntent |
 | Inventory barcode labels | ✅ Complete | ✅ Gap | JsBarcode print |
-| Multi-currency | ❌ Not started | ⭐ Gap | — |
+| Multi-currency | ✅ Foundation | ⭐ Gap | Currency field on 4 tables, API models, frontend display |
 | 2FA / SSO | ❌ Not started | ⭐ Gap | — |
 | API rate limiting | ✅ Complete | ✅ Parity | slowapi 100/min |
 | SLA tracking | ✅ Complete | ✅ Parity | Priority-based thresholds |
