@@ -23,6 +23,7 @@ pub struct Tenant {
 pub struct TenantMember {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     /// User.username that belongs to this tenant
     pub username: String,

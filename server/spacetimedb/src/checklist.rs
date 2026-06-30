@@ -6,6 +6,7 @@ use crate::ticket::ticket;
 pub struct ChecklistTemplate {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub name: String,
     pub description: String,
@@ -20,6 +21,7 @@ pub struct ChecklistTemplate {
 pub struct TicketChecklistItem {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub ticket_id: String,
     pub template_id: String,

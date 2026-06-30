@@ -7,6 +7,7 @@ use crate::product::products;
 pub struct InventoryAdjustment {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub product_id: String,
     pub quantity_change: f64,

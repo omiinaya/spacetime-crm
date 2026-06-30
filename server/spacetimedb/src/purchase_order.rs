@@ -7,6 +7,7 @@ use crate::product::products;
 pub struct PurchaseOrder {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub vendor_name: String,
     pub po_number: u64,
@@ -25,6 +26,7 @@ pub struct PurchaseOrder {
 pub struct PurchaseOrderLineItem {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub purchase_order_id: String,
     pub product_id: String,

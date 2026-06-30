@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Product {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub name: String,
     pub sku: String,

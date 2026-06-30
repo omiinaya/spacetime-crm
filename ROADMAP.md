@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-07-01
-| Overall completeness: ~96% (+1% since last assessment)
+| Overall completeness: ~97% (+1% since last assessment)
 
 ---
 
@@ -18,6 +18,7 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
+- **STDB tenant_id indexes — ADDED** — 23 B-tree indexes on `tenant_id` across all tables. Every multi-tenant query now hits an index instead of doing O(n) full-table scans. Migration was non-breaking (index-only addition).
 - **Low Stock Alerts — ADDED** — `GET /api/products/low-stock` lists products below threshold. `POST /api/products/low-stock/notify` sends email to admin with a formatted table. Frontend shows alert banner, product card badges, and detail panel display.
 - **`update_product` reducer — ADDED** — STDB module now supports updating name, sku, barcode, description, category, price, cost, `min_stock`, and `location` via `PUT /api/products/:id`.
 - **Product form extended** — `min_stock` and `location` fields in the create/edit form.
@@ -152,7 +153,7 @@
 
 ### 🔴 CRITICAL (fix within 2 sprints)
 
-1. **No explicit indexes beyond primary key** — `tenant_id` filters on every query, but no index on `tenant_id` column. O(n) scans per tenant.
+1. ~~**No explicit indexes beyond primary key**~~ **RESOLVED** — 23 B-tree indexes on `tenant_id` added. All multi-tenant tenant-scoped queries now use indexed lookups.
 
 2. **User table has no `tenant_id`** — deliberate (cross-tenant admin users) but inconsistent with every other entity. Portal users (customers) have no STDB table.
 

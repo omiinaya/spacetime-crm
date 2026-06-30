@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct TaxRate {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub name: String,
     pub rate: f64,

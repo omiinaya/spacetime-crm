@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Ticket {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub customer_id: String,
     pub ticket_number: u64,
@@ -30,6 +31,7 @@ pub struct Ticket {
 pub struct TicketNote {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub ticket_id: String,
     pub author: String,
@@ -43,6 +45,7 @@ pub struct TicketNote {
 pub struct TicketTimer {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub ticket_id: String,
     pub user_id: String,
