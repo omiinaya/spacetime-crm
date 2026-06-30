@@ -183,7 +183,7 @@ export default function InvoicesPage() {
                         <span className="text-xs text-muted-foreground">#{inv.invoice_number}</span>
                         <Badge variant={statusColors[inv.status] || "outline"}>{inv.status}</Badge>
                       </div>
-                      <p className="font-medium mt-1">${inv.total.toFixed(2)}</p>
+                      <p className="font-medium mt-1">{inv.currency || "USD"} {inv.total.toFixed(2)}</p>
                       {cust && <p className="text-xs text-muted-foreground">{cust.first_name} {cust.last_name}</p>}
                     </div>
                   </div>
@@ -196,7 +196,7 @@ export default function InvoicesPage() {
         {selectedInv && (
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle>#{selectedInv.invoice_number} — ${selectedInv.total.toFixed(2)}</CardTitle>
+              <CardHeader><CardTitle>#{selectedInv.invoice_number} — {selectedInv.currency || "USD"} {selectedInv.total.toFixed(2)}</CardTitle>
                 <Button size="sm" variant="outline" onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, "_blank")}>
                   <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
                 </Button>
@@ -224,7 +224,7 @@ export default function InvoicesPage() {
                     ))}
                   </Select>
                   <span className="text-sm font-medium tabular-nums">
-                    ${((selectedInv.subtotal * (selectedInv.tax_rate || 0) / 100)).toFixed(2)}
+                    {selectedInv.currency || "USD"} {((selectedInv.subtotal * (selectedInv.tax_rate || 0) / 100)).toFixed(2)}
                   </span>
                 </div>
 
@@ -234,10 +234,10 @@ export default function InvoicesPage() {
                     <div key={li.id} className="flex items-center justify-between text-sm p-2 rounded bg-muted/50">
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{li.description}</p>
-                        <p className="text-xs text-muted-foreground">{li.quantity} x ${li.unit_price.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">{li.quantity} x {selectedInv.currency || "USD"} {li.unit_price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-medium">${li.total.toFixed(2)}</span>
+                        <span className="font-medium">{selectedInv.currency || "USD"} {li.total.toFixed(2)}</span>
                         <Button size="icon" variant="ghost" onClick={() => removeLineItem(li.id)}><Trash2 className="h-3 w-3" /></Button>
                       </div>
                     </div>

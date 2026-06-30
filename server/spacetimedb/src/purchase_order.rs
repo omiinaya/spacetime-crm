@@ -20,6 +20,7 @@ pub struct PurchaseOrder {
     pub created_at: u64,
     pub updated_at: u64,
     pub approved_by: String,
+    pub currency: String,
     #[default(0u64)]
     pub approved_at: u64,
 }
@@ -52,6 +53,7 @@ pub fn create_purchase_order(ctx: &ReducerContext, tenant_id: String, vendor_nam
         po_number,
         status: "draft".to_string(),
         approved_by: String::new(),
+        currency: "USD".to_string(),
         approved_at: 0,
         subtotal: 0.0,
         tax_amount: 0.0,
