@@ -76,6 +76,29 @@ pub struct SavedPaymentMethod {
     pub updated_at: u64,
 }
 
+// ─── Scheduled Report ──
+
+#[spacetimedb::table(accessor = scheduled_reports, public)]
+#[derive(Debug, Clone)]
+pub struct ScheduledReport {
+    #[primary_key]
+    pub id: String,
+    #[index(btree)]
+    pub tenant_id: String,
+    pub name: String,
+    pub report_type: String,
+    pub schedule_frequency: String,
+    pub schedule_config_json: String,
+    pub recipients_json: String,
+    pub filters_json: String,
+    pub next_run_at: u64,
+    pub last_run_at: u64,
+    pub last_error: String,
+    pub enabled: bool,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
 // ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──
 
 #[spacetimedb::table(accessor = invoices, public)]
@@ -387,7 +410,99 @@ pub fn delete_payment_method(ctx: &ReducerContext, id: String) {
     ctx.db.saved_payment_methods().id().delete(&id);
 }
 
-// ─── Reducers ──
+// ─── Scheduled Report reducers ──
+
+#[spacetimedb::reducer]
+pub fn create_scheduled_report(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    name: String,
+    report_type: String,
+    schedule_frequency: String,
+    schedule_config_json: String,
+    recipients_json: String,
+    filters_json: String,
+    next_run_at: u64,
+) {
+    let id = make_id("srpt", ctx);
+    let now = now_ms(ctx);
+    ctx.db.scheduled_reports().insert(ScheduledReport {
+        id,
+        tenant_id,
+        name,
+        report_type,
+        schedule_frequency,
+        schedule_config_json,
+        recipients_json,
+        filters_json,
+        next_run_at,
+        last_run_at: 0,
+        last_error: String::new(),
+        enabled: true,
+        created_at: now,
+        updated_at: now,
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn update_scheduled_report(
+    ctx: &ReducerContext,
+    id: String,
+    name: String,
+    report_type: String,
+    schedule_frequency: String,
+    schedule_config_json: String,
+    recipients_json: String,
+    filters_json: String,
+    next_run_at: u64,
+    enabled: bool,
+) {
+    if let Some(r) = ctx.db.scheduled_reports().id().find(&id) {
+        ctx.db.scheduled_reports().id().update(ScheduledReport {
+            name,
+            report_type,
+            schedule_frequency,
+            schedule_config_json,
+            recipients_json,
+            filters_json,
+            next_run_at,
+            enabled,
+            updated_at: now_ms(ctx),
+            ..r
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn delete_scheduled_report(ctx: &ReducerContext, id: String) {
+    ctx.db.scheduled_reports().id().delete(&id);
+}
+
+#[spacetimedb::reducer]
+pub fn mark_report_run(ctx: &ReducerContext, id: String, next_run_at: u64) {
+    if let Some(r) = ctx.db.scheduled_reports().id().find(&id) {
+        ctx.db.scheduled_reports().id().update(ScheduledReport {
+            last_run_at: now_ms(ctx),
+            next_run_at,
+            last_error: String::new(),
+            updated_at: now_ms(ctx),
+            ..r
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn mark_report_error(ctx: &ReducerContext, id: String, error: String) {
+    if let Some(r) = ctx.db.scheduled_reports().id().find(&id) {
+        ctx.db.scheduled_reports().id().update(ScheduledReport {
+            last_error: error,
+            updated_at: now_ms(ctx),
+            ..r
+        });
+    }
+}
+
+// ─── Invoice reducers ──
 
 #[spacetimedb::reducer]
 pub fn create_invoice(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, notes: String, terms: String, due_date: u64) {
