@@ -13,8 +13,10 @@ import { ShoppingCart, Plus, Trash2, SendHorizontal, PackageCheck, X, ChevronDow
 const PAGE_SIZE = 25;
 import { toast } from "sonner";
 
-const statusColors: Record<string, "outline" | "default" | "success" | "destructive"> = {
+const statusColors: Record<string, "outline" | "default" | "success" | "destructive" | "secondary"> = {
   draft: "outline",
+  pending_approval: "secondary",
+  approved: "success",
   sent: "default",
   partial: "default",
   received: "success",
@@ -125,6 +127,51 @@ export default function PurchaseOrdersPage() {
   });
 
   const handleStatusChange = (status: string) => statusMutation.mutate(status);
+
+  const submitApprovalMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedPo) throw new Error("No PO selected");
+      return api.purchaseOrders.submitForApproval(selectedPo);
+    },
+    onSuccess: () => {
+      toast.success("PO submitted for approval");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order-detail", selectedPo] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to submit for approval"),
+  });
+
+  const handleSubmitApproval = () => submitApprovalMutation.mutate();
+
+  const approveMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedPo) throw new Error("No PO selected");
+      return api.purchaseOrders.approve(selectedPo, "current-user");
+    },
+    onSuccess: () => {
+      toast.success("PO approved");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order-detail", selectedPo] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to approve PO"),
+  });
+
+  const handleApprove = () => approveMutation.mutate();
+
+  const rejectMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedPo) throw new Error("No PO selected");
+      return api.purchaseOrders.reject(selectedPo);
+    },
+    onSuccess: () => {
+      toast.success("PO rejected, returned to draft");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order-detail", selectedPo] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to reject PO"),
+  });
+
+  const handleReject = () => rejectMutation.mutate();
 
   const receiveMutation = useMutation({
     mutationFn: () => {
@@ -239,6 +286,26 @@ export default function PurchaseOrdersPage() {
               {/* Action buttons */}
               <div className="flex gap-2 mb-4 flex-wrap">
                 {poDetail.status === "draft" && (
+                  <>
+                    <Button size="sm" onClick={() => handleStatusChange("sent")}>
+                      <SendHorizontal className="h-3.5 w-3.5 mr-1.5" />Mark as Sent
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={handleSubmitApproval}>
+                      <SendHorizontal className="h-3.5 w-3.5 mr-1.5" />Submit for Approval
+                    </Button>
+                  </>
+                )}
+                {poDetail.status === "pending_approval" && (
+                  <>
+                    <Button size="sm" variant="success" onClick={handleApprove}>
+                      <PackageCheck className="h-3.5 w-3.5 mr-1.5" />Approve
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={handleReject}>
+                      <X className="h-3.5 w-3.5 mr-1.5" />Reject
+                    </Button>
+                  </>
+                )}
+                {poDetail.status === "approved" && (
                   <Button size="sm" onClick={() => handleStatusChange("sent")}>
                     <SendHorizontal className="h-3.5 w-3.5 mr-1.5" />Mark as Sent
                   </Button>
@@ -286,6 +353,12 @@ export default function PurchaseOrdersPage() {
                     <span>Total</span>
                     <span>${poDetail.total.toFixed(2)}</span>
                   </div>
+                  {poDetail.status === "approved" && poDetail.approved_by && (
+                    <div className="flex justify-between text-green-600 border-t pt-2 mt-2">
+                      <span>Approved by</span>
+                      <span>{poDetail.approved_by}</span>
+                    </div>
+                  )}
                   {poDetail.notes && (
                     <div className="border-t pt-2 mt-2">
                       <span className="text-muted-foreground">Notes:</span>

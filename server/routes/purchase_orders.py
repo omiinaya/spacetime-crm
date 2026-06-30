@@ -7,7 +7,7 @@ from helpers import (
     _sql, _paginated, _call, _sort, _log_audit,
     require_role, logger,
 )
-from models import PurchaseOrderCreate, PurchaseOrderStatusUpdate, POLineItemCreate, POReceiveItem
+from models import PurchaseOrderCreate, PurchaseOrderStatusUpdate, POLineItemCreate, POReceiveItem, POApprovalAction
 
 router = APIRouter()
 
@@ -91,4 +91,28 @@ async def receive_po_items(po_id: str, body: POReceiveItem, user: dict = Depends
     for item in items:
         await _call("receive_po_item", [item["id"], item.get("received_quantity", 0)])
     await _log_audit(user, "receive", "purchase_order", po_id, f"{len(items)} items")
+    return {"ok": True}
+
+
+@router.post("/api/purchase-orders/{po_id}/submit-for-approval")
+async def submit_po_for_approval(po_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Submit a draft PO for approval."""
+    await _call("submit_for_approval", [po_id])
+    await _log_audit(user, "submit_approval", "purchase_order", po_id)
+    return {"ok": True}
+
+
+@router.post("/api/purchase-orders/{po_id}/approve")
+async def approve_purchase_order(po_id: str, body: POApprovalAction, user: dict = Depends(require_role("admin"))):
+    """Approve a pending PO."""
+    await _call("approve_po", [po_id, body.user_id])
+    await _log_audit(user, "approve", "purchase_order", po_id, f"approver={body.user_id}")
+    return {"ok": True}
+
+
+@router.post("/api/purchase-orders/{po_id}/reject")
+async def reject_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
+    """Reject a pending PO, sending it back to draft."""
+    await _call("reject_po", [po_id])
+    await _log_audit(user, "reject", "purchase_order", po_id)
     return {"ok": True}

@@ -192,6 +192,10 @@ class POReceiveItem(BaseModel):
     items: list[dict] = []
 
 
+class POApprovalAction(BaseModel):
+    user_id: str = Field(..., min_length=1, max_length=100)
+
+
 # ─── Estimates ───────────────────────────────────────────────────
 
 class EstimateCreate(BaseModel):
