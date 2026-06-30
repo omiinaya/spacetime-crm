@@ -20,6 +20,8 @@
 
 - **POS / Counter Sale — ADDED** — Full kiosk module: STDB counter_sale + counter_sale_line_item tables, reducers, 6 REST API endpoints, and a kiosk-style frontend with barcode scanner, product search, real-time cart/tax/total, cash/card payment, change calculation, receipt view with print support, and sale history. 10 new backend tests. Total coverage: 280 backend + 94 frontend = 374 tests.
 
+- **TOTP 2FA — ADDED** — Two-factor authentication for staff accounts. STDB: `totp_secret` + `totp_enabled` on User table + 4 reducers. Backend: setup, verify, enable, disable, modified login (returns `requires_2fa` + temp_token), complete-login endpoint. Frontend: 2FA challenge step in LoginPage, QR code setup and verify/disable UI in SettingsPage. 8 new backend tests. Total coverage: 288 backend + 94 frontend = 382 tests.
+
 - **Purchase order approvals — ADDED** — New approval workflow for POs: submit-for-approval, approve, and reject functions. Status flow: draft → pending_approval → approved → sent → partial → received → cancelled. Approved PO shows approver name and timestamp. 6 new backend tests. Total coverage: 268 backend + 94 frontend = 362 tests.
 
 - **Barcode label printing — ADDED** — Print 2×1 labels for any product with a barcode. jsbarcode generates inline SVG, opens print dialog with product name, price, SKU. Printer icon on each product card + detail panel.
@@ -226,7 +228,7 @@
 | Customer payment methods | ✅ Complete | ✅ Parity | Stripe SetupIntent |
 | Inventory barcode labels | ✅ Complete | ✅ Gap | JsBarcode print |
 | Multi-currency | ✅ Foundation | ⭐ Gap | Currency field on 4 tables, API models, frontend display |
-| 2FA / SSO | ❌ Not started | ⭐ Gap | — |
+| 2FA / TOTP | ✅ Complete | ✅ Parity | TOTP-based with QR setup, challenge login flow, disable with code |
 | API rate limiting | ✅ Complete | ✅ Parity | slowapi 100/min |
 | SLA tracking | ✅ Complete | ✅ Parity | Priority-based thresholds |
 | Offline mode | ❌ Not started | ❌ Not priority | — |
