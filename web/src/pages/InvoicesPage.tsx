@@ -162,7 +162,7 @@ export default function InvoicesPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Invoices</h1>
           <p className="text-sm text-muted-foreground mt-1">Billing and invoicing</p>
@@ -205,7 +205,7 @@ export default function InvoicesPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-3">
+        <div className={`space-y-3 ${selectedInv ? "hidden lg:block" : ""}`}>
           {invoices.map((inv) => {
             const cust = customers.find((c) => c.id === inv.customer_id);
             return (
@@ -229,6 +229,13 @@ export default function InvoicesPage() {
 
         {selectedInv && (
           <div className="space-y-4">
+            {/* Back button (mobile) */}
+            <button
+              onClick={() => setSelectedInv(null)}
+              className="lg:hidden text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              ← Back to list
+            </button>
             <Card>
               <CardHeader><CardTitle>#{selectedInv.invoice_number} — {selectedInv.currency || "USD"} {selectedInv.total.toFixed(2)}</CardTitle>
                 <Button size="sm" variant="outline" onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, "_blank")}>

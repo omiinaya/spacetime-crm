@@ -110,7 +110,7 @@ export default function CustomersPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Customers</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -123,7 +123,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-sm">
+      <div className="relative max-w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search customers..."
@@ -214,7 +214,7 @@ export default function CustomersPage() {
           </Card>
         ))}
         {!loading && customers.length === 0 && (
-          <div className="md:col-span-3 text-center py-12 text-muted-foreground">
+          <div className="col-span-full text-center py-12 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p>No customers yet</p>
             <Button variant="outline" className="mt-2" onClick={() => { setForm({ ...emptyForm }); setShowForm(true); }}>
