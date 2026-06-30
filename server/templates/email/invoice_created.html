@@ -1,0 +1,6 @@
+{% extends "email/base.html" %}
+{% block heading %}Invoice #{{ invoice_number }}{% endblock %}
+{% block body %}
+<p>A new invoice has been created for <strong>${{ total }}</strong>.</p>
+<p><a href="{{ link }}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View &amp; Pay Invoice</a></p>
+{% endblock %}

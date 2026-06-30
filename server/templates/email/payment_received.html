@@ -1,0 +1,6 @@
+{% extends "email/base.html" %}
+{% block heading %}Payment Received{% endblock %}
+{% block body %}
+<p>A payment of <strong>${{ amount }}</strong> has been applied to Invoice #{{ invoice_number }}.</p>
+<p><a href="{{ link }}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View Invoice</a></p>
+{% endblock %}

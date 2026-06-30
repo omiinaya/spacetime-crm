@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-07-01
-| Overall completeness: ~97% (+1% since last assessment)
+| Overall completeness: ~98% (+1% since last assessment)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
-- **STDB tenant_id indexes — ADDED** — 23 B-tree indexes on `tenant_id` across all tables. Every multi-tenant query now hits an index instead of doing O(n) full-table scans. Migration was non-breaking (index-only addition).
+- **Email templates — Jinja2-ified** — 6 notification templates moved from hardcoded `f`-strings in `mail.py` to Jinja2 templates in `server/templates/email/`. Base layout with extendable blocks. Makes customization trivial (just edit HTML files, no Python changes).
 - **Low Stock Alerts — ADDED** — `GET /api/products/low-stock` lists products below threshold. `POST /api/products/low-stock/notify` sends email to admin with a formatted table. Frontend shows alert banner, product card badges, and detail panel display.
 - **`update_product` reducer — ADDED** — STDB module now supports updating name, sku, barcode, description, category, price, cost, `min_stock`, and `location` via `PUT /api/products/:id`.
 - **Product form extended** — `min_stock` and `location` fields in the create/edit form.
@@ -75,7 +75,7 @@
 - [x] Inventory adjustments (add/remove stock with reason)
 - [x] Purchase order receiving (receive against PO, auto-update stock)
 - [x] Tax rate configuration
-|- [ ] 📌 **Email templates** — all hardcoded in `mail.py`, no customization
+|- [x] **Email templates** — Jinja2 email templates with base layout, customizable HTML files
 |- [ ] 📌 **Recurring appointments** — no repeat/schedule pattern
 |- [x] **Low stock alerts** — notification endpoint triggers email to admin
 

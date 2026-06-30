@@ -1,0 +1,6 @@
+{% extends "email/base.html" %}
+{% block heading %}Ticket #{{ ticket_number }} — {{ status_label }}{% endblock %}
+{% block body %}
+<p>Your ticket <strong>"{{ title }}"</strong> has been updated to <strong>{{ status_label }}</strong>.</p>
+<p><a href="{{ link }}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View in Portal</a></p>
+{% endblock %}
