@@ -143,6 +143,7 @@ export interface Invoice {
   due_date: number;
   created_at: number;
   updated_at: number;
+  currency: string;
 }
 
 export interface InvoiceLineItem {
@@ -165,6 +166,7 @@ export interface Payment {
   reference: string;
   notes: string;
   created_at: number;
+  currency: string;
 }
 
 export interface Appointment {
@@ -225,6 +227,7 @@ export interface Estimate {
   notes: string;
   expires_at: number;
   created_at: number;
+  currency: string;
 }
 
 export interface EstimateLineItem {
@@ -252,6 +255,7 @@ export interface PurchaseOrder {
   created_at: number;
   line_items?: PurchaseOrderLineItem[];
   receipt_progress?: number;
+  currency: string;
 }
 
 export interface PurchaseOrderLineItem {

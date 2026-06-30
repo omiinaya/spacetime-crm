@@ -95,6 +95,7 @@ class InvoiceCreate(BaseModel):
     notes: str = Field(default="", max_length=2000)
     terms: str = Field(default="", max_length=500)
     due_date: int = Field(default=0, ge=0)
+    currency: str = Field(default="USD", max_length=3)
 
 
 class InvoiceStatusUpdate(BaseModel):
@@ -121,6 +122,7 @@ class PaymentCreate(BaseModel):
     method: str = Field(default="cash", max_length=50)
     reference: str = Field(default="", max_length=255)
     notes: str = Field(default="", max_length=2000)
+    currency: str = Field(default="USD", max_length=3)
 
 
 # ─── Appointments ────────────────────────────────────────────────
@@ -174,6 +176,7 @@ class ProductQuantityUpdate(BaseModel):
 class PurchaseOrderCreate(BaseModel):
     vendor_name: str = Field(..., min_length=1, max_length=255)
     notes: str = Field(default="", max_length=2000)
+    currency: str = Field(default="USD", max_length=3)
 
 
 class PurchaseOrderStatusUpdate(BaseModel):
@@ -203,6 +206,7 @@ class EstimateCreate(BaseModel):
     ticket_id: str = Field(default="", max_length=100)
     notes: str = Field(default="", max_length=2000)
     expires_at: int = Field(default=0, ge=0)
+    currency: str = Field(default="USD", max_length=3)
 
 
 class EstimateStatusUpdate(BaseModel):

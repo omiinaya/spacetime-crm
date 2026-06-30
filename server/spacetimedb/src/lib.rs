@@ -122,6 +122,7 @@ pub struct Invoice {
     pub notes: String,
     pub terms: String,
     pub due_date: u64,
+    pub currency: String,
     pub created_at: u64,
     pub updated_at: u64,
 }
@@ -161,6 +162,7 @@ pub struct Estimate {
     pub notes: String,
     pub expires_at: u64,
     pub invoice_id: String,
+    pub currency: String,
     pub created_at: u64,
     pub updated_at: u64,
 }
@@ -300,6 +302,7 @@ pub fn generate_recurring_invoices(ctx: &ReducerContext) {
             notes: format!("Auto-generated from recurring rule: {}", rule.name),
             terms: String::new(),
             due_date,
+            currency: "USD".to_string(),
             created_at: now,
             updated_at: now,
         });
@@ -515,7 +518,7 @@ pub fn create_invoice(ctx: &ReducerContext, tenant_id: String, customer_id: Stri
         status: "draft".to_string(),
         subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0,
         discount_amount: 0.0, discount_percent: 0.0,
-        notes, terms, due_date, created_at: now, updated_at: now,
+        notes, terms, due_date, currency: "USD".to_string(), created_at: now, updated_at: now,
     });
 }
 
@@ -592,7 +595,7 @@ pub fn create_estimate(ctx: &ReducerContext, tenant_id: String, customer_id: Str
         id, tenant_id, customer_id, ticket_id, estimate_number,
         status: "draft".to_string(),
         subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0, discount_amount: 0.0,
-        notes, expires_at, invoice_id: String::new(), created_at: now, updated_at: now,
+        notes, expires_at, invoice_id: String::new(), currency: "USD".to_string(), created_at: now, updated_at: now,
     });
 }
 
@@ -646,6 +649,7 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
             notes: est.notes.clone(),
             terms: String::new(),
             due_date: 0,
+            currency: "USD".to_string(),
             created_at: now,
             updated_at: now,
         });

@@ -13,6 +13,7 @@ pub struct Payment {
     pub method: String,
     pub reference: String,
     pub notes: String,
+    pub currency: String,
     pub created_at: u64,
 }
 
@@ -38,6 +39,7 @@ pub fn record_payment(
         method,
         reference,
         notes,
+        currency: "USD".to_string(),
         created_at: now,
     });
 }
