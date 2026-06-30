@@ -21,6 +21,8 @@ pub mod webhook;
 pub mod tenant;
 #[cfg(test)]
 pub mod customer_test;
+#[cfg(test)]
+pub mod lib_test;
 
 pub use customer::*;
 pub use customer_geolocation::*;
