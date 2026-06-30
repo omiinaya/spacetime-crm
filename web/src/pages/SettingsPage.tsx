@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api, User, MailSettings, TaxRate, WebhookSubscription, WEBHOOK_EVENTS, SmsSettings } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -25,28 +27,30 @@ export default function SettingsPage() {
 }
 
 function UserSettings() {
-  const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", role: "staff" });
 
-  const load = async () => {
-    try {
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
       const res = await api.users.list();
-      setUsers(res.users);
-    } catch { /* silently fail */ }
-  };
+      return res.users ?? [];
+    },
+  });
 
-  useEffect(() => { load(); }, []);
-
-  const handleCreate = async () => {
-    try {
-      await api.users.create(form);
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; email: string; role: string }) =>
+      api.users.create(data),
+    onSuccess: () => {
       toast.success("User created");
       setShowForm(false);
       setForm({ name: "", email: "", role: "staff" });
-      load();
-    } catch { toast.error("Failed to create user"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: () => {
+      toast.error("Failed to create user");
+    },
+  });
 
   return (
     <Card>
@@ -64,7 +68,7 @@ function UserSettings() {
               <option value="tech">Tech</option>
               <option value="staff">Staff</option>
             </Select>
-            <Button size="sm" onClick={handleCreate}>Save</Button>
+            <Button size="sm" onClick={() => createMutation.mutate(form)}>Save</Button>
             <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
           </div>
         )}
@@ -94,47 +98,56 @@ function MailSettingsSection() {
     host: "", port: 587, username: "", use_tls: true,
     sender_name: "SpacetimeCRM", sender_email: "", password: "",
   });
-  const [configured, setConfigured] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message?: string; error?: string } | null>(null);
 
+  const { data: mailSettingsData } = useQuery({
+    queryKey: ["mail-settings"],
+    queryFn: () => api.settings.mail.get(),
+  });
+
+  const configured = mailSettingsData?.configured ?? false;
+
   useEffect(() => {
-    api.settings.mail.get().then((res) => {
-      setConfigured(res.configured);
-      if (res.settings) {
-        setMailConfig({ ...mailConfig, ...res.settings, password: "" });
-      }
-    }).catch(() => {});
-  }, []);
+    if (mailSettingsData?.settings) {
+      setMailConfig((prev) => ({ ...prev, ...mailSettingsData.settings!, password: "" }));
+    }
+  }, [mailSettingsData]);
 
-  const handleSave = async () => {
-    const data = { ...mailConfig };
-    if (!data.password) delete data.password;
-    try {
-      await api.settings.mail.save(data);
+  const saveMutation = useMutation({
+    mutationFn: (data: Partial<MailSettings>) => {
+      const payload = { ...data };
+      if (!payload.password) delete payload.password;
+      return api.settings.mail.save(payload);
+    },
+    onSuccess: () => {
       toast.success("Mail settings saved");
-      setConfigured(true);
-    } catch { toast.error("Failed to save mail settings"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["mail-settings"] });
+    },
+    onError: () => {
+      toast.error("Failed to save mail settings");
+    },
+  });
 
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      // Save first, then test
-      const data = { ...mailConfig };
-      if (!data.password) delete data.password;
-      await api.settings.mail.save(data);
-      const res = await api.settings.mail.test();
+  const testMutation = useMutation({
+    mutationFn: async () => {
+      const saveData = { ...mailConfig };
+      if (!saveData.password) delete saveData.password;
+      await api.settings.mail.save(saveData);
+      return api.settings.mail.test();
+    },
+    onSuccess: (res) => {
       setTestResult(res);
       if (res.ok) {
         toast.success("SMTP connection successful");
       } else {
         toast.error("SMTP test failed");
       }
-    } catch { toast.error("Test failed"); }
-    finally { setTesting(false); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["mail-settings"] });
+    },
+    onError: () => {
+      toast.error("Test failed");
+    },
+  });
 
   return (
     <Card>
@@ -192,9 +205,9 @@ function MailSettingsSection() {
         </label>
 
         <div className="flex gap-2">
-          <Button onClick={handleSave}>Save Settings</Button>
-          <Button variant="outline" onClick={handleTest} disabled={testing}>
-            {testing ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Testing...</> : "Test Connection"}
+          <Button onClick={() => saveMutation.mutate(mailConfig)}>Save Settings</Button>
+          <Button variant="outline" onClick={() => testMutation.mutate()} disabled={testMutation.isPending}>
+            {testMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Testing...</> : "Test Connection"}
           </Button>
         </div>
 
@@ -219,46 +232,60 @@ function MailSettingsSection() {
 
 function SmsSettingsSection() {
   const [smsConfig, setSmsConfig] = useState({ account_sid: "", from_number: "", auth_token: "" });
-  const [configured, setConfigured] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message?: string; error?: string } | null>(null);
 
+  const { data: smsSettingsData } = useQuery({
+    queryKey: ["sms-settings"],
+    queryFn: () => api.settings.sms.get(),
+  });
+
+  const configured = smsSettingsData?.configured ?? false;
+
   useEffect(() => {
-    api.settings.sms.get().then((res) => {
-      setConfigured(res.configured);
-      if (res.settings) {
-        setSmsConfig({ ...smsConfig, account_sid: res.settings.account_sid || "", from_number: res.settings.from_number || "" });
-      }
-    }).catch(() => {});
-  }, []);
+    if (smsSettingsData?.settings) {
+      setSmsConfig((prev) => ({
+        ...prev,
+        account_sid: smsSettingsData.settings!.account_sid || "",
+        from_number: smsSettingsData.settings!.from_number || "",
+      }));
+    }
+  }, [smsSettingsData]);
 
-  const handleSave = async () => {
-    const data = { ...smsConfig };
-    if (!data.auth_token) (data as any).auth_token = undefined;
-    try {
-      await api.settings.sms.save(data);
+  const saveMutation = useMutation({
+    mutationFn: (data: { account_sid?: string; auth_token?: string; from_number?: string }) => {
+      const payload = { ...data };
+      if (!payload.auth_token) (payload as any).auth_token = undefined;
+      return api.settings.sms.save(payload);
+    },
+    onSuccess: () => {
       toast.success("SMS settings saved");
-      setConfigured(true);
-    } catch { toast.error("Failed to save SMS settings"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["sms-settings"] });
+    },
+    onError: () => {
+      toast.error("Failed to save SMS settings");
+    },
+  });
 
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const data = { ...smsConfig };
-      if (!data.auth_token) (data as any).auth_token = undefined;
-      await api.settings.sms.save(data);
-      const res = await api.settings.sms.test();
+  const testMutation = useMutation({
+    mutationFn: async () => {
+      const saveData = { ...smsConfig };
+      if (!saveData.auth_token) (saveData as any).auth_token = undefined;
+      await api.settings.sms.save(saveData);
+      return api.settings.sms.test();
+    },
+    onSuccess: (res) => {
       setTestResult(res);
       if (res.ok) {
         toast.success("Twilio connection successful");
       } else {
         toast.error("Twilio test failed");
       }
-    } catch { toast.error("Test failed"); }
-    finally { setTesting(false); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["sms-settings"] });
+    },
+    onError: () => {
+      toast.error("Test failed");
+    },
+  });
 
   return (
     <Card>
@@ -295,9 +322,9 @@ function SmsSettingsSection() {
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={handleSave}>Save Settings</Button>
-          <Button variant="outline" onClick={handleTest} disabled={testing}>
-            {testing ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Testing...</> : "Test Connection"}
+          <Button onClick={() => saveMutation.mutate(smsConfig)}>Save Settings</Button>
+          <Button variant="outline" onClick={() => testMutation.mutate()} disabled={testMutation.isPending}>
+            {testMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Testing...</> : "Test Connection"}
           </Button>
         </div>
 
@@ -321,44 +348,53 @@ function SmsSettingsSection() {
 }
 
 function TaxRateSettings() {
-  const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", rate: 0, is_default: false });
 
-  const load = async () => {
-    try {
+  const { data: taxRates = [] } = useQuery({
+    queryKey: ["tax-rates"],
+    queryFn: async () => {
       const res = await api.taxRates.list();
-      setTaxRates(res.tax_rates);
-    } catch { /* silently fail */ }
-  };
+      return res.tax_rates ?? [];
+    },
+  });
 
-  useEffect(() => { load(); }, []);
-
-  const handleCreate = async () => {
-    try {
-      await api.taxRates.create(form);
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; rate: number; is_default: boolean }) =>
+      api.taxRates.create(data),
+    onSuccess: () => {
       toast.success("Tax rate created");
       setShowForm(false);
       setForm({ name: "", rate: 0, is_default: false });
-      load();
-    } catch { toast.error("Failed to create tax rate"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+    },
+    onError: () => {
+      toast.error("Failed to create tax rate");
+    },
+  });
 
-  const handleToggleDefault = async (tr: TaxRate) => {
-    try {
-      await api.taxRates.update(tr.id, { name: tr.name, rate: tr.rate, is_default: !tr.is_default });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name: string; rate: number; is_default: boolean } }) =>
+      api.taxRates.update(id, data),
+    onSuccess: () => {
       toast.success("Default updated");
-      load();
-    } catch { toast.error("Failed to update"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+    },
+    onError: () => {
+      toast.error("Failed to update");
+    },
+  });
 
-  const handleDelete = async (id: string) => {
-    try {
-      await api.taxRates.delete(id);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.taxRates.delete(id),
+    onSuccess: () => {
       toast.success("Tax rate deleted");
-      load();
-    } catch { toast.error("Failed to delete"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+    },
+    onError: () => {
+      toast.error("Failed to delete");
+    },
+  });
 
   return (
     <Card>
@@ -394,7 +430,7 @@ function TaxRateSettings() {
               />
               Default
             </label>
-            <Button size="sm" onClick={handleCreate}>Save</Button>
+            <Button size="sm" onClick={() => createMutation.mutate(form)}>Save</Button>
             <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
           </div>
         )}
@@ -417,10 +453,10 @@ function TaxRateSettings() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleToggleDefault(tr)}>
+                  <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id: tr.id, data: { name: tr.name, rate: tr.rate, is_default: !tr.is_default } })}>
                     {tr.is_default ? "Unset Default" : "Set Default"}
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(tr.id)}>Delete</Button>
+                  <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(tr.id)}>Delete</Button>
                 </div>
               </div>
             ))}
@@ -437,66 +473,60 @@ function TaxRateSettings() {
 }
 
 function WebhookSettings() {
-  const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ url: "", events: "", secret: "" });
   const [testing, setTesting] = useState<string | null>(null);
 
-  const load = async () => {
-    try {
+  const { data: subscriptions = [] } = useQuery({
+    queryKey: ["webhooks"],
+    queryFn: async () => {
       const res = await api.webhooks.list();
-      setSubscriptions(res.subscriptions);
-    } catch { /* silently fail */ }
-  };
+      return res.subscriptions ?? [];
+    },
+  });
 
-  useEffect(() => { load(); }, []);
-
-  const handleCreate = async () => {
-    if (!form.url || !form.events) {
-      toast.error("URL and events are required");
-      return;
-    }
-    try {
-      if (editingId) {
-        await api.webhooks.update(editingId, form);
-        toast.success("Webhook updated");
-      } else {
-        await api.webhooks.create(form);
-        toast.success("Webhook created");
-      }
+  const createMutation = useMutation({
+    mutationFn: (data: { url: string; events: string; secret?: string }) =>
+      editingId ? api.webhooks.update(editingId, data) : api.webhooks.create(data),
+    onSuccess: () => {
+      toast.success(editingId ? "Webhook updated" : "Webhook created");
       setShowForm(false);
       setEditingId(null);
       setForm({ url: "", events: "", secret: "" });
-      load();
-    } catch { toast.error("Failed to save webhook"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+    },
+    onError: () => {
+      toast.error("Failed to save webhook");
+    },
+  });
 
-  const handleEdit = (sub: WebhookSubscription) => {
-    setForm({ url: sub.url, events: sub.events, secret: sub.secret || "" });
-    setEditingId(sub.id);
-    setShowForm(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await api.webhooks.delete(id);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.webhooks.delete(id),
+    onSuccess: () => {
       toast.success("Webhook deleted");
-      load();
-    } catch { toast.error("Failed to delete"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+    },
+    onError: () => {
+      toast.error("Failed to delete");
+    },
+  });
 
-  const handleToggle = async (sub: WebhookSubscription) => {
-    try {
-      await api.webhooks.update(sub.id, {
+  const toggleMutation = useMutation({
+    mutationFn: (sub: WebhookSubscription) =>
+      api.webhooks.update(sub.id, {
         url: sub.url,
         events: sub.events,
         active: !sub.active,
-      });
+      }),
+    onSuccess: (_data, sub) => {
       toast.success(sub.active ? "Webhook paused" : "Webhook resumed");
-      load();
-    } catch { toast.error("Failed to toggle"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+    },
+    onError: () => {
+      toast.error("Failed to toggle");
+    },
+  });
 
   const handleTest = async (id: string) => {
     setTesting(id);
@@ -509,6 +539,20 @@ function WebhookSettings() {
       }
     } catch { toast.error("Test request failed"); }
     finally { setTesting(null); }
+  };
+
+  const handleCreate = () => {
+    if (!form.url || !form.events) {
+      toast.error("URL and events are required");
+      return;
+    }
+    createMutation.mutate(form);
+  };
+
+  const handleEdit = (sub: WebhookSubscription) => {
+    setForm({ url: sub.url, events: sub.events, secret: sub.secret || "" });
+    setEditingId(sub.id);
+    setShowForm(true);
   };
 
   const toggleEvent = (event: string) => {
@@ -635,10 +679,10 @@ function WebhookSettings() {
                   <Button size="sm" variant="outline" onClick={() => handleEdit(sub)}>
                     Edit
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleToggle(sub)}>
+                  <Button size="sm" variant="outline" onClick={() => toggleMutation.mutate(sub)}>
                     {sub.active ? "Pause" : "Resume"}
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(sub.id)}>
+                  <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(sub.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
