@@ -2,22 +2,23 @@
 
 use spacetimedb::*;
 
-mod customer;
-mod ticket;
-mod payment;
-mod appointment;
-mod product;
-mod purchase_order;
-mod inventory;
-mod tax_rate;
-mod user;
-mod audit;
-mod custom_field;
-mod customer_geolocation;
-mod checklist;
-mod webhook;
-mod tenant;
-mod customer_test;
+pub mod customer;
+pub mod ticket;
+pub mod payment;
+pub mod appointment;
+pub mod product;
+pub mod purchase_order;
+pub mod inventory;
+pub mod tax_rate;
+pub mod user;
+pub mod audit;
+pub mod custom_field;
+pub mod customer_geolocation;
+pub mod checklist;
+pub mod webhook;
+pub mod tenant;
+#[cfg(test)]
+pub mod customer_test;
 
 pub use customer::*;
 pub use customer_geolocation::*;
