@@ -179,3 +179,54 @@ async def delete_ticket_checklist(ticket_id: str, user: dict = Depends(require_r
     await _call("delete_ticket_checklist", [ticket_id])
     await _log_audit(user, "delete", "checklist", ticket_id)
     return {"ok": True}
+
+
+# ── TICKET SLA ──
+
+SLA_TARGETS: dict[str, float] = {
+    "urgent": 4,
+    "high": 24,
+    "medium": 72,
+    "low": 120,
+}
+
+
+@router.get("/api/tickets/sla-breached")
+async def list_sla_breaches(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List open tickets that have exceeded their SLA threshold."""
+    now_ms = asyncio.get_event_loop().time() * 1000
+    # Fetch all open tickets (STDB doesn't support NOT IN)
+    open_statuses = ["new", "assigned", "in_progress", "waiting_on_customer"]
+    all_open = []
+    for status in open_statuses:
+        rows, _ = await _paginated(
+            user["tenant_id"], "ticket",
+            offset=0, limit=1000,
+            where_extra=f"status = '{status}'",
+            order_by="created_at", order_desc=False,
+        )
+        all_open.extend(rows)
+    breaches = []
+    for t in all_open:
+        target_hours = SLA_TARGETS.get(t.get("priority", "medium"), 72)
+        created = t.get("created_at", 0)
+        if not created:
+            continue
+        elapsed_hours = (now_ms - created) / 3_600_000
+        if elapsed_hours > target_hours:
+            breaches.append({
+                "id": t["id"],
+                "ticket_number": t.get("ticket_number", 0),
+                "title": t.get("title", ""),
+                "priority": t.get("priority", "medium"),
+                "created_at": created,
+                "elapsed_hours": round(elapsed_hours, 1),
+                "target_hours": target_hours,
+            })
+    return {"breaches": breaches, "count": len(breaches)}
+
+
+@router.get("/api/tickets/sla-targets")
+async def get_sla_targets():
+    """Return the current SLA threshold targets per priority."""
+    return {"targets": SLA_TARGETS}
