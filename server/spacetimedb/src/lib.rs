@@ -16,6 +16,7 @@ pub mod custom_field;
 pub mod customer_geolocation;
 pub mod checklist;
 pub mod pos;
+pub mod sla_config;
 pub mod webhook;
 pub mod tenant;
 #[cfg(test)]
