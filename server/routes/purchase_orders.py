@@ -29,6 +29,7 @@ async def create_purchase_order(body: PurchaseOrderCreate, user: dict = Depends(
         user["tenant_id"],
         body.vendor_name,
         body.notes,
+        body.currency,
     ])
     await _log_audit(user, "create", "purchase_order", body.vendor_name)
     return {"ok": True}

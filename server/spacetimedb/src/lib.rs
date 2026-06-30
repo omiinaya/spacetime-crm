@@ -509,7 +509,7 @@ pub fn mark_report_error(ctx: &ReducerContext, id: String, error: String) {
 // ─── Invoice reducers ──
 
 #[spacetimedb::reducer]
-pub fn create_invoice(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, notes: String, terms: String, due_date: u64) {
+pub fn create_invoice(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, notes: String, terms: String, due_date: u64, currency: String) {
     let id = make_id("inv", ctx);
     let now = now_ms(ctx);
     let invoice_number = ctx.db.invoices().iter().count() as u64 + 10001;
@@ -518,7 +518,7 @@ pub fn create_invoice(ctx: &ReducerContext, tenant_id: String, customer_id: Stri
         status: "draft".to_string(),
         subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0,
         discount_amount: 0.0, discount_percent: 0.0,
-        notes, terms, due_date, currency: "USD".to_string(), created_at: now, updated_at: now,
+        notes, terms, due_date, currency, created_at: now, updated_at: now,
     });
 }
 
@@ -587,7 +587,7 @@ pub fn set_invoice_tax_rate(ctx: &ReducerContext, id: String, tax_rate: f64) {
 // ─── Estimate reducers ──
 
 #[spacetimedb::reducer]
-pub fn create_estimate(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, notes: String, expires_at: u64) {
+pub fn create_estimate(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, notes: String, expires_at: u64, currency: String) {
     let id = make_id("est", ctx);
     let now = now_ms(ctx);
     let estimate_number = ctx.db.estimates().iter().count() as u64 + 1001;
@@ -595,7 +595,7 @@ pub fn create_estimate(ctx: &ReducerContext, tenant_id: String, customer_id: Str
         id, tenant_id, customer_id, ticket_id, estimate_number,
         status: "draft".to_string(),
         subtotal: 0.0, tax_rate: 0.0, tax_amount: 0.0, total: 0.0, discount_amount: 0.0,
-        notes, expires_at, invoice_id: String::new(), currency: "USD".to_string(), created_at: now, updated_at: now,
+        notes, expires_at, invoice_id: String::new(), currency, created_at: now, updated_at: now,
     });
 }
 
