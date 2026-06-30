@@ -619,6 +619,14 @@ export const api = {
           body: JSON.stringify(data),
         }),
     },
+    lowStock: {
+      list: () =>
+        apiFetch<{ products: Product[]; count: number }>("/products/low-stock"),
+      notify: () =>
+        apiFetch<{ ok: boolean; count: number; notified?: string; message?: string; error?: string }>(
+          "/products/low-stock/notify", { method: "POST" }
+        ),
+    },
   },
   estimates: {
     list: (status?: string, offset?: number, limit?: number) => {

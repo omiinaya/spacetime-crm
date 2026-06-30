@@ -24,7 +24,7 @@ pub struct Product {
 }
 
 #[spacetimedb::reducer]
-pub fn create_product(ctx: &ReducerContext, tenant_id: String, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, quantity_on_hand: f64) {
+pub fn create_product(ctx: &ReducerContext, tenant_id: String, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, quantity_on_hand: f64, min_stock: f64, location: String) {
     let id = super::make_id("prod", ctx);
     let now = super::now_ms(ctx);
     ctx.db.products().insert(Product {
@@ -40,8 +40,8 @@ pub fn create_product(ctx: &ReducerContext, tenant_id: String, name: String, sku
         quantity_on_hand,
         quantity_committed: 0.0,
         quantity_available: quantity_on_hand,
-        min_stock: 0.0,
-        location: String::new(),
+        min_stock,
+        location,
         active: true,
         created_at: now,
         updated_at: now,
@@ -59,6 +59,25 @@ pub fn update_product_quantity(ctx: &ReducerContext, id: String, quantity_on_han
 #[spacetimedb::reducer]
 pub fn delete_product(ctx: &ReducerContext, id: String) {
     ctx.db.products().id().delete(&id);
+}
+
+#[spacetimedb::reducer]
+pub fn update_product(ctx: &ReducerContext, id: String, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, min_stock: f64, location: String) {
+    if let Some(p) = ctx.db.products().id().find(&id) {
+        ctx.db.products().id().update(Product {
+            name,
+            sku,
+            barcode,
+            description,
+            category,
+            price,
+            cost,
+            min_stock,
+            location,
+            updated_at: super::now_ms(ctx),
+            ..p
+        });
+    }
 }
 
 #[spacetimedb::reducer]

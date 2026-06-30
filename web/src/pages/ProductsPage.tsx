@@ -9,7 +9,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { Package, Plus, Search, ClipboardList, Scan, ScanLine } from "lucide-react";
+import { Package, Plus, Search, ClipboardList, Scan, ScanLine, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
 
@@ -99,6 +99,27 @@ export default function ProductsPage() {
     onError: () => toast.error("Failed to adjust stock"),
   });
 
+  const { data: lowStockData } = useQuery({
+    queryKey: ["products", "low-stock"],
+    queryFn: () => api.products.lowStock.list(),
+    refetchInterval: 60000,
+  });
+
+  const lowStock = lowStockData?.products ?? [];
+  const lowStockCount = lowStockData?.count ?? 0;
+
+  const notifyLowStockMutation = useMutation({
+    mutationFn: () => api.products.lowStock.notify(),
+    onSuccess: (res) => {
+      if (res.count > 0) {
+        toast.success(`Low stock alert sent to admin (${res.count} products)`);
+      } else {
+        toast.info("No low stock products to report");
+      }
+    },
+    onError: () => toast.error("Failed to send low stock notification"),
+  });
+
   const startScanner = async () => {
     setScanning(true);
     try {
@@ -177,6 +198,36 @@ export default function ProductsPage() {
         className="max-w-sm"
       />
 
+      {lowStockCount > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-400" />
+            <p className="text-sm text-amber-300">
+              <span className="font-semibold">{lowStockCount}</span> product{lowStockCount !== 1 ? "s" : ""} below minimum stock
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/20"
+              onClick={() => document.getElementById("low-stock-list")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              View
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/20"
+              onClick={() => notifyLowStockMutation.mutate()}
+              disabled={notifyLowStockMutation.isPending}
+            >
+              {notifyLowStockMutation.isPending ? "Sending..." : "Notify Admin"}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <Card className="border-primary/30">
           <CardHeader><CardTitle>{editId ? "Edit Product" : "New Product"}</CardTitle></CardHeader>
@@ -190,6 +241,8 @@ export default function ProductsPage() {
             <Input placeholder="Price" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} />
             <Input placeholder="Cost" type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: parseFloat(e.target.value) || 0 })} />
             <Input placeholder="Qty on hand" type="number" value={form.quantity_on_hand} onChange={(e) => setForm({ ...form, quantity_on_hand: parseFloat(e.target.value) || 0 })} />
+            <Input placeholder="Min stock" type="number" value={form.min_stock ?? 0} onChange={(e) => setForm({ ...form, min_stock: parseFloat(e.target.value) || 0 })} />
+            <Input placeholder="Location" value={form.location ?? ""} onChange={(e) => setForm({ ...form, location: e.target.value })} />
             <div className="col-span-2 flex gap-2">
               <div className="flex-1 flex gap-2">
                 <Input
@@ -248,6 +301,7 @@ export default function ProductsPage() {
                       <Package className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{p.name}</span>
                       {p.sku && <span className="text-xs text-muted-foreground">{p.sku}</span>}
+                      {p.min_stock > 0 && p.quantity_on_hand <= p.min_stock && (<Badge variant="destructive" className="text-[10px] px-1.5 py-0">Low</Badge>)}
                     </div>
                     {p.category && <p className="text-xs text-muted-foreground mt-1">{p.category}</p>}
                   </div>
@@ -287,6 +341,14 @@ export default function ProductsPage() {
                     <p className="text-xs text-muted-foreground">Available</p>
                   </div>
                 </div>
+                {selectedProduct.min_stock > 0 && (
+                  <div className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                    <span>Min Stock:</span>
+                    <span className={`font-medium ${selectedProduct.quantity_on_hand <= selectedProduct.min_stock ? "text-destructive" : "text-green-400"}`}>
+                      {selectedProduct.min_stock}
+                    </span>
+                  </div>
+                )}
                 <p className="text-sm">Price: <span className="font-medium">${selectedProduct.price.toFixed(2)}</span> &middot; Cost: <span className="font-medium">${selectedProduct.cost.toFixed(2)}</span></p>
                 {selectedProduct.barcode && (
                   <p className="text-sm">Barcode: <span className="font-mono text-xs text-muted-foreground">{selectedProduct.barcode}</span></p>

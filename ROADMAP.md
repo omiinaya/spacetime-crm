@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** 2026-06-30
-| Overall completeness: ~95% (+2% since last assessment)
+| **Last assessed:** 2026-07-01
+| Overall completeness: ~96% (+1% since last assessment)
 
 ---
 
@@ -18,6 +18,9 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
+- **Low Stock Alerts — ADDED** — `GET /api/products/low-stock` lists products below threshold. `POST /api/products/low-stock/notify` sends email to admin with a formatted table. Frontend shows alert banner, product card badges, and detail panel display.
+- **`update_product` reducer — ADDED** — STDB module now supports updating name, sku, barcode, description, category, price, cost, `min_stock`, and `location` via `PUT /api/products/:id`.
+- **Product form extended** — `min_stock` and `location` fields in the create/edit form.
 - **React Query — 12 PAGES CONVERTED** — Every admin data-fetching page uses useQuery/useMutation. Customers, Tickets, Invoices, Products, Appointments, Payments, Estimates, PurchaseOrders, AuditLog, ChecklistTemplates, CustomFields, Settings, Reports. React Query handles caching, dedup, stale-while-revalidate, and automatic refetching.
 - **Route splitting — COMPLETED** — main.py 2,390→55 lines, 20 APIRouter modules in routes/ package. All 52 backend tests pass.
 - **Frontend code-splitting — COMPLETED** — React.lazy() for all 23 pages, main bundle 980KB→249KB (75% drop)
@@ -71,9 +74,9 @@
 - [x] Inventory adjustments (add/remove stock with reason)
 - [x] Purchase order receiving (receive against PO, auto-update stock)
 - [x] Tax rate configuration
-- [ ] 📌 **Email templates** — all hardcoded in `mail.py`, no customization
-- [ ] 📌 **Recurring appointments** — no repeat/schedule pattern
-- [ ] 📌 **Low stock alerts** — threshold exists in DB, no notification triggers
+|- [ ] 📌 **Email templates** — all hardcoded in `mail.py`, no customization
+|- [ ] 📌 **Recurring appointments** — no repeat/schedule pattern
+|- [x] **Low stock alerts** — notification endpoint triggers email to admin
 
 ---
 
@@ -153,7 +156,7 @@
 
 2. **User table has no `tenant_id`** — deliberate (cross-tenant admin users) but inconsistent with every other entity. Portal users (customers) have no STDB table.
 
-3. **Frontend uses bare `fetch()`** — no React Query/SWR/tanstack-query. Data refetches on every navigation. No caching, no dedup, no optimistic updates.
+3. ~~**Frontend uses bare `fetch()`**~~ **RESOLVED** — React Query adopted across all 12 data-fetching pages. Caching, dedup, optimistic updates, stale-while-revalidate active.
 
 4. **WeasyPrint adds 200MB+ to Docker image** — depends on pango/cairo system libs. Alternative: chromium headless HTML→PDF or wkhtmltopdf.
 
