@@ -1,0 +1,49 @@
+"""User management tests."""
+import httpx
+import pytest
+from .conftest import SERVER_URL, assert_ok
+
+
+class TestUserCRUD:
+    def test_list(self, auth_headers: dict):
+        resp = httpx.get(f"{SERVER_URL}/api/users", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "users" in data
+        assert "total" in data
+
+    def test_create(self, auth_headers: dict):
+        ts = int(__import__('time').time())
+        resp = httpx.post(f"{SERVER_URL}/api/users", json={
+            "name": f"Tech User {ts}",
+            "email": f"tech-{ts}@test.com",
+            "role": "tech",
+        }, headers=auth_headers, timeout=10)
+        assert_ok(resp)
+
+        # Verify it appears in listing
+        r2 = httpx.get(f"{SERVER_URL}/api/users", headers=auth_headers, timeout=10)
+        data = r2.json()
+        emails = [u.get("email", "") for u in data.get("users", [])]
+        assert any(f"tech-{ts}" in e for e in emails)
+
+    def test_create_invalid_role(self, auth_headers: dict):
+        resp = httpx.post(f"{SERVER_URL}/api/users", json={
+            "name": "Bad", "email": "bad@test.com", "role": "superadmin",
+        }, headers=auth_headers, timeout=10)
+        assert resp.status_code == 422
+
+    def test_create_missing_name(self, auth_headers: dict):
+        resp = httpx.post(f"{SERVER_URL}/api/users", json={
+            "email": "missing@test.com", "role": "tech",
+        }, headers=auth_headers, timeout=10)
+        assert resp.status_code == 422
+
+
+class TestUserErrors:
+    def test_unauthorized_list(self, client: httpx.Client):
+        resp = client.get("/api/users", timeout=10)
+        assert resp.status_code in (401, 403)
+
+    def test_unauthorized_create(self, client: httpx.Client):
+        resp = client.post("/api/users", json={"name": "X", "email": "x@x.com", "role": "tech"}, timeout=10)
+        assert resp.status_code in (401, 403)
