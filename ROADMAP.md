@@ -19,6 +19,7 @@
 ### 🟢 Sprint Wins (since last assessment)
 
 - **Recurring invoices — ADDED** — New `recurring_invoice_rule` STDB table with CRUD + `generate_recurring_invoices` reducer that scans active rules, creates invoices with line items, and updates next-gen dates. API: list, create, update, delete, generate. Frontend: manage rules with form for setting frequency, interval, line item template, and "Generate Now" button.
+- **Saved payment methods — ADDED** — `saved_payment_method` STDB table with `save_payment_method`, `set_default_payment_method`, `delete_payment_method` reducers. Stripe `SetupIntent` endpoint for securely collecting cards. API: create, list (with customer filter), set default, delete. Frontend: admin UI to view/manage saved cards per customer.
 - **Recurring appointments — ADDED** — STDB module: `series_id` + `recurrence_rule` fields on Appointment, `set_recurrence` and `generate_next_occurrence` reducers. API: create with recurrence, set recurrence, generate-next endpoint, recurring-series list. Frontend: recurrence dropdown in form, "Recurring" panel with series list + "Generate Next" button.
 - **Low Stock Alerts — ADDED** — `GET /api/products/low-stock` lists products below threshold. `POST /api/products/low-stock/notify` sends email to admin with a formatted table. Frontend shows alert banner, product card badges, and detail panel display.
 - **`update_product` reducer — ADDED** — STDB module now supports updating name, sku, barcode, description, category, price, cost, `min_stock`, and `location` via `PUT /api/products/:id`.
@@ -82,7 +83,7 @@
 
 ---
 
-## Phase 3: Advanced ⚠️ (80% complete)
+## Phase 3: Advanced ⚠️ (90% complete)
 
 - [x] Multi-tenant support (25 tables with `tenant_id`)
 - [x] SMS notifications (Twilio — API integration works)
@@ -92,7 +93,7 @@
 - [x] Repair checklist templates
 - [x] Custom fields per customer/ticket
 - [x] Webhook integration (HMAC-SHA256 signed, 13 events)
-- [ ] 📌 **Saved customer payment methods** — not implemented
+- [x] **Saved customer payment methods** — `saved_payment_method` STDB table, Stripe SetupIntent, API CRUD, admin UI for listing/managing saved cards
 - [ ] 📌 **Portal payment UX** — checkout session creates but UI is basic
 - [ ] 📌 **Report scheduling/exports** — no saved reports, no email reports
 - [x] **Recurring invoices** — `recurring_invoice_rule` table + CRUD + `generate_recurring_invoices` reducer, API with manual trigger, frontend page with rule management and "Generate Now"

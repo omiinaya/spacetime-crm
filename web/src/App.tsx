@@ -43,13 +43,14 @@ const MapPage = lazy(() => import("./pages/MapPage"));
 const ChecklistTemplatesPage = lazy(() => import("./pages/ChecklistTemplatesPage"));
 const TenantsPage = lazy(() => import("./pages/TenantsPage"));
 const RecurringInvoicesPage = lazy(() => import("./pages/RecurringInvoicesPage"));
+const PaymentMethodsPage = lazy(() => import("./pages/PaymentMethodsPage"));
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
   | "purchase-orders" | "import-export" | "audit-log"
   | "health" | "custom-fields" | "checklist" | "map" | "reports" | "settings" | "tenants"
-  | "recurring-invoices";
+  | "recurring-invoices" | "payment-methods";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -68,6 +69,7 @@ const navItems: NavItem[] = [
   { id: "invoices", label: "Invoices", icon: FileText },
   { id: "recurring-invoices", label: "Recurring", icon: Repeat },
   { id: "payments", label: "Payments", icon: CreditCard },
+  { id: "payment-methods", label: "Payment Methods", icon: CreditCard },
   { id: "appointments", label: "Appointments", icon: Calendar },
   { id: "products", label: "Products", icon: Package },
   { id: "estimates", label: "Estimates", icon: FileCheck },
@@ -225,6 +227,8 @@ function AppShell() {
               return <RecurringInvoicesPage />;
             case "payments":
               return <PaymentsPage />;
+            case "payment-methods":
+              return <PaymentMethodsPage />;
             case "appointments":
               return <AppointmentsPage />;
             case "products":

@@ -56,6 +56,26 @@ pub struct RecurringInvoiceRule {
     pub updated_at: u64,
 }
 
+// ─── Saved Payment Method ──
+
+#[spacetimedb::table(accessor = saved_payment_methods, public)]
+#[derive(Debug, Clone)]
+pub struct SavedPaymentMethod {
+    #[primary_key]
+    pub id: String,
+    #[index(btree)]
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub stripe_payment_method_id: String,
+    pub brand: String,
+    pub last4: String,
+    pub exp_month: u32,
+    pub exp_year: u32,
+    pub is_default: bool,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
 // ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──
 
 #[spacetimedb::table(accessor = invoices, public)]
@@ -310,6 +330,61 @@ pub fn generate_recurring_invoices(ctx: &ReducerContext) {
             ..rule
         });
     }
+}
+
+// ─── Saved Payment Method reducers ──
+
+#[spacetimedb::reducer]
+pub fn save_payment_method(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    customer_id: String,
+    stripe_payment_method_id: String,
+    brand: String,
+    last4: String,
+    exp_month: u32,
+    exp_year: u32,
+) {
+    let id = make_id("pm", ctx);
+    let now = now_ms(ctx);
+    // Check if this is the first method for this customer — make it default
+    let existing = ctx.db.saved_payment_methods().iter()
+        .filter(|m| m.customer_id == customer_id)
+        .count();
+    ctx.db.saved_payment_methods().insert(SavedPaymentMethod {
+        id,
+        tenant_id,
+        customer_id,
+        stripe_payment_method_id,
+        brand,
+        last4,
+        exp_month,
+        exp_year,
+        is_default: existing == 0,
+        created_at: now,
+        updated_at: now,
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn set_default_payment_method(ctx: &ReducerContext, id: String, customer_id: String) {
+    let now = now_ms(ctx);
+    // Unset all defaults for this customer
+    let methods: Vec<SavedPaymentMethod> = ctx.db.saved_payment_methods().iter()
+        .filter(|m| m.customer_id == customer_id)
+        .collect();
+    for m in &methods {
+        ctx.db.saved_payment_methods().id().update(SavedPaymentMethod {
+            is_default: m.id == id,
+            updated_at: now,
+            ..m.clone()
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn delete_payment_method(ctx: &ReducerContext, id: String) {
+    ctx.db.saved_payment_methods().id().delete(&id);
 }
 
 // ─── Reducers ──

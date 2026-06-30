@@ -7,8 +7,9 @@ def register_routers(app):
     from . import (
         auth, appointments, checklists, custom_fields, customers,
         dashboard, estimates, export_import, health, invoices,
-        payments, portal, products, purchase_orders, recurring_invoices,
-        settings, tax_rates, tenants, tickets, users, webhooks,
+        payment_methods, payments, portal, products, purchase_orders,
+        recurring_invoices, settings, tax_rates, tenants, tickets, users,
+        webhooks,
     )
 
     app.include_router(auth.router)
@@ -22,6 +23,7 @@ def register_routers(app):
     app.include_router(health.router)
     app.include_router(invoices.router)
     app.include_router(payments.router)
+    app.include_router(payment_methods.router)
     app.include_router(portal.router)
     app.include_router(products.router)
     app.include_router(purchase_orders.router)
