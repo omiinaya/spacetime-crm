@@ -16,7 +16,7 @@ const PAGE_SIZE = 25;
 export default function PaymentsPage() {
   const pag = usePagination(PAGE_SIZE);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "" });
+  const [form, setForm] = useState({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "", currency: "USD" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["payments", { offset: pag.offset }],
@@ -43,7 +43,7 @@ export default function PaymentsPage() {
     onSuccess: () => {
       toast.success("Payment recorded");
       setShowForm(false);
-      setForm({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "" });
+      setForm({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "", currency: "USD" });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
     },
     onError: () => toast.error("Failed to record payment"),
@@ -75,7 +75,7 @@ export default function PaymentsPage() {
           <CreditCard className="h-8 w-8 text-green-400" />
           <div>
             <p className="text-xs text-muted-foreground">Total Collected</p>
-            <p className="text-2xl font-bold text-green-400">${totalAmount.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-400">{form.currency || "USD"} {totalAmount.toFixed(2)}</p>
           </div>
         </CardContent>
       </Card>
@@ -87,7 +87,7 @@ export default function PaymentsPage() {
             <Select value={form.invoice_id} onChange={(e) => setForm({ ...form, invoice_id: e.target.value })}>
               <option value="">Select invoice...</option>
               {invoices.map((inv) => (
-                <option key={inv.id} value={inv.id}>#{inv.invoice_number} — ${inv.total.toFixed(2)} ({inv.status})</option>
+                <option key={inv.id} value={inv.id}>#{inv.invoice_number} — {inv.currency || "USD"} {inv.total.toFixed(2)} ({inv.status})</option>
               ))}
             </Select>
             <Select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
@@ -106,6 +106,14 @@ export default function PaymentsPage() {
             </Select>
             <Input placeholder="Reference" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
             <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="CAD">CAD (C$)</option>
+              <option value="AUD">AUD (A$)</option>
+              <option value="JPY">JPY (¥)</option>
+            </Select>
             <div className="flex gap-2">
               <Button onClick={() => recordMutation.mutate()} disabled={recordMutation.isPending}>Record</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
@@ -119,7 +127,7 @@ export default function PaymentsPage() {
           <Card key={p.id}>
             <CardContent className="pt-4 flex items-center justify-between">
               <div>
-                <p className="font-medium">${p.amount.toFixed(2)}</p>
+                <p className="font-medium">{p.currency || "USD"} {p.amount.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">via {p.method} — {new Date(p.created_at).toLocaleDateString()}</p>
                 {p.reference && <p className="text-xs text-muted-foreground">Ref: {p.reference}</p>}
               </div>
