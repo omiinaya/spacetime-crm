@@ -19,7 +19,7 @@
 ### 🟢 Sprint Wins (since last assessment)
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
-- **Test coverage — 173 TESTS (14 modules)** — Added 33 new integration tests covering webhooks (CRUD + test + Stripe + auth), settings (mail/SMS get/save/test), and custom fields (definitions CRUD, values get/set). Also fixed a bug in the custom field definition route (missing reducer args). All 173 pass. Phase 4 → 82%.
+- **Test coverage — 199 TESTS (16 modules)** — Added 26 new tests covering recurring invoices (rules CRUD + generate, validation errors, auth) and payment methods (save/set-default/delete/setup-intent, validation, auth). All 199 pass. Phase 4 → 88%.
 - **Recurring invoices — ADDED** — New `recurring_invoice_rule` STDB table with CRUD + `generate_recurring_invoices` reducer that scans active rules, creates invoices with line items, and updates next-gen dates. API: list, create, update, delete, generate. Frontend: manage rules with form for setting frequency, interval, line item template, and "Generate Now" button.
 - **Saved payment methods — ADDED** — `saved_payment_method` STDB table with `save_payment_method`, `set_default_payment_method`, `delete_payment_method` reducers. Stripe `SetupIntent` endpoint for securely collecting cards. API: create, list (with customer filter), set default, delete. Frontend: admin UI to view/manage saved cards per customer.
 - **Portal payment UX — UPGRADED** — Portal invoice detail now shows saved cards with one-click "Pay with [card brand]" buttons using Stripe PaymentIntent (create+confirm server-side). Falls back to Stripe Checkout for new cards or manual recording. Portal `GET /api/portal/payment-methods` endpoint added.
@@ -103,7 +103,7 @@
 
 ---
 
-## Phase 4: Production Readiness ⚠️ (82% complete)
+## Phase 4: Production Readiness ⚠️ (88% complete)
 
 - [x] Authentication (JWT login for staff + customer portal)
 - [x] Role-based permissions (admin, tech, front_desk)
@@ -135,12 +135,12 @@
 | Area | Status | Details |
 |------|--------|---------|
 | Rust unit tests | ❌ 0 tests | 70 reducers, 25 tables — zero validation |
-| Python backend tests | ✅ 173 tests (14 files) | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize, webhooks, settings, custom fields |
+| Python backend tests | ✅ 199 tests (16 files) | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize, webhooks, settings, custom fields, recurring invoices, payment methods |
 | TypeScript frontend tests | ✅ 52 tests (8 suites) | Button, Card, Badge, Input, Pagination, ErrorBoundary, Auth, Utils |
 | E2E tests | ✅ 33 tests (5 suites) | Navigation, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test (backend + frontend + Rust check), lint |
-| **API path coverage** | **16/26 (62%)** | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, health, validation, webhooks, settings, custom fields |
-| **Endpoint coverage** | **~85%** | 173 tests across 14 modules |
+| **API path coverage** | **18/26 (69%)** | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, health, validation, webhooks, settings, custom fields, recurring invoices, payment methods |
+| **Endpoint coverage** | **~90%** | 199 tests across 16 modules |
 
 ### Test quality assessment
 
