@@ -154,7 +154,7 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
                     qoh, qc, min_stock, location, active, created_at, updated_at,
                 ])
             else:
-                await _call("create_product", [user["tenant_id"], name, sku, barcode, desc, category, price, cost, qoh])
+                await _call("create_product", [user["tenant_id"], name, sku, barcode, desc, category, price, cost, qoh, min_stock, location])
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")

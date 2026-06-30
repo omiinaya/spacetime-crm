@@ -16,20 +16,23 @@ router = APIRouter()
 @router.get("/api/products")
 async def list_products(search: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
     """List products with pagination and optional search."""
-    rows, total = await _paginated(
-        user["tenant_id"], "products",
-        offset=offset, limit=limit,
-        order_by="name", order_desc=False,
-    )
     q = search.lower().strip()
     if q:
-        rows = [
-            r for r in rows
-            if q in (r.get("name") or "").lower()
-            or q in (r.get("sku") or "").lower()
-        ]
+        # When searching, fetch up to 1000 rows, filter client-side, then paginate
+        rows, _ = await _paginated(
+            user["tenant_id"], "products",
+            offset=0, limit=1000,
+            order_by="name", order_desc=False,
+        )
+        rows = [r for r in rows if q in (r.get("name") or "").lower() or q in (r.get("sku") or "").lower()]
         total = len(rows)
         rows = rows[offset:offset + limit]
+    else:
+        rows, total = await _paginated(
+            user["tenant_id"], "products",
+            offset=offset, limit=limit,
+            order_by="name", order_desc=False,
+        )
     return {"products": rows, "total": total, "offset": offset, "limit": limit}
 
 
