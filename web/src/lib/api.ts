@@ -577,6 +577,13 @@ export const api = {
         apiFetch<{ breaches: TicketSlaBreach[]; count: number }>("/tickets/sla-breached"),
       targets: () =>
         apiFetch<{ targets: Record<string, number> }>("/tickets/sla-targets"),
+      settings: () =>
+        apiFetch<{ targets: Record<string, number>; updated_at: number }>("/tickets/sla-settings"),
+      save: (targets: Record<string, number>) =>
+        apiFetch<{ targets: Record<string, number>; ok: boolean }>("/tickets/sla-settings", {
+          method: "POST",
+          body: JSON.stringify({ targets }),
+        }),
     },
     timers: {
       list: (ticketId: string) =>

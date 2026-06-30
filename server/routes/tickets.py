@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
@@ -183,7 +184,7 @@ async def delete_ticket_checklist(ticket_id: str, user: dict = Depends(require_r
 
 # ── TICKET SLA ──
 
-SLA_TARGETS: dict[str, float] = {
+DEFAULT_SLA_TARGETS: dict[str, float] = {
     "urgent": 4,
     "high": 24,
     "medium": 72,
@@ -191,9 +192,25 @@ SLA_TARGETS: dict[str, float] = {
 }
 
 
+async def _load_sla_targets(tenant_id: str) -> dict[str, float]:
+    """Load SLA targets from STDB sla_config, falling back to defaults."""
+    rows = await _sql(f"SELECT * FROM sla_configs WHERE tenant_id = '{tenant_id}'")
+    if rows:
+        try:
+            loaded = json.loads(rows[0]["targets_json"])
+            # Merge with defaults so new or missing keys get a value
+            merged: dict[str, float] = dict(DEFAULT_SLA_TARGETS)
+            merged.update({k: float(v) for k, v in loaded.items() if isinstance(v, (int, float))})
+            return merged
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+    return dict(DEFAULT_SLA_TARGETS)
+
+
 @router.get("/api/tickets/sla-breached")
 async def list_sla_breaches(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """List open tickets that have exceeded their SLA threshold."""
+    targets = await _load_sla_targets(user["tenant_id"])
     now_ms = asyncio.get_event_loop().time() * 1000
     # Fetch all open tickets (STDB doesn't support NOT IN)
     open_statuses = ["new", "assigned", "in_progress", "waiting_on_customer"]
@@ -208,7 +225,7 @@ async def list_sla_breaches(user: dict = Depends(require_role("admin", "tech", "
         all_open.extend(rows)
     breaches = []
     for t in all_open:
-        target_hours = SLA_TARGETS.get(t.get("priority", "medium"), 72)
+        target_hours = targets.get(t.get("priority", "medium"), 72)
         created = t.get("created_at", 0)
         if not created:
             continue
@@ -227,6 +244,38 @@ async def list_sla_breaches(user: dict = Depends(require_role("admin", "tech", "
 
 
 @router.get("/api/tickets/sla-targets")
-async def get_sla_targets():
+async def get_sla_targets(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Return the current SLA threshold targets per priority."""
-    return {"targets": SLA_TARGETS}
+    targets = await _load_sla_targets(user["tenant_id"])
+    return {"targets": targets}
+
+
+@router.get("/api/tickets/sla-settings")
+async def get_sla_settings(user: dict = Depends(require_role("admin"))):
+    """Get the full SLA config object from STDB."""
+    tid = user["tenant_id"]
+    rows = await _sql(f"SELECT * FROM sla_configs WHERE tenant_id = '{tid}'")
+    if rows:
+        return {"targets": json.loads(rows[0]["targets_json"]), "updated_at": rows[0].get("updated_at", 0)}
+    return {"targets": DEFAULT_SLA_TARGETS, "updated_at": 0}
+
+
+@router.post("/api/tickets/sla-settings")
+async def save_sla_settings(
+    body: dict,
+    user: dict = Depends(require_role("admin")),
+):
+    """Save SLA thresholds. Expects {\"targets\": {\"urgent\": 4, \"high\": 24, ...}}."""
+    targets = body.get("targets", {})
+    # Validate: must have at least the 4 keys
+    for key in ("urgent", "high", "medium", "low"):
+        val = targets.get(key)
+        if val is None or not isinstance(val, (int, float)) or val <= 0:
+            raise HTTPException(400, f"Invalid or missing SLA target '{key}'")
+        if val > 8760:  # 1 year
+            raise HTTPException(400, f"SLA target '{key}' exceeds max (8760h)")
+    targets_json = json.dumps(targets)
+    await _call("upsert_sla_config", [user["tenant_id"], targets_json])
+    # Expire cached SLA targets by returning fresh data
+    fresh_targets = await _load_sla_targets(user["tenant_id"])
+    return {"targets": fresh_targets, "ok": True}
