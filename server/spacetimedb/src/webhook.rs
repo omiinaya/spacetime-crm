@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct WebhookSubscription {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     /// URL to send POST requests to
     pub url: String,

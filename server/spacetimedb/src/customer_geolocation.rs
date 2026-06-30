@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct CustomerGeolocation {
     #[primary_key]
     pub customer_id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub latitude: f64,
     pub longitude: f64,

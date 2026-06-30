@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct Appointment {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub customer_id: String,
     pub ticket_id: String,

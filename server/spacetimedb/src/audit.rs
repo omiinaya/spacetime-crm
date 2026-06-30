@@ -5,6 +5,7 @@ use spacetimedb::*;
 pub struct AuditLog {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub user_id: String,
     pub user_name: String,

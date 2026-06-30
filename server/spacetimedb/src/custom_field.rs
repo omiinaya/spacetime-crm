@@ -7,6 +7,7 @@ use spacetimedb::*;
 pub struct CustomFieldDefinition {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     /// Which entity this field applies to: "customer", "ticket", "invoice", "product"
     pub entity_type: String,
@@ -92,6 +93,7 @@ pub fn delete_custom_field_definition(ctx: &ReducerContext, id: String) {
 pub struct CustomFieldValue {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     /// The entity this value belongs to (e.g. customer_<id>)
     pub entity_id: String,

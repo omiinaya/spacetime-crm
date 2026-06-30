@@ -41,6 +41,7 @@ pub use webhook::*;
 pub struct Invoice {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub customer_id: String,
     pub ticket_id: String,
@@ -64,6 +65,7 @@ pub struct Invoice {
 pub struct InvoiceLineItem {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub invoice_id: String,
     pub item_type: String,
@@ -79,6 +81,7 @@ pub struct InvoiceLineItem {
 pub struct Estimate {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub customer_id: String,
     pub ticket_id: String,
@@ -101,6 +104,7 @@ pub struct Estimate {
 pub struct EstimateLineItem {
     #[primary_key]
     pub id: String,
+    #[index(btree)]
     pub tenant_id: String,
     pub estimate_id: String,
     pub item_type: String,
