@@ -25,11 +25,19 @@ const statusColors: Record<string, "default" | "secondary" | "warning" | "succes
 };
 
 const priorityColors: Record<string, string> = {
-  low: "text-slate-400",
-  medium: "text-amber-400",
+  low: "text-blue-400",
+  medium: "text-yellow-400",
   high: "text-orange-400",
-  urgent: "text-destructive",
+  urgent: "text-red-400",
 };
+
+const slaUrgency = (createdAt: number): { color: string; label: string } => {
+  const hours = (Date.now() - createdAt) / 3600000;
+  if (hours < 4) return { color: "bg-green-500", label: `${Math.round(hours)}h` };
+  if (hours < 24) return { color: "bg-amber-500", label: `${Math.round(hours)}h` };
+  if (hours < 72) return { color: "bg-red-500", label: `${Math.floor(hours / 24)}d` };
+  return { color: "bg-red-700", label: `${Math.floor(hours / 24)}d` };
+}
 
 export default function TicketsPage() {
   const pag = usePagination(PAGE_SIZE);
@@ -279,6 +287,10 @@ export default function TicketsPage() {
                         <span className="text-xs text-muted-foreground">#{t.ticket_number}</span>
                         <Badge variant={statusColors[t.status] || "secondary"}>{t.status}</Badge>
                         <span className={`text-xs ${priorityColors[t.priority] || ""}`}>{t.priority}</span>
+                        <span className="ml-auto flex items-center gap-1" title={new Date(t.created_at).toLocaleString()}>
+                          <span className={`inline-block h-2 w-2 rounded-full ${slaUrgency(t.created_at).color}`} />
+                          <span className="text-[10px] text-muted-foreground">{slaUrgency(t.created_at).label}</span>
+                        </span>
                       </div>
                       <p className="font-medium mt-1 truncate">{t.title}</p>
                       {cust && <p className="text-xs text-muted-foreground">{cust.first_name} {cust.last_name}</p>}
