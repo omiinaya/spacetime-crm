@@ -5,8 +5,6 @@ Uses actual Chrome engine — full CSS support, including flexbox, @page, modern
 """
 from __future__ import annotations
 
-from playwright.async_api import async_playwright
-
 
 async def html_to_pdf(html: str) -> bytes:
     """Convert an HTML string to PDF bytes using Chromium headless.
@@ -14,6 +12,8 @@ async def html_to_pdf(html: str) -> bytes:
     Returns raw PDF bytes suitable for FastAPI Response(content=..., media_type="application/pdf").
     Page format matches US Letter with 0.75in margins.
     """
+    from playwright.async_api import async_playwright
+
     async with async_playwright() as pw:
         browser = await pw.chromium.launch()
         page = await browser.new_page()
