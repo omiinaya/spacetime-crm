@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api } from "../lib/api";
 import { History, Filter, RefreshCw } from "lucide-react";
 import { Card } from "../components/ui/card";
@@ -31,26 +33,15 @@ function actionBadge(action: string) {
 }
 
 export default function AuditLogPage() {
-  const [entries, setEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [entityFilter, setEntityFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
 
-  const loadLog = async () => {
-    setLoading(true);
-    try {
-      const data = await api.auditLog.list(200, entityFilter || undefined, actionFilter || undefined);
-      setEntries(data.entries);
-    } catch {
-      setEntries([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["audit-log", { entity: entityFilter || undefined, action: actionFilter || undefined }],
+    queryFn: () => api.auditLog.list(200, entityFilter || undefined, actionFilter || undefined),
+  });
 
-  useEffect(() => {
-    loadLog();
-  }, [entityFilter, actionFilter]);
+  const entries = data?.entries ?? [];
 
   return (
     <div className="space-y-6">
@@ -59,7 +50,7 @@ export default function AuditLogPage() {
           <History className="w-6 h-6 text-blue-400" />
           Audit Log
         </h1>
-        <Button onClick={loadLog} variant="secondary" className="flex items-center gap-2">
+        <Button onClick={() => refetch()} variant="secondary" className="flex items-center gap-2">
           <RefreshCw className="w-4 h-4" />
           Refresh
         </Button>
@@ -94,7 +85,7 @@ export default function AuditLogPage() {
 
       {/* Log table */}
       <Card className="overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="p-8 text-center text-slate-400">Loading...</div>
         ) : entries.length === 0 ? (
           <div className="p-8 text-center text-slate-400">No audit log entries yet.</div>

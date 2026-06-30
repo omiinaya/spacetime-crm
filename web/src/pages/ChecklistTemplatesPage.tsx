@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api, ChecklistTemplate, ChecklistItem } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -91,40 +93,61 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
 }
 
 export default function ChecklistTemplatesPage() {
-  const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ChecklistTemplate | null>(null);
   const [showEditor, setShowEditor] = useState(false);
 
-  const load = async () => {
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ["checklist-templates"],
+    queryFn: async () => {
       const res = await api.checklist.templates.list();
-      setTemplates(res.templates);
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
-  };
+      return res.templates;
+    },
+  });
 
-  useEffect(() => { load(); }, []);
+  const templates = data ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; description: string; items: ChecklistItem[] }) =>
+      api.checklist.templates.create(data),
+    onSuccess: () => {
+      toast.success("Template created");
+      setShowEditor(false);
+      queryClient.invalidateQueries({ queryKey: ["checklist-templates"] });
+    },
+    onError: () => toast.error("Failed to create template"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: string; name: string; description: string; items: ChecklistItem[] }) =>
+      api.checklist.templates.update(data.id, { name: data.name, description: data.description, items: data.items }),
+    onSuccess: () => {
+      toast.success("Template updated");
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ["checklist-templates"] });
+    },
+    onError: () => toast.error("Failed to update template"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.checklist.templates.delete(id),
+    onSuccess: () => {
+      toast.success("Template deleted");
+      queryClient.invalidateQueries({ queryKey: ["checklist-templates"] });
+    },
+    onError: () => toast.error("Failed to delete template"),
+  });
 
   const handleCreate = async (name: string, desc: string, items: ChecklistItem[]) => {
-    await api.checklist.templates.create({ name, description: desc, items });
-    toast.success("Template created");
-    setShowEditor(false);
-    load();
+    await createMutation.mutateAsync({ name, description: desc, items });
   };
 
   const handleUpdate = async (name: string, desc: string, items: ChecklistItem[]) => {
     if (!editing) return;
-    await api.checklist.templates.update(editing.id, { name, description: desc, items });
-    toast.success("Template updated");
-    setEditing(null);
-    load();
+    await updateMutation.mutateAsync({ id: editing.id, name, description: desc, items });
   };
 
   const handleDelete = async (t: ChecklistTemplate) => {
-    await api.checklist.templates.delete(t.id);
-    toast.success("Template deleted");
-    load();
+    await deleteMutation.mutateAsync(t.id);
   };
 
   const parseItems = (t: ChecklistTemplate): ChecklistItem[] => {
@@ -163,7 +186,7 @@ export default function ChecklistTemplatesPage() {
       )}
 
       {/* Templates list */}
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
         </div>

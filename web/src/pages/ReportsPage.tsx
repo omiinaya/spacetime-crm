@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api, ReportsData } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -33,15 +33,12 @@ const getInvStatusColor = (status: string) =>
   INV_STATUS_COLORS[status.toLowerCase()] || "#6b7280";
 
 export default function ReportsPage() {
-  const [data, setData] = useState<ReportsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useQuery({
+    queryKey: ["reports"],
+    queryFn: () => api.reports.get(),
+  });
 
-  useEffect(() => {
-    api.reports.get().then(setData).catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />

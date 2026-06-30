@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -38,34 +40,30 @@ const entityColor = (t: string) => {
 };
 
 export default function CustomFieldsPage() {
-  const [definitions, setDefinitions] = useState<FieldDef[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<FieldDef | null>(null);
   const [creating, setCreating] = useState(false);
   const [filterEntity, setFilterEntity] = useState("");
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await api.customFields.definitions.list(filterEntity || undefined);
-      setDefinitions(data.definitions || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: definitions = [], isLoading } = useQuery({
+    queryKey: ["custom-fields", filterEntity ?? ""],
+    queryFn: async () => {
+      const res = await api.customFields.definitions.list(
+        filterEntity || undefined
+      );
+      return res.definitions ?? [];
+    },
+  });
 
-  useEffect(() => { load(); }, [filterEntity]);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.customFields.definitions.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom-fields"] });
+    },
+  });
 
-  const handleDelete = async (id: string, label: string) => {
+  const handleDelete = (id: string, label: string) => {
     if (!confirm(`Delete custom field "${label}"? This cannot be undone.`)) return;
-    try {
-      await api.customFields.definitions.delete(id);
-      load();
-    } catch (e) {
-      console.error(e);
-    }
+    deleteMutation.mutate(id);
   };
 
   return (
@@ -103,7 +101,7 @@ export default function CustomFieldsPage() {
       {(creating || editing) && (
         <FieldForm
           initial={editing}
-          onSave={() => { setCreating(false); setEditing(null); load(); }}
+          onSave={() => { setCreating(false); setEditing(null); }}
           onCancel={() => { setCreating(false); setEditing(null); }}
         />
       )}
@@ -114,7 +112,7 @@ export default function CustomFieldsPage() {
           <CardTitle className="text-sm">Field Definitions ({definitions.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : definitions.length === 0 ? (
             <p className="text-sm text-muted-foreground">No custom fields defined yet. Click "Add Field" to create one.</p>
@@ -177,6 +175,32 @@ function FieldForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const createMutation = useMutation({
+    mutationFn: (data: {
+      entity_type: string;
+      label: string;
+      field_type: string;
+      options: string[];
+      sort_order: number;
+      required: boolean;
+      active: boolean;
+    }) => api.customFields.definitions.create(data),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: {
+      id: string;
+      data: {
+        label: string;
+        field_type: string;
+        options: string[];
+        sort_order: number;
+        required: boolean;
+        active: boolean;
+      };
+    }) => api.customFields.definitions.update(id, data),
+  });
+
   const handleSave = async () => {
     if (!label.trim()) { setError("Label is required"); return; }
     setSaving(true);
@@ -194,10 +218,11 @@ function FieldForm({
         active,
       };
       if (initial) {
-        await api.customFields.definitions.update(initial.id, data);
+        await updateMutation.mutateAsync({ id: initial.id, data });
       } else {
-        await api.customFields.definitions.create(data);
+        await createMutation.mutateAsync(data);
       }
+      queryClient.invalidateQueries({ queryKey: ["custom-fields"] });
       onSave();
     } catch (e: any) {
       setError(e?.message || "Failed to save");
