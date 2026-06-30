@@ -198,7 +198,7 @@ export default function PurchaseOrdersPage() {
     <div className="flex gap-6 h-full">
       {/* ── PO list ── */}
       <div className={selectedPo ? "w-1/3 min-w-0" : "w-full"}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-start justify-between gap-2 flex-wrap mb-4">
           <div>
             <h1 className="text-2xl font-bold">Purchase Orders</h1>
             <p className="text-sm text-muted-foreground mt-1">Order parts and inventory</p>
