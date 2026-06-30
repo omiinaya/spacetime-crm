@@ -1144,4 +1144,20 @@ export const api = {
       );
     },
   },
+  auth: {
+    setup2FA: () =>
+      apiFetch<{ secret: string; provisioning_uri: string }>("/auth/setup-2fa", {
+        method: "POST",
+      }),
+    verify2FA: (code: string) =>
+      apiFetch<{ ok: boolean; message: string }>("/auth/verify-2fa", {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      }),
+    disable2FA: (code: string) =>
+      apiFetch<{ ok: boolean; message: string }>("/auth/disable-2fa", {
+        method: "POST",
+        body: JSON.stringify({ code }),
+      }),
+  },
 };
