@@ -5,7 +5,21 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, CreditCard, ExternalLink } from "lucide-react";
+import {
+  ChevronDown, ChevronUp, CreditCard, ExternalLink,
+  Star, CheckCircle2,
+} from "lucide-react";
+
+interface SavedCard {
+  id: string;
+  stripe_payment_method_id: string;
+  brand: string;
+  last_4?: string;
+  last4?: string;
+  exp_month: number;
+  exp_year: number;
+  is_default: boolean;
+}
 
 const statusColors: Record<string, "outline" | "default" | "success" | "destructive"> = {
   draft: "outline",
@@ -16,14 +30,23 @@ const statusColors: Record<string, "outline" | "default" | "success" | "destruct
   cancelled: "outline",
 };
 
+const brandLogos: Record<string, string> = {
+  visa: "💳",
+  mastercard: "💳",
+  amex: "💳",
+  discover: "💳",
+};
+
 export default function PortalInvoicesPage() {
   const [invoices, setInvoices] = useState<PortalInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<PortalInvoice | null>(null);
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [payAmount, setPayAmount] = useState(0);
   const [paying, setPaying] = useState(false);
   const [stripeLoading, setStripeLoading] = useState<string | null>(null);
+  const [cardPaying, setCardPaying] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -39,14 +62,19 @@ export default function PortalInvoicesPage() {
     if (expanded === id) {
       setExpanded(null);
       setDetail(null);
+      setSavedCards([]);
       return;
     }
     setExpanded(id);
     try {
-      const res = await portalApi.invoices.get(id);
-      setDetail(res.invoice);
-      setPayAmount(res.invoice.balance_due ?? res.invoice.total);
-    } catch { toast.error("Failed to load invoice"); }
+      const [invRes, pmRes] = await Promise.all([
+        portalApi.invoices.get(id),
+        portalApi.paymentMethods.list(),
+      ]);
+      setDetail(invRes.invoice);
+      setPayAmount(invRes.invoice.balance_due ?? invRes.invoice.total);
+      setSavedCards(pmRes.payment_methods || []);
+    } catch { toast.error("Failed to load invoice details"); }
   };
 
   const handlePayment = async (invoiceId: string) => {
@@ -55,7 +83,6 @@ export default function PortalInvoicesPage() {
     try {
       await portalApi.payments.create(invoiceId, payAmount, "card");
       toast.success("Payment recorded");
-      // Reload
       const res = await portalApi.invoices.get(invoiceId);
       setDetail(res.invoice);
     } catch { toast.error("Payment failed"); }
@@ -66,7 +93,6 @@ export default function PortalInvoicesPage() {
     setStripeLoading(invoiceId);
     try {
       const res = await portalApi.payments.createCheckoutSession(invoiceId);
-      // Redirect to Stripe Checkout
       window.location.href = res.url;
     } catch (e: any) {
       toast.error(e?.message || "Failed to initiate Stripe payment");
@@ -74,6 +100,30 @@ export default function PortalInvoicesPage() {
       setStripeLoading(null);
     }
   };
+
+  const handlePayWithSavedCard = async (invoiceId: string, paymentMethodId: string) => {
+    setCardPaying(paymentMethodId);
+    try {
+      const res = await portalApi.payments.payWithSavedCard(invoiceId, paymentMethodId);
+      if (res.ok) {
+        toast.success("Payment successful!");
+        const invRes = await portalApi.invoices.get(invoiceId);
+        setDetail(invRes.invoice);
+      } else {
+        toast.error("Payment failed");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Card payment failed");
+    } finally {
+      setCardPaying(null);
+    }
+  };
+
+  const needsPayment = (inv: PortalInvoice) =>
+    inv.status !== "paid" && inv.status !== "cancelled";
+
+  const hasBalance = (inv: PortalInvoice) =>
+    (inv.balance_due ?? inv.total) > 0;
 
   return (
     <div>
@@ -143,37 +193,98 @@ export default function PortalInvoicesPage() {
                     </div>
                   )}
 
-                  {/* Make payment */}
-                  {inv.status !== "paid" && inv.status !== "cancelled" && detail.balance_due != null && detail.balance_due > 0 && (
+                  {/* Payment section */}
+                  {needsPayment(inv) && hasBalance(detail) && (
                     <div className="bg-muted/30 rounded p-3 space-y-3">
                       <p className="text-sm font-semibold flex items-center gap-1">
-                        <CreditCard className="h-3.5 w-3.5" /> Pay with Card
+                        <CreditCard className="h-3.5 w-3.5" /> Pay
                       </p>
-                      <Button
-                        size="sm"
-                        className="w-full"
-                        onClick={() => handleStripeCheckout(inv.id)}
-                        disabled={stripeLoading === inv.id}
-                      >
-                        {stripeLoading === inv.id ? (
-                          "Redirecting to Stripe..."
-                        ) : (
-                          <>
-                            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                            Pay ${detail.balance_due.toFixed(2)} with Card
-                          </>
+
+                      {/* Saved cards */}
+                      {savedCards.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Saved Cards
+                          </p>
+                          {savedCards.map((card) => {
+                            const last4 = card.last_4 || card.last4 || "";
+                            const isPaying = cardPaying === card.stripe_payment_method_id;
+                            return (
+                              <Button
+                                key={card.id}
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start gap-2 h-auto py-2.5"
+                                disabled={isPaying}
+                                onClick={() =>
+                                  handlePayWithSavedCard(inv.id, card.stripe_payment_method_id)
+                                }
+                              >
+                                <CreditCard className="h-4 w-4 shrink-0" />
+                                <span className="capitalize">{card.brand}</span>
+                                <span className="font-mono">**** {last4}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {card.exp_month}/{card.exp_year}
+                                </span>
+                                {card.is_default && (
+                                  <Star className="h-3 w-3 text-yellow-500 ml-auto" />
+                                )}
+                                {isPaying ? (
+                                  <span className="ml-auto text-xs animate-pulse">Paying...</span>
+                                ) : (
+                                  <span className="ml-auto text-xs font-medium text-primary">
+                                    Pay ${(detail.balance_due ?? detail.total).toFixed(2)}
+                                  </span>
+                                )}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Stripe Checkout */}
+                      <div>
+                        {savedCards.length > 0 && (
+                          <div className="relative my-2">
+                            <div className="absolute inset-0 flex items-center">
+                              <span className="w-full border-t border-muted" />
+                            </div>
+                            <div className="relative flex justify-center text-xs">
+                              <span className="bg-muted/30 px-2 text-muted-foreground">
+                                or pay with a new card
+                              </span>
+                            </div>
+                          </div>
                         )}
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          variant={savedCards.length > 0 ? "outline" : "default"}
+                          onClick={() => handleStripeCheckout(inv.id)}
+                          disabled={stripeLoading === inv.id}
+                        >
+                          {stripeLoading === inv.id ? (
+                            "Redirecting to Stripe..."
+                          ) : (
+                            <>
+                              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                              Pay ${(detail.balance_due ?? detail.total).toFixed(2)} with Card
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground text-center">
                         Secure payment powered by Stripe
                       </p>
 
+                      {/* Manual payment divider */}
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center">
                           <span className="w-full border-t border-muted" />
                         </div>
                         <div className="relative flex justify-center text-xs">
-                          <span className="bg-muted/30 px-2 text-muted-foreground">or pay manually</span>
+                          <span className="bg-muted/30 px-2 text-muted-foreground">or record manually</span>
                         </div>
                       </div>
 
@@ -185,6 +296,14 @@ export default function PortalInvoicesPage() {
                           {paying ? "Processing..." : "Record Payment"}
                         </Button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Paid state */}
+                  {inv.status === "paid" && (
+                    <div className="flex items-center gap-2 text-green-600 text-sm font-medium py-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Fully Paid
                     </div>
                   )}
                 </div>

@@ -115,3 +115,47 @@ async def create_setup_intent(customer_id: str) -> Optional[dict[str, Any]]:
     except StripeError as e:
         logger.error("Stripe SetupIntent failed: %s", e)
         return None
+
+
+async def create_payment_intent(
+    invoice_id: str,
+    invoice_number: int,
+    customer_email: str,
+    amount: float,
+    payment_method_id: str,
+) -> Optional[dict[str, Any]]:
+    """Create and confirm a Stripe PaymentIntent using a saved payment method.
+
+    Returns dict with status + payment_intent_id, or None on failure.
+    """
+    if not is_configured():
+        logger.warning("Stripe not configured — skipping payment intent")
+        return None
+
+    init_stripe()
+
+    try:
+        intent = stripe_lib.PaymentIntent.create(
+            amount=int(round(amount * 100)),
+            currency="usd",
+            payment_method=payment_method_id,
+            receipt_email=customer_email,
+            off_session=True,
+            confirm=True,
+            metadata={
+                "invoice_id": invoice_id,
+                "invoice_number": str(invoice_number),
+            },
+        )
+        logger.info(
+            "Stripe PaymentIntent %s: status=%s for invoice #%s",
+            intent.id, intent.status, invoice_number,
+        )
+        return {
+            "payment_intent_id": intent.id,
+            "status": intent.status,
+            "amount": amount,
+        }
+    except StripeError as e:
+        logger.error("Stripe PaymentIntent failed: %s", e)
+        return {}

@@ -220,8 +220,23 @@ export const portalApi = {
           body: JSON.stringify({ invoice_id: invoiceId }),
         }
       ),
+    payWithSavedCard: (invoiceId: string, paymentMethodId: string) =>
+      portalApiFetch<{ ok: boolean; payment_intent_id?: string }>(
+        "/portal/payments/pay-with-saved-card",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            invoice_id: invoiceId,
+            payment_method_id: paymentMethodId,
+          }),
+        }
+      ),
   },
   appointments: {
     list: () => portalApiFetch<{ appointments: PortalAppointment[]; upcoming: PortalAppointment[]; past: PortalAppointment[] }>("/portal/appointments"),
+  },
+  paymentMethods: {
+    list: () =>
+      portalApiFetch<{ payment_methods: any[] }>("/portal/payment-methods"),
   },
 };

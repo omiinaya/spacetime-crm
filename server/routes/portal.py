@@ -15,9 +15,8 @@ from helpers import (
 from rate_limit import limiter
 from models import (
     PortalLoginRequest, PortalNoteCreate, PortalPaymentCreate,
-    PortalSetPassword, PortalCheckoutSessionCreate,
+    PortalSetPassword, PortalCheckoutSessionCreate, PortalPayWithSavedCard,
 )
-from stripe_payments import create_checkout_session, is_configured as stripe_configured
 
 router = APIRouter()
 
@@ -284,6 +283,7 @@ async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(
 @router.post("/api/portal/payments/create-checkout-session")
 async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, customer: dict = Depends(get_current_customer)):
     """Create a Stripe Checkout Session for an invoice payment."""
+    from stripe_payments import create_checkout_session, is_configured as stripe_configured
     if not stripe_configured():
         raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
 
@@ -323,3 +323,88 @@ async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, cust
         raise HTTPException(502, "Failed to create Stripe checkout session")
 
     return result
+
+
+# ── Saved Payment Methods (portal) ──────────────────────────────
+
+
+@router.get("/api/portal/payment-methods")
+async def portal_payment_methods(customer: dict = Depends(get_current_customer)):
+    """List the customer's saved payment methods."""
+    rows = await _sql(
+        f"SELECT * FROM saved_payment_methods WHERE customer_id = '{customer['id']}'"
+    )
+    return {"payment_methods": _sort(rows, "created_at", desc=True)}
+
+
+# ── Pay with Saved Card ─────────────────────────────────────────
+
+
+@router.post("/api/portal/payments/pay-with-saved-card")
+async def portal_pay_with_saved_card(
+    body: PortalPayWithSavedCard,
+    customer: dict = Depends(get_current_customer),
+):
+    """Pay an invoice using a saved payment method via Stripe PaymentIntent."""
+    invoice_id = body.invoice_id
+    payment_method_id = body.payment_method_id
+
+    # Verify invoice belongs to customer
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    if not rows:
+        raise HTTPException(404, "Invoice not found")
+    inv = rows[0]
+
+    if inv.get("status") in ("paid", "cancelled"):
+        raise HTTPException(400, f"Invoice is already {inv['status']}")
+
+    # Verify payment method belongs to customer
+    pm_rows = await _sql(
+        f"SELECT * FROM saved_payment_methods WHERE stripe_payment_method_id = '{payment_method_id}' AND customer_id = '{customer['id']}'"
+    )
+    if not pm_rows:
+        raise HTTPException(404, "Payment method not found")
+
+    # Calculate amount due
+    total = float(inv.get("total", 0))
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    total_paid = sum(float(p.get("amount", 0)) for p in payments)
+    amount_due = round(total - total_paid, 2)
+
+    if amount_due <= 0:
+        raise HTTPException(400, "Invoice is already fully paid")
+
+    # Create + confirm Stripe PaymentIntent
+    from stripe_payments import create_payment_intent, is_configured as stripe_configured
+    if not stripe_configured():
+        raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
+
+    result = await create_payment_intent(
+        invoice_id=invoice_id,
+        invoice_number=int(inv.get("invoice_number", 0)),
+        customer_email=customer.get("email", ""),
+        amount=amount_due,
+        payment_method_id=payment_method_id,
+    )
+
+    if not result or result.get("status") != "succeeded":
+        error_detail = result.get("status", "unknown") if result else "no response"
+        raise HTTPException(502, f"Stripe payment failed: {error_detail}")
+
+    # Record payment
+    await _call("record_payment", [
+        customer.get("tenant_id", ""),
+        invoice_id,
+        customer["id"],
+        amount_due,
+        "card",
+        result.get("payment_intent_id", ""),
+        f"Stripe saved card payment — {result.get('payment_intent_id', '')}",
+    ])
+
+    # Update invoice status
+    new_status = "paid"
+    if new_status != inv.get("status"):
+        await _call("update_invoice_status", [invoice_id, new_status])
+
+    return {"ok": True, "payment_intent_id": result.get("payment_intent_id")}
