@@ -957,4 +957,27 @@ export const api = {
     generate: () =>
       apiFetch<{ ok: boolean }>("/recurring-invoices/generate", { method: "POST" }),
   },
+  paymentMethods: {
+    list: (customerId?: string) => {
+      const qs = customerId ? `?customer_id=${encodeURIComponent(customerId)}` : "";
+      return apiFetch<{ payment_methods: any[] }>(`/payment-methods${qs}`);
+    },
+    createSetupIntent: (customer_id: string) =>
+      apiFetch<{ client_secret: string; id: string }>("/payment-methods/setup-intent", {
+        method: "POST",
+        body: JSON.stringify({ customer_id }),
+      }),
+    save: (data: any) =>
+      apiFetch<{ ok: boolean }>("/payment-methods", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    setDefault: (id: string, customer_id: string) =>
+      apiFetch<{ ok: boolean }>(`/payment-methods/${id}/default`, {
+        method: "PUT",
+        body: JSON.stringify({ customer_id }),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/payment-methods/${id}`, { method: "DELETE" }),
+  },
 };

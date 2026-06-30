@@ -92,3 +92,26 @@ async def verify_webhook(payload: bytes, sig_header: str) -> Optional[dict[str, 
     except ValueError as e:
         logger.error("Stripe webhook payload error: %s", e)
         return None
+
+
+async def create_setup_intent(customer_id: str) -> Optional[dict[str, Any]]:
+    """Create a Stripe SetupIntent to securely collect a payment method.
+
+    Returns dict with client_secret, or None if Stripe isn't configured.
+    """
+    if not is_configured():
+        logger.warning("Stripe not configured — skipping setup intent")
+        return None
+
+    init_stripe()
+
+    try:
+        intent = stripe_lib.SetupIntent.create(
+            payment_method_types=["card"],
+            metadata={"customer_id": customer_id},
+        )
+        logger.info("Stripe SetupIntent created for customer %s", customer_id)
+        return {"client_secret": intent.client_secret, "id": intent.id}
+    except StripeError as e:
+        logger.error("Stripe SetupIntent failed: %s", e)
+        return None
