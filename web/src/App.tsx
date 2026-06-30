@@ -5,7 +5,7 @@ import {
   Calendar, Package, FileCheck, ShoppingCart, BarChart3, Settings,
   Menu, Users as UsersIcon, LogOut, ExternalLink, Sun, Moon,
   Download, Upload, History, HeartPulse, ListOrdered, Map, ListChecks,
-  Building2,
+  Building2, Repeat,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -42,12 +42,14 @@ const CustomFieldsPage = lazy(() => import("./pages/CustomFieldsPage"));
 const MapPage = lazy(() => import("./pages/MapPage"));
 const ChecklistTemplatesPage = lazy(() => import("./pages/ChecklistTemplatesPage"));
 const TenantsPage = lazy(() => import("./pages/TenantsPage"));
+const RecurringInvoicesPage = lazy(() => import("./pages/RecurringInvoicesPage"));
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
   | "purchase-orders" | "import-export" | "audit-log"
-  | "health" | "custom-fields" | "checklist" | "map" | "reports" | "settings" | "tenants";
+  | "health" | "custom-fields" | "checklist" | "map" | "reports" | "settings" | "tenants"
+  | "recurring-invoices";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -64,6 +66,7 @@ const navItems: NavItem[] = [
   { id: "map", label: "Map", icon: Map },
   { id: "tickets", label: "Tickets", icon: Ticket },
   { id: "invoices", label: "Invoices", icon: FileText },
+  { id: "recurring-invoices", label: "Recurring", icon: Repeat },
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "appointments", label: "Appointments", icon: Calendar },
   { id: "products", label: "Products", icon: Package },
@@ -218,6 +221,8 @@ function AppShell() {
               return <TicketsPage />;
             case "invoices":
               return <InvoicesPage />;
+            case "recurring-invoices":
+              return <RecurringInvoicesPage />;
             case "payments":
               return <PaymentsPage />;
             case "appointments":

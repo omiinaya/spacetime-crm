@@ -34,6 +34,28 @@ pub use audit::*;
 pub use custom_field::*;
 pub use webhook::*;
 
+// ─── Recurring Invoice Rule ──
+
+#[spacetimedb::table(accessor = recurring_invoice_rules, public)]
+#[derive(Debug, Clone)]
+pub struct RecurringInvoiceRule {
+    #[primary_key]
+    pub id: String,
+    #[index(btree)]
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub name: String,
+    pub frequency: String,
+    pub interval_count: u32,
+    pub next_generation_date: u64,
+    pub last_generated_date: u64,
+    pub due_date_days: u32,
+    pub line_items_json: String,
+    pub status: String,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
 // ─── Invoice + Estimate (defined in lib.rs to avoid cross-module accessor issues) ──
 
 #[spacetimedb::table(accessor = invoices, public)]
@@ -113,6 +135,181 @@ pub struct EstimateLineItem {
     pub unit_price: f64,
     pub total: f64,
     pub sort_order: u32,
+}
+
+// ─── Recurring Invoice Rule reducers ──
+
+#[spacetimedb::reducer]
+pub fn create_recurring_invoice_rule(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    customer_id: String,
+    name: String,
+    frequency: String,
+    interval_count: u32,
+    due_date_days: u32,
+    line_items_json: String,
+    next_generation_date: u64,
+) {
+    let id = make_id("rir", ctx);
+    let now = now_ms(ctx);
+    ctx.db.recurring_invoice_rules().insert(RecurringInvoiceRule {
+        id,
+        tenant_id,
+        customer_id,
+        name,
+        frequency,
+        interval_count,
+        next_generation_date,
+        last_generated_date: 0,
+        due_date_days,
+        line_items_json,
+        status: "active".to_string(),
+        created_at: now,
+        updated_at: now,
+    });
+}
+
+#[spacetimedb::reducer]
+pub fn update_recurring_invoice_rule(
+    ctx: &ReducerContext,
+    id: String,
+    name: String,
+    frequency: String,
+    interval_count: u32,
+    due_date_days: u32,
+    line_items_json: String,
+    next_generation_date: u64,
+    status: String,
+) {
+    if let Some(rule) = ctx.db.recurring_invoice_rules().id().find(&id) {
+        ctx.db.recurring_invoice_rules().id().update(RecurringInvoiceRule {
+            name,
+            frequency,
+            interval_count,
+            due_date_days,
+            line_items_json,
+            next_generation_date,
+            status,
+            updated_at: now_ms(ctx),
+            ..rule
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn delete_recurring_invoice_rule(ctx: &ReducerContext, id: String) {
+    ctx.db.recurring_invoice_rules().id().delete(&id);
+}
+
+#[spacetimedb::reducer]
+pub fn generate_recurring_invoices(ctx: &ReducerContext) {
+    let now = now_ms(ctx);
+    let mut invoice_counter: u64 = 0;
+
+    // Collect all active rules whose next generation date is now or in the past
+    let due_rules: Vec<RecurringInvoiceRule> = ctx
+        .db
+        .recurring_invoice_rules()
+        .iter()
+        .filter(|r| r.status == "active" && r.next_generation_date > 0 && r.next_generation_date <= now)
+        .collect();
+
+    for rule in due_rules {
+        // Skip if customer data is missing
+        let _customer_id = rule.customer_id.clone();
+        if _customer_id.is_empty() {
+            continue;
+        }
+
+        // Calculate next generation date based on frequency
+        let ms_per_day: u64 = 86400000;
+        let next_gen = match rule.frequency.as_str() {
+            "daily" => now + ms_per_day * rule.interval_count as u64,
+            "weekly" => now + ms_per_day * 7 * rule.interval_count as u64,
+            "biweekly" => now + ms_per_day * 14 * rule.interval_count as u64,
+            "monthly" => now + ms_per_day * 30 * rule.interval_count as u64,
+            "quarterly" => now + ms_per_day * 90 * rule.interval_count as u64,
+            "yearly" => now + ms_per_day * 365 * rule.interval_count as u64,
+            _ => now + ms_per_day * 30,
+        };
+
+        // Create invoice
+        let inv_id = format!("ririnv_{}_{}", now, invoice_counter);
+        invoice_counter += 1;
+        let invoice_number = ctx.db.invoices().iter().count() as u64 + 10001;
+        let due_date = now + rule.due_date_days as u64 * ms_per_day;
+
+        ctx.db.invoices().insert(Invoice {
+            id: inv_id.clone(),
+            tenant_id: rule.tenant_id.clone(),
+            customer_id: rule.customer_id.clone(),
+            ticket_id: String::new(),
+            invoice_number,
+            status: "draft".to_string(),
+            subtotal: 0.0,
+            tax_rate: 0.0,
+            tax_amount: 0.0,
+            total: 0.0,
+            discount_amount: 0.0,
+            discount_percent: 0.0,
+            notes: format!("Auto-generated from recurring rule: {}", rule.name),
+            terms: String::new(),
+            due_date,
+            created_at: now,
+            updated_at: now,
+        });
+
+        // Parse line items JSON and insert
+        if let Ok(items) = serde_json::from_str::<Vec<serde_json::Value>>(&rule.line_items_json) {
+            for (i, item) in items.iter().enumerate() {
+                let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item").to_string();
+                let qty = item.get("quantity").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                let price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let total = qty * price;
+                let li_id = format!("riln_{}_{}_{}", now, invoice_counter - 1, i);
+                ctx.db.invoice_line_items().insert(InvoiceLineItem {
+                    id: li_id,
+                    tenant_id: rule.tenant_id.clone(),
+                    invoice_id: inv_id.clone(),
+                    item_type: item.get("item_type").and_then(|v| v.as_str()).unwrap_or("service").to_string(),
+                    description: desc,
+                    quantity: qty,
+                    unit_price: price,
+                    total,
+                    sort_order: i as u32,
+                });
+            }
+
+            // Recalc invoice totals
+            if let Some(inv) = ctx.db.invoices().id().find(&inv_id) {
+                let items: Vec<InvoiceLineItem> = ctx
+                    .db
+                    .invoice_line_items()
+                    .iter()
+                    .filter(|i| i.invoice_id == inv_id)
+                    .collect();
+                let subtotal: f64 = items.iter().map(|i| i.total).sum();
+                let tax_amount = subtotal * inv.tax_rate / 100.0;
+                let total = subtotal + tax_amount - inv.discount_amount;
+                ctx.db.invoices().id().update(Invoice {
+                    subtotal,
+                    tax_amount,
+                    total,
+                    updated_at: now,
+                    ..inv
+                });
+            }
+        }
+
+        // Update rule: set next generation date and last generated date
+        ctx.db.recurring_invoice_rules().id().update(RecurringInvoiceRule {
+            next_generation_date: next_gen,
+            last_generated_date: now,
+            updated_at: now,
+            ..rule
+        });
+    }
 }
 
 // ─── Reducers ──
