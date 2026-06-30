@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-06-30
-| Overall completeness: ~92% (+5% since last assessment)
+| Overall completeness: ~93% (+1% since last assessment)
 
 ---
 
