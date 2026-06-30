@@ -13,7 +13,7 @@
 | Backend API (Python) | ~3,960 | 91% | 22% (API paths) | 3 major, 2 minor |
 | Frontend (TypeScript) | 7,530 | 76% | 7% (unit) | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
-| **Tests** | **~7,100 (378 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
+| **Tests** | **~7,300 (396 tests)** | **Added this sprint** | **N/A** | **2 gaps** |
 | **Overall** | **~19,200** | **~92%** | **41%** | **9 items** |
 
 ### 🟢 Sprint Wins (since last assessment)
@@ -37,7 +37,8 @@
 - **SLA config UI — ADDED** — Editable SLA thresholds from SettingsPage. STDB: `sla_configs` table with upsert. Backend: GET/POST `/api/tickets/sla-settings` with validation. Reads from DB with fallback to defaults. Frontend: inline edit controls in SettingsPage with save/cancel. 5 new backend tests.
 
 - **Mobile responsive layout — IMPROVED** — TicketsPage: header flex-wrap so buttons/breach badge don't overflow, filter buttons wrap on narrow screens, detail panel hides list with back button on mobile. Foundation for responsive design across all pages.
-
+- **Mobile responsive — FULL SWEEP** — Added responsive header wrapping to all 15 page-level headers. Mobile back buttons on Tickets, Products, Invoices, Customers detail panels. Product form grid 1-col on mobile. 94 frontend tests green.
+- **Rust STDB unit tests — ADDED** — 18 tests: Ticket (CRUD, status, assign, notes, timer, tenant isolation, edge cases), Payment (record, delete, edge cases), Product (create, update, delete, edge cases), Purchase Order (create, status). Zero runtime deps. Compilation-only (wasm target).
 - **`server/main.py`: reload=True** — uvicorn hot-reload for faster dev iteration.
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
