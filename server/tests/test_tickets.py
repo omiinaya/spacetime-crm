@@ -151,3 +151,39 @@ class TestProductFlow:
         )
         data = assert_ok(resp)
         assert "products" in data
+
+
+class TestTicketSLA:
+    """SLA breach detection."""
+
+    def test_sla_breach_list(self, auth_headers: dict):
+        """SLA breaches endpoint returns a list with count."""
+        customer = create_customer(auth_headers, first_name="SLA", last_name="Test")
+        httpx.post(
+            f"{SERVER_URL}/api/tickets",
+            json={"customer_id": customer["id"], "title": "SLA breach test", "priority": "urgent"},
+            headers=auth_headers, timeout=10,
+        )
+        resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-breached", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "breaches" in data
+        assert "count" in data
+        # The just-created ticket may or may not be breached depending on elapsed time
+        assert isinstance(data["count"], int)
+
+    def test_sla_targets(self, auth_headers: dict):
+        """SLA targets endpoint returns priority thresholds."""
+        resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "targets" in data
+        targets = data["targets"]
+        assert "urgent" in targets
+        assert targets["urgent"] == 4
+        assert targets["high"] == 24
+        assert targets["medium"] == 72
+        assert targets["low"] == 120
+
+    def test_sla_breach_unauthed(self, client: httpx.Client):
+        """SLA endpoints require auth."""
+        resp = client.get("/api/tickets/sla-breached", timeout=10)
+        assert resp.status_code in (401, 403)

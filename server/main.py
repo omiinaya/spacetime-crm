@@ -62,4 +62,4 @@ async def spa_fallback(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=True)

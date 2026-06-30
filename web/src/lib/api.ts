@@ -117,6 +117,16 @@ export interface TicketTimer {
   running: boolean;
 }
 
+export interface TicketSlaBreach {
+  id: string;
+  ticket_number: number;
+  title: string;
+  priority: string;
+  created_at: number;
+  elapsed_hours: number;
+  target_hours: number;
+}
+
 export interface Invoice {
   id: string;
   customer_id: string;
@@ -510,6 +520,12 @@ export const api = {
     },
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/tickets/${id}`, { method: "DELETE" }),
+    sla: {
+      breaches: () =>
+        apiFetch<{ breaches: TicketSlaBreach[]; count: number }>("/tickets/sla-breached"),
+      targets: () =>
+        apiFetch<{ targets: Record<string, number> }>("/tickets/sla-targets"),
+    },
     timers: {
       list: (ticketId: string) =>
         apiFetch<{ timers: TicketTimer[] }>(`/tickets/${ticketId}/timers`),

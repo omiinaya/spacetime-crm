@@ -7,7 +7,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
-import { Ticket as TicketIcon, Plus, MessageSquare, Timer, StopCircle, Play, ListChecks } from "lucide-react";
+import { Ticket as TicketIcon, Plus, MessageSquare, Timer, StopCircle, Play, ListChecks, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
 import { usePagination } from "../lib/usePagination";
@@ -70,6 +70,15 @@ export default function TicketsPage() {
 
   const tickets = data?.tickets ?? [];
   const customers = data?.customers ?? [];
+
+  // SLA breaches — auto-refresh
+  const { data: breachData } = useQuery({
+    queryKey: ["tickets", "sla-breaches"],
+    queryFn: () => api.tickets.sla.breaches(),
+    refetchInterval: 60_000,
+  });
+  const breachCount = breachData?.count ?? 0;
+  const breachedIds = new Set(breachData?.breaches?.map((b) => b.id) ?? []);
 
   // Notes query — only active when a ticket is selected
   const { data: notesData } = useQuery({
@@ -225,8 +234,14 @@ export default function TicketsPage() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold">Tickets</h1>
+          {breachCount > 0 && (
+            <Badge variant="destructive" className="text-xs animate-pulse">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {breachCount} SLA breach{breachCount !== 1 ? "es" : ""}
+            </Badge>
+          )}
           <p className="text-sm text-muted-foreground mt-1">Manage repair tickets</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
@@ -279,7 +294,7 @@ export default function TicketsPage() {
           {tickets.map((t) => {
             const cust = customers.find((c) => c.id === t.customer_id);
             return (
-              <Card key={t.id} className={`cursor-pointer transition-colors ${selectedTicket?.id === t.id ? "border-primary" : "hover:border-primary/30"}`} onClick={() => viewTicket(t)}>
+              <Card key={t.id} className={`cursor-pointer transition-colors ${selectedTicket?.id === t.id ? "border-primary" : "hover:border-primary/30"} ${breachedIds.has(t.id) ? "border-l-red-500 border-l-4" : ""}`} onClick={() => viewTicket(t)}>
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">

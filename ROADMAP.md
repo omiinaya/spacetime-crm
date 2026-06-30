@@ -13,8 +13,8 @@
 | Backend API (Python) | ~3,960 | 91% | 22% (API paths) | 3 major, 2 minor |
 | Frontend (TypeScript) | 7,530 | 76% | 7% (unit) | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
-| **Tests** | **~6,700 (364 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
-| **Overall** | **~17,800** | **~89%** | **40%** | **9 items** |
+| **Tests** | **~6,800 (367 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
+| **Overall** | **~17,900** | **~89%** | **40%** | **9 items** |
 
 ### 🟢 Sprint Wins (since last assessment)
 
@@ -27,6 +27,10 @@
 - **Barcode quick-lookup — ADDED** — `GET /api/products/by-barcode/{barcode}` for instant product lookup by scanned barcode. Scan input in ProductsPage search bar triggers API and selects product. 2 new backend tests.
 
 - **Ticket SLA urgency — ADDED** — Live color-coded urgency indicators on ticket cards: green (<4h), amber (4-24h), red (24-72h), dark red (>72h) with hours/days label. Hover shows exact timestamp.
+
+- **SLA breach detection — ADDED** — `GET /api/tickets/sla-breached` finds open tickets past their priority-based thresholds (urgent=4h, high=24h, medium=72h, low=120h). Frontend: pulsing red badge counter in header + red left border on breached ticket cards. Auto-refreshes every 60s. 3 new backend tests.
+
+- **`server/main.py`: reload=True** — uvicorn hot-reload for faster dev iteration.
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
 - **Test coverage — 262 TESTS (25 modules)** — Added 43 new tests covering the remaining untested modules: users, health, dashboard, export/import, report schedules, plus 5 more PO tests fixed by product search bug. Fixed TWO bugs found by tests: (a) User `name` field has #[unique] — tests now use timestamped names, (b) Product search filtered after pagination slice — now fetches 1000 rows before filtering. Phase 4 → 92%.
@@ -146,12 +150,12 @@
 | Area | Status | Details |
 |------|--------|---------|
 | Rust unit tests | ❌ 0 tests | 70 reducers, 25 tables — zero validation |
-| Python backend tests | ✅ 270 tests (25 files) | All 23 route modules covered. Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize, webhooks, settings, custom fields, recurring invoices, payment methods, tax rates, checklists, users, health, dashboard, export/import, report schedules |
+| Python backend tests | ✅ 273 tests (25 files) | All 23 route modules covered. Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize, webhooks, settings, custom fields, recurring invoices, payment methods, tax rates, checklists, users, health, dashboard, export/import, report schedules |
 | TypeScript frontend tests | ✅ 94 tests (13 suites) | Button, Card, Badge, Input, Pagination, ErrorBoundary, Auth, Utils, + 5 pages (Health, Login, ForgotPassword, ResetPassword, Import/Export) |
 | E2E tests | ✅ 33 tests (5 suites) | Navigation, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test (backend + frontend + Rust check), lint |
 | **API path coverage** | **26/26 (100%)** | All route modules covered |
-| **Endpoint coverage** | **~98%** | 364 tests (270 backend + 94 frontend) |
+| **Endpoint coverage** | **~98%** | 367 tests (273 backend + 94 frontend) |
 
 ### Test quality assessment
 
