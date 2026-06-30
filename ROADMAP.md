@@ -13,12 +13,20 @@
 | Backend API (Python) | ~3,960 | 91% | 22% (API paths) | 3 major, 2 minor |
 | Frontend (TypeScript) | 7,530 | 76% | 7% (unit) | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
-| **Tests** | **~6,500 (362 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
-| **Overall** | **~17,600** | **~89%** | **40%** | **9 items** |
+| **Tests** | **~6,700 (364 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
+| **Overall** | **~17,800** | **~89%** | **40%** | **9 items** |
 
 ### 🟢 Sprint Wins (since last assessment)
 
 - **Purchase order approvals — ADDED** — New approval workflow for POs: submit-for-approval, approve, and reject functions. Status flow: draft → pending_approval → approved → sent → partial → received → cancelled. Approved PO shows approver name and timestamp. 6 new backend tests. Total coverage: 268 backend + 94 frontend = 362 tests.
+
+- **Barcode label printing — ADDED** — Print 2×1 labels for any product with a barcode. jsbarcode generates inline SVG, opens print dialog with product name, price, SKU. Printer icon on each product card + detail panel.
+
+- **Rust warnings eliminated — CLEANUP** — Fixed 7 hidden_glob_reexports warnings (mod→pub mod) and unused import (cfg(test) gate). Zero-warning STDB build.
+
+- **Barcode quick-lookup — ADDED** — `GET /api/products/by-barcode/{barcode}` for instant product lookup by scanned barcode. Scan input in ProductsPage search bar triggers API and selects product. 2 new backend tests.
+
+- **Ticket SLA urgency — ADDED** — Live color-coded urgency indicators on ticket cards: green (<4h), amber (4-24h), red (24-72h), dark red (>72h) with hours/days label. Hover shows exact timestamp.
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
 - **Test coverage — 262 TESTS (25 modules)** — Added 43 new tests covering the remaining untested modules: users, health, dashboard, export/import, report schedules, plus 5 more PO tests fixed by product search bug. Fixed TWO bugs found by tests: (a) User `name` field has #[unique] — tests now use timestamped names, (b) Product search filtered after pagination slice — now fetches 1000 rows before filtering. Phase 4 → 92%.
@@ -138,12 +146,12 @@
 | Area | Status | Details |
 |------|--------|---------|
 | Rust unit tests | ❌ 0 tests | 70 reducers, 25 tables — zero validation |
-| Python backend tests | ✅ 262 tests (25 files) | All 23 route modules covered. Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize, webhooks, settings, custom fields, recurring invoices, payment methods, tax rates, checklists, users, health, dashboard, export/import, report schedules |
+| Python backend tests | ✅ 270 tests (25 files) | All 23 route modules covered. Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize, webhooks, settings, custom fields, recurring invoices, payment methods, tax rates, checklists, users, health, dashboard, export/import, report schedules |
 | TypeScript frontend tests | ✅ 94 tests (13 suites) | Button, Card, Badge, Input, Pagination, ErrorBoundary, Auth, Utils, + 5 pages (Health, Login, ForgotPassword, ResetPassword, Import/Export) |
 | E2E tests | ✅ 33 tests (5 suites) | Navigation, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test (backend + frontend + Rust check), lint |
 | **API path coverage** | **26/26 (100%)** | All route modules covered |
-| **Endpoint coverage** | **~98%** | 356 tests (262 backend + 94 frontend) |
+| **Endpoint coverage** | **~98%** | 364 tests (270 backend + 94 frontend) |
 
 ### Test quality assessment
 
