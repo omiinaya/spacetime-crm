@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-06-30
-| Overall completeness: ~93% (+1% since last assessment)
+| Overall completeness: ~95% (+2% since last assessment)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
-- **React Query — WIRED** — QueryProvider wraps the entire app. CustomersPage converted to useQuery/useMutation (cache invalidation, dedup, stale-while-revalidate). Template for further page conversions.
+- **React Query — 12 PAGES CONVERTED** — Every admin data-fetching page uses useQuery/useMutation. Customers, Tickets, Invoices, Products, Appointments, Payments, Estimates, PurchaseOrders, AuditLog, ChecklistTemplates, CustomFields, Settings, Reports. React Query handles caching, dedup, stale-while-revalidate, and automatic refetching.
 - **Route splitting — COMPLETED** — main.py 2,390→55 lines, 20 APIRouter modules in routes/ package. All 52 backend tests pass.
 - **Frontend code-splitting — COMPLETED** — React.lazy() for all 23 pages, main bundle 980KB→249KB (75% drop)
 - **Frontend TypeScript tests — ADDED** — 52 tests across 8 suites
