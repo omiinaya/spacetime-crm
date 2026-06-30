@@ -44,11 +44,12 @@ const ChecklistTemplatesPage = lazy(() => import("./pages/ChecklistTemplatesPage
 const TenantsPage = lazy(() => import("./pages/TenantsPage"));
 const RecurringInvoicesPage = lazy(() => import("./pages/RecurringInvoicesPage"));
 const PaymentMethodsPage = lazy(() => import("./pages/PaymentMethodsPage"));
+const PosPage = lazy(() => import("./pages/PosPage"));
 
 type PageId =
   | "dashboard" | "customers" | "tickets" | "invoices"
   | "payments" | "appointments" | "products" | "estimates"
-  | "purchase-orders" | "import-export" | "audit-log"
+  | "purchase-orders" | "import-export" | "audit-log" | "pos"
   | "health" | "custom-fields" | "checklist" | "map" | "reports" | "settings" | "tenants"
   | "recurring-invoices" | "payment-methods";
 
@@ -74,6 +75,7 @@ const navItems: NavItem[] = [
   { id: "products", label: "Products", icon: Package },
   { id: "estimates", label: "Estimates", icon: FileCheck },
   { id: "purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
+  { id: "pos", label: "POS", icon: CreditCard },
   { id: "import-export", label: "Import/Export", icon: Download },
   { id: "custom-fields", label: "Custom Fields", icon: ListOrdered },
   { id: "checklist", label: "Checklists", icon: ListChecks },
@@ -229,6 +231,8 @@ function AppShell() {
               return <PaymentsPage />;
             case "payment-methods":
               return <PaymentMethodsPage />;
+            case "pos":
+              return <PosPage />;
             case "appointments":
               return <AppointmentsPage />;
             case "products":

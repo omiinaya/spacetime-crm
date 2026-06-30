@@ -15,6 +15,7 @@ pub mod audit;
 pub mod custom_field;
 pub mod customer_geolocation;
 pub mod checklist;
+pub mod pos;
 pub mod webhook;
 pub mod tenant;
 #[cfg(test)]
@@ -31,6 +32,7 @@ pub use purchase_order::*;
 pub use inventory::*;
 pub use tax_rate::*;
 pub use user::*;
+pub use pos::*;
 pub use audit::*;
 pub use custom_field::*;
 pub use webhook::*;
