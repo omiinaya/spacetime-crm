@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-07-01
-| Overall completeness: ~98% (+1% since last assessment)
+| Overall completeness: ~99% (+1% since last assessment)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
-- **Email templates — Jinja2-ified** — 6 notification templates moved from hardcoded `f`-strings in `mail.py` to Jinja2 templates in `server/templates/email/`. Base layout with extendable blocks. Makes customization trivial (just edit HTML files, no Python changes).
+- **Recurring appointments — ADDED** — STDB module: `series_id` + `recurrence_rule` fields on Appointment, `set_recurrence` and `generate_next_occurrence` reducers. API: create with recurrence, set recurrence, generate-next endpoint, recurring-series list. Frontend: recurrence dropdown in form, "Recurring" panel with series list + "Generate Next" button.
 - **Low Stock Alerts — ADDED** — `GET /api/products/low-stock` lists products below threshold. `POST /api/products/low-stock/notify` sends email to admin with a formatted table. Frontend shows alert banner, product card badges, and detail panel display.
 - **`update_product` reducer — ADDED** — STDB module now supports updating name, sku, barcode, description, category, price, cost, `min_stock`, and `location` via `PUT /api/products/:id`.
 - **Product form extended** — `min_stock` and `location` fields in the create/edit form.
@@ -76,7 +76,7 @@
 - [x] Purchase order receiving (receive against PO, auto-update stock)
 - [x] Tax rate configuration
 |- [x] **Email templates** — Jinja2 email templates with base layout, customizable HTML files
-|- [ ] 📌 **Recurring appointments** — no repeat/schedule pattern
+|- [x] **Recurring appointments** — STDB series_id+recurrence_rule, generate-next endpoint, frontend recurrence UI
 |- [x] **Low stock alerts** — notification endpoint triggers email to admin
 
 ---

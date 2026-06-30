@@ -168,6 +168,8 @@ export interface Appointment {
   all_day: boolean;
   status: string;
   color: string;
+  series_id: string;
+  recurrence_rule: string;
   created_at: number;
 }
 export interface Product {
@@ -584,6 +586,24 @@ export const api = {
       }),
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/appointments/${id}`, { method: "DELETE" }),
+    recurrence: {
+      set: (id: string, rule: string) =>
+        apiFetch<{ ok: boolean }>(`/appointments/${id}/recurrence`, {
+          method: "PUT",
+          body: JSON.stringify({ recurrence_rule: rule }),
+        }),
+    },
+    generateNext: (seriesId: string) =>
+      apiFetch<{ ok: boolean; start_time?: number; end_time?: number; error?: string }>(
+        "/appointments/generate-next", {
+          method: "POST",
+          body: JSON.stringify({ series_id: seriesId }),
+        }
+      ),
+    recurring: {
+      list: () =>
+        apiFetch<{ series: Appointment[] }>("/appointments/recurring"),
+    },
   },
   products: {
     list: (search?: string, offset?: number, limit?: number) => {
