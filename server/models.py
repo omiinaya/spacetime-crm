@@ -133,10 +133,20 @@ class AppointmentCreate(BaseModel):
     start_time: int = Field(..., ge=0)
     end_time: int = Field(..., ge=0)
     all_day: bool = False
+    series_id: str = Field(default="", max_length=100)
+    recurrence_rule: str = Field(default="", max_length=50)
 
 
 class AppointmentStatusUpdate(BaseModel):
     status: str = Field(..., min_length=1, max_length=50)
+
+
+class AppointmentRecurrence(BaseModel):
+    recurrence_rule: str = Field(..., max_length=50)
+
+
+class GenerateNextOccurrence(BaseModel):
+    series_id: str = Field(..., min_length=1, max_length=100)
 
 
 # ─── Products ────────────────────────────────────────────────────

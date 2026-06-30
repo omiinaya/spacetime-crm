@@ -8,9 +8,16 @@ from helpers import (
     _sql, _paginated, _call, _log_audit, _fire_webhook,
     require_role, logger,
 )
-from models import AppointmentCreate, AppointmentStatusUpdate
+from models import AppointmentCreate, AppointmentStatusUpdate, AppointmentRecurrence, GenerateNextOccurrence
 
 router = APIRouter()
+
+_RECURRENCE_INTERVALS: dict[str, int] = {
+    "daily": 86_400_000,      # 24h
+    "weekly": 604_800_000,     # 7d
+    "biweekly": 1_209_600_000, # 14d
+    "monthly": 2_592_000_000,  # 30d (approx)
+}
 
 
 @router.get("/api/appointments")
@@ -24,6 +31,22 @@ async def list_appointments(offset: int = 0, limit: int = 50, user: dict = Depen
     return {"appointments": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@router.get("/api/appointments/recurring")
+async def list_recurring_series(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List recurring appointment series (parent appointments with recurrence_rule set)."""
+    rows = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND recurrence_rule != '' AND series_id = ''")
+    series = []
+    for s in rows:
+        children = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{s['id']}'")
+        next_time = max([c["start_time"] for c in children]) if children else s["start_time"]
+        series.append({
+            **s,
+            "occurrence_count": len(children),
+            "next_occurrence": next_time,
+        })
+    return {"series": series}
+
+
 @router.post("/api/appointments")
 async def create_appointment(body: AppointmentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_appointment", [
@@ -35,6 +58,8 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
         body.start_time,
         body.end_time,
         body.all_day,
+        body.series_id,
+        body.recurrence_rule,
     ])
 
     async def _notify():
@@ -58,8 +83,51 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
         "title": body.title,
         "customer_id": body.customer_id,
         "start_time": body.start_time,
+        "recurrence_rule": body.recurrence_rule,
     }))
     return {"ok": True}
+
+
+@router.put("/api/appointments/{appt_id}/recurrence")
+async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Set or update the recurrence rule on an appointment (makes it a series parent)."""
+    await _call("set_recurrence", [appt_id, body.recurrence_rule])
+    await _log_audit(user, "update_recurrence", "appointment", appt_id, f"rule={body.recurrence_rule}")
+    return {"ok": True}
+
+
+@router.post("/api/appointments/generate-next")
+async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Generate the next occurrence of a recurring appointment series."""
+    # Find the parent series
+    rows = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND id = '{body.series_id}' AND recurrence_rule != ''")
+    if not rows:
+        return {"ok": False, "error": "Series not found"}
+    parent = rows[0]
+
+    rule = parent.get("recurrence_rule", "")
+    interval_ms = _RECURRENCE_INTERVALS.get(rule)
+    if not interval_ms:
+        return {"ok": False, "error": f"Unknown recurrence rule: {rule}"}
+
+    # Find the latest occurrence without ORDER BY (STDB limitation)
+    children = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{body.series_id}'")
+
+    if children:
+        # Manual sort — find the largest start_time
+        latest = max(children, key=lambda c: c.get("start_time", 0))
+        next_start = latest["start_time"] + interval_ms
+        duration = latest["end_time"] - latest["start_time"]
+        next_end = next_start + duration
+    else:
+        # No children yet — use the parent's time + one interval
+        next_start = parent["start_time"] + interval_ms
+        duration = parent["end_time"] - parent["start_time"]
+        next_end = next_start + duration
+
+    await _call("generate_next_occurrence", [body.series_id, next_start, next_end, rule])
+    await _log_audit(user, "generate_occurrence", "appointment", body.series_id, f"start={next_start}")
+    return {"ok": True, "start_time": next_start, "end_time": next_end}
 
 
 @router.put("/api/appointments/{appt_id}/status")

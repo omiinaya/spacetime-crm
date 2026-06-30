@@ -10,7 +10,7 @@ import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
 import MonthCalendar from "../components/MonthCalendar";
-import { Plus, Trash2, ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
+import { Plus, Trash2, Calendar, Clock, Repeat, Play } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -25,10 +25,22 @@ const statusColors: Record<string, "default" | "secondary" | "warning" | "succes
   cancelled: "destructive",
 };
 
+const RECURRENCE_LABELS: Record<string, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  biweekly: "Biweekly",
+  monthly: "Monthly",
+};
+
 export default function AppointmentsPage() {
   const pag = usePagination(PAGE_SIZE);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", ticket_id: "", title: "", description: "", start_time: "", end_time: "", all_day: false });
+  const [showRecurringPanel, setShowRecurringPanel] = useState(false);
+  const [form, setForm] = useState({
+    customer_id: "", ticket_id: "", title: "", description: "",
+    start_time: "", end_time: "", all_day: false,
+    series_id: "", recurrence_rule: "",
+  });
 
   // Calendar state
   const now = new Date();
@@ -57,8 +69,16 @@ export default function AppointmentsPage() {
     staleTime: 60_000,
   });
 
+  // ── React Query: recurring series ──
+  const { data: recurringData } = useQuery({
+    queryKey: ["appointments", "recurring"],
+    queryFn: () => api.appointments.recurring.list(),
+    staleTime: 30_000,
+  });
+
   const appts = apptsData?.appointments ?? [];
   const customers = customersData?.customers ?? [];
+  const recurringSeries = recurringData?.series ?? [];
 
   // ── Mutations ──
   const createMutation = useMutation({
@@ -71,8 +91,9 @@ export default function AppointmentsPage() {
     onSuccess: () => {
       toast.success("Appointment created");
       setShowForm(false);
-      setForm({ customer_id: "", ticket_id: "", title: "", description: "", start_time: "", end_time: "", all_day: false });
+      setForm({ customer_id: "", ticket_id: "", title: "", description: "", start_time: "", end_time: "", all_day: false, series_id: "", recurrence_rule: "" });
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments", "recurring"] });
     },
     onError: () => {
       toast.error("Failed to create appointment");
@@ -92,10 +113,25 @@ export default function AppointmentsPage() {
     onSuccess: () => {
       toast.success("Appointment deleted");
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments", "recurring"] });
     },
     onError: () => {
       toast.error("Failed to delete appointment");
     },
+  });
+
+  const generateNextMutation = useMutation({
+    mutationFn: (seriesId: string) => api.appointments.generateNext(seriesId),
+    onSuccess: (res) => {
+      if (res.ok) {
+        toast.success("Next occurrence created");
+        queryClient.invalidateQueries({ queryKey: ["appointments"] });
+        queryClient.invalidateQueries({ queryKey: ["appointments", "recurring"] });
+      } else {
+        toast.error(res.error || "Failed to generate next");
+      }
+    },
+    onError: () => toast.error("Failed to generate next occurrence"),
   });
 
   const handleCreate = () => createMutation.mutate();
@@ -133,10 +169,56 @@ export default function AppointmentsPage() {
           <h1 className="text-2xl font-bold">Appointments</h1>
           <p className="text-sm text-muted-foreground mt-1">Schedule and manage appointments</p>
         </div>
-        <Button onClick={() => { setForm({ ...form, start_time: "", end_time: "" }); setShowForm(true); }}>
-          <Plus className="h-4 w-4 mr-1.5" />New Appointment
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowRecurringPanel(!showRecurringPanel)}>
+            <Repeat className="h-4 w-4 mr-1.5" />Recurring
+          </Button>
+          <Button onClick={() => { setForm({ ...form, start_time: "", end_time: "", recurrence_rule: "" }); setShowForm(true); }}>
+            <Plus className="h-4 w-4 mr-1.5" />New Appointment
+          </Button>
+        </div>
       </div>
+
+      {/* Recurring series panel */}
+      {showRecurringPanel && (
+        <Card className="border-indigo-500/30">
+          <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Recurring Series</CardTitle></CardHeader>
+          <CardContent>
+            {recurringSeries.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No recurring appointment series yet. Set a recurrence rule when creating an appointment.
+              </p>
+            )}
+            <div className="space-y-2">
+              {recurringSeries.map((s) => (
+                <div key={s.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Repeat className="h-4 w-4 text-indigo-400 shrink-0" />
+                      <span className="font-medium">{s.title}</span>
+                      <Badge variant="outline" className="text-[10px]">{RECURRENCE_LABELS[s.recurrence_rule] || s.recurrence_rule}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {customerName(s.customer_id)}
+                      {(s as any).occurrence_count > 0 && (
+                        <span> &middot; {(s as any).occurrence_count} occurrence{(s as any).occurrence_count !== 1 ? "s" : ""}</span>
+                      )}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => generateNextMutation.mutate(s.id)}
+                    disabled={generateNextMutation.isPending}
+                  >
+                    <Play className="h-3.5 w-3.5 mr-1" /> Generate Next
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Calendar + Day detail split */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -196,6 +278,7 @@ export default function AppointmentsPage() {
             const startStr = new Date(a.start_time).toLocaleTimeString("en-US", {
               hour: "numeric", minute: "2-digit",
             });
+            const isRecurring = a.recurrence_rule !== "" && a.series_id === "";
             return (
               <Card key={a.id}>
                 <CardContent className="pt-4">
@@ -203,6 +286,12 @@ export default function AppointmentsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant={statusColors[a.status] || "outline"}>{a.status}</Badge>
+                        {isRecurring && (
+                          <Badge variant="outline" className="text-[10px] border-indigo-500/40 text-indigo-400">
+                            <Repeat className="h-3 w-3 mr-0.5 inline" />
+                            {RECURRENCE_LABELS[a.recurrence_rule] || a.recurrence_rule}
+                          </Badge>
+                        )}
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" /> {startStr}
                         </span>
@@ -257,6 +346,21 @@ export default function AppointmentsPage() {
               <Input type="datetime-local" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
             </div>
             <Input placeholder="Ticket ID (optional)" value={form.ticket_id} onChange={(e) => setForm({ ...form, ticket_id: e.target.value })} />
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={form.recurrence_rule} onChange={(e) => setForm({ ...form, recurrence_rule: e.target.value })}>
+                <option value="">No repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly</option>
+                <option value="monthly">Monthly</option>
+              </Select>
+            </div>
+            {form.recurrence_rule && (
+              <p className="text-xs text-indigo-400">
+                <Repeat className="h-3 w-3 inline mr-1" />
+                This will create a recurring series. Use "Generate Next" to create future occurrences.
+              </p>
+            )}
             <div className="flex gap-2">
               <Button onClick={handleCreate}>Create</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>

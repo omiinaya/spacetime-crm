@@ -109,17 +109,23 @@ stdb: true
 98|
 99|### Essential Commands
 100|
-101|```bash
-102|# Start SpacetimeDB
-103|spacetime start -l 3001
-104|
-105|# Publish STDB module (after changing Rust code)
-106|cd server/spacetimedb
-107|cargo build --release --target wasm32-unknown-unknown
-108|spacetime publish -s local-3001 --yes spacetime-crm
-109|
-110|# Start API server
-111|cd server && cp -n .env.example .env 2>/dev/null; python3 main.py
+```bash
+# Start SpacetimeDB
+spacetime start -l 3001
+
+# Publish STDB module (after changing Rust code)
+cd server/spacetimedb
+cargo build --release --target wasm32-unknown-unknown
+spacetime publish -s local-3001 --yes spacetime-crm
+
+# After publish with --delete-data, re-bootstrap:
+python3 scripts/bootstrap.py  # creates admin user + tenant
+python3 scripts/seed-demo.py   # seeds demo data
+# Or combined:
+bash scripts/reseed.sh
+
+# Start API server
+cd server && cp -n .env.example .env 2>/dev/null; python3 main.py
 112|
 113|# Start frontend dev server
 114|cd web && npm run dev
