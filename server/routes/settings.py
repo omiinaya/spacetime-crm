@@ -1,7 +1,5 @@
 """Settings routes — Mail + SMS."""
-from __future__ import annotations
-
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from helpers import (
     require_role, logger,

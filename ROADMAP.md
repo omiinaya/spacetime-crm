@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** 2026-07-01
-| Overall completeness: ~100% (Phase 4 complete, PO approval workflow added)
+| **Last assessed:** 2026-07-02
+| Overall completeness: ~90% (Phase 4 complete, PO approvals, barcode labels, SLA tracking, breach detection)
 
 ---
 
@@ -219,14 +219,14 @@
 | **Pydantic validation** | **🟢 Started** | ✅ Expected | **2/51 endpoints** |
 | Mobile app | ❌ Not started | ⭐ Gap | — |
 | POS / counter sale | ❌ Not started | ⭐ Gap | — |
-| Purchase order approvals | ❌ Not started | ⭐ Gap | — |
+| Purchase order approvals | ✅ Complete | ✅ Parity | Submit/approve/reject |
 | Automated recurring invoices | ✅ Complete | ✅ Parity | HTML generation |
 | Customer payment methods | ✅ Complete | ✅ Parity | Stripe SetupIntent |
-| Inventory barcode labels | ❌ Not started | ✅ Gap | — |
+| Inventory barcode labels | ✅ Complete | ✅ Gap | JsBarcode print |
 | Multi-currency | ❌ Not started | ⭐ Gap | — |
 | 2FA / SSO | ❌ Not started | ⭐ Gap | — |
 | API rate limiting | ✅ Complete | ✅ Parity | slowapi 100/min |
-| SLA tracking | ❌ Not started | ⭐ Gap | — |
+| SLA tracking | ✅ Complete | ✅ Parity | Priority-based thresholds |
 | Offline mode | ❌ Not started | ❌ Not priority | — |
 
 ### Verdict

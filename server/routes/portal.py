@@ -1,6 +1,4 @@
 """Customer portal routes + Stripe checkout session creation."""
-from __future__ import annotations
-
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
