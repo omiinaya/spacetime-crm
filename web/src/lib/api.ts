@@ -647,6 +647,8 @@ export const api = {
       }),
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/products/${id}`, { method: "DELETE" }),
+    byBarcode: (barcode: string) =>
+      apiFetch<{ product: Product }>(`/products/by-barcode/${encodeURIComponent(barcode)}`),
     adjustments: {
       list: (productId: string) =>
         apiFetch<{ adjustments: InventoryAdjustment[] }>(
