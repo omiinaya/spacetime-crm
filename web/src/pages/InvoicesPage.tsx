@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import { api, Invoice, Customer, InvoiceLineItem, TaxRate } from "../lib/api";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
+import { api, Invoice, Customer, TaxRate } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -23,79 +25,113 @@ const statusColors: Record<string, "default" | "warning" | "success" | "destruct
 
 export default function InvoicesPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "" });
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
 
-  const load = async (search: string, offset: number) => {
-    try {
-      const [iRes, cRes, tRes] = await Promise.all([api.invoices.list(search, offset, PAGE_SIZE), api.customers.list(), api.taxRates.list()]);
-      setInvoices(iRes.invoices);
-      setCustomers(cRes.customers);
-      setTaxRates(tRes.tax_rates);
-      pag.setTotal(iRes.total);
-    } catch { toast.error("Failed to load invoices"); }
-    finally { setLoading(false); }
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ["invoices", { filter, offset: pag.offset }],
+    queryFn: async () => {
+      const [iRes, cRes, tRes] = await Promise.all([
+        api.invoices.list(filter, pag.offset, PAGE_SIZE),
+        api.customers.list(),
+        api.taxRates.list(),
+      ]);
+      return { invoices: iRes.invoices, customers: cRes.customers, tax_rates: tRes.tax_rates, total: iRes.total };
+    },
+    select: (res) => {
+      pag.setTotal(res.total);
+      setTaxRates(res.tax_rates);
+      return { invoices: res.invoices, customers: res.customers };
+    },
+  });
 
-  useEffect(() => { load(filter, pag.offset); }, [filter, pag.offset]);
+  const invoices = data?.invoices ?? [];
+  const customers = data?.customers ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: () => api.invoices.create({
+      customer_id: form.customer_id,
+      ticket_id: form.ticket_id,
+      notes: form.notes,
+      terms: form.terms,
+      due_date: form.due_date ? new Date(form.due_date).getTime() : 0,
+    }),
+    onSuccess: () => {
+      toast.success("Invoice created");
+      setShowForm(false);
+      setForm({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "" });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: () => toast.error("Failed to create invoice"),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.invoices.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-line-items"] });
+    },
+  });
+
+  const taxMutation = useMutation({
+    mutationFn: ({ id, rate }: { id: string; rate: number }) => api.taxRates.setInvoiceTaxRate(id, rate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-line-items"] });
+    },
+  });
+
+  const lineItemMutation = useMutation({
+    mutationFn: (item: { description: string; quantity: number; unit_price: number; item_type: string }) =>
+      api.invoices.lineItems.create(selectedInv!.id, item),
+    onSuccess: () => {
+      setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
+      queryClient.invalidateQueries({ queryKey: ["invoice-line-items", selectedInv?.id] });
+    },
+    onError: () => toast.error("Failed to add item"),
+  });
+
+  const removeLineItemMutation = useMutation({
+    mutationFn: (itemId: string) => api.invoices.lineItems.delete(selectedInv!.id, itemId),
+    onSuccess: (_, itemId) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-line-items", selectedInv?.id] });
+    },
+    onError: () => toast.error("Failed to remove item"),
+  });
+
+  const { data: lineItemsData } = useQuery({
+    queryKey: ["invoice-line-items", selectedInv?.id],
+    queryFn: async () => {
+      const res = await api.invoices.lineItems.list(selectedInv!.id);
+      return res.line_items;
+    },
+    enabled: !!selectedInv,
+  });
 
   const handleFilter = (val: string) => {
     setFilter(val);
     pag.reset();
   };
 
-  const handleCreate = async () => {
-    try {
-      await api.invoices.create({
-        customer_id: form.customer_id,
-        ticket_id: form.ticket_id,
-        notes: form.notes,
-        terms: form.terms,
-        due_date: form.due_date ? new Date(form.due_date).getTime() : 0,
-      });
-      toast.success("Invoice created");
-      setShowForm(false);
-      setForm({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "" });
-      load(filter, pag.offset);
-    } catch { toast.error("Failed to create invoice"); }
-  };
-
   const selectInvoice = async (inv: Invoice) => {
     setSelectedInv(inv);
-    try {
-      const res = await api.invoices.lineItems.list(inv.id);
-      setLineItems(res.line_items);
-    } catch { setLineItems([]); }
     setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
   };
 
-  const addLineItem = async () => {
+  const lineItems = lineItemsData ?? [];
+
+  const addLineItem = () => {
     if (!selectedInv) return;
-    try {
-      await api.invoices.lineItems.create(selectedInv.id, newItem);
-      const res = await api.invoices.lineItems.list(selectedInv.id);
-      setLineItems(res.line_items);
-      setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
-      load(filter, pag.offset);
-    } catch { toast.error("Failed to add item"); }
+    lineItemMutation.mutate(newItem);
   };
 
-  const removeLineItem = async (itemId: string) => {
+  const removeLineItem = (itemId: string) => {
     if (!selectedInv) return;
-    try {
-      await api.invoices.lineItems.delete(selectedInv.id, itemId);
-      const res = await api.invoices.lineItems.list(selectedInv.id);
-      setLineItems(res.line_items);
-      load(filter, pag.offset);
-    } catch { toast.error("Failed to remove item"); }
+    removeLineItemMutation.mutate(itemId);
   };
 
   return (
@@ -127,7 +163,7 @@ export default function InvoicesPage() {
             <Input placeholder="Terms" value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} />
             <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
             <div className="flex gap-2">
-              <Button onClick={handleCreate}>Create</Button>
+              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Create</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
             </div>
           </CardContent>
@@ -166,7 +202,7 @@ export default function InvoicesPage() {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Select value={selectedInv.status} onChange={async (e) => { await api.invoices.updateStatus(selectedInv.id, e.target.value); load(filter, pag.offset); selectInvoice(selectedInv); }}>
+                <Select value={selectedInv.status} onChange={(e) => statusMutation.mutate({ id: selectedInv.id, status: e.target.value })}>
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
                   <option value="paid">Paid</option>
@@ -179,15 +215,7 @@ export default function InvoicesPage() {
                   <label className="text-xs text-muted-foreground whitespace-nowrap">Tax Rate:</label>
                   <Select
                     value={String(selectedInv.tax_rate)}
-                    onChange={async (e) => {
-                      const rate = parseFloat(e.target.value);
-                      try {
-                        await api.taxRates.setInvoiceTaxRate(selectedInv.id, rate);
-                        toast.success("Tax rate updated");
-                        load(filter, pag.offset);
-                        selectInvoice(selectedInv);
-                      } catch { toast.error("Failed to update tax rate"); }
-                    }}
+                    onChange={(e) => taxMutation.mutate({ id: selectedInv.id, rate: parseFloat(e.target.value) })}
                     className="flex-1"
                   >
                     <option value="0">No tax</option>
