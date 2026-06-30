@@ -1,7 +1,7 @@
 """Product + Inventory Adjustment routes."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
     _sql, _paginated, _call, _sort, _log_audit,
@@ -120,6 +120,15 @@ async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "fro
         if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
     ]
     return {"products": _sort(low_stock, "name"), "count": len(low_stock)}
+
+
+@router.get("/api/products/by-barcode/{barcode}")
+async def lookup_product_by_barcode(barcode: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Find a product by barcode (exact match, tenant-scoped)."""
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}' AND barcode = '{barcode}'")
+    if not rows:
+        raise HTTPException(404, "Product not found for this barcode")
+    return {"product": rows[0]}
 
 
 @router.post("/api/products/low-stock/notify")

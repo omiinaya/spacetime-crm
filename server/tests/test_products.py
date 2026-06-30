@@ -141,6 +141,23 @@ class TestProductErrors:
 
     def test_unauthorized_access(self, client: httpx.Client):
         """Product endpoints require auth."""
-        for path in ["/api/products", "/api/products/fake/adjustments", "/api/products/low-stock"]:
+        for path in ["/api/products", "/api/products/fake/adjustments", "/api/products/low-stock", "/api/products/by-barcode/test123"]:
             resp = client.get(path, timeout=10)
             assert resp.status_code in (401, 403), f"{path} allowed unauthenticated"
+
+
+class TestBarcodeLookup:
+    """Barcode-based product lookup."""
+
+    PRODUCT = {"name": "Barcode Test", "sku": "BAR-001", "barcode": "5901234567890", "price": 25, "cost": 10, "quantity_on_hand": 5}
+
+    def test_lookup_by_barcode(self, auth_headers: dict):
+        httpx.post(f"{SERVER_URL}/api/products", json=self.PRODUCT, headers=auth_headers, timeout=10)
+        resp = httpx.get(f"{SERVER_URL}/api/products/by-barcode/5901234567890", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert data["product"]["name"] == "Barcode Test"
+        assert data["product"]["barcode"] == "5901234567890"
+
+    def test_lookup_nonexistent(self, auth_headers: dict):
+        resp = httpx.get(f"{SERVER_URL}/api/products/by-barcode/nonexistent-999", headers=auth_headers, timeout=10)
+        assert resp.status_code == 404

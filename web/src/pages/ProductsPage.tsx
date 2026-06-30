@@ -39,6 +39,7 @@ export default function ProductsPage() {
   const [scanning, setScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [barcodeLookup, setBarcodeLookup] = useState("");
 
   const barcodeDetectorSupported = typeof window !== "undefined" && "BarcodeDetector" in window;
 
@@ -70,6 +71,23 @@ export default function ProductsPage() {
   const handleSearch = (val: string) => {
     setSearch(val);
     pag.reset();
+  };
+
+  const barcodeLookupMutation = useMutation({
+    mutationFn: async () => {
+      if (!barcodeLookup.trim()) throw new Error("No barcode");
+      return api.products.byBarcode(barcodeLookup.trim());
+    },
+    onSuccess: (data) => {
+      setSelectedProduct(data.product);
+      toast.success(`Found: ${data.product.name}`);
+      setBarcodeLookup("");
+    },
+    onError: () => toast.error("No product found with this barcode"),
+  });
+
+  const handleBarcodeLookup = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") barcodeLookupMutation.mutate();
   };
 
   const createMutation = useMutation({
@@ -192,12 +210,25 @@ export default function ProductsPage() {
       </div>
 
       {/* Search */}
-      <Input
-        placeholder="Search products..."
-        value={search}
-        onChange={(e) => handleSearch(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="flex gap-2 items-center">
+        <Input
+          placeholder="Search products..."
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="max-w-sm"
+        />
+        <div className="flex items-center gap-1 border rounded-md px-2 py-1 bg-muted/30 max-w-[200px]">
+          <Scan className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <input
+            type="text"
+            placeholder="Scan barcode..."
+            value={barcodeLookup}
+            onChange={(e) => setBarcodeLookup(e.target.value)}
+            onKeyDown={handleBarcodeLookup}
+            className="bg-transparent border-none outline-none text-xs w-full py-0.5"
+          />
+        </div>
+      </div>
 
       {lowStockCount > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
