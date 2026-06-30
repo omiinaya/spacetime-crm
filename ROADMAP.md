@@ -185,7 +185,7 @@
 
 3. ~~**Frontend uses bare `fetch()`**~~ **RESOLVED** — React Query adopted across all 12 data-fetching pages. Caching, dedup, optimistic updates, stale-while-revalidate active.
 
-4. **WeasyPrint adds 200MB+ to Docker image** — depends on pango/cairo system libs. Alternative: chromium headless HTML→PDF or wkhtmltopdf.
+4. ~~**WeasyPrint adds 200MB+ to Docker image**~~ **RESOLVED** — Switched to Playwright+Chromium HTML→PDF in commit `40d9be8`. Docker image size reduced ~200MB.
 
 ### 🟢 MINOR / Cosmetic
 

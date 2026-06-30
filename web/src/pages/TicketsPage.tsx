@@ -233,8 +233,8 @@ export default function TicketsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl font-bold">Tickets</h1>
           {breachCount > 0 && (
             <Badge variant="destructive" className="text-xs animate-pulse">
@@ -242,14 +242,14 @@ export default function TicketsPage() {
               {breachCount} SLA breach{breachCount !== 1 ? "es" : ""}
             </Badge>
           )}
-          <p className="text-sm text-muted-foreground mt-1">Manage repair tickets</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-1.5" /> New Ticket
         </Button>
       </div>
+      <p className="text-sm text-muted-foreground -mt-2">Manage repair tickets</p>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {["", "new", "assigned", "in_progress", "waiting_on_customer", "resolved", "closed"].map((s) => (
           <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => handleFilter(s)}>
             {s || "All"}
@@ -290,7 +290,7 @@ export default function TicketsPage() {
 
       {/* Ticket list & detail */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-3">
+        <div className={`space-y-3 ${selectedTicket ? "hidden lg:block" : ""}`}>
           {tickets.map((t) => {
             const cust = customers.find((c) => c.id === t.customer_id);
             return (
@@ -320,6 +320,13 @@ export default function TicketsPage() {
         {/* Detail panel */}
         {selectedTicket && (
           <div className="space-y-4">
+            {/* Back button (mobile) */}
+            <button
+              onClick={() => setSelectedTicket(null)}
+              className="lg:hidden text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              ← Back to list
+            </button>
             <Card>
               <CardHeader>
                 <CardTitle>#{selectedTicket.ticket_number} — {selectedTicket.title}</CardTitle>
