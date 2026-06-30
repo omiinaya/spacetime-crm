@@ -19,6 +19,7 @@
 ### 🟢 Sprint Wins (since last assessment)
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
+- **Test coverage — 99 TESTS (10 modules)** — Added 47 new integration tests covering invoices, payments, products, and appointments — full CRUD + edge cases + auth. All 99 pass.
 - **Recurring invoices — ADDED** — New `recurring_invoice_rule` STDB table with CRUD + `generate_recurring_invoices` reducer that scans active rules, creates invoices with line items, and updates next-gen dates. API: list, create, update, delete, generate. Frontend: manage rules with form for setting frequency, interval, line item template, and "Generate Now" button.
 - **Saved payment methods — ADDED** — `saved_payment_method` STDB table with `save_payment_method`, `set_default_payment_method`, `delete_payment_method` reducers. Stripe `SetupIntent` endpoint for securely collecting cards. API: create, list (with customer filter), set default, delete. Frontend: admin UI to view/manage saved cards per customer.
 - **Portal payment UX — UPGRADED** — Portal invoice detail now shows saved cards with one-click "Pay with [card brand]" buttons using Stripe PaymentIntent (create+confirm server-side). Falls back to Stripe Checkout for new cards or manual recording. Portal `GET /api/portal/payment-methods` endpoint added.
@@ -102,7 +103,7 @@
 
 ---
 
-## Phase 4: Production Readiness ⚠️ (55% complete)
+## Phase 4: Production Readiness ⚠️ (65% complete)
 
 - [x] Authentication (JWT login for staff + customer portal)
 - [x] Role-based permissions (admin, tech, front_desk)
@@ -134,12 +135,12 @@
 | Area | Status | Details |
 |------|--------|---------|
 | Rust unit tests | ❌ 0 tests | 70 reducers, 25 tables — zero validation |
-| Python backend tests | ✅ 39 tests (624 lines) | Auth, customer CRUD, tickets, tenants, validation |
+| Python backend tests | ✅ 99 tests (10 files) | Auth, customer CRUD, tickets, invoices, payments, products, appointments, tenants, validation, sanitize |
 | TypeScript frontend tests | ✅ 52 tests (8 suites) | Button, Card, Badge, Input, Pagination, ErrorBoundary, Auth, Utils |
 | E2E tests | ✅ 33 tests (5 suites) | Navigation, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test (backend + frontend + Rust check), lint |
-| **API path coverage** | **9/26 (35%)** | Auth, customers, tickets, invoices, products, tenants, health, portal, validation |
-| **Endpoint coverage** | **~22%** | 39 tests for 123 endpoint registrations |
+| **API path coverage** | **13/26 (50%)** | Auth, customers, tickets, invoices, payments, products, appointments, tenants, health, portal, validation |
+| **Endpoint coverage** | **~50%** | 99 tests across 10 modules |
 
 ### Test quality assessment
 
