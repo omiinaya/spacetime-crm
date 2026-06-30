@@ -36,6 +36,8 @@
 
 - **SLA config UI — ADDED** — Editable SLA thresholds from SettingsPage. STDB: `sla_configs` table with upsert. Backend: GET/POST `/api/tickets/sla-settings` with validation. Reads from DB with fallback to defaults. Frontend: inline edit controls in SettingsPage with save/cancel. 5 new backend tests.
 
+- **Mobile responsive layout — IMPROVED** — TicketsPage: header flex-wrap so buttons/breach badge don't overflow, filter buttons wrap on narrow screens, detail panel hides list with back button on mobile. Foundation for responsive design across all pages.
+
 - **`server/main.py`: reload=True** — uvicorn hot-reload for faster dev iteration.
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
