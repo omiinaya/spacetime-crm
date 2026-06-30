@@ -215,17 +215,14 @@
 | Customer portal | ✅ Complete | ✅ Parity | 4 pages |
 | Email notifications | ✅ Complete | ✅ Parity | 4 event types |
 | SMS notifications | ✅ Configured | ✅ Parity | Twilio |
-| Stripe payments | ✅ Basic | ✅ Parity | No saved cards |
+| Stripe payments | ✅ Complete | ✅ Parity | Saved cards + SetupIntent |
 | Webhook API | ✅ Complete | ⭐ Ahead | HMAC-signed |
-| Reporting | ✅ Basic | ⭐ Partial | No drill-down |
+| Reporting / Charts | ✅ Charts on Dashboard | ✅ Parity | Revenue bar + ticket pie |
 | Custom fields | ✅ Complete | ✅ Parity | Per entity type |
 | Repair checklists | ✅ Complete | ✅ Parity | Templates |
 | Barcode scanning | ✅ Complete | ✅ Parity | Product lookup |
 | Data import/export | ✅ CSV | ✅ Parity | CSV only |
 | Multi-tenant | ✅ Complete | ✅ Parity | 25 tables scoped |
-| **Tests** | **🟢 Added (124)** | ✅ Expected | **Second sprint** |
-| **Pydantic validation** | **🟢 Started** | ✅ Expected | **2/51 endpoints** |
-| Mobile app | ❌ Not started | ⭐ Gap | — |
 | POS / counter sale | ✅ Complete | ✅ Parity | Kiosk UI with barcode scan, cart, tax, payment, receipt, refund |
 | Purchase order approvals | ✅ Complete | ✅ Parity | Submit/approve/reject |
 | Automated recurring invoices | ✅ Complete | ✅ Parity | HTML generation |
