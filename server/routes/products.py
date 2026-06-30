@@ -8,6 +8,7 @@ from helpers import (
     require_role, logger,
 )
 from models import ProductCreate, ProductQuantityUpdate, InventoryAdjustmentCreate
+from mail import _notify_low_stock
 
 router = APIRouter()
 
@@ -44,6 +45,8 @@ async def create_product(body: ProductCreate, user: dict = Depends(require_role(
         body.price,
         body.cost,
         body.quantity_on_hand,
+        body.min_stock,
+        body.location,
     ])
     await _log_audit(user, "create", "product", body.name)
     return {"ok": True}
@@ -60,6 +63,25 @@ async def update_product_quantity(product_id: str, body: ProductQuantityUpdate, 
 async def delete_product(product_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_product", [product_id])
     await _log_audit(user, "delete", "product", product_id)
+    return {"ok": True}
+
+
+@router.put("/api/products/{product_id}")
+async def update_product(product_id: str, body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))):
+    """Update product fields including min_stock."""
+    await _call("update_product", [
+        product_id,
+        body.name,
+        body.sku,
+        body.barcode,
+        body.description,
+        body.category,
+        body.price,
+        body.cost,
+        body.min_stock,
+        body.location,
+    ])
+    await _log_audit(user, "update", "product", body.name, f"min_stock={body.min_stock}")
     return {"ok": True}
 
 
@@ -84,3 +106,32 @@ async def create_adjustment(product_id: str, body: InventoryAdjustmentCreate, us
     ])
     await _log_audit(user, "create", "adjustment", product_id, f"qty={body.quantity_change}")
     return {"ok": True}
+
+
+@router.get("/api/products/low-stock")
+async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List products below minimum stock threshold for the current tenant."""
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
+    low_stock = [
+        r for r in rows
+        if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
+    ]
+    return {"products": _sort(low_stock, "name"), "count": len(low_stock)}
+
+
+@router.post("/api/products/low-stock/notify")
+async def notify_low_stock(user: dict = Depends(require_role("admin"))):
+    """Check low stock and send email alert to admin."""
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
+    low_stock = [
+        r for r in rows
+        if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
+    ]
+    if not low_stock:
+        return {"ok": True, "message": "No low stock items found", "count": 0}
+    admin_email = user.get("email", "")
+    if not admin_email:
+        return {"ok": False, "error": "Admin user has no email configured"}
+    _notify_low_stock(admin_email, low_stock)
+    await _log_audit(user, "notify", "low_stock", "", f"products={len(low_stock)}")
+    return {"ok": True, "count": len(low_stock), "notified": admin_email}

@@ -236,3 +236,33 @@ def _notify_estimate_approved(customer_email: str, estimate_number: int, total: 
 <p style="color:#999;font-size:12px">SpacetimeCRM Customer Portal</p>
 </body></html>"""
     send_email(customer_email, f"Estimate #{estimate_number} Approved", html)
+
+
+def _notify_low_stock(admin_email: str, products: list[dict]) -> None:
+    """Send low stock alert to admin."""
+    if not products:
+        return
+    rows_html = "".join(
+        f'<tr><td style="padding:8px;border-bottom:1px solid #eee">{p.get("name","?")}</td>'
+        f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{p.get("sku","-")}</td>'
+        f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#ef4444;font-weight:bold">{p.get("quantity_on_hand",0):.0f}</td>'
+        f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{p.get("min_stock",0):.0f}</td>'
+        f'</tr>'
+        for p in products
+    )
+    html = f"""<!DOCTYPE html>
+<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+<h2 style="color:#333">⚠️ Low Stock Alert</h2>
+<p>The following products are below their minimum stock threshold:</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+<thead><tr style="background:#f9fafb">
+<th style="padding:8px;text-align:left;border-bottom:2px solid #e5e7eb">Product</th>
+<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">SKU</th>
+<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">On Hand</th>
+<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">Min Stock</th>
+</tr></thead>
+<tbody>{rows_html}</tbody>
+</table>
+<p style="color:#999;font-size:12px">SpacetimeCRM — Inventory Alert</p>
+</body></html>"""
+    send_email(admin_email, f"⚠️ Low Stock Alert — {len(products)} product(s) below threshold", html)
