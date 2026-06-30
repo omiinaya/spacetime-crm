@@ -385,6 +385,54 @@ export interface WebhookSubscription {
   updated_at: number;
 }
 
+export interface POSCounterSale {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  customer_name: string;
+  items_count: number;
+  subtotal: number;
+  tax_rate: number;
+  tax_amount: number;
+  discount_amount: number;
+  total: number;
+  payment_method: string;
+  amount_tendered: number;
+  change_due: number;
+  currency: string;
+  receipt_number: number;
+  status: string;
+  created_at: number;
+  created_by: string;
+  refunded_at: number;
+}
+
+export interface POSCounterSaleDetail extends POSCounterSale {
+  line_items: POSCounterSaleLineItem[];
+}
+
+export interface POSCounterSaleLineItem {
+  id: string;
+  tenant_id: string;
+  sale_id: string;
+  product_id: string;
+  product_name: string;
+  sku: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  sort_order: number;
+}
+
+export interface POSAddItemPayload {
+  sale_id: string;
+  product_id: string;
+  product_name: string;
+  sku?: string;
+  quantity: number;
+  unit_price: number;
+}
+
 export const WEBHOOK_EVENTS = [
   "customer.created",
   "customer.updated",
@@ -1059,5 +1107,41 @@ export const api = {
       }),
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/payment-methods/${id}`, { method: "DELETE" }),
+  },
+  pos: {
+    list: (offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ sales: POSCounterSale[]; total: number; offset: number; limit: number }>(
+        `/pos/sales${qs ? `?${qs}` : ""}`
+      );
+    },
+    get: (id: string) =>
+      apiFetch<{ sale: POSCounterSaleDetail }>(`/pos/sales/${id}`),
+    create: (data: Partial<POSCounterSale>) =>
+      apiFetch<{ ok: boolean }>("/pos/create", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    addItem: (data: POSAddItemPayload) =>
+      apiFetch<{ ok: boolean }>("/pos/items", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    refund: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/pos/refund/${id}`, { method: "POST" }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/pos/sales/${id}`, { method: "DELETE" }),
+    receipts: (offset?: number, limit?: number) => {
+      const p = new URLSearchParams();
+      if (offset !== undefined) p.set("offset", String(offset));
+      if (limit !== undefined) p.set("limit", String(limit));
+      const qs = p.toString();
+      return apiFetch<{ receipts: POSCounterSale[]; total: number; offset: number; limit: number }>(
+        `/pos/receipts${qs ? `?${qs}` : ""}`
+      );
+    },
   },
 };
