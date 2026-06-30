@@ -36,6 +36,9 @@ async def create_custom_field_definition(body: CustomFieldDefinitionCreate, user
         body.label,
         body.field_type,
         json.dumps(body.options),
+        body.sort_order,
+        body.required,
+        body.active,
     ])
     await _log_audit(user, "create", "custom_field", body.label)
     return {"ok": True, "id": field_id}

@@ -13,13 +13,13 @@
 | Backend API (Python) | ~3,925 | 90% | 22% (API paths) | 3 major, 2 minor |
 | Frontend (TypeScript) | 7,469 | 75% | 7% (unit) | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
-| **Tests** | **~4,900 (124 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
+| **Tests** | **~6,200 (173 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
 | **Overall** | **~17,400** | **~89%** | **40%** | **9 items** |
 
 ### 🟢 Sprint Wins (since last assessment)
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
-- **Test coverage — 140 TESTS (11 modules)** — Added 70 new integration tests covering estimates (CRUD, line items, status workflow, conversion to invoice, errors), purchase orders (CRUD, line items, receiving with stock update, errors), and portal (login, profile, stats, tickets, invoices, payments, appointments, password change, auth enforcement). All 140 pass. Phase 4 → 75%.
+- **Test coverage — 173 TESTS (14 modules)** — Added 33 new integration tests covering webhooks (CRUD + test + Stripe + auth), settings (mail/SMS get/save/test), and custom fields (definitions CRUD, values get/set). Also fixed a bug in the custom field definition route (missing reducer args). All 173 pass. Phase 4 → 82%.
 - **Recurring invoices — ADDED** — New `recurring_invoice_rule` STDB table with CRUD + `generate_recurring_invoices` reducer that scans active rules, creates invoices with line items, and updates next-gen dates. API: list, create, update, delete, generate. Frontend: manage rules with form for setting frequency, interval, line item template, and "Generate Now" button.
 - **Saved payment methods — ADDED** — `saved_payment_method` STDB table with `save_payment_method`, `set_default_payment_method`, `delete_payment_method` reducers. Stripe `SetupIntent` endpoint for securely collecting cards. API: create, list (with customer filter), set default, delete. Frontend: admin UI to view/manage saved cards per customer.
 - **Portal payment UX — UPGRADED** — Portal invoice detail now shows saved cards with one-click "Pay with [card brand]" buttons using Stripe PaymentIntent (create+confirm server-side). Falls back to Stripe Checkout for new cards or manual recording. Portal `GET /api/portal/payment-methods` endpoint added.
@@ -103,7 +103,7 @@
 
 ---
 
-## Phase 4: Production Readiness ⚠️ (75% complete)
+## Phase 4: Production Readiness ⚠️ (82% complete)
 
 - [x] Authentication (JWT login for staff + customer portal)
 - [x] Role-based permissions (admin, tech, front_desk)
@@ -135,12 +135,12 @@
 | Area | Status | Details |
 |------|--------|---------|
 | Rust unit tests | ❌ 0 tests | 70 reducers, 25 tables — zero validation |
-| Python backend tests | ✅ 140 tests (11 files) | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize |
+| Python backend tests | ✅ 173 tests (14 files) | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, validation, sanitize, webhooks, settings, custom fields |
 | TypeScript frontend tests | ✅ 52 tests (8 suites) | Button, Card, Badge, Input, Pagination, ErrorBoundary, Auth, Utils |
 | E2E tests | ✅ 33 tests (5 suites) | Navigation, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test (backend + frontend + Rust check), lint |
-| **API path coverage** | **17/26 (65%)** | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, health, validation |
-| **Endpoint coverage** | **~80%** | 140 tests across 11 modules |
+| **API path coverage** | **16/26 (62%)** | Auth, customers, tickets, invoices, payments, products, appointments, portal, estimates, purchase orders, tenants, health, validation, webhooks, settings, custom fields |
+| **Endpoint coverage** | **~85%** | 173 tests across 14 modules |
 
 ### Test quality assessment
 
