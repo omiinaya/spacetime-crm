@@ -199,7 +199,7 @@ export default function ProductsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Products</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage inventory and stock</p>
@@ -210,14 +210,14 @@ export default function ProductsPage() {
       </div>
 
       {/* Search */}
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-2 items-center flex-wrap">
         <Input
           placeholder="Search products..."
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          className="max-w-sm"
+          className="max-w-full sm:max-w-sm"
         />
-        <div className="flex items-center gap-1 border rounded-md px-2 py-1 bg-muted/30 max-w-[200px]">
+        <div className="flex items-center gap-1 border rounded-md px-2 py-1 bg-muted/30 max-w-full sm:max-w-[200px] flex-1 sm:flex-none">
           <Scan className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <input
             type="text"
@@ -263,7 +263,7 @@ export default function ProductsPage() {
       {showForm && (
         <Card className="border-primary/30">
           <CardHeader><CardTitle>{editId ? "Edit Product" : "New Product"}</CardTitle></CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Input placeholder="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
             <div className="col-span-2">
@@ -319,7 +319,7 @@ export default function ProductsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Product list */}
-        <div className="space-y-3">
+        <div className={`space-y-3 ${selectedProduct ? "hidden lg:block" : ""}`}>
           {products.map((p) => (
             <Card
               key={p.id}
@@ -363,6 +363,13 @@ export default function ProductsPage() {
         {/* Detail panel */}
         {selectedProduct && (
           <div className="space-y-4">
+            {/* Back button (mobile) */}
+            <button
+              onClick={() => setSelectedProduct(null)}
+              className="lg:hidden text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              ← Back to list
+            </button>
             <Card>
               <CardHeader>
                 <CardTitle>{selectedProduct.name}</CardTitle>
