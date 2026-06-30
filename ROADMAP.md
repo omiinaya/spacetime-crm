@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-07-01
-| Overall completeness: ~99% (+0% since last assessment)
+| Overall completeness: ~100% (+1% since last assessment)
 
 ---
 
@@ -18,6 +18,7 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
+- **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
 - **Recurring invoices — ADDED** — New `recurring_invoice_rule` STDB table with CRUD + `generate_recurring_invoices` reducer that scans active rules, creates invoices with line items, and updates next-gen dates. API: list, create, update, delete, generate. Frontend: manage rules with form for setting frequency, interval, line item template, and "Generate Now" button.
 - **Saved payment methods — ADDED** — `saved_payment_method` STDB table with `save_payment_method`, `set_default_payment_method`, `delete_payment_method` reducers. Stripe `SetupIntent` endpoint for securely collecting cards. API: create, list (with customer filter), set default, delete. Frontend: admin UI to view/manage saved cards per customer.
 - **Portal payment UX — UPGRADED** — Portal invoice detail now shows saved cards with one-click "Pay with [card brand]" buttons using Stripe PaymentIntent (create+confirm server-side). Falls back to Stripe Checkout for new cards or manual recording. Portal `GET /api/portal/payment-methods` endpoint added.
@@ -84,7 +85,7 @@
 
 ---
 
-## Phase 3: Advanced ⚠️ (95% complete)
+## Phase 3: Advanced ✅ (100% complete)
 
 - [x] Multi-tenant support (25 tables with `tenant_id`)
 - [x] SMS notifications (Twilio — API integration works)
@@ -96,7 +97,7 @@
 - [x] Webhook integration (HMAC-SHA256 signed, 13 events)
 - [x] **Saved customer payment methods** — `saved_payment_method` STDB table, Stripe SetupIntent, API CRUD, admin UI for listing/managing saved cards
 - [x] **Portal payment UX** — saved cards shown in portal invoice detail, one-click "Pay with [card]" via Stripe PaymentIntent. Portal lists payment methods, fallback to Stripe Checkout or manual recording
-- [ ] 📌 **Report scheduling/exports** — no saved reports, no email reports
+- [x] **Report scheduling/exports** — saved report configurations in STDB, 6 report types, CRUD API, run-now endpoint, HTML email delivery, check-due endpoint for cron. Frontend: create/run/pause/delete schedules from ReportsPage
 - [x] **Recurring invoices** — `recurring_invoice_rule` table + CRUD + `generate_recurring_invoices` reducer, API with manual trigger, frontend page with rule management and "Generate Now"
 
 ---

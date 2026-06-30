@@ -1,0 +1,20 @@
+{% extends "email/base.html" %}
+{% block heading %}📊 {{ title }}{% endblock %}
+{% block body %}
+<p style="color:#666;font-size:13px">Generated {{ date }}</p>
+
+{% if metrics %}
+<table style="width:100%;border-collapse:collapse;margin:16px 0;background:#f8f8ff;border-radius:8px">
+{% for m in metrics %}
+<tr>
+  <td style="padding:8px 16px;border-bottom:1px solid #eee;color:#666">{{ m.label }}</td>
+  <td style="padding:8px 16px;border-bottom:1px solid #eee;font-weight:bold;text-align:right">{{ m.value }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+
+<p style="color:#999;font-size:11px;margin-top:24px;text-align:center">
+SpacetimeCRM · Automated Report Delivery
+</p>
+{% endblock %}
