@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
-import { api, Invoice, Customer, TaxRate } from "../lib/api";
+import { api, Invoice, Customer, TaxRate, Payment } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { FileText, Plus, Trash2, FileDown } from "lucide-react";
+import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
@@ -29,6 +29,8 @@ export default function InvoicesPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" });
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({ amount: 0, method: "cash", reference: "" });
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
 
@@ -102,6 +104,29 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: ["invoice-line-items", selectedInv?.id] });
     },
     onError: () => toast.error("Failed to remove item"),
+  });
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedInv) throw new Error("No invoice selected");
+      const cust = customers.find(c => c.id === selectedInv.customer_id);
+      return api.payments.record({
+        invoice_id: selectedInv.id,
+        customer_id: selectedInv.customer_id,
+        amount: paymentForm.amount || selectedInv.total,
+        method: paymentForm.method,
+        reference: paymentForm.reference,
+        notes: "",
+        currency: selectedInv.currency || "USD",
+      });
+    },
+    onSuccess: () => {
+      toast.success("Payment recorded");
+      setShowPaymentForm(false);
+      setPaymentForm({ amount: 0, method: "cash", reference: "" });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: () => toast.error("Failed to record payment"),
   });
 
   const { data: lineItemsData } = useQuery({
@@ -262,6 +287,71 @@ export default function InvoicesPage() {
                   <Input type="number" placeholder="Qty" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })} className="w-20" />
                   <Input type="number" placeholder="Price" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: +e.target.value })} className="w-24" />
                   <Button size="sm" onClick={addLineItem}><Plus className="h-3 w-3" /></Button>
+                </div>
+
+                {/* Record Payment */}
+                <div className="border-t border-border pt-3 mt-2">
+                  {!showPaymentForm ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => setShowPaymentForm(true)}
+                    >
+                      <DollarSign className="h-4 w-4" />
+                      Record Payment
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Record Payment
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Amount"
+                          value={paymentForm.amount || selectedInv.total}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
+                          className="w-28"
+                        />
+                        <Select
+                          value={paymentForm.method}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
+                          className="flex-1"
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="card">Card</option>
+                          <option value="check">Check</option>
+                          <option value="stripe">Stripe</option>
+                          <option value="other">Other</option>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Reference (optional)"
+                          value={paymentForm.reference}
+                          onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                          className="flex-1"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => recordPaymentMutation.mutate()}
+                          disabled={recordPaymentMutation.isPending}
+                        >
+                          {recordPaymentMutation.isPending ? (
+                            <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
+                          ) : (
+                            <CreditCard className="h-3.5 w-3.5" />
+                          )}
+                          Pay
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setShowPaymentForm(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
