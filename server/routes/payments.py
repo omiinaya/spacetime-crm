@@ -37,6 +37,7 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
         body.method,
         body.reference,
         body.notes,
+        body.currency,
     ])
     if invoice_id:
         invoices = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")

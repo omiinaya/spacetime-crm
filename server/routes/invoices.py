@@ -37,6 +37,7 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
         body.notes,
         body.terms,
         body.due_date,
+        body.currency,
     ])
 
     async def _notify():

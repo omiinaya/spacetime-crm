@@ -27,6 +27,7 @@ pub fn record_payment(
     method: String,
     reference: String,
     notes: String,
+    currency: String,
 ) {
     let id = super::make_id("pmt", ctx);
     let now = super::now_ms(ctx);
@@ -39,7 +40,7 @@ pub fn record_payment(
         method,
         reference,
         notes,
-        currency: "USD".to_string(),
+        currency,
         created_at: now,
     });
 }
