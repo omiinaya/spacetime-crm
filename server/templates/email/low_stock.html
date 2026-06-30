@@ -1,0 +1,24 @@
+{% extends "email/base.html" %}
+{% block heading %}⚠️ Low Stock Alert{% endblock %}
+{% block body %}
+<p>The following products are below their minimum stock threshold:</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+<thead><tr style="background:#f9fafb">
+<th style="padding:8px;text-align:left;border-bottom:2px solid #e5e7eb">Product</th>
+<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">SKU</th>
+<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">On Hand</th>
+<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">Min Stock</th>
+</tr></thead>
+<tbody>
+{% for p in products %}
+<tr>
+<td style="padding:8px;border-bottom:1px solid #eee">{{ p.name }}</td>
+<td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{{ p.sku }}</td>
+<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#ef4444;font-weight:bold">{{ p.qty }}</td>
+<td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{{ p.min }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+<p><strong>{{ count }}</strong> product(s) need reordering.</p>
+{% endblock %}

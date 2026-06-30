@@ -1,0 +1,7 @@
+{% extends "email/base.html" %}
+{% block heading %}Appointment Scheduled{% endblock %}
+{% block body %}
+<p><strong>{{ title }}</strong></p>
+<p>When: <strong>{{ date_str }}</strong></p>
+<p><a href="{{ link }}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View in Portal</a></p>
+{% endblock %}

@@ -156,6 +156,15 @@ def test_connection() -> dict:
 
 # ── Notification templates ──
 
+from helpers import jinja_env
+
+_STATUS_LABELS = {
+    "new": "New", "in_progress": "In Progress",
+    "waiting_parts": "Waiting for Parts", "waiting_customer": "Waiting for Customer",
+    "resolved": "Resolved", "closed": "Closed",
+}
+
+
 def _customer_email(customer: Optional[dict]) -> Optional[str]:
     """Get customer's preferred notification email address."""
     if not customer:
@@ -165,33 +174,18 @@ def _customer_email(customer: Optional[dict]) -> Optional[str]:
 
 def _notify_ticket_status_change(customer_email: str, ticket_number: int, title: str, status: str, link: str) -> None:
     """Send ticket status notification."""
-    status_labels = {
-        "new": "New", "in_progress": "In Progress",
-        "waiting_parts": "Waiting for Parts", "waiting_customer": "Waiting for Customer",
-        "resolved": "Resolved", "closed": "Closed",
-    }
-    status_label = status_labels.get(status, status)
-    html = f"""<!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-<h2 style="color:#333">Ticket #{ticket_number} — {status_label}</h2>
-<p>Your ticket <strong>"{title}"</strong> has been updated to <strong>{status_label}</strong>.</p>
-<p><a href="{link}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View in Portal</a></p>
-<hr style="border:none;border-top:1px solid #eee" />
-<p style="color:#999;font-size:12px">SpacetimeCRM Customer Portal</p>
-</body></html>"""
+    status_label = _STATUS_LABELS.get(status, status)
+    html = jinja_env.get_template("email/ticket_status.html").render(
+        ticket_number=ticket_number, title=title, status_label=status_label, link=link,
+    )
     send_email(customer_email, f"Ticket #{ticket_number} — {status_label}", html)
 
 
 def _notify_invoice_created(customer_email: str, invoice_number: int, total: float, link: str) -> None:
     """Send invoice notification."""
-    html = f"""<!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-<h2 style="color:#333">Invoice #{invoice_number}</h2>
-<p>A new invoice has been created for <strong>${total:.2f}</strong>.</p>
-<p><a href="{link}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View & Pay Invoice</a></p>
-<hr style="border:none;border-top:1px solid #eee" />
-<p style="color:#999;font-size:12px">SpacetimeCRM Customer Portal</p>
-</body></html>"""
+    html = jinja_env.get_template("email/invoice_created.html").render(
+        invoice_number=invoice_number, total=f"{total:.2f}", link=link,
+    )
     send_email(customer_email, f"Invoice #{invoice_number} — ${total:.2f}", html)
 
 
@@ -200,41 +194,25 @@ def _notify_appointment_created(customer_email: str, title: str, start_time: int
     from datetime import datetime
     dt = datetime.fromtimestamp(start_time / 1000)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
-    html = f"""<!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-<h2 style="color:#333">Appointment Scheduled</h2>
-<p><strong>{title}</strong></p>
-<p>When: <strong>{date_str}</strong></p>
-<p><a href="{link}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View in Portal</a></p>
-<hr style="border:none;border-top:1px solid #eee" />
-<p style="color:#999;font-size:12px">SpacetimeCRM Customer Portal</p>
-</body></html>"""
+    html = jinja_env.get_template("email/appointment_created.html").render(
+        title=title, date_str=date_str, link=link,
+    )
     send_email(customer_email, f"Appointment: {title}", html)
 
 
 def _notify_payment_received(customer_email: str, invoice_number: int, amount: float, link: str) -> None:
     """Send payment confirmation."""
-    html = f"""<!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-<h2 style="color:#333">Payment Received</h2>
-<p>A payment of <strong>${amount:.2f}</strong> has been applied to Invoice #{invoice_number}.</p>
-<p><a href="{link}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View Invoice</a></p>
-<hr style="border:none;border-top:1px solid #eee" />
-<p style="color:#999;font-size:12px">SpacetimeCRM Customer Portal</p>
-</body></html>"""
+    html = jinja_env.get_template("email/payment_received.html").render(
+        amount=f"{amount:.2f}", invoice_number=invoice_number, link=link,
+    )
     send_email(customer_email, f"Payment Received — Invoice #{invoice_number}", html)
 
 
 def _notify_estimate_approved(customer_email: str, estimate_number: int, total: float, link: str) -> None:
     """Send estimate approved notification."""
-    html = f"""<!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-<h2 style="color:#333">Estimate #{estimate_number} Approved</h2>
-<p>Your estimate for <strong>${total:.2f}</strong> has been approved and an invoice is being created.</p>
-<p><a href="{link}" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View in Portal</a></p>
-<hr style="border:none;border-top:1px solid #eee" />
-<p style="color:#999;font-size:12px">SpacetimeCRM Customer Portal</p>
-</body></html>"""
+    html = jinja_env.get_template("email/estimate_approved.html").render(
+        estimate_number=estimate_number, total=f"{total:.2f}", link=link,
+    )
     send_email(customer_email, f"Estimate #{estimate_number} Approved", html)
 
 
@@ -242,27 +220,12 @@ def _notify_low_stock(admin_email: str, products: list[dict]) -> None:
     """Send low stock alert to admin."""
     if not products:
         return
-    rows_html = "".join(
-        f'<tr><td style="padding:8px;border-bottom:1px solid #eee">{p.get("name","?")}</td>'
-        f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{p.get("sku","-")}</td>'
-        f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:center;color:#ef4444;font-weight:bold">{p.get("quantity_on_hand",0):.0f}</td>'
-        f'<td style="padding:8px;border-bottom:1px solid #eee;text-align:center">{p.get("min_stock",0):.0f}</td>'
-        f'</tr>'
+    items = [
+        {"name": p.get("name", "?"), "sku": p.get("sku", "-"),
+         "qty": f"{p.get('quantity_on_hand', 0):.0f}", "min": f"{p.get('min_stock', 0):.0f}"}
         for p in products
+    ]
+    html = jinja_env.get_template("email/low_stock.html").render(
+        products=items, count=len(products),
     )
-    html = f"""<!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-<h2 style="color:#333">⚠️ Low Stock Alert</h2>
-<p>The following products are below their minimum stock threshold:</p>
-<table style="width:100%;border-collapse:collapse;margin:16px 0">
-<thead><tr style="background:#f9fafb">
-<th style="padding:8px;text-align:left;border-bottom:2px solid #e5e7eb">Product</th>
-<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">SKU</th>
-<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">On Hand</th>
-<th style="padding:8px;text-align:center;border-bottom:2px solid #e5e7eb">Min Stock</th>
-</tr></thead>
-<tbody>{rows_html}</tbody>
-</table>
-<p style="color:#999;font-size:12px">SpacetimeCRM — Inventory Alert</p>
-</body></html>"""
     send_email(admin_email, f"⚠️ Low Stock Alert — {len(products)} product(s) below threshold", html)
