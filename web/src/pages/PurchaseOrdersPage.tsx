@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api, PurchaseOrder, PurchaseOrderLineItem } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -21,101 +23,128 @@ const statusColors: Record<string, "outline" | "default" | "success" | "destruct
 
 export default function PurchaseOrdersPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ vendor_name: "", notes: "" });
   const [selectedPo, setSelectedPo] = useState<string | null>(null);
-  const [poDetail, setPoDetail] = useState<PurchaseOrder | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [newItemForm, setNewItemForm] = useState({ product_id: "", description: "", quantity: 1, unit_price: 0 });
   const [receiveMode, setReceiveMode] = useState<string | null>(null);
   const [receiveQuantities, setReceiveQuantities] = useState<Record<string, number>>({});
 
-  const load = async (offset: number) => {
-    try {
-      const res = await api.purchaseOrders.list(offset, PAGE_SIZE);
-      setPos(res.purchase_orders);
+  const { data: listData, isLoading } = useQuery({
+    queryKey: ["purchase-orders", { offset: pag.offset }],
+    queryFn: async () => {
+      const res = await api.purchaseOrders.list(pag.offset, PAGE_SIZE);
       pag.setTotal(res.total);
-    } catch { toast.error("Failed to load purchase orders"); }
-    finally { setLoading(false); }
-  };
+      return res.purchase_orders;
+    },
+  });
+  const pos = listData ?? [];
 
-  useEffect(() => { load(pag.offset); }, [pag.offset]);
-
-  const loadDetail = async (id: string) => {
-    setDetailLoading(true);
-    try {
-      const res = await api.purchaseOrders.get(id);
-      setPoDetail(res.purchase_order);
-      setSelectedPo(id);
-      // Init receive quantities
+  const { data: poDetail, isLoading: detailLoading } = useQuery({
+    queryKey: ["purchase-order-detail", selectedPo],
+    queryFn: async () => {
+      const res = await api.purchaseOrders.get(selectedPo!);
       const rq: Record<string, number> = {};
       for (const item of res.purchase_order.line_items || []) {
         rq[item.id] = item.received_quantity;
       }
       setReceiveQuantities(rq);
-    } catch { toast.error("Failed to load PO details"); }
-    finally { setDetailLoading(false); }
-  };
+      return res.purchase_order;
+    },
+    enabled: !!selectedPo,
+  });
 
-  const handleCreate = async () => {
-    try {
-      await api.purchaseOrders.create(form);
+  const createMutation = useMutation({
+    mutationFn: () => api.purchaseOrders.create(form),
+    onSuccess: () => {
       toast.success("Purchase order created");
       setShowForm(false);
       setForm({ vendor_name: "", notes: "" });
-      load(pag.offset);
-    } catch { toast.error("Failed to create purchase order"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to create purchase order"),
+  });
 
-  const handleDelete = async (id: string) => {
-    await api.purchaseOrders.delete(id);
-    toast.success("Purchase order deleted");
-    if (selectedPo === id) { setSelectedPo(null); setPoDetail(null); }
-    load(pag.offset);
-  };
+  const handleCreate = () => createMutation.mutate();
 
-  const handleAddItem = async () => {
-    if (!selectedPo) return;
-    if (!newItemForm.description) { toast.error("Description required"); return; }
-    try {
-      await api.purchaseOrders.lineItems.create(selectedPo, newItemForm);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.purchaseOrders.delete(id),
+    onSuccess: (_data, id) => {
+      toast.success("Purchase order deleted");
+      if (selectedPo === id) { setSelectedPo(null); }
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to delete purchase order"),
+  });
+
+  const handleDelete = (id: string) => deleteMutation.mutate(id);
+
+  const addItemMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedPo) throw new Error("No PO selected");
+      if (!newItemForm.description) throw new Error("Description required");
+      return api.purchaseOrders.lineItems.create(selectedPo, newItemForm);
+    },
+    onSuccess: () => {
       toast.success("Line item added");
       setNewItemForm({ product_id: "", description: "", quantity: 1, unit_price: 0 });
-      loadDetail(selectedPo);
-      load(pag.offset);
-    } catch { toast.error("Failed to add line item"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["purchase-order-detail", selectedPo] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: (err) => toast.error(err instanceof Error && err.message === "Description required" ? err.message : "Failed to add line item"),
+  });
 
-  const handleDeleteItem = async (itemId: string) => {
-    if (!selectedPo) return;
-    await api.purchaseOrders.lineItems.delete(selectedPo, itemId);
-    toast.success("Line item removed");
-    loadDetail(selectedPo);
-    load(pag.offset);
-  };
+  const handleAddItem = () => addItemMutation.mutate();
 
-  const handleStatusChange = async (status: string) => {
-    if (!selectedPo) return;
-    await api.purchaseOrders.status.update(selectedPo, status);
-    toast.success(`PO marked as ${status}`);
-    loadDetail(selectedPo);
-    load(pag.offset);
-  };
+  const deleteItemMutation = useMutation({
+    mutationFn: (itemId: string) => {
+      if (!selectedPo) throw new Error("No PO selected");
+      return api.purchaseOrders.lineItems.delete(selectedPo, itemId);
+    },
+    onSuccess: () => {
+      toast.success("Line item removed");
+      queryClient.invalidateQueries({ queryKey: ["purchase-order-detail", selectedPo] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to remove line item"),
+  });
 
-  const handleReceive = async () => {
-    if (!selectedPo || !poDetail?.line_items) return;
-    const items = poDetail.line_items.map((item) => ({
-      id: item.id,
-      received_quantity: receiveQuantities[item.id] ?? item.quantity,
-    }));
-    await api.purchaseOrders.receive(selectedPo, items);
-    toast.success("Items received");
-    setReceiveMode(null);
-    loadDetail(selectedPo);
-    load(pag.offset);
-  };
+  const handleDeleteItem = (itemId: string) => deleteItemMutation.mutate(itemId);
+
+  const statusMutation = useMutation({
+    mutationFn: (status: string) => {
+      if (!selectedPo) throw new Error("No PO selected");
+      return api.purchaseOrders.status.update(selectedPo, status);
+    },
+    onSuccess: (_data, status) => {
+      toast.success(`PO marked as ${status}`);
+      queryClient.invalidateQueries({ queryKey: ["purchase-order-detail", selectedPo] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to update status"),
+  });
+
+  const handleStatusChange = (status: string) => statusMutation.mutate(status);
+
+  const receiveMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedPo || !poDetail?.line_items) throw new Error("No PO or items");
+      const items = poDetail.line_items.map((item) => ({
+        id: item.id,
+        received_quantity: receiveQuantities[item.id] ?? item.quantity,
+      }));
+      return api.purchaseOrders.receive(selectedPo, items);
+    },
+    onSuccess: () => {
+      toast.success("Items received");
+      setReceiveMode(null);
+      queryClient.invalidateQueries({ queryKey: ["purchase-order-detail", selectedPo] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+    },
+    onError: () => toast.error("Failed to receive items"),
+  });
+
+  const handleReceive = () => receiveMutation.mutate();
 
   return (
     <div className="flex gap-6 h-full">
@@ -151,7 +180,7 @@ export default function PurchaseOrdersPage() {
           {pos.map((po) => (
             <Card key={po.id}
               className={`cursor-pointer transition-colors ${selectedPo === po.id ? "ring-2 ring-primary" : "hover:bg-muted/50"}`}
-              onClick={() => loadDetail(po.id)}>
+              onClick={() => setSelectedPo(po.id)}>
               <CardContent className="pt-4 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
@@ -167,7 +196,7 @@ export default function PurchaseOrdersPage() {
               </CardContent>
             </Card>
           ))}
-          {!loading && pos.length === 0 && (
+          {!isLoading && pos.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">No purchase orders yet</p>
           )}
         </div>
@@ -202,7 +231,7 @@ export default function PurchaseOrdersPage() {
                   </div>
                   <p className="text-muted-foreground">{poDetail.vendor_name}</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => { setSelectedPo(null); setPoDetail(null); }}>
+                <Button variant="ghost" size="icon" onClick={() => { setSelectedPo(null); }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>

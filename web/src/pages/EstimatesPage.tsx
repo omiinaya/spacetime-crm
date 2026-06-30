@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api, Estimate, Customer, EstimateLineItem } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -21,59 +23,100 @@ const statusColors: Record<string, "default" | "warning" | "success" | "destruct
 
 export default function EstimatesPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [estimates, setEstimates] = useState<Estimate[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", expires_at: "" });
   const [selectedEst, setSelectedEst] = useState<Estimate | null>(null);
-  const [lineItems, setLineItems] = useState<EstimateLineItem[]>([]);
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
 
-  const load = async (offset: number) => {
-    try {
-      const [eRes, cRes] = await Promise.all([api.estimates.list(filter, offset, PAGE_SIZE), api.customers.list()]);
-      setEstimates(eRes.estimates);
-      setCustomers(cRes.customers);
-      pag.setTotal(eRes.total);
-    } catch { toast.error("Failed to load estimates"); }
-    finally { setLoading(false); }
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ["estimates", { filter, offset: pag.offset }],
+    queryFn: async () => {
+      const [eRes, cRes] = await Promise.all([
+        api.estimates.list(filter, pag.offset, PAGE_SIZE),
+        api.customers.list(),
+      ]);
+      return { estimates: eRes.estimates, customers: cRes.customers, total: eRes.total };
+    },
+    select: (res) => {
+      pag.setTotal(res.total);
+      return { estimates: res.estimates, customers: res.customers };
+    },
+  });
 
-  useEffect(() => { load(pag.offset); }, [filter, pag.offset]);
+  const estimates = data?.estimates ?? [];
+  const customers = data?.customers ?? [];
 
-  const handleCreate = async () => {
-    try {
-      await api.estimates.create({
-        customer_id: form.customer_id, ticket_id: form.ticket_id,
-        notes: form.notes, expires_at: form.expires_at ? new Date(form.expires_at).getTime() : 0,
-      });
+  const { data: lineItemsData } = useQuery({
+    queryKey: ["estimate-line-items", selectedEst?.id],
+    queryFn: async () => {
+      if (!selectedEst) return [];
+      const res = await api.estimates.lineItems.list(selectedEst.id);
+      return res.line_items;
+    },
+    enabled: !!selectedEst,
+  });
+
+  const lineItems = lineItemsData ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      api.estimates.create({
+        customer_id: form.customer_id,
+        ticket_id: form.ticket_id,
+        notes: form.notes,
+        expires_at: form.expires_at ? new Date(form.expires_at).getTime() : 0,
+      }),
+    onSuccess: () => {
       toast.success("Estimate created");
       setShowForm(false);
       setForm({ customer_id: "", ticket_id: "", notes: "", expires_at: "" });
-      load(pag.offset);
-    } catch { toast.error("Failed to create estimate"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    },
+    onError: () => toast.error("Failed to create estimate"),
+  });
 
-  const selectEst = async (est: Estimate) => {
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.estimates.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    },
+  });
+
+  const convertMutation = useMutation({
+    mutationFn: (id: string) => api.estimates.convert(id),
+    onSuccess: () => {
+      toast.success("Converted to invoice!");
+      setSelectedEst(null);
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    },
+    onError: () => toast.error("Failed to convert"),
+  });
+
+  const lineItemMutation = useMutation({
+    mutationFn: (item: { description: string; quantity: number; unit_price: number; item_type: string }) =>
+      api.estimates.lineItems.create(selectedEst!.id, item),
+    onSuccess: () => {
+      setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
+      queryClient.invalidateQueries({ queryKey: ["estimate-line-items", selectedEst?.id] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    },
+    onError: () => toast.error("Failed to add item"),
+  });
+
+  const selectEst = (est: Estimate) => {
     setSelectedEst(est);
-    try {
-      const res = await api.estimates.lineItems.list(est.id);
-      setLineItems(res.line_items);
-    } catch { setLineItems([]); }
     setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
   };
 
-  const addLineItem = async () => {
+  const handleCreate = () => {
+    createMutation.mutate();
+  };
+
+  const addLineItem = () => {
     if (!selectedEst) return;
-    try {
-      await api.estimates.lineItems.create(selectedEst.id, newItem);
-      const res = await api.estimates.lineItems.list(selectedEst.id);
-      setLineItems(res.line_items);
-      setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
-      load(pag.offset);
-    } catch { toast.error("Failed to add item"); }
+    lineItemMutation.mutate(newItem);
   };
 
   return (
@@ -135,20 +178,13 @@ export default function EstimatesPage() {
             <Card>
               <CardHeader><CardTitle>#{selectedEst.estimate_number} — ${selectedEst.total.toFixed(2)}</CardTitle>
                 {selectedEst.status === "approved" && (
-                  <Button size="sm" variant="default" onClick={async () => {
-                    try {
-                      await api.estimates.convert(selectedEst.id);
-                      toast.success("Converted to invoice!");
-                      setSelectedEst(null);
-                      load(pag.offset);
-                    } catch { toast.error("Failed to convert"); }
-                  }}>
+                  <Button size="sm" variant="default" onClick={() => convertMutation.mutate(selectedEst.id)}>
                     <FileText className="h-3.5 w-3.5 mr-1" /> Convert to Invoice
                   </Button>
                 )}
               </CardHeader>
               <CardContent className="space-y-3">
-                <Select value={selectedEst.status} onChange={(e) => { api.estimates.updateStatus(selectedEst.id, e.target.value); selectEst(selectedEst); }}>
+                <Select value={selectedEst.status} onChange={(e) => { statusMutation.mutate({ id: selectedEst.id, status: e.target.value }); }}>
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
                   <option value="approved">Approved</option>
