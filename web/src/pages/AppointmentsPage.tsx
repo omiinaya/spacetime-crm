@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import { api, Appointment, Customer } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -25,9 +27,6 @@ const statusColors: Record<string, "default" | "secondary" | "warning" | "succes
 
 export default function AppointmentsPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [appts, setAppts] = useState<Appointment[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ customer_id: "", ticket_id: "", title: "", description: "", start_time: "", end_time: "", all_day: false });
 
@@ -37,43 +36,73 @@ export default function AppointmentsPage() {
   const [calMonth, setCalMonth] = useState(now.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
 
-  const load = async (offset: number) => {
-    try {
-      const [aRes, cRes] = await Promise.all([api.appointments.list(offset, PAGE_SIZE), api.customers.list()]);
-      setAppts(aRes.appointments);
-      setCustomers(cRes.customers);
-      pag.setTotal(aRes.total);
-    } catch { toast.error("Failed to load appointments"); }
-    finally { setLoading(false); }
-  };
+  // ── React Query: appointments list ──
+  const { data: apptsData, isLoading } = useQuery({
+    queryKey: ["appointments", { offset: pag.offset }],
+    queryFn: () => api.appointments.list(pag.offset, PAGE_SIZE),
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => { load(pag.offset); }, [pag.offset]);
+  // Sync pagination total from query data
+  useEffect(() => {
+    if (apptsData?.total !== undefined) {
+      pag.setTotal(apptsData.total);
+    }
+  }, [apptsData?.total]);
 
-  const handleCreate = async () => {
-    try {
-      await api.appointments.create({
+  // ── React Query: customers for dropdown ──
+  const { data: customersData } = useQuery({
+    queryKey: ["customers"],
+    queryFn: () => api.customers.list(),
+    staleTime: 60_000,
+  });
+
+  const appts = apptsData?.appointments ?? [];
+  const customers = customersData?.customers ?? [];
+
+  // ── Mutations ──
+  const createMutation = useMutation({
+    mutationFn: () =>
+      api.appointments.create({
         ...form,
         start_time: form.start_time ? new Date(form.start_time).getTime() : 0,
         end_time: form.end_time ? new Date(form.end_time).getTime() : 0,
-      });
+      }),
+    onSuccess: () => {
       toast.success("Appointment created");
       setShowForm(false);
       setForm({ customer_id: "", ticket_id: "", title: "", description: "", start_time: "", end_time: "", all_day: false });
-      load(pag.offset);
-    } catch { toast.error("Failed to create appointment"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+    onError: () => {
+      toast.error("Failed to create appointment");
+    },
+  });
 
-  const handleStatus = async (id: string, status: string) => {
-    await api.appointments.updateStatus(id, status);
-    load(pag.offset);
-  };
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.appointments.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+  });
 
-  const handleDelete = async (id: string) => {
-    await api.appointments.delete(id);
-    toast.success("Appointment deleted");
-    load(pag.offset);
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.appointments.delete(id),
+    onSuccess: () => {
+      toast.success("Appointment deleted");
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    },
+    onError: () => {
+      toast.error("Failed to delete appointment");
+    },
+  });
 
+  const handleCreate = () => createMutation.mutate();
+  const handleStatus = (id: string, status: string) => statusMutation.mutate({ id, status });
+  const handleDelete = (id: string) => deleteMutation.mutate(id);
+
+  // ── Derived data ──
   const setFormDate = (day: number) => {
     const d = new Date(calYear, calMonth, day);
     const yyyymmdd = d.toISOString().slice(0, 10);

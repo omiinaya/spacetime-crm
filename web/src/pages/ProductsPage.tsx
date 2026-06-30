@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { api, Product, InventoryAdjustment } from "../lib/api";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
+import { api, Product } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -26,14 +28,11 @@ const reasonColors: Record<string, string> = {
 
 export default function ProductsPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Product>>({ ...emptyForm });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [adjustments, setAdjustments] = useState<InventoryAdjustment[]>([]);
   const [adjForm, setAdjForm] = useState({ quantity_change: 0, reason: "received", reference_id: "", notes: "" });
   const { user } = useAuth();
   const [scanning, setScanning] = useState(false);
@@ -42,21 +41,63 @@ export default function ProductsPage() {
 
   const barcodeDetectorSupported = typeof window !== "undefined" && "BarcodeDetector" in window;
 
-  const load = async (offset: number) => {
-    try {
-      const res = await api.products.list(search, offset, PAGE_SIZE);
-      setProducts(res.products);
+  const { data, isLoading } = useQuery({
+    queryKey: ["products", { search, offset: pag.offset }],
+    queryFn: async () => {
+      const res = await api.products.list(search, pag.offset, PAGE_SIZE);
+      return res;
+    },
+    select: (res) => {
       pag.setTotal(res.total);
-    } catch { toast.error("Failed to load products"); }
-    finally { setLoading(false); }
-  };
+      return { products: res.products };
+    },
+  });
 
-  useEffect(() => { load(pag.offset); }, [search, pag.offset]);
+  const products = data?.products ?? [];
+
+  // Adjustments query — active when product selected
+  const { data: adjData } = useQuery({
+    queryKey: ["product-adjustments", selectedProduct?.id],
+    queryFn: async () => {
+      const res = await api.products.adjustments.list(selectedProduct!.id);
+      return res.adjustments;
+    },
+    enabled: !!selectedProduct,
+  });
+  const adjustments = adjData ?? [];
 
   const handleSearch = (val: string) => {
     setSearch(val);
     pag.reset();
   };
+
+  const createMutation = useMutation({
+    mutationFn: () => api.products.create(form),
+    onSuccess: () => {
+      toast.success("Product created");
+      setShowForm(false);
+      setForm({ ...emptyForm });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: () => toast.error("Failed to save product"),
+  });
+
+  const adjustMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedProduct || !user) throw new Error("No product or user");
+      return api.products.adjustments.create(selectedProduct.id, {
+        ...adjForm,
+        user_id: user.id,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Stock adjusted");
+      setAdjForm({ quantity_change: 0, reason: "received", reference_id: "", notes: "" });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product-adjustments", selectedProduct?.id] });
+    },
+    onError: () => toast.error("Failed to adjust stock"),
+  });
 
   const startScanner = async () => {
     setScanning(true);
@@ -106,40 +147,12 @@ export default function ProductsPage() {
     };
   }, []);
 
-  const loadAdjustments = async (productId: string) => {
-    try {
-      const res = await api.products.adjustments.list(productId);
-      setAdjustments(res.adjustments);
-    } catch { setAdjustments([]); }
-  };
+  const handleSubmit = () => createMutation.mutate();
 
-  const handleSubmit = async () => {
-    try {
-      await api.products.create(form);
-      toast.success("Product created");
-      setShowForm(false);
-      setForm({ ...emptyForm });
-      load(pag.offset);
-    } catch { toast.error("Failed to save product"); }
-  };
+  const adjustStock = () => adjustMutation.mutate();
 
-  const adjustStock = async () => {
-    if (!selectedProduct || !user) return;
-    try {
-      await api.products.adjustments.create(selectedProduct.id, {
-        ...adjForm,
-        user_id: user.id,
-      });
-      toast.success("Stock adjusted");
-      setAdjForm({ quantity_change: 0, reason: "received", reference_id: "", notes: "" });
-      load(pag.offset);
-      loadAdjustments(selectedProduct.id);
-    } catch { toast.error("Failed to adjust stock"); }
-  };
-
-  const viewProduct = async (p: Product) => {
+  const viewProduct = (p: Product) => {
     setSelectedProduct(p);
-    await loadAdjustments(p.id);
   };
 
   const fmtDate = (ts: number) => new Date(ts).toLocaleString();

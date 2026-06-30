@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import { api, Payment, Invoice, Customer } from "../lib/api";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
+import { api } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -7,54 +9,54 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import Pagination from "../components/Pagination";
 import { CreditCard, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
 
-import { toast } from "sonner";
-
 export default function PaymentsPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "" });
 
-  const load = async (offset: number) => {
-    try {
+  const { data, isLoading } = useQuery({
+    queryKey: ["payments", { offset: pag.offset }],
+    queryFn: async () => {
       const [pRes, iRes, cRes] = await Promise.all([
-        api.payments.list(undefined, offset, PAGE_SIZE),
+        api.payments.list(undefined, pag.offset, PAGE_SIZE),
         api.invoices.list(),
         api.customers.list(),
       ]);
-      setPayments(pRes.payments);
-      setInvoices(iRes.invoices);
-      setCustomers(cRes.customers);
-      pag.setTotal(pRes.total);
-    } catch { toast.error("Failed to load payments"); }
-    finally { setLoading(false); }
-  };
+      return { payments: pRes.payments, invoices: iRes.invoices, customers: cRes.customers, total: pRes.total };
+    },
+    select: (res) => {
+      pag.setTotal(res.total);
+      return { payments: res.payments, invoices: res.invoices, customers: res.customers };
+    },
+  });
 
-  useEffect(() => { load(pag.offset); }, [pag.offset]);
+  const payments = data?.payments ?? [];
+  const invoices = data?.invoices ?? [];
+  const customers = data?.customers ?? [];
 
-  const handleRecord = async () => {
-    try {
-      await api.payments.record(form);
+  const recordMutation = useMutation({
+    mutationFn: () => api.payments.record(form),
+    onSuccess: () => {
       toast.success("Payment recorded");
       setShowForm(false);
       setForm({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "" });
-      load(pag.offset);
-    } catch { toast.error("Failed to record payment"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    },
+    onError: () => toast.error("Failed to record payment"),
+  });
 
-  const handleDelete = async (id: string) => {
-    try {
-      await api.payments.delete(id);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.payments.delete(id),
+    onSuccess: () => {
       toast.success("Payment deleted");
-      load(pag.offset);
-    } catch { toast.error("Failed to delete"); }
-  };
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+    },
+    onError: () => toast.error("Failed to delete"),
+  });
 
   const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -105,7 +107,7 @@ export default function PaymentsPage() {
             <Input placeholder="Reference" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
             <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             <div className="flex gap-2">
-              <Button onClick={handleRecord}>Record</Button>
+              <Button onClick={() => recordMutation.mutate()} disabled={recordMutation.isPending}>Record</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
             </div>
           </CardContent>
@@ -121,7 +123,7 @@ export default function PaymentsPage() {
                 <p className="text-xs text-muted-foreground">via {p.method} — {new Date(p.created_at).toLocaleDateString()}</p>
                 {p.reference && <p className="text-xs text-muted-foreground">Ref: {p.reference}</p>}
               </div>
-              <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+              <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(p.id)} disabled={deleteMutation.isPending}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
             </CardContent>
           </Card>
         ))}
