@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-07-01
-| Overall completeness: ~99% (+1% since last assessment)
+| Overall completeness: ~99% (+0% since last assessment)
 
 ---
 
@@ -18,6 +18,7 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
+- **Recurring invoices — ADDED** — New `recurring_invoice_rule` STDB table with CRUD + `generate_recurring_invoices` reducer that scans active rules, creates invoices with line items, and updates next-gen dates. API: list, create, update, delete, generate. Frontend: manage rules with form for setting frequency, interval, line item template, and "Generate Now" button.
 - **Recurring appointments — ADDED** — STDB module: `series_id` + `recurrence_rule` fields on Appointment, `set_recurrence` and `generate_next_occurrence` reducers. API: create with recurrence, set recurrence, generate-next endpoint, recurring-series list. Frontend: recurrence dropdown in form, "Recurring" panel with series list + "Generate Next" button.
 - **Low Stock Alerts — ADDED** — `GET /api/products/low-stock` lists products below threshold. `POST /api/products/low-stock/notify` sends email to admin with a formatted table. Frontend shows alert banner, product card badges, and detail panel display.
 - **`update_product` reducer — ADDED** — STDB module now supports updating name, sku, barcode, description, category, price, cost, `min_stock`, and `location` via `PUT /api/products/:id`.
@@ -81,7 +82,7 @@
 
 ---
 
-## Phase 3: Advanced ⚠️ (65% complete)
+## Phase 3: Advanced ⚠️ (80% complete)
 
 - [x] Multi-tenant support (25 tables with `tenant_id`)
 - [x] SMS notifications (Twilio — API integration works)
@@ -94,7 +95,7 @@
 - [ ] 📌 **Saved customer payment methods** — not implemented
 - [ ] 📌 **Portal payment UX** — checkout session creates but UI is basic
 - [ ] 📌 **Report scheduling/exports** — no saved reports, no email reports
-- [ ] 📌 **Recurring invoices** — no auto-generation or scheduling
+- [x] **Recurring invoices** — `recurring_invoice_rule` table + CRUD + `generate_recurring_invoices` reducer, API with manual trigger, frontend page with rule management and "Generate Now"
 
 ---
 

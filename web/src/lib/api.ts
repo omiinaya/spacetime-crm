@@ -939,4 +939,22 @@ export const api = {
         `/webhook-subscriptions/${id}/test`, { method: "POST" }
       ),
   },
+  recurringInvoices: {
+    list: () =>
+      apiFetch<{ rules: any[] }>("/recurring-invoices"),
+    create: (data: any) =>
+      apiFetch<{ ok: boolean }>("/recurring-invoices", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: any) =>
+      apiFetch<{ ok: boolean }>(`/recurring-invoices/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/recurring-invoices/${id}`, { method: "DELETE" }),
+    generate: () =>
+      apiFetch<{ ok: boolean }>("/recurring-invoices/generate", { method: "POST" }),
+  },
 };
