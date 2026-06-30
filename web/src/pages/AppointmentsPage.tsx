@@ -164,7 +164,7 @@ export default function AppointmentsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Appointments</h1>
           <p className="text-sm text-muted-foreground mt-1">Schedule and manage appointments</p>
