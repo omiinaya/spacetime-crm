@@ -170,3 +170,60 @@ class TestPOErrors:
     def test_unauthorized_access(self, client: httpx.Client):
         resp = client.get("/api/purchase-orders", timeout=10)
         assert resp.status_code in (401, 403)
+
+
+class TestPOApproval:
+    """Purchase order approval workflow: submit, approve, reject."""
+
+    def test_submit_for_approval(self, auth_headers: dict):
+        po_id = _create_po(auth_headers, "submit")
+        resp = httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
+        assert_ok(resp)
+        r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
+        assert r.json()["purchase_order"]["status"] == "pending_approval"
+
+    def test_approve_po(self, auth_headers: dict):
+        po_id = _create_po(auth_headers, "approve")
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
+        resp = httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/approve", json={"user_id": "admin-user"}, headers=auth_headers, timeout=10)
+        assert_ok(resp)
+        r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
+        po = r.json()["purchase_order"]
+        assert po["status"] == "approved"
+        assert po["approved_by"] == "admin-user"
+        assert po["approved_at"] > 0
+
+    def test_reject_po(self, auth_headers: dict):
+        po_id = _create_po(auth_headers, "reject")
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
+        resp = httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/reject", headers=auth_headers, timeout=10)
+        assert_ok(resp)
+        r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
+        assert r.json()["purchase_order"]["status"] == "draft"
+
+    def test_reapprove_after_rejection(self, auth_headers: dict):
+        po_id = _create_po(auth_headers, "reauth")
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/reject", headers=auth_headers, timeout=10)
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/approve", json={"user_id": "admin-user"}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
+        assert r.json()["purchase_order"]["status"] == "approved"
+
+    def test_cannot_approve_from_sent_status(self, auth_headers: dict):
+        """Approve should only work from pending_approval status."""
+        po_id = _create_po(auth_headers, "wrongstate")
+        # Go directly to sent via status update
+        httpx.put(f"{SERVER_URL}/api/purchase-orders/{po_id}/status", json={"status": "sent"}, headers=auth_headers, timeout=10)
+        # Approve should silently no-op (status != pending_approval)
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/approve", json={"user_id": "admin"}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
+        assert r.json()["purchase_order"]["status"] == "sent"
+
+    def test_approve_shows_approved_by(self, auth_headers: dict):
+        po_id = _create_po(auth_headers, "showappr")
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
+        httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/approve", json={"user_id": "jane-admin"}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
+        po = r.json()["purchase_order"]
+        assert po["approved_by"] == "jane-admin"

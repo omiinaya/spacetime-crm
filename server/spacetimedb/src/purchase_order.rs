@@ -11,7 +11,7 @@ pub struct PurchaseOrder {
     pub tenant_id: String,
     pub vendor_name: String,
     pub po_number: u64,
-    pub status: String, // draft → sent → partial → received → cancelled
+    pub status: String, // draft → pending_approval → approved → sent → partial → received → cancelled
     pub subtotal: f64,
     pub tax_amount: f64,
     pub shipping_cost: f64,
@@ -19,6 +19,9 @@ pub struct PurchaseOrder {
     pub notes: String,
     pub created_at: u64,
     pub updated_at: u64,
+    pub approved_by: String,
+    #[default(0u64)]
+    pub approved_at: u64,
 }
 
 #[spacetimedb::table(accessor = purchase_order_line_item, public)]
@@ -48,6 +51,8 @@ pub fn create_purchase_order(ctx: &ReducerContext, tenant_id: String, vendor_nam
         vendor_name,
         po_number,
         status: "draft".to_string(),
+        approved_by: String::new(),
+        approved_at: 0,
         subtotal: 0.0,
         tax_amount: 0.0,
         shipping_cost: 0.0,
@@ -112,6 +117,44 @@ pub fn delete_po_line_item(ctx: &ReducerContext, po_id: String, item_id: String)
 pub fn update_po_status(ctx: &ReducerContext, id: String, status: String) {
     if let Some(mut po) = ctx.db.purchase_order().id().find(&id) {
         po.status = status;
+        po.updated_at = super::now_ms(ctx);
+        ctx.db.purchase_order().id().update(po);
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn submit_for_approval(ctx: &ReducerContext, id: String) {
+    if let Some(mut po) = ctx.db.purchase_order().id().find(&id) {
+        if po.status != "draft" {
+            return;
+        }
+        po.status = "pending_approval".to_string();
+        po.updated_at = super::now_ms(ctx);
+        ctx.db.purchase_order().id().update(po);
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn approve_po(ctx: &ReducerContext, id: String, user_id: String) {
+    if let Some(mut po) = ctx.db.purchase_order().id().find(&id) {
+        if po.status != "pending_approval" {
+            return;
+        }
+        po.status = "approved".to_string();
+        po.approved_by = user_id;
+        po.approved_at = super::now_ms(ctx);
+        po.updated_at = super::now_ms(ctx);
+        ctx.db.purchase_order().id().update(po);
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn reject_po(ctx: &ReducerContext, id: String) {
+    if let Some(mut po) = ctx.db.purchase_order().id().find(&id) {
+        if po.status != "pending_approval" {
+            return;
+        }
+        po.status = "draft".to_string();
         po.updated_at = super::now_ms(ctx);
         ctx.db.purchase_order().id().update(po);
     }

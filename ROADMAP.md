@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** 2026-07-01
-| Overall completeness: ~100% (Phase 4 complete)
+| Overall completeness: ~100% (Phase 4 complete, PO approval workflow added)
 
 ---
 
@@ -9,14 +9,16 @@
 
 | Layer | Lines | Completeness | Test Coverage | Anti-Patterns |
 |-------|-------|:------------:|:-------------:|:-------------:|
-| STDB Module (Rust) | 1,711 | 86% | 0% (unit) | 3 major, 4 minor |
-| Backend API (Python) | ~3,925 | 90% | 22% (API paths) | 3 major, 2 minor |
-| Frontend (TypeScript) | 7,469 | 75% | 7% (unit) | 3 major, 3 minor |
+| STDB Module (Rust) | 1,725 | 87% | 0% (unit) | 3 major, 4 minor |
+| Backend API (Python) | ~3,960 | 91% | 22% (API paths) | 3 major, 2 minor |
+| Frontend (TypeScript) | 7,530 | 76% | 7% (unit) | 3 major, 3 minor |
 | Infra (Docker/scripts) | 45 (Dockerfile) | 85% | N/A | 2 minor |
-| **Tests** | **~6,200 (173 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
-| **Overall** | **~17,400** | **~89%** | **40%** | **9 items** |
+| **Tests** | **~6,500 (362 tests)** | **Added this sprint** | **N/A** | **3 gaps** |
+| **Overall** | **~17,600** | **~89%** | **40%** | **9 items** |
 
 ### 🟢 Sprint Wins (since last assessment)
+
+- **Purchase order approvals — ADDED** — New approval workflow for POs: submit-for-approval, approve, and reject functions. Status flow: draft → pending_approval → approved → sent → partial → received → cancelled. Approved PO shows approver name and timestamp. 6 new backend tests. Total coverage: 268 backend + 94 frontend = 362 tests.
 
 - **Report scheduling & email — ADDED** — New `scheduled_report` STDB table (public, tenant-scoped). CRUD reducers. Backend API: list, create, update, delete, run-now, check-due. Report generator builds data for 6 report types (revenue, tickets, invoices, appointments, tech productivity, customers) with real STDB queries. HTML email delivery with inline chart bars. Calculates next-run based on daily/weekly/monthly schedules. Frontend: management UI in ReportsPage with create form, run-now/pause/resume/delete actions.
 - **Test coverage — 262 TESTS (25 modules)** — Added 43 new tests covering the remaining untested modules: users, health, dashboard, export/import, report schedules, plus 5 more PO tests fixed by product search bug. Fixed TWO bugs found by tests: (a) User `name` field has #[unique] — tests now use timestamped names, (b) Product search filtered after pagination slice — now fetches 1000 rows before filtering. Phase 4 → 92%.

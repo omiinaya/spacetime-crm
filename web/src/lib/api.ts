@@ -233,6 +233,8 @@ export interface PurchaseOrder {
   vendor_name: string;
   po_number: number;
   status: string;
+  approved_by: string;
+  approved_at: number;
   subtotal: number;
   tax_amount: number;
   total: number;
@@ -746,6 +748,19 @@ export const api = {
       apiFetch<{ ok: boolean }>(`/purchase-orders/${poId}/receive`, {
         method: "POST",
         body: JSON.stringify({ items }),
+      }),
+    submitForApproval: (poId: string) =>
+      apiFetch<{ ok: boolean }>(`/purchase-orders/${poId}/submit-for-approval`, {
+        method: "POST",
+      }),
+    approve: (poId: string, userId: string) =>
+      apiFetch<{ ok: boolean }>(`/purchase-orders/${poId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({ user_id: userId }),
+      }),
+    reject: (poId: string) =>
+      apiFetch<{ ok: boolean }>(`/purchase-orders/${poId}/reject`, {
+        method: "POST",
       }),
   },
   users: {
