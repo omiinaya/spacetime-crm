@@ -38,6 +38,7 @@ export default function PosPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [scanning, setScanning] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
+  const [refunding, setRefunding] = useState(false);
 
   // ── Product search ──
   const { data: searchResults } = useQuery({
@@ -225,9 +226,28 @@ export default function PosPage() {
             <ArrowLeft className="w-4 h-4 mr-1" /> New Sale
           </Button>
           <h2 className="text-lg font-bold">Receipt #{sale.receipt_number}</h2>
+          {sale.status === "refunded" && <Badge variant="destructive">Refunded</Badge>}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-1" /> Print
           </Button>
+          {sale.status !== "refunded" && sale.status !== "voided" && (
+            <Button variant="outline" size="sm" className="text-red-500 border-red-500/30 hover:bg-red-500/10" disabled={refunding} onClick={async () => {
+              if (!confirm("Refund this sale? This cannot be undone.")) return;
+              setRefunding(true);
+              try {
+                await api.pos.refund(sale.id);
+                setLastReceipt({ ...lastReceipt, sale: { ...sale, status: "refunded", refunded_at: Date.now() } });
+                queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
+                toast.success("Sale refunded");
+              } catch (e) {
+                toast.error("Failed to refund");
+              } finally {
+                setRefunding(false);
+              }
+            }}>
+              <RotateCcw className="w-4 h-4 mr-1" /> {refunding ? "Refunding..." : "Refund"}
+            </Button>
+          )}
         </div>
 
         <Card className="print:shadow-none print:border-0">
