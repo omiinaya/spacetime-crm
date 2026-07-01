@@ -30,6 +30,14 @@ export default function DashboardPage({
 }) {
   const [reports, setReports] = useState<ReportsData | null>(null);
 
+  const updateApptStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) =>
+      api.appointments.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+  });
+
   const claimTicket = useMutation({
     mutationFn: async (ticketId: string) => {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -314,10 +322,39 @@ export default function DashboardPage({
                 {stats.today_appointments.slice(0, 5).map((appt) => {
                   const time = new Date(appt.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                   return (
-                    <div key={appt.id} className="flex items-center justify-between border rounded-lg p-2 hover:bg-accent cursor-pointer" onClick={() => onNavigate("appointments")}>
-                      <div className="flex-1 min-w-0">
+                    <div key={appt.id} className="flex items-center justify-between border rounded-lg p-2 hover:bg-accent">
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onNavigate("appointments")}>
                         <p className="text-sm font-medium truncate">{appt.title || "Appointment"}</p>
                         <p className="text-xs text-muted-foreground">{time} · {appt.status}</p>
+                      </div>
+                      <div className="flex items-center gap-1 ml-2 shrink-0">
+                        {appt.status === "scheduled" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateApptStatus.mutate({ id: appt.id, status: "checked_in" }); }}
+                            className="text-xs px-2 py-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                            title="Check in"
+                          >
+                            Check In
+                          </button>
+                        )}
+                        {appt.status === "checked_in" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateApptStatus.mutate({ id: appt.id, status: "in_progress" }); }}
+                            className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                            title="Start service"
+                          >
+                            Start
+                          </button>
+                        )}
+                        {(appt.status === "scheduled" || appt.status === "checked_in" || appt.status === "in_progress") && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateApptStatus.mutate({ id: appt.id, status: "completed" }); }}
+                            className="text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20"
+                            title="Mark completed"
+                          >
+                            ✓
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
