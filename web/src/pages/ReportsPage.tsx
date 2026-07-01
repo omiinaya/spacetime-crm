@@ -126,7 +126,7 @@ export default function ReportsPage() {
     return <p className="text-sm text-muted-foreground">Failed to load reports.</p>;
   }
 
-  const { revenue_by_month, ticket_by_status, invoice_by_status, appointments_by_month, tech_closed, top_customers, totals } = data;
+  const { revenue_by_month, ticket_by_status, invoice_by_status, appointments_by_month, customers_by_month, tech_closed, top_customers, totals } = data;
 
   return (
     <div className="space-y-6">
@@ -318,6 +318,25 @@ export default function ReportsPage() {
                 </BarChart>
               </ResponsiveContainer>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Customer Acquisition by Month */}
+        <Card>
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4 text-blue-400" /> Customer Acquisition</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={customers_by_month}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
+                <YAxis tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px" }}
+                  formatter={(value: any) => [value, "New Customers"]}
+                />
+                <Bar dataKey="new_customers" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
