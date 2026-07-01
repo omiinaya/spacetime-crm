@@ -1,0 +1,10 @@
+{% extends "email/base.html" %}
+{% block heading %}Appointment Reminder — Tomorrow{% endblock %}
+{% block body %}
+<p>This is a friendly reminder about your upcoming appointment:</p>
+<p><strong>{{ title }}</strong></p>
+<p>When: <strong>{{ date_str }}</strong></p>
+<p>Please arrive on time. If you need to reschedule, contact us as soon as possible.</p>
+<p><a href="{{ link }}" target="_blank" style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">View in Portal</a></p>
+<p style="margin-top:20px;font-size:0.85em;color:#888;">This is an automated reminder from SpacetimeCRM.</p>
+{% endblock %}

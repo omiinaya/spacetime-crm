@@ -195,6 +195,16 @@ def _notify_appointment_created(phone: str, title: str, start_time: int) -> None
     asyncio.ensure_future(send_sms(phone, body))
 
 
+def _notify_appointment_reminder(phone: str, title: str, start_time: int) -> None:
+    """Send appointment reminder SMS (24h before)."""
+    from datetime import datetime
+    dt = datetime.fromtimestamp(start_time / 1000)
+    date_str = dt.strftime("%A, %B %d at %I:%M %p")
+    body = f"Reminder: {title} tomorrow at {date_str}. See you then!"
+    import asyncio
+    asyncio.ensure_future(send_sms(phone, body))
+
+
 def _notify_estimate_approved(phone: str, estimate_number: int, total: float) -> None:
     """Send estimate approved SMS notification."""
     body = f"Estimate #{estimate_number} for ${total:.2f} approved. An invoice is being created."

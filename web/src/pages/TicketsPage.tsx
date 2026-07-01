@@ -57,7 +57,7 @@ export default function TicketsPage() {
     queryKey: ["tickets", { filter, offset: pag.offset }],
     queryFn: async () => {
       const [tRes, cRes] = await Promise.all([
-        api.tickets.list(filter, pag.offset, PAGE_SIZE),
+        api.tickets.list(filter, undefined, pag.offset, PAGE_SIZE),
         api.customers.list(),
       ]);
       return { tickets: tRes.tickets, customers: cRes.customers, total: tRes.total };

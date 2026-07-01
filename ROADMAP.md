@@ -18,6 +18,12 @@
 
 ### 🟢 Sprint Wins (since last assessment)
 
+- **Appointment reminder emails — ADDED** — `POST /api/appointments/send-reminders` sends email + SMS to all customers with appointments starting within 24 hours. New email template (`appointment_reminder.html`) with reminder branding + schedule link. New SMS function for appointments. `GET /api/appointments/due-soon` lists upcoming appointments with customer enrichment. Daily cron: `send-appointment-reminders` at 7 AM daily. 4 new backend tests.
+
+- **Customer detail panel — ADDED** — Click any customer card to expand a detail panel showing their 5 most recent tickets and invoices with status badges, amounts, and dates. Fetched on-demand via `customer_id` filter on existing tickets/invoices endpoints. Backend: added `customer_id` filter param to `GET /api/tickets` and `GET /api/invoices`. Frontend: `CustomerDetailPanel` component with inline cards, uses React Query for caching.
+
+- **Recurring invoice auto-generation cron — ADDED** — Hermes cron job runs `POST /api/recurring-invoices/generate` daily at 6 AM to auto-generate invoices for due recurring rules.
+
 - **POS / Counter Sale — ADDED** — Full kiosk module: STDB counter_sale + counter_sale_line_item tables, reducers, 6 REST API endpoints, and a kiosk-style frontend with barcode scanner, product search, real-time cart/tax/total, cash/card payment, change calculation, receipt view with print support, and sale history. 10 new backend tests. Total coverage: 280 backend + 94 frontend = 374 tests.
 
 - **TOTP 2FA — ADDED** — Two-factor authentication for staff accounts. STDB: `totp_secret` + `totp_enabled` on User table + 4 reducers. Backend: setup, verify, enable, disable, modified login (returns `requires_2fa` + temp_token), complete-login endpoint. Frontend: 2FA challenge step in LoginPage, QR code setup and verify/disable UI in SettingsPage. 8 new backend tests. Total coverage: 288 backend + 94 frontend = 382 tests.

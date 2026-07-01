@@ -16,9 +16,14 @@ router = APIRouter()
 
 
 @router.get("/api/invoices")
-async def list_invoices(status: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    """List invoices with pagination and optional status filter."""
-    where = f"status = '{status}'" if status else ""
+async def list_invoices(status: str = "", customer_id: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """List invoices with pagination and optional status/customer filter."""
+    conditions = []
+    if status:
+        conditions.append(f"status = '{status}'")
+    if customer_id:
+        conditions.append(f"customer_id = '{customer_id}'")
+    where = " AND ".join(conditions) if conditions else ""
     rows, total = await _paginated(
         user["tenant_id"], "invoices",
         offset=offset, limit=limit,

@@ -65,7 +65,7 @@ export default function InvoicesPage() {
     queryKey: ["invoices", { filter, offset: pag.offset }],
     queryFn: async () => {
       const [iRes, cRes, tRes] = await Promise.all([
-        api.invoices.list(filter, pag.offset, PAGE_SIZE),
+        api.invoices.list(filter, undefined, pag.offset, PAGE_SIZE),
         api.customers.list(),
         api.taxRates.list(),
       ]);
