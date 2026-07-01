@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { queryClient } from "../lib/query-client";
 import {
-  Users, Ticket, FileText, CreditCard, Calendar, Package,
+  Users, Ticket, FileText, CreditCard, Calendar, Package, CheckCircle, ArrowRight, Loader2,
 } from "lucide-react";
 import { api, DashboardStats, ReportsData, Invoice } from "../lib/api";
 import { Badge } from "../components/ui/badge";
@@ -27,6 +29,17 @@ export default function DashboardPage({
   onNavigate: (p: PageId) => void;
 }) {
   const [reports, setReports] = useState<ReportsData | null>(null);
+
+  const claimTicket = useMutation({
+    mutationFn: async (ticketId: string) => {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      return api.tickets.assign(ticketId, user.id || "");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: () => {},
+  });
 
   useEffect(() => {
     api.reports.get().then(setReports).catch(() => {});
@@ -250,17 +263,25 @@ export default function DashboardPage({
                   return (
                     <div
                       key={ticket.id}
-                      className="flex items-center justify-between border rounded-lg p-3 hover:bg-accent cursor-pointer"
-                      onClick={() => onNavigate("tickets")}
+                      className="flex items-center justify-between border rounded-lg p-3 hover:bg-accent"
                     >
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onNavigate("tickets")}>
                         <p className="text-sm font-medium truncate">{ticket.title || "Untitled"}</p>
                         <p className="text-xs text-muted-foreground">
                           <span className={`${slaColor}`}>●</span> {ticket.status === "open" ? "Open" : ticket.status}
                           {ticket.priority && ` · ${ticket.priority}`}
                         </p>
                       </div>
-                      <div className="text-right ml-2">
+                      <div className="flex items-center gap-1 ml-2 shrink-0">
+                        {ticket.status === "open" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); claimTicket.mutate(ticket.id); }}
+                            className="text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20"
+                            title="Assign to me"
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                          </button>
+                        )}
                         <p className="text-sm font-semibold">#{ticket.ticket_number || ticket.id.slice(-6)}</p>
                       </div>
                     </div>
