@@ -113,6 +113,11 @@ class InvoiceTaxRateUpdate(BaseModel):
     tax_rate: float = Field(..., ge=0, le=100)
 
 
+class BulkInvoiceStatusUpdate(BaseModel):
+    invoice_ids: list[str] = Field(..., min_length=1, max_length=500)
+    status: str = Field(..., min_length=1, max_length=50)
+
+
 # ─── Payments ────────────────────────────────────────────────────
 
 class PaymentCreate(BaseModel):

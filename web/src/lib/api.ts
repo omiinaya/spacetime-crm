@@ -157,6 +157,15 @@ export interface InvoiceLineItem {
   sort_order: number;
 }
 
+export interface InvoiceSummary {
+  by_status: Record<string, { count: number; total: number }>;
+  total_count: number;
+  total_revenue: number;
+  total_outstanding: number;
+  overdue_count: number;
+  overdue_total: number;
+}
+
 export interface Payment {
   id: string;
   invoice_id: string;
@@ -648,6 +657,13 @@ export const api = {
       apiFetch<{ count: number; total: number }>("/invoices/overdue-count"),
     triggerOverdueCheck: () =>
       apiFetch<{ ok: boolean }>("/invoices/trigger-overdue-check", { method: "POST" }),
+    summary: () =>
+      apiFetch<InvoiceSummary>("/invoices/summary"),
+    bulkStatusUpdate: (invoiceIds: string[], status: string) =>
+      apiFetch<{ ok: boolean; updated: number; errors: number }>("/invoices/bulk-status-update", {
+        method: "POST",
+        body: JSON.stringify({ invoice_ids: invoiceIds, status }),
+      }),
   },
   payments: {
     list: (invoiceId?: string, offset?: number, limit?: number) => {

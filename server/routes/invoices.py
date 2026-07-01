@@ -10,7 +10,7 @@ from helpers import (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
     require_role, logger, STATUS_LABELS, STATUS_CSS, jinja_env,
 )
-from models import InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate
+from models import InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate, BulkInvoiceStatusUpdate
 
 router = APIRouter()
 
@@ -68,6 +68,59 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
         "ticket_id": body.ticket_id,
     }))
     return {"ok": True}
+
+
+@router.get("/api/invoices/summary")
+async def get_invoice_summary(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Get invoice summary: counts and totals by status."""
+    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}'")
+    now = int(datetime.utcnow().timestamp() * 1000)
+    summary: dict[str, dict] = {}
+    for inv in rows:
+        s = inv.get("status", "draft")
+        total = float(inv.get("total", 0))
+        if s not in summary:
+            summary[s] = {"count": 0, "total": 0.0}
+        summary[s]["count"] += 1
+        summary[s]["total"] = round(summary[s]["total"] + total, 2)
+    # Add on-the-fly overdue detection
+    sent_partial_overdue = sum(
+        1 for i in rows
+        if i.get("status") in ("sent", "partial") and i.get("due_date", 0) > 0 and i.get("due_date", 0) < now
+    )
+    sent_partial_overdue_total = round(sum(
+        float(i.get("total", 0)) for i in rows
+        if i.get("status") in ("sent", "partial") and i.get("due_date", 0) > 0 and i.get("due_date", 0) < now
+    ), 2)
+    return {
+        "by_status": summary,
+        "total_count": len(rows),
+        "total_revenue": round(sum(float(i.get("total", 0)) for i in rows if i.get("status") == "paid"), 2),
+        "total_outstanding": round(sum(float(i.get("total", 0)) for i in rows if i.get("status") in ("sent", "partial", "overdue")), 2),
+        "overdue_count": sent_partial_overdue + summary.get("overdue", {}).get("count", 0),
+        "overdue_total": round(sent_partial_overdue_total + summary.get("overdue", {}).get("total", 0), 2),
+    }
+
+
+@router.post("/api/invoices/bulk-status-update")
+async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict = Depends(require_role("admin"))):
+    """Update status of multiple invoices at once."""
+    updated = 0
+    errors = 0
+    for inv_id in body.invoice_ids:
+        try:
+            await _call("update_invoice_status", [inv_id, body.status])
+            updated += 1
+        except HTTPException:
+            errors += 1
+    if updated:
+        await _log_audit(user, "bulk_update_status", "invoice", f"count={updated}", f"status={body.status}")
+        asyncio.ensure_future(_fire_webhook("invoice.bulk_status_changed", {
+            "entity_type": "invoice",
+            "count": updated,
+            "status": body.status,
+        }))
+    return {"ok": True, "updated": updated, "errors": errors}
 
 
 @router.get("/api/invoices/overdue-count")
