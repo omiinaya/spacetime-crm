@@ -144,3 +144,35 @@ class TestPOSRefund:
         r = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}", headers=auth_headers, timeout=10)
         assert r.json()["sale"]["status"] == "refunded"
         assert r.json()["sale"]["refunded_at"] > 0
+
+
+class TestPOSReceiptPdf:
+    """POS receipt PDF generation."""
+
+    def test_receipt_pdf_returns_pdf(self, auth_headers: dict):
+        """Getting receipt PDF for a completed sale returns PDF content type."""
+        sale_id = _create_sale(auth_headers, "pdf")
+        resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}/receipt-pdf", headers=auth_headers, timeout=10)
+        assert resp.status_code == 200
+        assert resp.headers.get("content-type", "").startswith("application/pdf")
+        content = resp.content
+        assert len(content) > 200  # PDF is at least a few hundred bytes
+
+    def test_receipt_pdf_nonexistent(self, auth_headers: dict):
+        """Getting receipt PDF for a nonexistent sale returns 404."""
+        resp = httpx.get(f"{SERVER_URL}/api/pos/sales/nonexistent-999/receipt-pdf", headers=auth_headers, timeout=10)
+        assert resp.status_code == 404
+
+    def test_receipt_pdf_requires_auth(self, client: httpx.Client):
+        """Getting receipt PDF without auth returns 401."""
+        resp = client.get(f"{SERVER_URL}/api/pos/sales/fake-id/receipt-pdf", timeout=10)
+        assert resp.status_code in (401, 403)
+
+    def test_receipt_pdf_has_content_disposition(self, auth_headers: dict):
+        """Receipt PDF response includes a Content-Disposition header."""
+        sale_id = _create_sale(auth_headers, "disp")
+        resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}/receipt-pdf", headers=auth_headers, timeout=10)
+        assert resp.status_code == 200
+        assert "Content-Disposition" in resp.headers
+        assert "receipt_" in resp.headers["content-disposition"]
+        assert ".pdf" in resp.headers["content-disposition"]

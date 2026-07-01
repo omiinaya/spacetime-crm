@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 0.5in; size: 4in 8in; }
+  body { font-family: 'Courier New', monospace; font-size: 11px; color: #333; margin: 0; padding: 10px; }
+  .header { text-align: center; margin-bottom: 12px; border-bottom: 1px dashed #999; padding-bottom: 8px; }
+  .header h2 { margin: 0; font-size: 16px; }
+  .header p { margin: 2px 0; font-size: 10px; color: #666; }
+  .receipt-no { font-size: 12px; font-weight: bold; margin-top: 4px; }
+  .customer { margin-bottom: 10px; font-size: 10px; }
+  .customer p { margin: 1px 0; }
+  .items { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .items th { border-bottom: 1px solid #999; padding: 3px 0; text-align: left; font-size: 10px; }
+  .items td { padding: 3px 0; font-size: 10px; vertical-align: top; }
+  .items .item-qty { text-align: center; }
+  .items .item-price { text-align: right; }
+  .items .item-total { text-align: right; }
+  .items .item-name { max-width: 140px; overflow: hidden; }
+  .totals { margin-top: 5px; border-top: 1px dashed #999; padding-top: 5px; }
+  .totals table { width: 100%; }
+  .totals td { padding: 2px 0; font-size: 10px; }
+  .totals .label { text-align: left; }
+  .totals .value { text-align: right; }
+  .grand-total { font-size: 14px; font-weight: bold; }
+  .grand-total td { border-top: 1px solid #333; padding-top: 3px; }
+  .payment { margin-top: 8px; font-size: 10px; border-top: 1px dashed #999; padding-top: 6px; }
+  .payment p { margin: 1px 0; }
+  .footer { text-align: center; margin-top: 12px; border-top: 1px dashed #999; padding-top: 8px; font-size: 9px; color: #888; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2>{{ store_name }}</h2>
+  <p>{{ store_address }}</p>
+  <p>{{ store_phone }}</p>
+  <div class="receipt-no">Receipt #{{ receipt_number }}</div>
+  <p>{{ date }}</p>
+</div>
+
+{% if customer_name %}
+<div class="customer">
+  <p><strong>Customer:</strong> {{ customer_name }}</p>
+</div>
+{% endif %}
+
+<table class="items">
+  <thead>
+    <tr>
+      <th>Qty</th>
+      <th>Item</th>
+      <th class="item-price">Price</th>
+      <th class="item-total">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td class="item-qty">{{ item.quantity }}</td>
+      <td class="item-name">{{ item.product_name }}</td>
+      <td class="item-price">{{ currency }}{{ "%.2f"|format(item.unit_price) }}</td>
+      <td class="item-total">{{ currency }}{{ "%.2f"|format(item.total) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="totals">
+  <table>
+    <tr><td class="label">Subtotal</td><td class="value">{{ currency }}{{ "%.2f"|format(subtotal) }}</td></tr>
+    {% if discount_amount > 0 %}
+    <tr><td class="label">Discount</td><td class="value">-{{ currency }}{{ "%.2f"|format(discount_amount) }}</td></tr>
+    {% endif %}
+    {% if tax_amount > 0 %}
+    <tr><td class="label">Tax ({{ "%.1f"|format(tax_rate * 100) }}%)</td><td class="value">{{ currency }}{{ "%.2f"|format(tax_amount) }}</td></tr>
+    {% endif %}
+    <tr class="grand-total"><td class="label">Total</td><td class="value">{{ currency }}{{ "%.2f"|format(total) }}</td></tr>
+  </table>
+</div>
+
+<div class="payment">
+  <p><strong>Payment:</strong> {{ payment_method | capitalize }}</p>
+  <p><strong>Tendered:</strong> {{ currency }}{{ "%.2f"|format(amount_tendered) }}</p>
+  <p><strong>Change:</strong> {{ currency }}{{ "%.2f"|format(change) }}</p>
+</div>
+
+<div class="footer">
+  <p>Thank you for your business!</p>
+  <p>Items: {{ items_count }} &middot; {{ date }}</p>
+  {% if store_tax_id %}
+  <p>Tax ID: {{ store_tax_id }}</p>
+  {% endif %}
+</div>
+
+</body>
+</html>

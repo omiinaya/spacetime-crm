@@ -8,7 +8,7 @@ import { Badge } from "../components/ui/badge";
 import {
   ShoppingCart, Printer, Search, X, Plus, Minus,
   DollarSign, Receipt, RotateCcw, Trash2, CreditCard,
-  Banknote, Loader2, ArrowLeft, Check,
+  Banknote, Loader2, ArrowLeft, Check, FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -247,6 +247,14 @@ export default function PosPage() {
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-1" /> Print
           </Button>
+          <a
+            href={`/api/pos/sales/${sale.id}/receipt-pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+          >
+            <FileDown className="w-4 h-4 mr-1" /> PDF
+          </a>
           {sale.status !== "refunded" && sale.status !== "voided" && (
             <Button variant="outline" size="sm" className="text-red-500 border-red-500/30 hover:bg-red-500/10" disabled={refunding} onClick={async () => {
               if (!confirm("Refund this sale? This cannot be undone.")) return;
