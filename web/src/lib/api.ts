@@ -328,6 +328,22 @@ export interface SmsSettings {
   auth_token?: string;
 }
 
+export interface DayHours {
+  enabled: boolean;
+  open: string;
+  close: string;
+}
+
+export interface BusinessHours {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
+
 export interface ReportsData {
   revenue_by_month: { month: string; revenue: number }[];
   ticket_by_status: { status: string; count: number }[];
@@ -925,6 +941,14 @@ export const api = {
       test: () =>
         apiFetch<{ ok: boolean; message?: string; error?: string }>("/settings/sms/test", {
           method: "POST",
+        }),
+    },
+    businessHours: {
+      get: () => apiFetch<{ configured: boolean; hours: BusinessHours }>("/settings/business-hours"),
+      save: (data: BusinessHours) =>
+        apiFetch<{ ok: boolean; hours: BusinessHours }>("/settings/business-hours", {
+          method: "POST",
+          body: JSON.stringify(data),
         }),
     },
   },

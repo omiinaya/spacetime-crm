@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from helpers import (
     require_role, logger,
 )
-from models import MailSettingsUpdate, SMSSettingsUpdate
+from models import MailSettingsUpdate, SMSSettingsUpdate, BusinessHoursUpdate
 from rate_limit import limiter
 
 router = APIRouter()
@@ -78,3 +78,26 @@ async def sms_settings_test(request: Request, user: dict = Depends(require_role(
     from sms import test_connection as _test
     result = _test()
     return result
+
+
+# ── Business Hours ─────────────────────────────────────────────────
+
+
+@router.get("/api/settings/business-hours")
+async def business_hours_get(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Get current business hours."""
+    from business_hours import get_settings as _get, DEFAULT_HOURS
+    settings = _get()
+    if settings is None:
+        return {"configured": False, "hours": DEFAULT_HOURS}
+    return {"configured": True, "hours": settings}
+
+
+@router.post("/api/settings/business-hours")
+@limiter.limit("30/minute")
+async def business_hours_save(request: Request, body: BusinessHoursUpdate, user: dict = Depends(require_role("admin"))):
+    """Save business hours."""
+    from business_hours import update_settings as _update
+    data = body.model_dump()
+    result = _update(data)
+    return {"ok": True, "hours": result}
