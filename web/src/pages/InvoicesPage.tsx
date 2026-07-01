@@ -9,7 +9,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square } from "lucide-react";
+import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
@@ -59,6 +59,21 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
     },
     onError: () => toast.error("Bulk update failed"),
+  });
+
+  const batchEmailMutation = useMutation({
+    mutationFn: () => api.invoices.sendBatchEmail(Array.from(selectedIds)),
+    onSuccess: (data) => {
+      toast.success(`Emailed ${data.sent} invoice(s), ${data.failed} failed, ${data.skipped} skipped`);
+      if (data.failed > 0) {
+        data.details
+          .filter(d => d.status === "error")
+          .slice(0, 3)
+          .forEach(d => toast.error(`Failed: ${d.id.slice(0, 12)} — ${d.error}`));
+      }
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: () => toast.error("Batch email failed"),
   });
 
   const { data, isLoading } = useQuery({
@@ -155,6 +170,19 @@ export default function InvoicesPage() {
     },
     onError: () => toast.error("Failed to record payment"),
   });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: (invoiceId: string) => api.invoices.sendEmail(invoiceId),
+    onSuccess: (data) => {
+      toast.success(`Invoice #${data.invoice_number} sent to ${data.sent_to}`);
+    },
+    onError: () => toast.error("Failed to send email"),
+  });
+
+  const handleSendEmail = () => {
+    if (!selectedInv) return;
+    sendEmailMutation.mutate(selectedInv.id);
+  };
 
   const { data: lineItemsData } = useQuery({
     queryKey: ["invoice-line-items", selectedInv?.id],
@@ -279,6 +307,19 @@ export default function InvoicesPage() {
             ) : null}
             Apply
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => batchEmailMutation.mutate()}
+            disabled={batchEmailMutation.isPending}
+          >
+            {batchEmailMutation.isPending ? (
+              <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
+            ) : (
+              <Mail className="h-3.5 w-3.5 mr-1" />
+            )}
+            Email Selected
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Clear
           </Button>
@@ -361,10 +402,23 @@ export default function InvoicesPage() {
               ← Back to list
             </button>
             <Card className={selectedInv.status === "overdue" ? "border-l-red-500 border-l-2" : ""}>
-              <CardHeader><CardTitle>#{selectedInv.invoice_number} — {selectedInv.currency || "USD"} {selectedInv.total.toFixed(2)}</CardTitle>
-                <Button size="sm" variant="outline" onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, "_blank")}>
-                  <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
-                </Button>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>#{selectedInv.invoice_number} — {selectedInv.currency || "USD"} {selectedInv.total.toFixed(2)}</CardTitle>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={handleSendEmail} disabled={sendEmailMutation.isPending}>
+                      {sendEmailMutation.isPending ? (
+                        <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
+                      ) : (
+                        <Mail className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Email
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, "_blank")}>
+                      <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Select value={selectedInv.status} onChange={(e) => statusMutation.mutate({ id: selectedInv.id, status: e.target.value })}>

@@ -668,6 +668,18 @@ export const api = {
       }),
     sendOverdueReminders: () =>
       apiFetch<{ ok: boolean; email: number; sms: number; total: number }>("/invoices/send-overdue-reminders", { method: "POST" }),
+    sendEmail: (invoiceId: string) =>
+      apiFetch<{ ok: boolean; sent_to: string; invoice_number: number }>("/invoices/send-email", {
+        method: "POST",
+        body: JSON.stringify({ invoice_id: invoiceId }),
+      }),
+    sendBatchEmail: (invoiceIds: string[]) =>
+      apiFetch<{ ok: boolean; sent: number; failed: number; skipped: number; details: any[] }>("/invoices/send-batch-email", {
+        method: "POST",
+        body: JSON.stringify({ invoice_ids: invoiceIds }),
+      }),
+    emailQueueStatus: () =>
+      apiFetch<{ sends: any[]; count: number }>("/invoices/email-queue-status"),
   },
   payments: {
     list: (invoiceId?: string, offset?: number, limit?: number) => {

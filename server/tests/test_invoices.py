@@ -332,3 +332,94 @@ class TestInvoiceErrors:
         """Send overdue reminders requires auth."""
         resp = client.post("/api/invoices/send-overdue-reminders", timeout=10)
         assert resp.status_code in (401, 403)
+
+
+class TestInvoiceEmailQueue:
+    """Invoice email delivery endpoints."""
+
+    def test_send_email_requires_invoice_id(self, auth_headers: dict):
+        """Send email endpoint rejects missing invoice_id."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices/send-email",
+            json={},
+            headers=auth_headers, timeout=10,
+        )
+        assert resp.status_code == 400
+
+    def test_send_email_nonexistent(self, auth_headers: dict):
+        """Send email on nonexistent invoice returns 404."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices/send-email",
+            json={"invoice_id": "nonexistent"},
+            headers=auth_headers, timeout=10,
+        )
+        assert resp.status_code == 404
+
+    def test_send_email_valid(self, auth_headers: dict):
+        """Send email on valid invoice returns ok."""
+        # Get a real invoice
+        list_resp = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 1}, headers=auth_headers, timeout=10)
+        invs = list_resp.json().get("invoices", [])
+        if not invs:
+            pytest.skip("No invoices found")
+        inv_id = invs[0]["id"]
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices/send-email",
+            json={"invoice_id": inv_id},
+            headers=auth_headers, timeout=10,
+        )
+        data = assert_ok(resp)
+        assert data["ok"] is True
+        assert "sent_to" in data
+        assert data["invoice_number"] > 0
+
+    def test_send_email_unauthorized(self, client: httpx.Client):
+        """Send email requires auth."""
+        resp = client.post("/api/invoices/send-email", json={"invoice_id": "x"}, timeout=10)
+        assert resp.status_code in (401, 403)
+
+    def test_batch_email_empty_ids(self, auth_headers: dict):
+        """Batch email rejects empty invoice_ids array."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices/send-batch-email",
+            json={"invoice_ids": []},
+            headers=auth_headers, timeout=10,
+        )
+        assert resp.status_code == 400
+
+    def test_batch_email_valid(self, auth_headers: dict):
+        """Batch email on valid invoices returns ok."""
+        list_resp = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 2}, headers=auth_headers, timeout=10)
+        invs = list_resp.json().get("invoices", [])
+        if len(invs) < 1:
+            pytest.skip("Need at least 1 invoice")
+        ids = [inv["id"] for inv in invs[:2]]
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices/send-batch-email",
+            json={"invoice_ids": ids},
+            headers=auth_headers, timeout=10,
+        )
+        data = assert_ok(resp)
+        assert data["ok"] is True
+        assert "sent" in data
+        assert "failed" in data
+        assert "skipped" in data
+
+    def test_batch_email_unauthorized(self, client: httpx.Client):
+        """Batch email requires auth."""
+        resp = client.post("/api/invoices/send-batch-email", json={"invoice_ids": ["x"]}, timeout=10)
+        assert resp.status_code in (401, 403)
+
+    def test_email_queue_status(self, auth_headers: dict):
+        """Email queue status returns sends list."""
+        resp = httpx.get(f"{SERVER_URL}/api/invoices/email-queue-status", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "sends" in data
+        assert "count" in data
+        assert isinstance(data["sends"], list)
+        assert isinstance(data["count"], int)
+
+    def test_email_queue_status_unauthorized(self, client: httpx.Client):
+        """Email queue status requires auth."""
+        resp = client.get("/api/invoices/email-queue-status", timeout=10)
+        assert resp.status_code in (401, 403)

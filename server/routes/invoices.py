@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pdf import html_to_pdf
+from mail import send_email, _notify_invoice_created
 
 from helpers import (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
@@ -296,3 +297,105 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
+
+
+# ── Invoice Email Delivery Queue ──
+
+
+@router.post("/api/invoices/send-email")
+async def send_invoice_email(
+    body: dict,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+):
+    """Send a single invoice by email. Body: {"invoice_id": "..."}"""
+    invoice_id = body.get("invoice_id", "")
+    if not invoice_id:
+        raise HTTPException(400, "invoice_id required")
+
+    invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND tenant_id = '{user['tenant_id']}'")
+    if not invs:
+        raise HTTPException(404, "Invoice not found")
+    inv = invs[0]
+
+    cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+    if not cust:
+        raise HTTPException(400, "Customer not found for this invoice")
+    c = cust[0]
+
+    customer_email = c.get("email") or None
+    if not customer_email:
+        raise HTTPException(400, "Customer has no email address on file")
+
+    inv_num = inv.get("invoice_number", 0)
+    total = float(inv.get("total", 0))
+    link = f"http://localhost:8723/portal/"
+
+    _notify_invoice_created(customer_email, inv_num, total, link)
+
+    await _log_audit(user, "send_email", "invoice", invoice_id,
+                     f"to={customer_email} invoice={inv_num}")
+
+    return {"ok": True, "sent_to": customer_email, "invoice_number": inv_num}
+
+
+@router.post("/api/invoices/send-batch-email")
+async def send_batch_invoice_email(
+    body: dict,
+    user: dict = Depends(require_role("admin")),
+):
+    """Send multiple invoices by email. Body: {"invoice_ids": ["id1", "id2", ...]}"""
+    invoice_ids = body.get("invoice_ids", [])
+    if not invoice_ids:
+        raise HTTPException(400, "invoice_ids array required")
+
+    results = {"sent": 0, "failed": 0, "skipped": 0, "details": []}
+
+    for invoice_id in invoice_ids:
+        invs = await _sql(
+            f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND tenant_id = '{user['tenant_id']}'"
+        )
+        if not invs:
+            results["skipped"] += 1
+            results["details"].append({"id": invoice_id, "status": "not_found"})
+            continue
+        inv = invs[0]
+
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+        if not cust:
+            results["skipped"] += 1
+            results["details"].append({"id": invoice_id, "status": "no_customer"})
+            continue
+
+        customer_email = cust[0].get("email") or None
+        if not customer_email:
+            results["skipped"] += 1
+            results["details"].append({"id": invoice_id, "status": "no_email"})
+            continue
+
+        try:
+            inv_num = inv.get("invoice_number", 0)
+            total = float(inv.get("total", 0))
+            link = "http://localhost:8723/portal/"
+            _notify_invoice_created(customer_email, inv_num, total, link)
+            results["sent"] += 1
+            results["details"].append({"id": invoice_id, "status": "sent", "to": customer_email})
+        except Exception as e:
+            results["failed"] += 1
+            results["details"].append({"id": invoice_id, "status": "error", "error": str(e)})
+
+    await _log_audit(user, "send_batch_email", "invoice",
+                     f"{results['sent']} sent, {results['failed']} failed, {results['skipped']} skipped")
+
+    return {"ok": True, **results}
+
+
+@router.get("/api/invoices/email-queue-status")
+async def get_email_queue_status(user: dict = Depends(require_role("admin", "tech"))):
+    """Get recent invoice email sends from audit log."""
+    rows = await _sql(
+        f"SELECT * FROM audit_log WHERE tenant_id = '{user['tenant_id']}' "
+        f"AND (action = 'send_email' OR action = 'send_batch_email')"
+    )
+    # Manual sort — STDB doesn't support ORDER BY
+    rows.sort(key=lambda r: r.get("created_at", 0), reverse=True)
+    return {"sends": rows[:50], "count": min(len(rows), 50)}
