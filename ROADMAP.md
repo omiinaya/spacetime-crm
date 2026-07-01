@@ -20,6 +20,8 @@
 
 - **Appointment reminder emails — ADDED** — `POST /api/appointments/send-reminders` sends email + SMS to all customers with appointments starting within 24 hours. New email template (`appointment_reminder.html`) with reminder branding + schedule link. New SMS function for appointments. `GET /api/appointments/due-soon` lists upcoming appointments with customer enrichment. Daily cron: `send-appointment-reminders` at 7 AM daily. 4 new backend tests.
 
+- **Invoice email delivery queue — ADDED** — `POST /api/invoices/send-email` sends a single invoice to its customer's email. `POST /api/invoices/send-batch-email` sends multiple invoices at once with per-invoice status tracking (sent/failed/skipped). `GET /api/invoices/email-queue-status` returns recent sends from audit log. Frontend: "Email" button on invoice detail panel, "Email Selected" button in bulk action bar. 9 new backend tests.
+
 - **Customer detail panel — ADDED** — Click any customer card to expand a detail panel showing their 5 most recent tickets and invoices with status badges, amounts, and dates. Fetched on-demand via `customer_id` filter on existing tickets/invoices endpoints. Backend: added `customer_id` filter param to `GET /api/tickets` and `GET /api/invoices`. Frontend: `CustomerDetailPanel` component with inline cards, uses React Query for caching.
 
 - **Recurring invoice auto-generation cron — ADDED** — Hermes cron job runs `POST /api/recurring-invoices/generate` daily at 6 AM to auto-generate invoices for due recurring rules.
