@@ -38,6 +38,21 @@ export default function DashboardPage({
     },
   });
 
+  const markPaid = useMutation({
+    mutationFn: async (inv: Invoice) =>
+      api.payments.record({
+        invoice_id: inv.id,
+        customer_id: inv.customer_id,
+        amount: Number(inv.total),
+        method: "cash",
+        currency: inv.currency || "USD",
+        notes: "Marked paid from dashboard",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+  });
+
   const claimTicket = useMutation({
     mutationFn: async (ticketId: string) => {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -230,7 +245,16 @@ export default function DashboardPage({
                   >
                     <span>{inv.invoice_number ? `#${inv.invoice_number}` : inv.id.slice(-6)}</span>
                     <span>Due {dueDate}</span>
-                    <span className="font-medium">${Number(inv.total).toFixed(2)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">${Number(inv.total).toFixed(2)}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); markPaid.mutate(inv); }}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-green-600/20 text-green-400 hover:bg-green-600/30"
+                        title="Mark as paid"
+                      >
+                        Pay
+                      </button>
+                    </div>
                   </div>
                 );
               })}
