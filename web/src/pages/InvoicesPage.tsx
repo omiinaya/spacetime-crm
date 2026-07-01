@@ -41,6 +41,15 @@ export default function InvoicesPage() {
     queryFn: () => api.invoices.summary(),
   });
 
+  const sendReminderMutation = useMutation({
+    mutationFn: () => api.invoices.sendOverdueReminders(),
+    onSuccess: (data) => {
+      toast.success(`Sent ${data.email} email(s) and ${data.sms} SMS reminder(s)`);
+      queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
+    },
+    onError: () => toast.error("Failed to send reminders"),
+  });
+
   const bulkMutation = useMutation({
     mutationFn: () => api.invoices.bulkStatusUpdate(Array.from(selectedIds), bulkStatus),
     onSuccess: (data) => {
@@ -222,9 +231,24 @@ export default function InvoicesPage() {
             <p className="text-xs text-muted-foreground">Outstanding</p>
             <p className="text-lg font-bold text-amber-400">${summary.total_outstanding.toFixed(2)}</p>
           </div>
-          <div className="border rounded-lg p-3">
+          <div className="border rounded-lg p-3 relative">
             <p className="text-xs text-muted-foreground">Overdue</p>
             <p className="text-lg font-bold text-red-400">{summary.overdue_count} / ${summary.overdue_total.toFixed(2)}</p>
+            {summary.overdue_count > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="absolute top-1 right-1 h-6 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                onClick={() => sendReminderMutation.mutate()}
+                disabled={sendReminderMutation.isPending}
+              >
+                {sendReminderMutation.isPending ? (
+                  <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
+                ) : (
+                  "Remind"
+                )}
+              </Button>
+            )}
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Revenue</p>

@@ -149,6 +149,39 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
     return {"ok": True, "marked": marked}
 
 
+@router.post("/api/invoices/send-overdue-reminders")
+async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
+    """Find overdue invoices and send email/SMS reminders to each customer."""
+    now = int(datetime.utcnow().timestamp() * 1000)
+    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}))")
+    sent = {"email": 0, "sms": 0, "total": 0}
+    for inv in rows:
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+        if not cust:
+            continue
+        c = cust[0]
+        email = c.get("email") or None
+        phone = c.get("phone") or None
+        due_ts = inv.get("due_date", 0) / 1000
+        due_str = datetime.fromtimestamp(due_ts).strftime("%b %d, %Y") if due_ts else "—"
+        link = f"http://localhost:8723/portal/"
+        inv_num = inv.get("invoice_number", 0)
+        total = float(inv.get("total", 0))
+
+        if email:
+            from mail import _notify_overdue_reminder as _mail_reminder
+            _mail_reminder(email, inv_num, total, due_str, link)
+            sent["email"] += 1
+        if phone:
+            from sms import _notify_overdue_reminder as _sms_reminder
+            _sms_reminder(phone, inv_num, total)
+            sent["sms"] += 1
+        sent["total"] += 1
+
+    await _log_audit(user, "send_overdue_reminders", "invoice", f"email={sent['email']} sms={sent['sms']}")
+    return {"ok": True, **sent}
+
+
 @router.put("/api/invoices/{invoice_id}/status")
 async def update_invoice_status(invoice_id: str, body: InvoiceStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_invoice_status", [invoice_id, body.status])

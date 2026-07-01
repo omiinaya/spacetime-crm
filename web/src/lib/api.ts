@@ -664,6 +664,8 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ invoice_ids: invoiceIds, status }),
       }),
+    sendOverdueReminders: () =>
+      apiFetch<{ ok: boolean; email: number; sms: number; total: number }>("/invoices/send-overdue-reminders", { method: "POST" }),
   },
   payments: {
     list: (invoiceId?: string, offset?: number, limit?: number) => {
