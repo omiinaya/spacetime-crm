@@ -24,6 +24,20 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") == "paid")
     pending_revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") not in ("paid", "cancelled"))
     upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
+
+    # My assigned tickets for dashboard personalization
+    my_tickets = [t for t in all_tickets if t.get("assigned_user_id") == user["id"] and t.get("status") not in ("resolved", "closed")]
+
+    # Priority breakdown for my tickets
+    my_ticket_counts = {"all": len(my_tickets), "urgent": 0, "high": 0, "medium": 0, "low": 0}
+    for t in my_tickets:
+        prio = t.get("priority", "medium")
+        if prio in my_ticket_counts:
+            my_ticket_counts[prio] += 1
+
+    # Recent 5 my tickets for the dashboard card
+    my_recent = sorted(my_tickets, key=lambda x: x.get("created_at", 0), reverse=True)[:5]
+
     return {
         "total_customers": total_customers,
         "total_tickets": total_tickets,
@@ -31,6 +45,8 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
         "revenue": revenue,
         "pending_revenue": pending_revenue,
         "upcoming_appointments": upcoming_appointments,
+        "my_tickets": my_recent,
+        "my_ticket_counts": my_ticket_counts,
     }
 
 
