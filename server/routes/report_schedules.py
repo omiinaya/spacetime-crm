@@ -295,6 +295,23 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             for uid, c in sorted(tech_counts.items(), key=lambda x: -x[1])
         ]
 
+        # SLA breach rate
+        sla_targets = {"urgent": 4, "high": 24, "medium": 72, "low": 120}
+        now_ms = int(now.timestamp() * 1000)
+        breached = 0
+        for t in tickets:
+            status = t.get("status", "")
+            if status in ("resolved", "closed"):
+                continue
+            priority = t.get("priority", "low")
+            created_ts = t.get("created_at", 0)
+            if created_ts:
+                elapsed_hours = (now_ms - created_ts) / (1000 * 3600)
+                target = sla_targets.get(priority, 120)
+                if elapsed_hours > target:
+                    breached += 1
+        sla_rate = round((breached / open_count * 100), 1) if open_count > 0 else 0
+
         return {
             "title": "Tickets Report",
             "metrics": [
@@ -302,6 +319,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
                 {"label": "Open", "value": str(open_count)},
                 {"label": "Resolved/Closed", "value": str(resolved_count)},
                 {"label": "Avg Resolution", "value": f"{avg_resolution}h"},
+                {"label": "SLA Breach Rate", "value": f"{sla_rate}%"},
             ],
             "chart": ticket_by_status,
             "chart_label": "Tickets by Status",
@@ -329,13 +347,23 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             if inv.get("status") in ("sent", "overdue", "partial")
         )
 
+        total_sent_inv = sum(1 for inv in invoices if inv.get("status") in ("sent", "overdue", "partial"))
+        overdue_count = status_counts.get("overdue", 0)
+        # On-the-fly detection for sent/partial past-due
+        now_ms_inv = int(now.timestamp() * 1000)
+        for inv in invoices:
+            if inv.get("status") in ("sent", "partial") and inv.get("due_date", 0) > 0 and inv.get("due_date", 0) < now_ms_inv:
+                overdue_count += 1
+                total_sent_inv += 1
+        overdue_rate = round((overdue_count / total_sent_inv * 100), 1) if total_sent_inv > 0 else 0
+
         return {
             "title": "Invoice Report",
             "metrics": [
                 {"label": "Total Invoices", "value": str(len(invoices))},
                 {"label": "Total Collected", "value": f"${total_rev:,.2f}"},
                 {"label": "Outstanding", "value": f"${outstanding:,.2f}"},
-                {"label": "Overdue", "value": str(status_counts.get("overdue", 0))},
+                {"label": "Overdue Rate", "value": f"{overdue_rate}% ({overdue_count})"},
             ],
             "chart": inv_by_status,
             "chart_label": "Invoices by Status",

@@ -139,6 +139,38 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
             resolution_times.append((updated - created) / (1000 * 3600))
     avg_resolution_hours = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
 
+    # SLA breach rate
+    sla_targets = {"urgent": 4, "high": 24, "medium": 72, "low": 120}
+    now_ms = int(now.timestamp() * 1000)
+    total_open = 0
+    breached = {"urgent": 0, "high": 0, "medium": 0, "low": 0}
+    for t in all_tickets:
+        status = t.get("status", "")
+        if status in ("resolved", "closed"):
+            continue
+        total_open += 1
+        priority = t.get("priority", "low")
+        created_ts = t.get("created_at", 0)
+        if created_ts:
+            elapsed_hours = (now_ms - created_ts) / (1000 * 3600)
+            target = sla_targets.get(priority, 120)
+            if elapsed_hours > target:
+                breached[priority] = breached.get(priority, 0) + 1
+
+    sla_breach_count = sum(breached.values())
+    sla_breach_rate = round((sla_breach_count / total_open * 100), 1) if total_open > 0 else 0
+
+    # Overdue invoice rate
+    total_sent_invoices = sum(1 for inv in all_invoices if inv.get("status") in ("sent", "overdue", "partial"))
+    overdue_invoices = sum(1 for inv in all_invoices if inv.get("status") == "overdue")
+    # Also check on-the-fly overdue
+    now_ms_inv = int(now.timestamp() * 1000)
+    for inv in all_invoices:
+        if inv.get("status") in ("sent", "partial") and inv.get("due_date", 0) > 0 and inv.get("due_date", 0) < now_ms_inv:
+            overdue_invoices += 1
+            total_sent_invoices += 1
+    overdue_rate = round((overdue_invoices / total_sent_invoices * 100), 1) if total_sent_invoices > 0 else 0
+
     tech_ticket_map: dict[str, int] = {}
     for t in all_tickets:
         uid = t.get("assigned_user_id", "")
@@ -179,6 +211,10 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
             "total_paid": total_paid,
             "outstanding_revenue": round(outstanding_revenue, 2),
             "avg_resolution_hours": avg_resolution_hours,
+            "sla_breach_count": sla_breach_count,
+            "sla_breach_rate": sla_breach_rate,
+            "overdue_invoice_count": overdue_invoices,
+            "overdue_invoice_rate": overdue_rate,
         },
         "tech_closed": tech_closed,
         "top_customers": top_customers,

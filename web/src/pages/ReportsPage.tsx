@@ -165,6 +165,46 @@ export default function ReportsPage() {
         })}
       </div>
 
+      {/* SLA & Overdue health cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Card>
+          <CardContent className="pt-4 flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+              totals.sla_breach_rate > 50 ? "bg-red-500/20" :
+              totals.sla_breach_rate > 20 ? "bg-amber-500/20" : "bg-green-500/20"
+            }`}>
+              <Award className={`h-5 w-5 ${
+                totals.sla_breach_rate > 50 ? "text-red-400" :
+                totals.sla_breach_rate > 20 ? "text-amber-400" : "text-green-400"
+              }`} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">SLA Breach Rate</p>
+              <p className="text-lg font-bold">{totals.sla_breach_rate}%</p>
+              <p className="text-xs text-muted-foreground">{totals.sla_breach_count} breached of {totals.open_tickets} open tickets</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+              totals.overdue_invoice_rate > 50 ? "bg-red-500/20" :
+              totals.overdue_invoice_rate > 20 ? "bg-amber-500/20" : "bg-green-500/20"
+            }`}>
+              <Clock className={`h-5 w-5 ${
+                totals.overdue_invoice_rate > 50 ? "text-red-400" :
+                totals.overdue_invoice_rate > 20 ? "text-amber-400" : "text-green-400"
+              }`} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Overdue Invoice Rate</p>
+              <p className="text-lg font-bold">{totals.overdue_invoice_rate}%</p>
+              <p className="text-xs text-muted-foreground">{totals.overdue_invoice_count} overdue of {totals.total_sent} sent invoices</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Charts grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
