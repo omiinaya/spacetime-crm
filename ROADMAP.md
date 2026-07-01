@@ -30,6 +30,10 @@
 
 - **Barcode quick-lookup — ADDED** — `GET /api/products/by-barcode/{barcode}` for instant product lookup by scanned barcode. Scan input in ProductsPage search bar triggers API and selects product. 2 new backend tests.
 
+- **Invoice summary + bulk status — ADDED** — Summary bar (total/outstanding/overdue/revenue) on InvoicesPage, checkbox selection with select-all, bulk status update to Draft/Sent/Paid/Overdue/Cancelled. `GET /api/invoices/summary`, `POST /api/invoices/bulk-status-update`. 4 new backend tests.
+
+- **Overdue invoice detection — ADDED** — SQL-based on-the-fly detection in dashboard stats + overdue-count endpoint + trigger-overdue-check marks past-due invoices. Dashboard alert card with count/total/top-3 due list. Frontend: red left border on overdue invoices in list + detail panel. Daily overdue-check cron (every 4h). Customer email/SMS reminders with dedicated HTML template and SMS message. 4 new backend tests.
+
 - **Ticket SLA urgency — ADDED** — Live color-coded urgency indicators on ticket cards: green (<4h), amber (4-24h), red (24-72h), dark red (>72h) with hours/days label. Hover shows exact timestamp.
 
 - **SLA breach detection — ADDED** — `GET /api/tickets/sla-breached` finds open tickets past their priority-based thresholds (urgent=4h, high=24h, medium=72h, low=120h). Frontend: pulsing red badge counter in header + red left border on breached ticket cards. Auto-refreshes every 60s. 3 new backend tests.

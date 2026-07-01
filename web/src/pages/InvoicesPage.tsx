@@ -332,7 +332,7 @@ export default function InvoicesPage() {
                 <button onClick={(e) => { e.stopPropagation(); toggleSelect(inv.id); }} className="mt-4 shrink-0 hover:text-foreground text-muted-foreground">
                   {selectedIds.has(inv.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                 </button>
-                <Card className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? "border-primary" : "hover:border-primary/30"}`} onClick={() => selectInvoice(inv)}>
+                <Card className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? "border-primary" : "hover:border-primary/30"} ${inv.status === "overdue" ? "border-l-red-500 border-l-2" : ""}`} onClick={() => selectInvoice(inv)}>
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div>
@@ -360,7 +360,7 @@ export default function InvoicesPage() {
             >
               ← Back to list
             </button>
-            <Card>
+            <Card className={selectedInv.status === "overdue" ? "border-l-red-500 border-l-2" : ""}>
               <CardHeader><CardTitle>#{selectedInv.invoice_number} — {selectedInv.currency || "USD"} {selectedInv.total.toFixed(2)}</CardTitle>
                 <Button size="sm" variant="outline" onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, "_blank")}>
                   <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
