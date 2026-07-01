@@ -200,3 +200,10 @@ def _notify_estimate_approved(phone: str, estimate_number: int, total: float) ->
     body = f"Estimate #{estimate_number} for ${total:.2f} approved. An invoice is being created."
     import asyncio
     asyncio.ensure_future(send_sms(phone, body))
+
+
+def _notify_overdue_reminder(phone: str, invoice_number: int, total: float) -> None:
+    """Send overdue invoice reminder SMS."""
+    body = f"Reminder: Invoice #{invoice_number} for ${total:.2f} is overdue. Please arrange payment. Reply or call us to discuss."
+    import asyncio
+    asyncio.ensure_future(send_sms(phone, body))

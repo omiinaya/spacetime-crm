@@ -229,3 +229,12 @@ def _notify_low_stock(admin_email: str, products: list[dict]) -> None:
         products=items, count=len(products),
     )
     send_email(admin_email, f"⚠️ Low Stock Alert — {len(products)} product(s) below threshold", html)
+
+
+def _notify_overdue_reminder(customer_email: str, invoice_number: int, total: float, due_date: str, link: str) -> None:
+    """Send overdue invoice reminder email."""
+    html = jinja_env.get_template("email/overdue_reminder.html").render(
+        invoice_number=invoice_number, total=f"{total:.2f}",
+        customer_name="Valued Customer", due_date=due_date, link=link,
+    )
+    send_email(customer_email, f"Overdue Invoice #{invoice_number} — ${total:.2f}", html)

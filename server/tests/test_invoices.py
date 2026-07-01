@@ -316,3 +316,19 @@ class TestInvoiceErrors:
         """Bulk status update requires auth."""
         resp = client.post("/api/invoices/bulk-status-update", json={"invoice_ids": ["fake"], "status": "sent"}, timeout=10)
         assert resp.status_code in (401, 403)
+
+    def test_send_overdue_reminders(self, auth_headers: dict):
+        """Send overdue reminders returns expected shape."""
+        resp = httpx.post(f"{SERVER_URL}/api/invoices/send-overdue-reminders", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert data["ok"] is True
+        assert "email" in data
+        assert "sms" in data
+        assert "total" in data
+        assert isinstance(data["email"], int)
+        assert isinstance(data["sms"], int)
+
+    def test_send_overdue_reminders_unauthorized(self, client: httpx.Client):
+        """Send overdue reminders requires auth."""
+        resp = client.post("/api/invoices/send-overdue-reminders", timeout=10)
+        assert resp.status_code in (401, 403)
