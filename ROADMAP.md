@@ -22,6 +22,8 @@
 
 - **Invoice email delivery queue — ADDED** — `POST /api/invoices/send-email` sends a single invoice to its customer's email. `POST /api/invoices/send-batch-email` sends multiple invoices at once with per-invoice status tracking (sent/failed/skipped). `GET /api/invoices/email-queue-status` returns recent sends from audit log. Frontend: "Email" button on invoice detail panel, "Email Selected" button in bulk action bar. 9 new backend tests.
 
+- **SLA breach rate + overdue rate on reports — ADDED** — Reports page now shows SLA Breach Rate (X% of open tickets past their priority threshold) and Overdue Invoice Rate (Y% of sent invoices past due) as color-coded health cards. Backend: computed in both the `/api/reports` endpoint and the report schedule generator. Scheduled ticket reports include SLA breach rate. Scheduled invoice reports show overdue rate instead of raw count. Frontend: 2 new health cards with dynamic red/amber/green coloring.
+
 - **Customer detail panel — ADDED** — Click any customer card to expand a detail panel showing their 5 most recent tickets and invoices with status badges, amounts, and dates. Fetched on-demand via `customer_id` filter on existing tickets/invoices endpoints. Backend: added `customer_id` filter param to `GET /api/tickets` and `GET /api/invoices`. Frontend: `CustomerDetailPanel` component with inline cards, uses React Query for caching.
 
 - **Recurring invoice auto-generation cron — ADDED** — Hermes cron job runs `POST /api/recurring-invoices/generate` daily at 6 AM to auto-generate invoices for due recurring rules.

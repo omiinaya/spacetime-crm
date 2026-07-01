@@ -341,6 +341,10 @@ export interface ReportsData {
     total_paid: number;
     outstanding_revenue: number;
     avg_resolution_hours: number;
+    sla_breach_count: number;
+    sla_breach_rate: number;
+    overdue_invoice_count: number;
+    overdue_invoice_rate: number;
   };
   tech_closed: { user_name: string; closed_count: number }[];
   top_customers: { customer_name: string; revenue: number }[];
