@@ -48,6 +48,7 @@ async def stripe_webhook(request: Request):
                 "stripe",
                 payment_intent,
                 f"Stripe payment via session {stripe_session_id}",
+                "USD",
             ])
 
             # Update invoice status

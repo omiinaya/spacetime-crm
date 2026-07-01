@@ -231,6 +231,7 @@ async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depend
         method,
         body.reference,
         "Online payment via customer portal",
+        "USD",
     ])
 
     payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
@@ -398,6 +399,7 @@ async def portal_pay_with_saved_card(
         "card",
         result.get("payment_intent_id", ""),
         f"Stripe saved card payment — {result.get('payment_intent_id', '')}",
+        "USD",
     ])
 
     # Update invoice status
