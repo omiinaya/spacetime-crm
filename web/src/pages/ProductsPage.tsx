@@ -9,7 +9,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { Package, Plus, Search, ClipboardList, Scan, ScanLine, AlertTriangle, Printer } from "lucide-react";
+import { Package, Plus, Search, ClipboardList, Scan, ScanLine, AlertTriangle, Printer, ArrowRightLeft } from "lucide-react";
 import { printBarcodeLabel } from "../components/BarcodeLabel";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
@@ -118,6 +118,40 @@ export default function ProductsPage() {
     onError: () => toast.error("Failed to adjust stock"),
   });
 
+  // Transfer stock state + mutation
+  const [transferForm, setTransferForm] = useState({ destProductId: "", quantity: 1, notes: "" });
+  const [transferSearch, setTransferSearch] = useState("");
+
+  const { data: transferProducts } = useQuery({
+    queryKey: ["products", "transfer-search", transferSearch],
+    queryFn: async () => {
+      if (!transferSearch) return { products: [] as Product[] };
+      const res = await api.products.list(transferSearch, 0, 20);
+      return res;
+    },
+    enabled: transferSearch.length >= 1,
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedProduct || !transferForm.destProductId) throw new Error("Select a destination product");
+      return api.products.transfer({
+        source_product_id: selectedProduct.id,
+        destination_product_id: transferForm.destProductId,
+        quantity: transferForm.quantity,
+        notes: transferForm.notes,
+      });
+    },
+    onSuccess: (res) => {
+      toast.success(`Transferred ${res.quantity ?? 0} units`);
+      setTransferForm({ destProductId: "", quantity: 1, notes: "" });
+      setTransferSearch("");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product-adjustments", selectedProduct?.id] });
+    },
+    onError: () => toast.error("Transfer failed"),
+  });
+
   const { data: lowStockData } = useQuery({
     queryKey: ["products", "low-stock"],
     queryFn: () => api.products.lowStock.list(),
@@ -130,8 +164,8 @@ export default function ProductsPage() {
   const notifyLowStockMutation = useMutation({
     mutationFn: () => api.products.lowStock.notify(),
     onSuccess: (res) => {
-      if (res.count > 0) {
-        toast.success(`Low stock alert sent to admin (${res.count} products)`);
+      if ((res.count ?? 0) > 0) {
+        toast.success(`Low stock alert sent to admin (${res.count ?? 0} products)`);
       } else {
         toast.info("No low stock products to report");
       }
@@ -444,6 +478,64 @@ export default function ProductsPage() {
                   onChange={(e) => setAdjForm({ ...adjForm, notes: e.target.value })}
                 />
                 <Button onClick={adjustStock}>Apply Adjustment</Button>
+              </CardContent>
+            </Card>
+
+            {/* Stock transfer */}
+            <Card>
+              <CardHeader><CardTitle><ArrowRightLeft className="h-4 w-4 inline mr-1.5" />Transfer Stock</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Move stock from <strong>{selectedProduct.name}</strong> to another product
+                </p>
+                <div>
+                  <Input
+                    placeholder="Search destination product..."
+                    value={transferSearch}
+                    onChange={(e) => setTransferSearch(e.target.value)}
+                  />
+                  {transferSearch.length >= 1 && (
+                    <div className="mt-1 max-h-32 overflow-y-auto border border-border rounded-md bg-card">
+                      {(transferProducts?.products ?? []).filter(p => p.id !== selectedProduct.id).map((p) => (
+                        <button
+                          key={p.id}
+                          className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors ${transferForm.destProductId === p.id ? "bg-primary/10 font-medium" : ""}`}
+                          onClick={() => { setTransferForm({ ...transferForm, destProductId: p.id }); setTransferSearch(p.name); }}
+                        >
+                          {p.name} <span className="text-xs text-muted-foreground">({p.quantity_on_hand} in stock)</span>
+                        </button>
+                      ))}
+                      {(transferProducts?.products ?? []).filter(p => p.id !== selectedProduct.id).length === 0 && (
+                        <p className="px-3 py-1.5 text-xs text-muted-foreground">No matching products</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={transferForm.quantity}
+                      onChange={(e) => setTransferForm({ ...transferForm, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <span className="text-xs text-muted-foreground pb-2">Max: {selectedProduct.quantity_on_hand}</span>
+                  </div>
+                </div>
+                <Input
+                  placeholder="Transfer notes (optional)"
+                  value={transferForm.notes}
+                  onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
+                />
+                <Button
+                  onClick={() => transferMutation.mutate()}
+                  disabled={!transferForm.destProductId || transferMutation.isPending}
+                >
+                  {transferMutation.isPending ? "Transferring..." : "Transfer"}
+                </Button>
               </CardContent>
             </Card>
 

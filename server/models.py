@@ -249,6 +249,14 @@ class InventoryAdjustmentCreate(BaseModel):
     user_id: str = Field(default="", max_length=100)
 
 
+class StockTransferRequest(BaseModel):
+    source_product_id: str = Field(..., min_length=1, max_length=100)
+    destination_product_id: str = Field(..., min_length=1, max_length=100)
+    quantity: float = Field(..., gt=0)
+    reference_id: str = Field(default="", max_length=255)
+    notes: str = Field(default="", max_length=2000)
+
+
 # ─── Tenants ─────────────────────────────────────────────────────
 
 class TenantCreate(BaseModel):
