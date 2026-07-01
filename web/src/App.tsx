@@ -197,6 +197,10 @@ function AppShell() {
   useEffect(() => {
     if (user) {
       api.stats.get().then(setStats).catch(() => {});
+      const interval = setInterval(() => {
+        api.stats.get().then(setStats).catch(() => {});
+      }, 60_000);
+      return () => clearInterval(interval);
     }
   }, [page, user]);
 
