@@ -535,6 +535,27 @@ pub fn update_invoice_status(ctx: &ReducerContext, id: String, status: String) {
 }
 
 #[spacetimedb::reducer]
+pub fn mark_overdue_invoices(ctx: &ReducerContext) {
+    let now = now_ms(ctx);
+    let overdue_targets: Vec<Invoice> = ctx
+        .db
+        .invoices()
+        .iter()
+        .filter(|inv| {
+            (inv.status == "sent" || inv.status == "partial")
+                && inv.due_date > 0
+                && inv.due_date < now
+        })
+        .collect();
+    for inv in overdue_targets {
+        ctx.db.invoices().id().update(Invoice {
+            status: "overdue".to_string(),
+            ..inv
+        });
+    }
+}
+
+#[spacetimedb::reducer]
 pub fn add_invoice_line_item(ctx: &ReducerContext, invoice_id: String, item_type: String, description: String, quantity: f64, unit_price: f64) {
     let id = make_id("iln", ctx);
     let total = quantity * unit_price;
