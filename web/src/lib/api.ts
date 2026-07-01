@@ -802,10 +802,15 @@ export const api = {
       list: () =>
         apiFetch<{ products: Product[]; count: number }>("/products/low-stock"),
       notify: () =>
-        apiFetch<{ ok: boolean; count: number; notified?: string; message?: string; error?: string }>(
-          "/products/low-stock/notify", { method: "POST" }
-        ),
+        apiFetch<{ ok: boolean; count?: number; notified?: string }>("/products/low-stock/notify", {
+          method: "POST",
+        }),
     },
+    transfer: (data: { source_product_id: string; destination_product_id: string; quantity: number; reference_id?: string; notes?: string }) =>
+      apiFetch<{ ok: boolean; quantity: number; reference: string }>("/products/transfer", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
   estimates: {
     list: (status?: string, offset?: number, limit?: number) => {

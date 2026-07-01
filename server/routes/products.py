@@ -7,7 +7,7 @@ from helpers import (
     _sql, _paginated, _call, _sort, _log_audit,
     require_role, logger,
 )
-from models import ProductCreate, ProductQuantityUpdate, InventoryAdjustmentCreate
+from models import ProductCreate, ProductQuantityUpdate, InventoryAdjustmentCreate, StockTransferRequest
 from mail import _notify_low_stock
 
 router = APIRouter()
@@ -147,3 +147,34 @@ async def notify_low_stock(user: dict = Depends(require_role("admin"))):
     _notify_low_stock(admin_email, low_stock)
     await _log_audit(user, "notify", "low_stock", "", f"products={len(low_stock)}")
     return {"ok": True, "count": len(low_stock), "notified": admin_email}
+
+
+@router.post("/api/products/transfer")
+async def transfer_stock(body: StockTransferRequest, user: dict = Depends(require_role("admin", "tech"))):
+    """Transfer stock between two products. Creates inventory adjustments on both."""
+    tid = user["tenant_id"]
+    uid = user["id"]
+
+    # Verify both products exist and belong to this tenant
+    src_rows = await _sql(f"SELECT * FROM products WHERE id = '{body.source_product_id}' AND tenant_id = '{tid}'")
+    dst_rows = await _sql(f"SELECT * FROM products WHERE id = '{body.destination_product_id}' AND tenant_id = '{tid}'")
+    if not src_rows:
+        raise HTTPException(404, "Source product not found")
+    if not dst_rows:
+        raise HTTPException(404, "Destination product not found")
+
+    src = src_rows[0]
+    qty = body.quantity
+
+    if src.get("quantity_on_hand", 0) < qty:
+        raise HTTPException(400, f"Insufficient stock: source has {src.get('quantity_on_hand', 0)}, need {qty}")
+
+    ref = body.reference_id or f"transfer_{body.source_product_id[:8]}"
+
+    # Negative adjustment on source
+    await _call("create_inventory_adjustment", [tid, body.source_product_id, -qty, "transferred", ref, body.notes, uid])
+    # Positive adjustment on destination
+    await _call("create_inventory_adjustment", [tid, body.destination_product_id, qty, "transferred", ref, body.notes, uid])
+
+    await _log_audit(user, "transfer", "stock", body.source_product_id, f"qty={qty}→{body.destination_product_id}")
+    return {"ok": True, "quantity": qty, "reference": ref}
