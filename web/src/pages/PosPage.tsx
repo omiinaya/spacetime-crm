@@ -30,6 +30,8 @@ export default function PosPage() {
   const scanRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"sale" | "history" | "receipt">("sale");
   const [customerName, setCustomerName] = useState("Walk-in");
+  const [customerId, setCustomerId] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [amountTendered, setAmountTendered] = useState("");
   const [taxRate, setTaxRate] = useState("8.25");
@@ -46,6 +48,14 @@ export default function PosPage() {
     queryFn: () =>
       api.products.list(searchQuery, 0, 20).then((r) => r.products),
     enabled: searchQuery.length >= 1,
+  });
+
+  // ── Customer search ──
+  const { data: customerResults } = useQuery({
+    queryKey: ["pos-customers", customerSearch],
+    queryFn: () =>
+      api.customers.list(customerSearch, 0, 10).then((r) => r.customers),
+    enabled: customerSearch.length >= 1,
   });
 
   // ── Sale history ──
@@ -80,6 +90,7 @@ export default function PosPage() {
 
     // 1. Create the sale
     const createRes = await api.pos.create({
+      customer_id: customerId,
       customer_name: customerName,
       payment_method: paymentMethod,
       amount_tendered: parseFloat(amountTendered) || 0,
@@ -121,6 +132,9 @@ export default function PosPage() {
     // 5. Reset cart
     setCart([]);
     setAmountTendered("");
+    setCustomerId("");
+    setCustomerName("Walk-in");
+    setCustomerSearch("");
     setMode("receipt");
     queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
     toast.success(`Sale complete — Receipt #${detailRes.sale.receipt_number}`);
@@ -452,13 +466,40 @@ export default function PosPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div>
+                <div className="relative">
                   <label className="text-xs text-muted-foreground mb-1 block">Customer</label>
                   <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Walk-in"
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      if (!e.target.value) {
+                        setCustomerId("");
+                        setCustomerName("Walk-in");
+                      }
+                    }}
+                    placeholder="Search customers..."
                   />
+                  {customerSearch.length >= 1 && customerResults && customerResults.length > 0 && (
+                    <div className="absolute z-50 top-full left-0 right-0 bg-card border rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
+                      {customerResults.map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-center justify-between p-2 hover:bg-accent cursor-pointer text-sm"
+                          onClick={() => {
+                            setCustomerId(c.id);
+                            setCustomerName(`${c.first_name} ${c.last_name}`.trim());
+                            setCustomerSearch("");
+                          }}
+                        >
+                          <span className="font-medium">{(c.first_name && c.last_name) ? `${c.first_name} ${c.last_name}` : c.email || "Unknown"}</span>
+                          <span className="text-xs text-muted-foreground">{c.email || c.phone || ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {customerSearch.length > 0 && customerResults && customerResults.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">No customers found</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Tax Rate %</label>
