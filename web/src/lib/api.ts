@@ -287,6 +287,7 @@ export interface DashboardStats {
   upcoming_appointments: number;
   my_tickets?: Ticket[];
   my_ticket_counts?: { all: number; urgent: number; high: number; medium: number; low: number };
+  today_appointments?: Appointment[];
 }
 
 export interface MailSettings {

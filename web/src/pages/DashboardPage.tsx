@@ -225,34 +225,36 @@ export default function DashboardPage({
           </CardContent>
         </Card>
 
-        {/* Recent Activity / Stats summary */}
+        {/* Today's Appointments + Summary */}
         <Card>
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="w-4 h-4" /> Today's Appointments
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="text-sm text-muted-foreground">Open tickets</span>
-                <span className="font-semibold">{stats?.open_tickets ?? 0}</span>
+            {stats?.today_appointments && stats.today_appointments.length > 0 ? (
+              <div className="space-y-2">
+                {stats.today_appointments.slice(0, 5).map((appt) => {
+                  const time = new Date(appt.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                  return (
+                    <div key={appt.id} className="flex items-center justify-between border rounded-lg p-2 hover:bg-accent cursor-pointer" onClick={() => onNavigate("appointments")}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{appt.title || "Appointment"}</p>
+                        <p className="text-xs text-muted-foreground">{time} · {appt.status}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <Button variant="ghost" size="sm" className="w-full mt-1 text-xs" onClick={() => onNavigate("appointments")}>
+                  View all →
+                </Button>
               </div>
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="text-sm text-muted-foreground">My tickets</span>
-                <span className="font-semibold">{stats?.my_ticket_counts?.all ?? 0}</span>
-              </div>
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="text-sm text-muted-foreground">Pending revenue</span>
-                <span className="font-semibold">${(stats?.pending_revenue ?? 0).toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between border-b pb-2">
-                <span className="text-sm text-muted-foreground">Total customers</span>
-                <span className="font-semibold">{stats?.total_customers ?? 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Upcoming appointments</span>
-                <span className="font-semibold">{stats?.upcoming_appointments ?? 0}</span>
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No appointments today
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

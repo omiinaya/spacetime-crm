@@ -25,6 +25,13 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     pending_revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") not in ("paid", "cancelled"))
     upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
 
+    # Today's appointments
+    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    day_start_ms = int(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+    day_end_ms = day_start_ms + 86400000
+    today_appts = [a for a in all_appointments if day_start_ms <= a.get("start_time", 0) < day_end_ms and a.get("status") not in ("cancelled",)]
+    today_appts_sorted = sorted(today_appts, key=lambda x: x.get("start_time", 0))[:10]
+
     # My assigned tickets for dashboard personalization
     my_tickets = [t for t in all_tickets if t.get("assigned_user_id") == user["id"] and t.get("status") not in ("resolved", "closed")]
 
@@ -47,6 +54,7 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
         "upcoming_appointments": upcoming_appointments,
         "my_tickets": my_recent,
         "my_ticket_counts": my_ticket_counts,
+        "today_appointments": today_appts_sorted,
     }
 
 
