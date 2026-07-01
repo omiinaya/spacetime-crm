@@ -13,3 +13,6 @@ __pycache__/
 web/playwright-report/
 web/test-results/
 web/.auth/
+
+# Virtual environment
+server/.venv/

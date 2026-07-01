@@ -279,6 +279,20 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
         tax_amount=f"{float(inv.get('tax_amount', 0)):.2f}",
         tax_rate=f"{float(inv.get('tax_rate', 0)) * 100:.1f}",
         discount_amount=float(inv.get("discount_amount", 0)),
+        currency=inv.get("currency", "USD"),
+        payments=[] if status not in ("paid", "partial") else [
+            {
+                "date": datetime.fromtimestamp(float(p.get("created_at", 0)) / 1000).strftime("%b %d, %Y") if p.get("created_at") else "—",
+                "method": p.get("method", "—"),
+                "reference": p.get("reference", ""),
+                "amount": f"{float(p.get('amount', 0)):.2f}",
+                "notes": p.get("notes", ""),
+            }
+            for p in _sort(
+                await _sql(f"SELECT amount, method, reference, created_at, notes FROM payment WHERE invoice_id = '{invoice_id}'"),
+                key="created_at"
+            )
+        ],
         items=[
             {
                 "description": i.get("description", ""),
