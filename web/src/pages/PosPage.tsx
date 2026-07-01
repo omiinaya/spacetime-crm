@@ -184,15 +184,18 @@ export default function PosPage() {
         scanBuffer = "";
         if (!barcode) return;
 
-        api.products.list(barcode, 0, 5).then((res) => {
-          const found = res.products.find(
-            (p) => p.barcode === barcode || p.sku === barcode
-          );
-          if (found) {
-            addToCart(found);
-          } else {
-            toast.error(`No product found: ${barcode}`);
-          }
+        api.products.byBarcode(barcode).then((res) => {
+          addToCart(res.product);
+        }).catch(() => {
+          // Not found by exact barcode — fall back to SKU search
+          api.products.list(barcode, 0, 5).then((res) => {
+            const found = res.products.find((p) => p.sku === barcode);
+            if (found) {
+              addToCart(found);
+            } else {
+              toast.error(`No product found: ${barcode}`);
+            }
+          });
         });
       } else if (e.key.length === 1) {
         scanBuffer += e.key;
