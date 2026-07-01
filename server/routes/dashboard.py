@@ -25,6 +25,16 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     pending_revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") not in ("paid", "cancelled"))
     upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
 
+    # Overdue invoices — detect on-the-fly from SQL
+    now = int(datetime.utcnow().timestamp() * 1000)
+    sent_partial = [i for i in all_invoices if i.get("status") in ("sent", "partial") and i.get("due_date", 0) > 0 and i.get("due_date", 0) < now]
+    overdue_invoices = [i for i in all_invoices if i.get("status") == "overdue"]
+    # Also include invoices that are past due but not yet marked overdue (detect on-the-fly)
+    combined_overdue = overdue_invoices + sent_partial
+    combined_overdue.sort(key=lambda x: x.get("due_date", 0))
+    overdue_invoices_total = round(sum(float(i.get("total", 0)) for i in combined_overdue), 2)
+    overdue_invoices_sorted = combined_overdue[:5]
+
     # Today's appointments
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     day_start_ms = int(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
@@ -55,6 +65,9 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
         "my_tickets": my_recent,
         "my_ticket_counts": my_ticket_counts,
         "today_appointments": today_appts_sorted,
+        "overdue_invoices": overdue_invoices_sorted,
+        "overdue_invoices_count": len(combined_overdue),
+        "overdue_invoices_total": overdue_invoices_total,
     }
 
 

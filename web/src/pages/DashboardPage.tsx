@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Users, Ticket, FileText, CreditCard, Calendar, Package,
 } from "lucide-react";
-import { api, DashboardStats, ReportsData } from "../lib/api";
+import { api, DashboardStats, ReportsData, Invoice } from "../lib/api";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -163,6 +163,61 @@ export default function DashboardPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Overdue Invoices Alert */}
+      {(() => {
+        const overdueCount = stats?.overdue_invoices_count;
+        const overdueInv = stats?.overdue_invoices;
+        if (overdueCount == null || overdueCount < 1) return null;
+        return (
+        <div className="border border-red-800/50 bg-red-950/20 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-900/30">
+                <FileText className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-red-400">
+                  {overdueCount} Overdue Invoice{overdueCount !== 1 ? "s" : ""}
+                </p>
+                <p className="text-sm text-red-300/70">
+                  Total: ${stats!.overdue_invoices_total?.toFixed(2)}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-800 text-red-400 hover:bg-red-900/30"
+              onClick={() => onNavigate("invoices")}
+            >
+              View Invoices
+            </Button>
+          </div>
+          {/* Show top 3 overdue invoices */}
+          {overdueInv && overdueInv.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {overdueInv.slice(0, 3).map((inv: Invoice) => {
+                const dueDate = inv.due_date
+                  ? new Date(inv.due_date).toLocaleDateString()
+                  : "—";
+                return (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between text-xs text-red-300/80 px-2 py-1 rounded hover:bg-red-900/20 cursor-pointer"
+                    onClick={() => onNavigate("invoices")}
+                  >
+                    <span>{inv.invoice_number ? `#${inv.invoice_number}` : inv.id.slice(-6)}</span>
+                    <span>Due {dueDate}</span>
+                    <span className="font-medium">${Number(inv.total).toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        );
+      })()}
 
       {/* My Tickets section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

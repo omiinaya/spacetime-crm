@@ -10,10 +10,13 @@ class TestDashboard:
         data = assert_ok(resp)
         assert "total_customers" in data
         assert "total_tickets" in data
-        assert "revenue" in data
         assert "open_tickets" in data
+        assert "revenue" in data
         assert "pending_revenue" in data
         assert "upcoming_appointments" in data
+        assert "overdue_invoices_count" in data
+        assert "overdue_invoices_total" in data
+        assert "overdue_invoices" in data
 
     def test_reports(self, auth_headers: dict):
         resp = httpx.get(f"{SERVER_URL}/api/reports", headers=auth_headers, timeout=10)
