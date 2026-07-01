@@ -275,3 +275,44 @@ class TestInvoiceErrors:
         """Trigger overdue check requires auth."""
         resp = client.post("/api/invoices/trigger-overdue-check", timeout=10)
         assert resp.status_code in (401, 403)
+
+    def test_summary(self, auth_headers: dict):
+        """Summary endpoint returns expected shape."""
+        resp = httpx.get(f"{SERVER_URL}/api/invoices/summary", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "by_status" in data
+        assert "total_count" in data
+        assert "total_revenue" in data
+        assert "total_outstanding" in data
+        assert "overdue_count" in data
+        assert "overdue_total" in data
+        assert isinstance(data["total_count"], int)
+        assert data["total_count"] > 0
+
+    def test_bulk_status_update(self, auth_headers: dict):
+        """Bulk status update changes invoice statuses."""
+        # First get some invoice IDs
+        list_resp = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 3}, headers=auth_headers, timeout=10)
+        invs = list_resp.json().get("invoices", [])
+        if len(invs) < 2:
+            pytest.skip("Need at least 2 invoices for bulk test")
+        ids = [inv["id"] for inv in invs[:2]]
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices/bulk-status-update",
+            json={"invoice_ids": ids, "status": "sent"},
+            headers=auth_headers, timeout=10,
+        )
+        data = assert_ok(resp)
+        assert data["ok"] is True
+        assert data["updated"] >= 1
+        assert data["errors"] == 0
+
+    def test_summary_unauthorized(self, client: httpx.Client):
+        """Summary requires auth."""
+        resp = client.get("/api/invoices/summary", timeout=10)
+        assert resp.status_code in (401, 403)
+
+    def test_bulk_status_unauthorized(self, client: httpx.Client):
+        """Bulk status update requires auth."""
+        resp = client.post("/api/invoices/bulk-status-update", json={"invoice_ids": ["fake"], "status": "sent"}, timeout=10)
+        assert resp.status_code in (401, 403)

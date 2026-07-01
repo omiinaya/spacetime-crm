@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
-import { api, Invoice, Customer, TaxRate, Payment } from "../lib/api";
+import { api, Invoice, Customer, TaxRate, Payment, InvoiceSummary } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard } from "lucide-react";
+import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
@@ -33,6 +33,24 @@ export default function InvoicesPage() {
   const [paymentForm, setPaymentForm] = useState({ amount: 0, method: "cash", reference: "" });
   const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState("sent");
+
+  const { data: summary } = useQuery({
+    queryKey: ["invoice-summary"],
+    queryFn: () => api.invoices.summary(),
+  });
+
+  const bulkMutation = useMutation({
+    mutationFn: () => api.invoices.bulkStatusUpdate(Array.from(selectedIds), bulkStatus),
+    onSuccess: (data) => {
+      toast.success(`Updated ${data.updated} invoice(s) to ${bulkStatus}`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
+    },
+    onError: () => toast.error("Bulk update failed"),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["invoices", { filter, offset: pag.offset }],
@@ -160,6 +178,23 @@ export default function InvoicesPage() {
     removeLineItemMutation.mutate(itemId);
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === invoices.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(invoices.map(i => i.id)));
+    }
+  };
+
   return (
     <>
       <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -175,6 +210,56 @@ export default function InvoicesPage() {
           <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => handleFilter(s)}>{s || "All"}</Button>
         ))}
       </div>
+
+      {/* Summary bar */}
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="border rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="text-lg font-bold">{summary.total_count}</p>
+          </div>
+          <div className="border rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Outstanding</p>
+            <p className="text-lg font-bold text-amber-400">${summary.total_outstanding.toFixed(2)}</p>
+          </div>
+          <div className="border rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Overdue</p>
+            <p className="text-lg font-bold text-red-400">{summary.overdue_count} / ${summary.overdue_total.toFixed(2)}</p>
+          </div>
+          <div className="border rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Revenue</p>
+            <p className="text-lg font-bold text-green-400">${summary.total_revenue.toFixed(2)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <div className="flex-1" />
+          <Select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="w-28">
+            <option value="draft">Draft</option>
+            <option value="sent">Sent</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+            <option value="cancelled">Cancelled</option>
+          </Select>
+          <Button
+            size="sm"
+            onClick={() => bulkMutation.mutate()}
+            disabled={bulkMutation.isPending}
+          >
+            {bulkMutation.isPending ? (
+              <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
+            ) : null}
+            Apply
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       {showForm && (
         <Card className="border-primary/30">
@@ -206,23 +291,38 @@ export default function InvoicesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className={`space-y-3 ${selectedInv ? "hidden lg:block" : ""}`}>
+          {/* Select all header */}
+          {invoices.length > 0 && (
+            <div className="flex items-center gap-2 px-1 pb-1 text-xs text-muted-foreground">
+              <button onClick={toggleSelectAll} className="flex items-center gap-1.5 hover:text-foreground">
+                {selectedIds.size === invoices.length ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+                {selectedIds.size === invoices.length ? "Deselect all" : "Select all"}
+              </button>
+              {selectedIds.size > 0 && <span className="text-primary font-medium">{selectedIds.size} selected</span>}
+            </div>
+          )}
           {invoices.map((inv) => {
             const cust = customers.find((c) => c.id === inv.customer_id);
             return (
-              <Card key={inv.id} className={`cursor-pointer transition-colors ${selectedInv?.id === inv.id ? "border-primary" : "hover:border-primary/30"}`} onClick={() => selectInvoice(inv)}>
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">#{inv.invoice_number}</span>
-                        <Badge variant={statusColors[inv.status] || "outline"}>{inv.status}</Badge>
+              <div key={inv.id} className="flex items-start gap-2">
+                <button onClick={(e) => { e.stopPropagation(); toggleSelect(inv.id); }} className="mt-4 shrink-0 hover:text-foreground text-muted-foreground">
+                  {selectedIds.has(inv.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                </button>
+                <Card className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? "border-primary" : "hover:border-primary/30"}`} onClick={() => selectInvoice(inv)}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">#{inv.invoice_number}</span>
+                          <Badge variant={statusColors[inv.status] || "outline"}>{inv.status}</Badge>
+                        </div>
+                        <p className="font-medium mt-1">{inv.currency || "USD"} {inv.total.toFixed(2)}</p>
+                        {cust && <p className="text-xs text-muted-foreground">{cust.first_name} {cust.last_name}</p>}
                       </div>
-                      <p className="font-medium mt-1">{inv.currency || "USD"} {inv.total.toFixed(2)}</p>
-                      {cust && <p className="text-xs text-muted-foreground">{cust.first_name} {cust.last_name}</p>}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             );
           })}
         </div>
