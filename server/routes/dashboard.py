@@ -198,6 +198,20 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         for cid, rev in sorted(customer_revenue.items(), key=lambda x: -x[1])[:10]
     ]
 
+    # Customer acquisition by month (last 12 months)
+    all_customers = await _sql("SELECT * FROM customer")
+    customers_by_month = []
+    for i in range(11, -1, -1):
+        month_start = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+        month_start_ts = int(month_start.timestamp() * 1000)
+        month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
+        month_label = month_start.strftime("%b %y")
+        month_count = sum(
+            1 for c in all_customers
+            if month_start_ts <= c.get("created_at", 0) < month_end_ts
+        )
+        customers_by_month.append({"month": month_label, "new_customers": month_count})
+
     return {
         "revenue_by_month": revenue_by_month,
         "ticket_by_status": ticket_by_status,
@@ -218,6 +232,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         },
         "tech_closed": tech_closed,
         "top_customers": top_customers,
+        "customers_by_month": customers_by_month,
     }
 
 

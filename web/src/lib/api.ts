@@ -349,6 +349,7 @@ export interface ReportsData {
   ticket_by_status: { status: string; count: number }[];
   invoice_by_status: { status: string; count: number }[];
   appointments_by_month: { month: string; appointments: number }[];
+  customers_by_month: { month: string; new_customers: number }[];
   totals: {
     total_revenue: number;
     total_tickets: number;
