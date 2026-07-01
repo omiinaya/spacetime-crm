@@ -285,6 +285,8 @@ export interface DashboardStats {
   revenue: number;
   pending_revenue: number;
   upcoming_appointments: number;
+  my_tickets?: Ticket[];
+  my_ticket_counts?: { all: number; urgent: number; high: number; medium: number; low: number };
 }
 
 export interface MailSettings {

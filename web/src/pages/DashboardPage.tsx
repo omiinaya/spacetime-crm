@@ -3,6 +3,7 @@ import {
   Users, Ticket, FileText, CreditCard, Calendar, Package,
 } from "lucide-react";
 import { api, DashboardStats, ReportsData } from "../lib/api";
+import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import {
@@ -163,30 +164,98 @@ export default function DashboardPage({
         </Card>
       </div>
 
-      {/* Recent activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Open tickets:{" "}
-              <span className="text-foreground font-medium">{stats?.open_tickets ?? 0}</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Pending revenue:{" "}
-              <span className="text-foreground font-medium">
-                ${(stats?.pending_revenue ?? 0).toFixed(2)}
-              </span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Total customers:{" "}
-              <span className="text-foreground font-medium">{stats?.total_customers ?? 0}</span>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* My Tickets section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* My assigned tickets */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Ticket className="w-4 h-4" /> My Tickets
+              </CardTitle>
+              {stats?.my_ticket_counts && (
+                <div className="flex gap-2 text-xs">
+                  {stats.my_ticket_counts.urgent > 0 && (
+                    <Badge variant="destructive" className="text-xs">{stats.my_ticket_counts.urgent} urgent</Badge>
+                  )}
+                  {stats.my_ticket_counts.high > 0 && (
+                    <Badge className="text-xs bg-orange-500">{stats.my_ticket_counts.high} high</Badge>
+                  )}
+                  <span className="text-muted-foreground">{stats.my_ticket_counts.all} total</span>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {stats?.my_tickets && stats.my_tickets.length > 0 ? (
+              <div className="space-y-2">
+                {stats.my_tickets.map((ticket) => {
+                  const hoursAge = (Date.now() - new Date(ticket.created_at).getTime()) / 3600000;
+                  const slaColor = hoursAge < 4 ? "text-green-400" : hoursAge < 24 ? "text-amber-400" : hoursAge < 72 ? "text-red-400" : "text-red-600";
+                  return (
+                    <div
+                      key={ticket.id}
+                      className="flex items-center justify-between border rounded-lg p-3 hover:bg-accent cursor-pointer"
+                      onClick={() => onNavigate("tickets")}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{ticket.title || "Untitled"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          <span className={`${slaColor}`}>●</span> {ticket.status === "open" ? "Open" : ticket.status}
+                          {ticket.priority && ` · ${ticket.priority}`}
+                        </p>
+                      </div>
+                      <div className="text-right ml-2">
+                        <p className="text-sm font-semibold">#{ticket.ticket_number || ticket.id.slice(-6)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No tickets assigned to you
+              </p>
+            )}
+            {stats?.my_tickets && stats.my_tickets.length > 0 && (
+              <Button variant="ghost" size="sm" className="w-full mt-2 text-xs" onClick={() => onNavigate("tickets")}>
+                View all tickets →
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity / Stats summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b pb-2">
+                <span className="text-sm text-muted-foreground">Open tickets</span>
+                <span className="font-semibold">{stats?.open_tickets ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between border-b pb-2">
+                <span className="text-sm text-muted-foreground">My tickets</span>
+                <span className="font-semibold">{stats?.my_ticket_counts?.all ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between border-b pb-2">
+                <span className="text-sm text-muted-foreground">Pending revenue</span>
+                <span className="font-semibold">${(stats?.pending_revenue ?? 0).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between border-b pb-2">
+                <span className="text-sm text-muted-foreground">Total customers</span>
+                <span className="font-semibold">{stats?.total_customers ?? 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Upcoming appointments</span>
+                <span className="font-semibold">{stats?.upcoming_appointments ?? 0}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </>
   );
 }
