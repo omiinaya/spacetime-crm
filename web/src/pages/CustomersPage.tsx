@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api, Customer } from "../lib/api";
+import type { Ticket as TicketType, Invoice } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { queryClient } from "../lib/query-client";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -10,6 +11,7 @@ import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
 import {
   Users, Plus, Search, Mail, Phone, MapPin, Edit2, Trash2, Key,
+  Ticket as TicketIcon, Receipt, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,6 +23,147 @@ const emptyForm: Partial<Customer> = {
   company: "", notes: "", tags: "",
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  draft: "bg-zinc-500",
+  sent: "bg-blue-500",
+  paid: "bg-green-500",
+  overdue: "bg-red-500",
+  partial: "bg-amber-500",
+  cancelled: "bg-zinc-300",
+  new: "bg-blue-500",
+  in_progress: "bg-amber-500",
+  waiting_parts: "bg-purple-500",
+  waiting_customer: "bg-orange-500",
+  resolved: "bg-green-500",
+  closed: "bg-zinc-400",
+  scheduled: "bg-blue-500",
+  completed: "bg-green-500",
+  no_show: "bg-red-500",
+  pending_approval: "bg-amber-500",
+  approved: "bg-green-500",
+};
+
+function CustomerDetailPanel({
+  customer,
+  onClose,
+}: {
+  customer: Customer;
+  onClose: () => void;
+}) {
+  const { data: ticketsData } = useQuery({
+    queryKey: ["customer-tickets", customer.id],
+    queryFn: () =>
+      api.tickets.list("", customer.id, 0, 5) as Promise<{
+        tickets: TicketType[];
+        total: number;
+      }>,
+  });
+
+  const { data: invoicesData } = useQuery({
+    queryKey: ["customer-invoices", customer.id],
+    queryFn: () =>
+      api.invoices.list("", customer.id, 0, 5) as Promise<{
+        invoices: Invoice[];
+        total: number;
+      }>,
+  });
+
+  const tickets = ticketsData?.tickets ?? [];
+  const invoices = invoicesData?.invoices ?? [];
+
+  const formatDate = (ts: number) => {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    return d.toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+    });
+  };
+
+  const formatCurrency = (val: number, currency?: string) => {
+    const sym = currency === "EUR" ? "\u20ac" : currency === "GBP" ? "\u00a3" : "$";
+    return `${sym}${val.toFixed(2)}`;
+  };
+
+  return (
+    <div className="col-span-full border border-primary/20 rounded-lg bg-muted/30 p-4 animate-in slide-in-from-top-2 duration-200">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="font-semibold text-lg">{customer.first_name} {customer.last_name}</h3>
+          <p className="text-sm text-muted-foreground">
+            {customer.email && <>{customer.email} &middot; </>}
+            {customer.phone || customer.mobile}
+          </p>
+          {customer.company && <p className="text-xs text-muted-foreground">{customer.company}</p>}
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <ChevronUp className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Recent Tickets */}
+        <Card>
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              <TicketIcon className="h-3.5 w-3.5" /> Recent Tickets ({tickets.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="py-1 px-3">
+            {tickets.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">No tickets</p>
+            ) : (
+              <div className="space-y-1.5">
+                {tickets.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between text-xs py-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[t.status] || "bg-zinc-400"}`} />
+                      <span className="truncate">#{t.ticket_number} {t.title}</span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 shrink-0">
+                      {t.status.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Invoices */}
+        <Card>
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+              <Receipt className="h-3.5 w-3.5" /> Recent Invoices ({invoices.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="py-1 px-3">
+            {invoices.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">No invoices</p>
+            ) : (
+              <div className="space-y-1.5">
+                {invoices.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between text-xs py-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[inv.status] || "bg-zinc-400"}`} />
+                      <span className="truncate">#{inv.invoice_number} — {formatDate(inv.created_at)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-medium">{formatCurrency(inv.total, inv.currency)}</span>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                        {inv.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function CustomersPage() {
   const pag = usePagination(PAGE_SIZE);
   const [search, setSearch] = useState("");
@@ -30,6 +173,7 @@ export default function CustomersPage() {
   const [pwCustomer, setPwCustomer] = useState<Customer | null>(null);
   const [pwPassword, setPwPassword] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
+  const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["customers", { search, offset: pag.offset }],
@@ -48,6 +192,10 @@ export default function CustomersPage() {
     setSearch(val);
     pag.reset();
   };
+
+  const handleToggleExpand = useCallback((cid: string) => {
+    setExpandedCustomerId((prev) => (prev === cid ? null : cid));
+  }, []);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -167,51 +315,68 @@ export default function CustomersPage() {
       {/* Customer list */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {customers.map((c) => (
-          <Card key={c.id} className="hover:border-primary/30 transition-colors">
-            <CardContent className="pt-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Users className="h-5 w-5 text-primary" />
+          <div key={c.id} className="contents">
+            <Card
+              className={`hover:border-primary/30 transition-colors cursor-pointer ${
+                expandedCustomerId === c.id ? "border-primary/40" : ""
+              }`}
+              onClick={() => handleToggleExpand(c.id)}
+            >
+              <CardContent className="pt-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{fullName(c)}</p>
+                      {c.company && (
+                        <p className="text-xs text-muted-foreground truncate">{c.company}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{fullName(c)}</p>
-                    {c.company && (
-                      <p className="text-xs text-muted-foreground truncate">{c.company}</p>
-                    )}
+                  <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <Button size="icon" variant="ghost" onClick={() => openPwDialog(c)} title="Set Portal Password">
+                      <Key className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleEdit(c)}>
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(c.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" onClick={() => openPwDialog(c)} title="Set Portal Password">
-                    <Key className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleEdit(c)}>
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(c.id)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  {c.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3 w-3" /> {c.email}
+                    </div>
+                  )}
+                  {c.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3 w-3" /> {c.phone}
+                    </div>
+                  )}
+                  {(c.city || c.state) && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3" /> {[c.city, c.state].filter(Boolean).join(", ")}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-primary/60">
+                    <ChevronDown className={`h-3 w-3 transition-transform ${
+                      expandedCustomerId === c.id ? "rotate-180" : ""
+                    }`} />
+                    {expandedCustomerId === c.id ? "Hide details" : "Show details"}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                {c.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-3 w-3" /> {c.email}
-                  </div>
-                )}
-                {c.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-3 w-3" /> {c.phone}
-                  </div>
-                )}
-                {(c.city || c.state) && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3 w-3" /> {[c.city, c.state].filter(Boolean).join(", ")}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {expandedCustomerId === c.id && (
+              <CustomerDetailPanel customer={c} onClose={() => setExpandedCustomerId(null)} />
+            )}
+          </div>
         ))}
         {!loading && customers.length === 0 && (
           <div className="col-span-full text-center py-12 text-muted-foreground">

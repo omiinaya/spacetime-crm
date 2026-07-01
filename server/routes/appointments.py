@@ -130,6 +130,72 @@ async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = De
     return {"ok": True, "start_time": next_start, "end_time": next_end}
 
 
+@router.get("/api/appointments/due-soon")
+async def get_appointments_due_soon(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Get appointments starting in the next 24 hours."""
+    now_ms = int(__import__("time").time() * 1000)
+    in_24h = now_ms + 86_400_000  # 24h in ms
+
+    rows = await _sql(
+        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' "
+        f"AND status != 'cancelled' AND status != 'completed' "
+        f"AND start_time >= {now_ms} AND start_time <= {in_24h}"
+    )
+
+    # Enrich with customer info
+    result = sorted(rows, key=lambda r: r.get("start_time", 0))
+    for r in result:
+        cust = await _sql(
+            f"SELECT first_name, last_name, email, mobile, phone FROM customer WHERE id = '{r.get('customer_id', '')}'"
+        )
+        r["customer"] = cust[0] if cust else {}
+
+    return {"appointments": result, "count": len(result)}
+
+
+@router.post("/api/appointments/send-reminders")
+async def send_appointment_reminders(user: dict = Depends(require_role("admin"))):
+    """Send reminder notifications for appointments starting in the next 24 hours."""
+    now_ms = int(__import__("time").time() * 1000)
+    in_24h = now_ms + 86_400_000
+
+    rows = await _sql(
+        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' "
+        f"AND status != 'cancelled' AND status != 'completed' "
+        f"AND start_time >= {now_ms} AND start_time <= {in_24h}"
+    )
+
+    sent = {"email": 0, "sms": 0, "skipped": 0}
+    for appt in rows:
+        cust = await _sql(
+            f"SELECT first_name, last_name, email, mobile, phone FROM customer WHERE id = '{appt.get('customer_id', '')}'"
+        )
+        if not cust:
+            sent["skipped"] += 1
+            continue
+
+        c = cust[0]
+        link = "http://localhost:8723/portal/"
+
+        email = c.get("email") or None
+        if email:
+            from mail import _notify_appointment_reminder as _mail
+            _mail(email, appt.get("title", "Appointment"), appt.get("start_time", 0), link)
+            sent["email"] += 1
+
+        phone = c.get("mobile") or c.get("phone") or None
+        if phone:
+            from sms import _notify_appointment_reminder as _sms
+            _sms(phone, appt.get("title", "Appointment"), appt.get("start_time", 0))
+            sent["sms"] += 1
+
+        if not email and not phone:
+            sent["skipped"] += 1
+
+    await _log_audit(user, "send_reminders", "appointment", f"{sent['email']} email, {sent['sms']} SMS, {sent['skipped']} skipped")
+    return {"ok": True, "sent": sent}
+
+
 @router.put("/api/appointments/{appt_id}/status")
 async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_appointment_status", [appt_id, body.status])

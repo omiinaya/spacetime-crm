@@ -551,9 +551,10 @@ export const api = {
     },
   },
   tickets: {
-    list: (status?: string, offset?: number, limit?: number) => {
+    list: (status?: string, customerId?: string, offset?: number, limit?: number) => {
       const p = new URLSearchParams();
       if (status) p.set("status", status);
+      if (customerId) p.set("customer_id", customerId);
       if (offset !== undefined) p.set("offset", String(offset));
       if (limit !== undefined) p.set("limit", String(limit));
       const qs = p.toString();
@@ -615,9 +616,10 @@ export const api = {
     },
   },
   invoices: {
-    list: (status?: string, offset?: number, limit?: number) => {
+    list: (status?: string, customerId?: string, offset?: number, limit?: number) => {
       const p = new URLSearchParams();
       if (status) p.set("status", status);
+      if (customerId) p.set("customer_id", customerId);
       if (offset !== undefined) p.set("offset", String(offset));
       if (limit !== undefined) p.set("limit", String(limit));
       const qs = p.toString();

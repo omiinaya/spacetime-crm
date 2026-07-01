@@ -231,6 +231,17 @@ def _notify_low_stock(admin_email: str, products: list[dict]) -> None:
     send_email(admin_email, f"⚠️ Low Stock Alert — {len(products)} product(s) below threshold", html)
 
 
+def _notify_appointment_reminder(customer_email: str, title: str, start_time: int, link: str) -> None:
+    """Send appointment reminder email (24h before)."""
+    from datetime import datetime
+    dt = datetime.fromtimestamp(start_time / 1000)
+    date_str = dt.strftime("%A, %B %d at %I:%M %p")
+    html = jinja_env.get_template("email/appointment_reminder.html").render(
+        title=title, date_str=date_str, link=link,
+    )
+    send_email(customer_email, f"Reminder: {title} — Tomorrow", html)
+
+
 def _notify_overdue_reminder(customer_email: str, invoice_number: int, total: float, due_date: str, link: str) -> None:
     """Send overdue invoice reminder email."""
     html = jinja_env.get_template("email/overdue_reminder.html").render(

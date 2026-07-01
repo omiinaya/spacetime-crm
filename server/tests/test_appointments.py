@@ -175,6 +175,34 @@ class TestAppointmentErrors:
 
     def test_unauthorized_access(self, client: httpx.Client):
         """Appointment endpoints require auth."""
-        for path in ["/api/appointments", "/api/appointments/recurring"]:
+        for path in ["/api/appointments", "/api/appointments/recurring", "/api/appointments/due-soon"]:
             resp = client.get(path, timeout=10)
             assert resp.status_code in (401, 403), f"{path} allowed unauthenticated"
+
+
+class TestAppointmentReminders:
+    """Appointment reminder endpoints."""
+
+    def test_due_soon_returns_appointments(self, auth_headers: dict):
+        """Due-soon endpoint returns appointments (may be empty)."""
+        resp = httpx.get(f"{SERVER_URL}/api/appointments/due-soon", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "appointments" in data
+        assert "count" in data
+        assert isinstance(data["appointments"], list)
+
+    def test_due_soon_unauthorized(self, client: httpx.Client):
+        """Due-soon endpoint requires auth."""
+        resp = client.get("/api/appointments/due-soon", timeout=10)
+        assert resp.status_code in (401, 403)
+
+    def test_send_reminders_returns_ok(self, auth_headers: dict):
+        """Send-reminders endpoint returns ok (gracefully handles no upcoming appts)."""
+        resp = httpx.post(f"{SERVER_URL}/api/appointments/send-reminders", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "sent" in data
+
+    def test_send_reminders_unauthorized(self, client: httpx.Client):
+        """Send-reminders endpoint requires auth."""
+        resp = client.post("/api/appointments/send-reminders", timeout=10)
+        assert resp.status_code in (401, 403)
