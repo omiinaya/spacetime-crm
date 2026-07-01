@@ -288,6 +288,9 @@ export interface DashboardStats {
   my_tickets?: Ticket[];
   my_ticket_counts?: { all: number; urgent: number; high: number; medium: number; low: number };
   today_appointments?: Appointment[];
+  overdue_invoices?: Invoice[];
+  overdue_invoices_count?: number;
+  overdue_invoices_total?: number;
 }
 
 export interface MailSettings {
@@ -641,6 +644,10 @@ export const api = {
     },
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/invoices/${id}`, { method: "DELETE" }),
+    overdueCount: () =>
+      apiFetch<{ count: number; total: number }>("/invoices/overdue-count"),
+    triggerOverdueCheck: () =>
+      apiFetch<{ ok: boolean }>("/invoices/trigger-overdue-check", { method: "POST" }),
   },
   payments: {
     list: (invoiceId?: string, offset?: number, limit?: number) => {

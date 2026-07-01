@@ -70,6 +70,32 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
     return {"ok": True}
 
 
+@router.get("/api/invoices/overdue-count")
+async def get_overdue_count(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Get count of overdue invoices and total overdue amount.
+    Detects overdue on-the-fly: invoices past due_date with status sent/partial count as overdue."""
+    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {int(datetime.utcnow().timestamp() * 1000)}))")
+    total = sum(float(i.get("total", 0)) for i in rows)
+    return {"count": len(rows), "total": round(total, 2)}
+
+
+@router.post("/api/invoices/trigger-overdue-check")
+async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
+    """Mark overdue invoices — checks each sent/partial invoice past its due date
+    and updates status to 'overdue' via the STDB reducer, or reports it would mark them."""
+    # Detect overdue invoices that need marking
+    now = int(datetime.utcnow().timestamp() * 1000)
+    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}")
+    marked = 0
+    for inv in rows:
+        try:
+            await _call("update_invoice_status", [inv["id"], "overdue"])
+            marked += 1
+        except HTTPException:
+            pass
+    return {"ok": True, "marked": marked}
+
+
 @router.put("/api/invoices/{invoice_id}/status")
 async def update_invoice_status(invoice_id: str, body: InvoiceStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_invoice_status", [invoice_id, body.status])

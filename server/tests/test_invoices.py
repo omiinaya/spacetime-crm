@@ -248,3 +248,30 @@ class TestInvoiceErrors:
         for path in ["/api/invoices", "/api/invoices/fake/pdf"]:
             resp = client.get(path, timeout=10)
             assert resp.status_code in (401, 403), f"{path} allowed unauthenticated: {resp.status_code}"
+
+    def test_overdue_count(self, auth_headers: dict):
+        """Overdue count endpoint returns expected shape."""
+        resp = httpx.get(f"{SERVER_URL}/api/invoices/overdue-count", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "count" in data
+        assert "total" in data
+        assert isinstance(data["count"], int)
+        assert isinstance(data["total"], (int, float))
+
+    def test_trigger_overdue_check(self, auth_headers: dict):
+        """Trigger overdue check returns ok."""
+        resp = httpx.post(f"{SERVER_URL}/api/invoices/trigger-overdue-check", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert data["ok"] is True
+        assert "marked" in data
+        assert isinstance(data["marked"], int)
+
+    def test_overdue_count_unauthorized(self, client: httpx.Client):
+        """Overdue count requires auth."""
+        resp = client.get("/api/invoices/overdue-count", timeout=10)
+        assert resp.status_code in (401, 403)
+
+    def test_trigger_overdue_unauthorized(self, client: httpx.Client):
+        """Trigger overdue check requires auth."""
+        resp = client.post("/api/invoices/trigger-overdue-check", timeout=10)
+        assert resp.status_code in (401, 403)
