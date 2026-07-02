@@ -14,17 +14,21 @@ router = APIRouter()
 
 
 @router.get("/api/products")
-async def list_products(search: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
-    """List products with pagination and optional search."""
+async def list_products(search: str = "", category: str = "", offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
+    """List products with pagination and optional search + category filter."""
+    cat = category.strip()
     q = search.lower().strip()
-    if q:
-        # When searching, fetch up to 1000 rows, filter client-side, then paginate
+    if q or cat:
+        # When filtering, fetch up to 1000 rows, filter client-side, then paginate
         rows, _ = await _paginated(
             user["tenant_id"], "products",
             offset=0, limit=1000,
             order_by="name", order_desc=False,
         )
-        rows = [r for r in rows if q in (r.get("name") or "").lower() or q in (r.get("sku") or "").lower()]
+        if q:
+            rows = [r for r in rows if q in (r.get("name") or "").lower() or q in (r.get("sku") or "").lower()]
+        if cat:
+            rows = [r for r in rows if r.get("category", "") == cat]
         total = len(rows)
         rows = rows[offset:offset + limit]
     else:
@@ -178,3 +182,15 @@ async def transfer_stock(body: StockTransferRequest, user: dict = Depends(requir
 
     await _log_audit(user, "transfer", "stock", body.source_product_id, f"qty={qty}→{body.destination_product_id}")
     return {"ok": True, "quantity": qty, "reference": ref}
+
+
+@router.get("/api/products/categories")
+async def list_categories(user: dict = Depends(require_role("admin", "tech"))):
+    """Get distinct product categories for the current tenant."""
+    rows, _ = await _paginated(
+        user["tenant_id"], "products",
+        offset=0, limit=1000,
+        order_by="name", order_desc=False,
+    )
+    cats = sorted({r.get("category", "") for r in rows if r.get("category")})
+    return {"categories": cats}

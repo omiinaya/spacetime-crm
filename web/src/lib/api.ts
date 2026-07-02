@@ -763,9 +763,10 @@ export const api = {
     },
   },
   products: {
-    list: (search?: string, offset?: number, limit?: number) => {
+    list: (search?: string, category?: string, offset?: number, limit?: number) => {
       const p = new URLSearchParams();
       if (search) p.set("search", search);
+      if (category) p.set("category", category);
       if (offset !== undefined) p.set("offset", String(offset));
       if (limit !== undefined) p.set("limit", String(limit));
       const qs = p.toString();
@@ -773,6 +774,8 @@ export const api = {
         `/products${qs ? `?${qs}` : ""}`
       );
     },
+    categories: () =>
+      apiFetch<{ categories: string[] }>("/products/categories"),
     create: (data: Partial<Product>) =>
       apiFetch<{ ok: boolean }>("/products", {
         method: "POST",
