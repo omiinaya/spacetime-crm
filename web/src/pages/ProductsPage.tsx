@@ -30,6 +30,7 @@ const reasonColors: Record<string, string> = {
 export default function ProductsPage() {
   const pag = usePagination(PAGE_SIZE);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Product>>({ ...emptyForm });
@@ -43,10 +44,19 @@ export default function ProductsPage() {
 
   const barcodeDetectorSupported = typeof window !== "undefined" && "BarcodeDetector" in window;
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["products", { search, offset: pag.offset }],
+  const { data: categories } = useQuery({
+    queryKey: ["product-categories"],
     queryFn: async () => {
-      const res = await api.products.list(search, pag.offset, PAGE_SIZE);
+      const res = await api.products.categories();
+      return res.categories;
+    },
+    staleTime: 60000,
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["products", { search, category: categoryFilter, offset: pag.offset }],
+    queryFn: async () => {
+      const res = await api.products.list(search, categoryFilter, pag.offset, PAGE_SIZE);
       return res;
     },
     select: (res) => {
@@ -126,7 +136,7 @@ export default function ProductsPage() {
     queryKey: ["products", "transfer-search", transferSearch],
     queryFn: async () => {
       if (!transferSearch) return { products: [] as Product[] };
-      const res = await api.products.list(transferSearch, 0, 20);
+      const res = await api.products.list(transferSearch, undefined, 0, 20);
       return res;
     },
     enabled: transferSearch.length >= 1,
@@ -243,7 +253,7 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      {/* Search */}
+      {/* Search + category filter */}
       <div className="flex gap-2 items-center flex-wrap">
         <Input
           placeholder="Search products..."
@@ -251,6 +261,16 @@ export default function ProductsPage() {
           onChange={(e) => handleSearch(e.target.value)}
           className="max-w-full sm:max-w-sm"
         />
+        <select
+          value={categoryFilter}
+          onChange={(e) => { setCategoryFilter(e.target.value); pag.reset(); }}
+          className="h-9 rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">All categories</option>
+          {categories?.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
         <div className="flex items-center gap-1 border rounded-md px-2 py-1 bg-muted/30 max-w-full sm:max-w-[200px] flex-1 sm:flex-none">
           <Scan className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <input
