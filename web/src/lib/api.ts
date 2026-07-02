@@ -300,6 +300,8 @@ export interface DashboardStats {
   overdue_invoices?: Invoice[];
   overdue_invoices_count?: number;
   overdue_invoices_total?: number;
+  monthly_revenue: number;
+  revenue_target: number;
 }
 
 export interface MailSettings {

@@ -17,6 +17,7 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     all_customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
     all_invoices = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
+    all_payments = await _sql_t("SELECT * FROM payment", user["tenant_id"])
     all_appointments = await _sql_t("SELECT * FROM appointment", user["tenant_id"])
     total_customers = len(all_customers)
     total_tickets = len(all_tickets)
@@ -55,6 +56,17 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     # Recent 5 my tickets for the dashboard card
     my_recent = sorted(my_tickets, key=lambda x: x.get("created_at", 0), reverse=True)[:5]
 
+    # Monthly revenue vs target
+    now_ms_month = int(datetime.utcnow().timestamp() * 1000)
+    month_start_ms = int(datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+    monthly_revenue = sum(
+        float(p.get("amount", 0))
+        for p in all_payments
+        if month_start_ms <= p.get("created_at", 0) < now_ms_month
+    )
+    monthly_revenue = round(monthly_revenue, 2)
+    revenue_target = 25000.0  # default monthly target
+
     return {
         "total_customers": total_customers,
         "total_tickets": total_tickets,
@@ -68,6 +80,8 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
         "overdue_invoices": overdue_invoices_sorted,
         "overdue_invoices_count": len(combined_overdue),
         "overdue_invoices_total": overdue_invoices_total,
+        "monthly_revenue": monthly_revenue,
+        "revenue_target": revenue_target,
     }
 
 
