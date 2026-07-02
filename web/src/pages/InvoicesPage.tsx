@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
 import { api, Invoice, Customer, TaxRate, Payment, InvoiceSummary } from "../lib/api";
@@ -10,7 +10,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square, Mail, Edit3 } from "lucide-react";
+import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square, Mail, Edit3, Save } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
@@ -28,7 +28,14 @@ export default function InvoicesPage() {
   const pag = usePagination(PAGE_SIZE);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" });
+  const DRAFT_KEY = "spacetime-crm-invoice-draft";
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" };
+  });
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: 0, method: "cash", reference: "" });
@@ -38,6 +45,13 @@ export default function InvoicesPage() {
   const [bulkStatus, setBulkStatus] = useState("sent");
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkEditForm, setBulkEditForm] = useState({ terms: "", notes: "" });
+
+  // Auto-save invoice draft to localStorage
+  useEffect(() => {
+    if (showForm) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+    }
+  }, [form, showForm, DRAFT_KEY]);
 
   const { data: summary } = useQuery({
     queryKey: ["invoice-summary"],
@@ -124,6 +138,7 @@ export default function InvoicesPage() {
       toast.success("Invoice created");
       setShowForm(false);
       setForm({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" });
+      localStorage.removeItem(DRAFT_KEY);
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
     onError: () => toast.error("Failed to create invoice"),
@@ -255,6 +270,20 @@ export default function InvoicesPage() {
           <p className="text-sm text-muted-foreground mt-1">Billing and invoicing</p>
         </div>
         <Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4 mr-1.5" />New Invoice</Button>
+        {(() => {
+          const draft = localStorage.getItem(DRAFT_KEY);
+          if (!draft || showForm) return null;
+          try { const d = JSON.parse(draft); if (!d.customer_id && !d.notes && !d.terms) return null; } catch { return null; }
+          return (
+            <button
+              onClick={() => setShowForm(true)}
+              className="text-xs flex items-center gap-1 text-amber-400 hover:text-amber-300"
+              title="Unsaved draft available"
+            >
+              <Save className="h-3 w-3" /> Draft
+            </button>
+          );
+        })()}
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -371,7 +400,7 @@ export default function InvoicesPage() {
             </Select>
             <div className="flex gap-2">
               <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Create</Button>
-              <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setShowForm(false); localStorage.removeItem(DRAFT_KEY); }}>Cancel</Button>
             </div>
           </CardContent>
         </Card>
