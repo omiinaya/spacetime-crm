@@ -6,10 +6,11 @@ import { usePagination } from "../lib/usePagination";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square, Mail } from "lucide-react";
+import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square, Mail, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
@@ -35,6 +36,8 @@ export default function InvoicesPage() {
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("sent");
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [bulkEditForm, setBulkEditForm] = useState({ terms: "", notes: "" });
 
   const { data: summary } = useQuery({
     queryKey: ["invoice-summary"],
@@ -74,6 +77,18 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
     onError: () => toast.error("Batch email failed"),
+  });
+
+  const bulkEditMutation = useMutation({
+    mutationFn: () => api.invoices.bulkEdit(Array.from(selectedIds), bulkEditForm),
+    onSuccess: (data) => {
+      toast.success(`Updated terms/notes on ${data.updated} invoice(s)`);
+      setSelectedIds(new Set());
+      setShowBulkEdit(false);
+      setBulkEditForm({ terms: "", notes: "" });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: () => toast.error("Bulk edit failed"),
   });
 
   const { data, isLoading } = useQuery({
@@ -320,6 +335,14 @@ export default function InvoicesPage() {
             )}
             Email Selected
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { setBulkEditForm({ terms: "", notes: "" }); setShowBulkEdit(true); }}
+          >
+            <Edit3 className="h-3.5 w-3.5 mr-1" />
+            Edit
+          </Button>
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Clear
           </Button>
@@ -543,6 +566,47 @@ export default function InvoicesPage() {
           </div>
         )}
       </div>
+
+      {/* Bulk Edit dialog */}
+      {showBulkEdit && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg mx-4">
+            <CardHeader>
+              <CardTitle>Edit {selectedIds.size} Invoice{selectedIds.size !== 1 ? "s" : ""}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Terms (leaves empty fields unchanged)</label>
+                <Textarea
+                  placeholder="Payment terms..."
+                  value={bulkEditForm.terms}
+                  onChange={(e) => setBulkEditForm({ ...bulkEditForm, terms: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Notes (leaves empty fields unchanged)</label>
+                <Textarea
+                  placeholder="Invoice notes..."
+                  value={bulkEditForm.notes}
+                  onChange={(e) => setBulkEditForm({ ...bulkEditForm, notes: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowBulkEdit(false)}>Cancel</Button>
+                <Button
+                  onClick={() => bulkEditMutation.mutate()}
+                  disabled={bulkEditMutation.isPending || (!bulkEditForm.terms && !bulkEditForm.notes)}
+                >
+                  {bulkEditMutation.isPending ? (
+                    <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
+                  ) : null}
+                  Apply to {selectedIds.size} invoice{selectedIds.size !== 1 ? "s" : ""}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Pagination
         page={pag.page}
