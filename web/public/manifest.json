@@ -1,0 +1,16 @@
+{
+  "name": "SpacetimeCRM",
+  "short_name": "CRM",
+  "description": "Repair shop CRM — customers, tickets, invoices, inventory",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
