@@ -701,6 +701,11 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ invoice_ids: invoiceIds }),
       }),
+    bulkEdit: (invoiceIds: string[], data: { terms?: string; notes?: string }) =>
+      apiFetch<{ ok: boolean; updated: number; errors: number }>("/invoices/bulk-edit", {
+        method: "POST",
+        body: JSON.stringify({ invoice_ids: invoiceIds, ...data }),
+      }),
     emailQueueStatus: () =>
       apiFetch<{ sends: any[]; count: number }>("/invoices/email-queue-status"),
   },

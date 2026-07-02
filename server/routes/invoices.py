@@ -11,7 +11,7 @@ from helpers import (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
     require_role, logger, STATUS_LABELS, STATUS_CSS, jinja_env,
 )
-from models import InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate, BulkInvoiceStatusUpdate
+from models import InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate, BulkInvoiceStatusUpdate, BulkInvoiceEdit
 
 router = APIRouter()
 
@@ -126,6 +126,34 @@ async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict =
             "count": updated,
             "status": body.status,
         }))
+    return {"ok": True, "updated": updated, "errors": errors}
+
+
+@router.post("/api/invoices/bulk-edit")
+async def bulk_edit_invoices(body: BulkInvoiceEdit, user: dict = Depends(require_role("admin"))):
+    """Update terms and/or notes on multiple invoices at once."""
+    updated = 0
+    errors = 0
+    has_notes = body.notes != ""
+    has_terms = body.terms != ""
+
+    if not has_notes and not has_terms:
+        raise HTTPException(400, "Nothing to update — provide terms or notes")
+
+    for inv_id in body.invoice_ids:
+        try:
+            parts = []
+            if has_notes:
+                parts.append(f"notes = '{body.notes.replace(chr(39), chr(39)*2)}'")
+            if has_terms:
+                parts.append(f"terms = '{body.terms.replace(chr(39), chr(39)*2)}'")
+            sql = f"UPDATE invoices SET {', '.join(parts)} WHERE id = '{inv_id}'"
+            await _sql(sql)
+            updated += 1
+        except Exception:
+            errors += 1
+    if updated:
+        await _log_audit(user, "bulk_edit", "invoice", f"count={updated}", f"notes={has_notes} terms={has_terms}")
     return {"ok": True, "updated": updated, "errors": errors}
 
 
