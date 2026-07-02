@@ -53,6 +53,36 @@ async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("a
         "title": body.title,
         "customer_id": body.customer_id,
     }))
+
+    # Auto-assign to least-loaded staff member (admin or tech) if available
+    try:
+        tid = user["tenant_id"]
+        # Find the most recently created ticket for this tenant
+        recent = _sort(
+            await _sql(f"SELECT id, status, created_at FROM ticket WHERE tenant_id = '{tid}'"),
+            key="created_at"
+        )
+        if recent:
+            new_id = recent[0]["id"]
+            # Find staff (admin + tech) with fewest open tickets
+            staff = await _sql(f"SELECT id, name, role FROM \"user\" WHERE (role = 'admin' OR role = 'tech') AND active = true AND name != 'admin'")
+            if staff:
+                # Count open tickets per staff member
+                counts = []
+                for s in staff:
+                    open_tickets = await _sql(
+                        f"SELECT COUNT(*) AS cnt FROM ticket WHERE assigned_user_id = '{s['id']}' AND status != 'resolved' AND status != 'closed' AND status != 'cancelled'"
+                    )
+                    cnt = int(open_tickets[0].get("cnt", 0)) if open_tickets else 0
+                    counts.append((cnt, s["id"]))
+                # Pick the one with fewest
+                counts.sort()
+                best_id = counts[0][1]
+                await _call("assign_ticket", [new_id, best_id])
+                logger.info("Auto-assigned ticket %s to user %s (%d open tickets)", new_id[:12], best_id, counts[0][0])
+    except Exception as e:
+        logger.warning("Auto-assign failed (non-fatal): %s", e)
+
     return {"ok": True}
 
 
