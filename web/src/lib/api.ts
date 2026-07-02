@@ -532,6 +532,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ password }),
       }),
+    duplicates: () =>
+      apiFetch<{ duplicates: { field: string; value: string; customers: Customer[] }[]; count: number }>(
+        "/customers/duplicates"
+      ),
   },
   checklist: {
     templates: {

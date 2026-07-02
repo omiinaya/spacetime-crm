@@ -210,3 +210,32 @@ async def geocode_all_customers(user: dict = Depends(require_role("admin", "tech
             results["failed"] += 1
 
     return results
+
+
+@router.get("/api/customers/duplicates")
+async def find_duplicate_customers(user: dict = Depends(require_role("admin"))):
+    """Find potential duplicate customers by matching email or phone."""
+    rows = await _sql_t("SELECT * FROM customer", user["tenant_id"])
+    seen_email: dict[str, list[dict]] = {}
+    seen_phone: dict[str, list[dict]] = {}
+    for c in rows:
+        email = (c.get("email") or "").strip().lower()
+        phone = (c.get("phone") or "").strip()
+        mobile = (c.get("mobile") or "").strip()
+        if email:
+            seen_email.setdefault(email, []).append(c)
+        if phone:
+            seen_phone.setdefault(phone, []).append(c)
+        if mobile and mobile != phone:
+            seen_phone.setdefault(mobile, []).append(c)
+
+    duplicates: list[dict] = []
+    for email, group in seen_email.items():
+        if len(group) > 1:
+            duplicates.append({"field": "email", "value": email, "customers": group})
+    for phone, group in seen_phone.items():
+        if len(group) > 1:
+            duplicates.append({"field": "phone", "value": phone, "customers": group})
+
+    duplicates.sort(key=lambda d: -len(d["customers"]))
+    return {"duplicates": duplicates, "count": len(duplicates)}
