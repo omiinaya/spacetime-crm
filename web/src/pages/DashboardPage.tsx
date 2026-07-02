@@ -68,11 +68,12 @@ export default function DashboardPage({
     api.reports.get().then(setReports).catch(() => {});
   }, []);
 
-  const summaryCards = [
-    { label: "Total Customers", value: stats?.total_customers ?? 0, icon: Users, color: "text-blue-400", link: "customers" as PageId },
-    { label: "Open Tickets", value: stats?.open_tickets ?? 0, icon: Ticket, color: "text-amber-400", link: "tickets" as PageId },
-    { label: "Revenue", value: `$${(stats?.revenue ?? 0).toFixed(2)}`, icon: CreditCard, color: "text-green-400", link: "invoices" as PageId },
-    { label: "Upcoming Appointments", value: stats?.upcoming_appointments ?? 0, icon: Calendar, color: "text-purple-400", link: "appointments" as PageId },
+  const summaryCards: { label: string; value: string | number; icon: any; color: string; link: PageId }[] = [
+    { label: "Total Customers", value: stats?.total_customers ?? 0, icon: Users, color: "text-blue-400", link: "customers" },
+    { label: "Open Tickets", value: stats?.open_tickets ?? 0, icon: Ticket, color: "text-amber-400", link: "tickets" },
+    { label: "Revenue", value: `$${(stats?.revenue ?? 0).toFixed(2)}`, icon: CreditCard, color: "text-green-400", link: "invoices" },
+    { label: "Upcoming Appointments", value: stats?.upcoming_appointments ?? 0, icon: Calendar, color: "text-purple-400", link: "appointments" },
+    ...(stats ? [{ label: "Avg Resolution", value: `${stats.avg_resolution_hours}h`, icon: CheckCircle, color: "text-sky-400", link: "tickets" as PageId }] : []),
   ];
 
   return (
@@ -85,7 +86,7 @@ export default function DashboardPage({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {summaryCards.map((card) => {
           const Icon = card.icon;
           return (

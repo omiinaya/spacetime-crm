@@ -67,6 +67,15 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     monthly_revenue = round(monthly_revenue, 2)
     revenue_target = 25000.0  # default monthly target
 
+    # Average resolution time
+    resolution_times = []
+    for t in all_tickets:
+        created = t.get("created_at", 0)
+        updated = t.get("updated_at", 0)
+        if created and updated > created and t.get("status") in ("resolved", "closed"):
+            resolution_times.append((updated - created) / (1000 * 3600))
+    avg_resolution_hours = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
+
     return {
         "total_customers": total_customers,
         "total_tickets": total_tickets,
@@ -82,6 +91,7 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
         "overdue_invoices_total": overdue_invoices_total,
         "monthly_revenue": monthly_revenue,
         "revenue_target": revenue_target,
+        "avg_resolution_hours": avg_resolution_hours,
     }
 
 

@@ -302,6 +302,7 @@ export interface DashboardStats {
   overdue_invoices_total?: number;
   monthly_revenue: number;
   revenue_target: number;
+  avg_resolution_hours: number;
 }
 
 export interface MailSettings {
