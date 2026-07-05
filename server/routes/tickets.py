@@ -5,6 +5,7 @@ import asyncio
 import json
 from fastapi import APIRouter, Depends, HTTPException
 
+from config import settings
 from helpers import (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
     require_role, logger,
@@ -100,7 +101,7 @@ async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: d
             cust = await _sql(f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'")
             email = _mail_customer_email(cust[0]) if cust else None
             if email:
-                link = f"http://localhost:8723/portal/"
+                link = f"{settings.app_url}/portal/"
                 _notify_ticket_status_change(email, t.get("ticket_number", 0), t.get("title", ""), status, link)
             from sms import _customer_phone as _sms_customer_phone
             from sms import _notify_ticket_status_change as _sms_ticket_status

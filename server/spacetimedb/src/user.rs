@@ -82,6 +82,41 @@ pub fn disable_user_totp(ctx: &ReducerContext, id: String) {
 }
 
 #[spacetimedb::reducer]
+pub fn set_user_pin(ctx: &ReducerContext, id: String, pin: String) {
+    if let Some(u) = ctx.db.user().id().find(&id) {
+        ctx.db.user().id().update(User { pin, ..u });
+    }
+}
+
+#[spacetimedb::reducer]
 pub fn delete_user(ctx: &ReducerContext, id: String) {
     ctx.db.user().id().delete(&id);
+}
+
+// ── UserSettings reducers ──
+
+#[spacetimedb::reducer]
+pub fn upsert_user_settings(ctx: &ReducerContext, user_id: String, theme: String, default_ticket_status: String) {
+    let now = super::now_ms(ctx);
+    if let Some(existing) = ctx.db.user_settings().user_id().find(&user_id) {
+        ctx.db.user_settings().user_id().update(UserSettings {
+            theme,
+            default_ticket_status,
+            updated_at: now,
+            ..existing
+        });
+    } else {
+        ctx.db.user_settings().insert(UserSettings {
+            user_id,
+            theme,
+            default_ticket_status,
+            created_at: now,
+            updated_at: now,
+        });
+    }
+}
+
+#[spacetimedb::reducer]
+pub fn delete_user_settings(ctx: &ReducerContext, user_id: String) {
+    ctx.db.user_settings().user_id().delete(&user_id);
 }

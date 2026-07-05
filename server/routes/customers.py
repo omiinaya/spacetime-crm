@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
     _sql, _sql_t, _paginated, _call, _sort, _log_audit, _fire_webhook,
-    _safe_id, require_role, get_current_user, logger,
+    _safe_id, _safe_customer, require_role, get_current_user, logger,
 )
 from client import get_http_client
 from models import CustomerCreate, CustomerUpdate, SetPasswordRequest
@@ -35,6 +35,7 @@ async def list_customers(search: str = "", offset: int = 0, limit: int = 50, use
         ]
         total = len(rows)
         rows = rows[offset:offset + limit]
+    rows = [_safe_customer(r) for r in rows]
     return {"customers": rows, "total": total, "offset": offset, "limit": limit}
 
 
@@ -238,4 +239,7 @@ async def find_duplicate_customers(user: dict = Depends(require_role("admin"))):
             duplicates.append({"field": "phone", "value": phone, "customers": group})
 
     duplicates.sort(key=lambda d: -len(d["customers"]))
+    # Strip sensitive fields from customer data in duplicate groups
+    for dup in duplicates:
+        dup["customers"] = [_safe_customer(c) for c in dup["customers"]]
     return {"duplicates": duplicates, "count": len(duplicates)}

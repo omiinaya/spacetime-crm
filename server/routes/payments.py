@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends
 
+from config import settings
 from helpers import (
     _sql, _paginated, _call, _log_audit, _fire_webhook,
     require_role, logger,
@@ -58,7 +59,7 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
                 from sms import _notify_payment_received as _sms_payment_received
                 email = _mail_customer_email(cust[0]) if cust else None
                 if email:
-                    link = f"http://localhost:8723/portal/"
+                    link = f"{settings.app_url}/portal/"
                     _notify_payment_received(email, inv.get("invoice_number", 0), float(body.amount), link)
                 phone = _sms_customer_phone(cust[0]) if cust else None
                 if phone:
