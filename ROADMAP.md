@@ -435,7 +435,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | 7 | **Missing error states** on PortalDashboard, AuditLogPage | 🟡 MEDIUM | 20 min |
 | 8 | **11 TypeScript `any` files** in catch blocks and API response shapes | 🟡 MEDIUM | 30 min |
 || 9 | **`UserSettings` table has no API or UI** — dead code | 🟡 MEDIUM | ✅ **Done** — API + UI + tests implemented (`cyber-elf/task_f7002a184d824426_`) |
-| 10 | **`User.pin` field unused** — dead field in STDB | 🟡 MEDIUM | Implement POS PIN or remove |
+|| 10 | **`User.pin` field unused** — dead field in STDB | 🟡 MEDIUM | ✅ **Done** — POS PIN login with bcrypt-hashed PIN implemented (7E) |
 
 ### 🟢 LOW
 
@@ -525,4 +525,4 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 11. **Service type breakdown on reports**
 12. **Duplicate detection UI on CustomersPage**
 13. ~~**Implement `UserSettings` API + UI or remove**~~ ✅ Done
-14. **Implement `User.pin` POS login or remove**
+14. ~~**Implement `User.pin` POS login or remove**~~ ✅ Done
