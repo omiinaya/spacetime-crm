@@ -23,6 +23,8 @@ pub mod tenant;
 pub mod customer_test;
 #[cfg(test)]
 pub mod lib_test;
+#[cfg(test)]
+pub mod integration_test;
 
 pub use customer::*;
 pub use customer_geolocation::*;
