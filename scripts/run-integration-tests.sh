@@ -2,15 +2,17 @@
 # ──────────────────────────────────────────────────────────────────────
 # run-integration-tests.sh
 #
-# Orchestrates full integration test suite for SpacetimeCRM.
+# Full-stack integration test suite for SpacetimeCRM.
 #
-# What it does:
-#   1. Optionally (outside Docker) builds the STDB WASM module
-#   2. Starts a test STDB container via docker-compose.test.yml
+# What it does (full orchestration):
+#   1. Builds the STDB WASM module (or skips with --quick)
+#   2. Starts an ephemeral STDB container on port 3002
 #   3. Publishes the module to the test instance
 #   4. Seeds bootstrap data (admin user + tenant)
-#   5. Runs the Python integration test suite (pytest)
-#   6. Reports results and cleans up the container
+#   5. Starts the FastAPI backend connected to the test STDB
+#   6. Runs the Python integration test suite (pytest) against the backend
+#   7. Runs standalone Rust container tests directly against STDB
+#   8. Reports pass/fail and cleans up the container
 #
 # Usage:
 #   ./scripts/run-integration-tests.sh          # full run
@@ -29,6 +31,16 @@ SERVER_URL="http://${STDB_HOST}:${STDB_PORT}"
 COMPOSE_FILE="${REPO_DIR}/docker-compose.test.yml"
 CLEANUP=true
 BUILD=true
+BACKEND_PID=""
+
+# Ensure backend is killed on any exit
+cleanup_backend() {
+  if [ -n "$BACKEND_PID" ]; then
+    kill "$BACKEND_PID" 2>/dev/null || true
+    wait "$BACKEND_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup_backend EXIT
 
 # ── Parse args ──────────────────────────────────────────────────────
 for arg in "$@"; do
@@ -138,14 +150,40 @@ cd "$REPO_DIR"
 STDB_HOST="$STDB_HOST" STDB_PORT="$STDB_PORT" STDB_DB="$STDB_DB" \
   python3 scripts/bootstrap.py 2>&1 || echo -e "${YELLOW}⚠ bootstrap.py not found or failed (non-fatal)${NC}"
 
+# ── Phase 4b: Start FastAPI backend ──────────────────────────────
+echo ""
+echo -e "${INFO} Starting FastAPI backend against test STDB..."
+BACKEND_PORT=8723
+BACKEND_URL="http://${STDB_HOST}:${BACKEND_PORT}"
+
+cd "$REPO_DIR/server"
+STDB_HOST="$STDB_HOST" STDB_PORT="$STDB_PORT" STDB_DB="$STDB_DB" \
+  nohup python3 -m uvicorn main:app --host 0.0.0.0 --port $BACKEND_PORT \
+  > /tmp/crm-test-backend.log 2>&1 &
+BACKEND_PID=$!
+
+echo -e "${INFO} Backend PID=${BACKEND_PID}, waiting for health..."
+for i in $(seq 1 20); do
+  if curl -sf "${BACKEND_URL}/api/health" >/dev/null 2>&1; then
+    echo -e "${PASS} Backend is ready (${BACKEND_URL})"
+    break
+  fi
+  if [ "$i" -eq 20 ]; then
+    echo -e "${FAIL} Backend did not become healthy after 20 attempts"
+    kill $BACKEND_PID 2>/dev/null || true
+    exit 1
+  fi
+  sleep 2
+done
+
 # ── Phase 5: Run integration tests ────────────────────────────────
 echo ""
 echo -e "${CYAN}══════════════════════════════════════════════${NC}"
 echo -e "${CYAN}  Running Integration Tests${NC}"
 echo -e "${CYAN}══════════════════════════════════════════════${NC}"
 
-# Export test environment variables
-export CRM_TEST_SERVER="${SERVER_URL}"
+# Export test environment variables for Python tests (hit FastAPI)
+export CRM_TEST_SERVER="${BACKEND_URL}"
 export CRM_ADMIN_EMAIL="${CRM_ADMIN_EMAIL:-admin@crm.local}"
 export CRM_ADMIN_PW="${CRM_ADMIN_PW:-admin123}"
 
@@ -163,6 +201,15 @@ if [ -d "tests" ]; then
   fi
 else
   echo -e "${YELLOW}⚠ No tests/ directory found${NC}"
+fi
+
+# ── Phase 4c: Stop FastAPI backend ──────────────────────────────
+echo ""
+echo -e "${INFO} Stopping FastAPI backend..."
+if [ -n "$BACKEND_PID" ]; then
+  kill "$BACKEND_PID" 2>/dev/null || true
+  wait "$BACKEND_PID" 2>/dev/null || true
+  echo -e "${PASS} Backend stopped"
 fi
 
 # ── Phase 5b: Rust container integration tests ──────────────────

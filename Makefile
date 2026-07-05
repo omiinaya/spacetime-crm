@@ -191,15 +191,15 @@ test-unit:  ## Run fast offline-safe unit tests
 		echo "⚠️  vitest not found. Install: cd web && npm install -D vitest"; \
 	fi
 
-test-container: ## Spin up test STDB container and run full integration suite
-\t@echo "🚀 Starting integration tests in containerized STDB..."
-\t@bash scripts/run-integration-tests.sh
+test-container: ## Spin up test STDB container and run full integration suite (build → container → publish → backend → test → cleanup)
+	@echo "🚀 Starting full integration test suite..."
+	@bash scripts/run-integration-tests.sh
 
 test-rust-container: ## Build & run standalone Rust container tests (requires running STDB)
-\t@echo "🚀 Building container test binary..."
-\t@cargo build --manifest-path server/container-tests/Cargo.toml
-\t@echo "🚀 Running container tests..."
-\t@cd server/container-tests && ./target/debug/container-tests
+	@echo "🚀 Building container test binary..."
+	@cargo build --manifest-path server/container-tests/Cargo.toml
+	@echo "🚀 Running container tests..."
+	@cd server/container-tests && ./target/debug/container-tests
 
 test-integration:  ## Tests needing running services (STDB + backend + frontend)
 	@echo "⚠️  Integration tests require STDB on :3001 and backend on :8723"
