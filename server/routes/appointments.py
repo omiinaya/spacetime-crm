@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends
 
+from config import settings
 from helpers import (
     _sql, _paginated, _call, _log_audit, _fire_webhook,
     require_role, logger,
@@ -70,7 +71,7 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
         from sms import _notify_appointment_created as _sms_appointment_created
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
-            link = f"http://localhost:8723/portal/"
+            link = f"{settings.app_url}/portal/"
             _notify_appointment_created(email, body.title, body.start_time, link)
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
@@ -175,7 +176,7 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
             continue
 
         c = cust[0]
-        link = "http://localhost:8723/portal/"
+        link = f"{settings.app_url}/portal/"
 
         email = c.get("email") or None
         if email:

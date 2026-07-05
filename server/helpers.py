@@ -38,6 +38,16 @@ STATUS_CSS = {
     "partial": "partial", "overdue": "overdue", "cancelled": "cancelled",
 }
 
+# ── Safe response helpers ────────────────────────────────────
+
+CUSTOMER_SENSITIVE_FIELDS = {"portal_password_hash"}
+
+
+def _safe_customer(c: dict) -> dict:
+    """Strip sensitive fields from a customer dict before returning to client."""
+    return {k: v for k, v in c.items() if k not in CUSTOMER_SENSITIVE_FIELDS}
+
+
 # ── STDB helpers ──────────────────────────────────────────────
 
 

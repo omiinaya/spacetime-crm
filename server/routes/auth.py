@@ -11,6 +11,7 @@ from helpers import (
 from models import (
     LoginRequest, SetPasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
     Setup2FARequest, CompleteLoginRequest, Disable2FARequest,
+    SetPinRequest, PosLoginRequest,
 )
 from rate_limit import limiter
 
@@ -305,6 +306,61 @@ async def set_password(body: SetPasswordRequest, user: dict = Depends(get_curren
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
     await _call("set_user_password", [user["id"], hashed])
     return {"ok": True}
+
+
+@router.post("/api/auth/set-pin")
+async def set_pin(body: SetPinRequest, user: dict = Depends(get_current_user)):
+    """Set or change the POS PIN for the current user. PIN is stored as bcrypt hash."""
+    pin = body.pin
+    if not pin.isdigit() or len(pin) < 4 or len(pin) > 10:
+        raise HTTPException(400, "PIN must be 4–10 digits")
+    hashed = bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
+    await _call("set_user_pin", [user["id"], hashed])
+    return {"ok": True}
+
+
+@router.post("/api/auth/pos-login")
+@limiter.limit("30/minute")
+async def pos_login(request: Request, body: PosLoginRequest):
+    """Quick PIN-based login for POS terminal. Returns full JWT (no 2FA challenge)."""
+    user_id = body.user_id
+    pin = body.pin
+
+    if not pin.isdigit() or len(pin) < 4 or len(pin) > 10:
+        raise HTTPException(400, "PIN must be 4–10 digits")
+
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    if not rows:
+        raise HTTPException(401, "Invalid user ID or PIN")
+
+    user = rows[0]
+    if not user.get("active", False):
+        raise HTTPException(403, "Account is disabled")
+
+    stored_pin = user.get("pin", "")
+    if not stored_pin or not bcrypt.checkpw(pin.encode(), stored_pin.encode()):
+        raise HTTPException(401, "Invalid user ID or PIN")
+
+    now = datetime.utcnow()
+    tenant_id = ""
+    try:
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        if tm_rows:
+            tenant_id = tm_rows[0]["tenant_id"]
+    except Exception:
+        pass
+
+    token = _make_full_token(user, tenant_id, now)
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "tenant_id": tenant_id,
+        },
+    }
 
 
 # ── Password Reset ─────────────────────────────────────────────

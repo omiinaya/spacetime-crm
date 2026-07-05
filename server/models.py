@@ -499,6 +499,15 @@ class Disable2FARequest(BaseModel):
     code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
 
 
+class SetPinRequest(BaseModel):
+    pin: str = Field(..., min_length=4, max_length=10, pattern=r"^\d{4,10}$")
+
+
+class PosLoginRequest(BaseModel):
+    user_id: str = Field(..., min_length=1, max_length=100)
+    pin: str = Field(..., min_length=4, max_length=10, pattern=r"^\d{4,10}$")
+
+
 # ─── Business Hours ─────────────────────────────────────────────
 
 class DayHours(BaseModel):

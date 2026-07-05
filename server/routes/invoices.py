@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pdf import html_to_pdf
 from mail import send_email, _notify_invoice_created
 
+from config import settings
 from helpers import (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
     require_role, logger, STATUS_LABELS, STATUS_CSS, jinja_env,
@@ -57,7 +58,7 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
             invs = await _sql("SELECT * FROM invoices LIMIT 1")
             if invs:
                 inv = invs[0]
-                link = f"http://localhost:8723/portal/"
+                link = f"{settings.app_url}/portal/"
                 _notify_invoice_created(email, inv.get("invoice_number", 0), float(inv.get("total", 0)), link)
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
@@ -197,8 +198,8 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
         email = c.get("email") or None
         phone = c.get("phone") or None
         due_ts = inv.get("due_date", 0) / 1000
-        due_str = datetime.fromtimestamp(due_ts).strftime("%b %d, %Y") if due_ts else "—"
-        link = f"http://localhost:8723/portal/"
+        due_str = datetime.fromtimestamp(due_ts).strftime("%b %d, %Y") if due_ts else "\u2014"
+        link = f"{settings.app_url}/portal/"
         inv_num = inv.get("invoice_number", 0)
         total = float(inv.get("total", 0))
 
@@ -370,7 +371,7 @@ async def send_invoice_email(
 
     inv_num = inv.get("invoice_number", 0)
     total = float(inv.get("total", 0))
-    link = f"http://localhost:8723/portal/"
+    link = f"{settings.app_url}/portal/"
 
     _notify_invoice_created(customer_email, inv_num, total, link)
 
@@ -417,7 +418,7 @@ async def send_batch_invoice_email(
         try:
             inv_num = inv.get("invoice_number", 0)
             total = float(inv.get("total", 0))
-            link = "http://localhost:8723/portal/"
+            link = f"{settings.app_url}/portal/"
             _notify_invoice_created(customer_email, inv_num, total, link)
             results["sent"] += 1
             results["details"].append({"id": invoice_id, "status": "sent", "to": customer_email})
