@@ -192,8 +192,7 @@ test-unit:  ## Run fast offline-safe unit tests
 	fi
 
 test-container: ## Spin up test STDB container and run full integration suite (build → container → publish → backend → test → cleanup)
-	@echo "🚀 Starting full integration test suite..."
-	@bash scripts/run-integration-tests.sh
+	@bash scripts/run-integration-tests.sh $(ARGS)
 
 test-rust-container: ## Build & run standalone Rust container tests (requires running STDB)
 	@echo "🚀 Building container test binary..."
