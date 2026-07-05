@@ -355,6 +355,11 @@ class UserUpdate(BaseModel):
     active: bool = True
 
 
+class UserSettingsUpdate(BaseModel):
+    theme: str = Field(default="light", pattern=r"^(light|dark)$")
+    default_ticket_status: str = Field(default="new", max_length=50)
+
+
 # ─── Mail/SMS Settings ───────────────────────────────────────────
 
 class MailSettingsUpdate(BaseModel):
