@@ -11,8 +11,13 @@ mod tests {
     use crate::*;
     // STDB accessor traits for table methods
     use crate::appointment::appointment;
+    use crate::customer::customer;
+    use crate::product::products;
+    use crate::purchase_order::purchase_order;
+    use crate::purchase_order::purchase_order_line_item;
     use crate::ticket::ticket;
     use crate::user::user;
+    use crate::user::user_settings;
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -1101,7 +1106,421 @@ mod tests {
         let _ = delete_ticket_checklist(&ctx, "tkt_nope".into());
         let _ = set_custom_field_value(&ctx, "e".into(), "f".into(), "v".into(), "t_nope".into());
         let _ = delete_custom_field_value(&ctx, "e".into(), "f".into());
+        // Untested reducers safety
+        set_user_pin(&ctx, "user_nope".into(), "1234".into());
+        upsert_user_settings(&ctx, "user_nope".into(), "dark".into(), "new".into());
+        delete_user_settings(&ctx, "user_nope".into());
+        update_product_quantity(&ctx, "prod_nope".into(), 0.0);
+        import_customer(&ctx, "t".into(), "cust_nope".into(), "N".into(), "N".into(), "n@t.com".into(), "".into(), "".into(), "".into(), "".into(), "".into(), "".into(), "".into(), "".into(), "".into(), "".into(), 0, 0);
+        import_product(&ctx, "t".into(), "prod_nope".into(), "N".into(), "N".into(), "".into(), "".into(), "".into(), 0.0, 0.0, 0.0, 0.0, 0.0, "".into(), true, 0, 0);
+        let _ = delete_po_line_item(&ctx, "po_nope".into(), "poli_nope".into());
+        let _ = submit_for_approval(&ctx, "po_nope".into());
+        let _ = approve_po(&ctx, "po_nope".into(), "u".into());
+        let _ = reject_po(&ctx, "po_nope".into());
+        let _ = receive_po_item(&ctx, "poli_nope".into(), 0.0);
+        let _ = delete_purchase_order(&ctx, "po_nope".into());
+        delete_ticket_timer(&ctx, "tmr_nope".into());
+        generate_recurring_invoices(&ctx);
 
         // No crash = success
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  CUSTOMER: import_customer
+    // ──────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_import_customer() {
+        let ctx = test_ctx();
+        import_customer(
+            &ctx,
+            "t_imp".into(),
+            "cust_imported_1".into(),
+            "Imported".into(),
+            "User".into(),
+            "imported@test.com".into(),
+            "555-0001".into(),
+            "555-0002".into(),
+            "123 Main St".into(),
+            "".into(),
+            "Portland".into(),
+            "OR".into(),
+            "97201".into(),
+            "Acme Corp".into(),
+            "Bulk import".into(),
+            "".into(),
+            1000000000000,
+            1000000000000,
+        );
+        let customers: Vec<Customer> = ctx.db.customer().iter().collect();
+        assert_eq!(customers.len(), 1);
+        let c = &customers[0];
+        assert_eq!(c.id, "cust_imported_1");
+        assert_eq!(c.first_name, "Imported");
+        assert_eq!(c.created_at, 1000000000000);
+        assert_eq!(c.updated_at, 1000000000000);
+        assert_eq!(c.company, "Acme Corp");
+        assert_eq!(c.city, "Portland");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  PRODUCT: update_product_quantity, import_product
+    // ──────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_update_product_quantity() {
+        let ctx = test_ctx();
+        create_product(&ctx, "t_pq".into(), "Widget".into(), "WDG".into(),
+            "".into(), "".into(), "Parts".into(), 10.0, 5.0, 50.0, 5.0, "A1".into());
+        let pid = ctx.db.products().iter().next().unwrap().id.clone();
+        assert_eq!(ctx.db.products().id().find(&pid).unwrap().quantity_on_hand, 50.0);
+        update_product_quantity(&ctx, pid.clone(), 30.0);
+        let updated = ctx.db.products().id().find(&pid).unwrap();
+        assert_eq!(updated.quantity_on_hand, 30.0);
+        assert_eq!(updated.quantity_available, 30.0);
+    }
+
+    #[test]
+    fn test_update_nonexistent_product_quantity_doesnt_panic() {
+        let ctx = test_ctx();
+        update_product_quantity(&ctx, "prod_nope".into(), 99.0);
+        assert_eq!(ctx.db.products().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_import_product() {
+        let ctx = test_ctx();
+        import_product(&ctx, "t_ip".into(), "prod_imported_1".into(),
+            "Imported Widget".into(), "IMP-001".into(), "123456789".into(),
+            "High quality widget".into(), "Gadgets".into(),
+            29.99, 12.00, 100.0, 10.0, 5.0, "B2".into(), true, 2000000000000, 2000000000000);
+        let products_list: Vec<Product> = ctx.db.products().iter().collect();
+        assert_eq!(products_list.len(), 1);
+        let p = &products_list[0];
+        assert_eq!(p.id, "prod_imported_1");
+        assert_eq!(p.name, "Imported Widget");
+        assert_eq!(p.price, 29.99);
+        assert_eq!(p.quantity_on_hand, 100.0);
+        assert_eq!(p.quantity_committed, 10.0);
+        assert_eq!(p.quantity_available, 90.0);
+        assert_eq!(p.created_at, 2000000000000);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  PURCHASE ORDER LIFECYCLE
+    // ──────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_po_submit_for_approval() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t_po".into(), "Vendor Co".into(), "Urgent".into(), "USD".into());
+        let po = ctx.db.purchase_order().iter().next().unwrap();
+        let poid = po.id.clone();
+        assert_eq!(po.status, "draft");
+        submit_for_approval(&ctx, poid.clone());
+        assert_eq!(ctx.db.purchase_order().id().find(&poid).unwrap().status, "pending_approval");
+    }
+
+    #[test]
+    fn test_po_submit_for_approval_from_non_draft_is_noop() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        submit_for_approval(&ctx, poid.clone());
+        assert_eq!(ctx.db.purchase_order().id().find(&poid).unwrap().status, "pending_approval");
+        // Second submit should be no-op (already pending_approval)
+        submit_for_approval(&ctx, poid);
+        // No crash = success
+    }
+
+    #[test]
+    fn test_po_approve() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        submit_for_approval(&ctx, poid.clone());
+        approve_po(&ctx, poid.clone(), "user_admin".into());
+        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        assert_eq!(po.status, "approved");
+        assert_eq!(po.approved_by, "user_admin");
+        assert!(po.approved_at > 0);
+    }
+
+    #[test]
+    fn test_po_approve_from_draft_is_noop() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        approve_po(&ctx, poid, "user_admin".into());
+        // Should stay draft
+        assert_eq!(ctx.db.purchase_order().iter().next().unwrap().status, "draft");
+    }
+
+    #[test]
+    fn test_po_reject() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        submit_for_approval(&ctx, poid.clone());
+        reject_po(&ctx, poid.clone());
+        assert_eq!(ctx.db.purchase_order().id().find(&poid).unwrap().status, "draft");
+    }
+
+    #[test]
+    fn test_po_reject_from_draft_is_noop() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        reject_po(&ctx, poid);
+        // Should stay draft
+        assert_eq!(ctx.db.purchase_order().iter().next().unwrap().status, "draft");
+    }
+
+    #[test]
+    fn test_po_add_and_delete_line_item() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        // Add a line item
+        add_po_line_item(&ctx, poid.clone(), "prod_1".into(), "Cable".into(), 10.0, 5.0);
+        use crate::purchase_order::purchase_order_line_item;
+        assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 1);
+        let item = ctx.db.purchase_order_line_item().iter().next().unwrap();
+        assert_eq!(item.description, "Cable");
+        assert!((item.total - 50.0).abs() < 0.01);
+        // PO totals should be recalculated
+        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        assert!((po.subtotal - 50.0).abs() < 0.01);
+        // Delete the line item
+        let item_id = item.id.clone();
+        delete_po_line_item(&ctx, poid.clone(), item_id);
+        assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 0);
+        // PO should recalc to zero
+        let po2 = ctx.db.purchase_order().id().find(&poid).unwrap();
+        assert!((po2.subtotal - 0.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_po_receive_item() {
+        let ctx = test_ctx();
+        // Create a product to receive against
+        create_product(&ctx, "t_rcv".into(), "RAM Stick".into(), "RAM-8GB".into(),
+            "".into(), "".into(), "Parts".into(), 49.99, 25.0, 5.0, 2.0, "C3".into());
+        let prod = ctx.db.products().iter().next().unwrap();
+        let pid = prod.id.clone();
+        assert_eq!(prod.quantity_on_hand, 5.0);
+        // Create PO and add line item referencing the product
+        create_purchase_order(&ctx, "t_rcv".into(), "MemSupplier".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        add_po_line_item(&ctx, poid.clone(), pid.clone(), "8GB DDR4".into(), 10.0, 30.0);
+        let item = ctx.db.purchase_order_line_item().iter().next().unwrap();
+        let item_id = item.id.clone();
+        assert_eq!(item.received_quantity, 0.0);
+        // Receive 5 units
+        receive_po_item(&ctx, item_id.clone(), 5.0);
+        // Line item should show received
+        let updated_item = ctx.db.purchase_order_line_item().id().find(&item_id).unwrap();
+        assert_eq!(updated_item.received_quantity, 5.0);
+        // Product stock should increase
+        let updated_prod = ctx.db.products().id().find(&pid).unwrap();
+        assert_eq!(updated_prod.quantity_on_hand, 10.0);
+        // Inventory adjustment should be created
+        assert_eq!(ctx.db.inventory_adjustment().iter().count(), 1);
+        let adj = ctx.db.inventory_adjustment().iter().next().unwrap();
+        assert_eq!(adj.reason, "received");
+        // PO status should be "partial"
+        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        assert_eq!(po.status, "partial");
+    }
+
+    #[test]
+    fn test_po_receive_full_quantity() {
+        let ctx = test_ctx();
+        create_product(&ctx, "t".into(), "P".into(), "P".into(), "".into(),
+            "".into(), "".into(), 1.0, 0.5, 0.0, 0.0, "".into());
+        let pid = ctx.db.products().iter().next().unwrap().id.clone();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        add_po_line_item(&ctx, poid.clone(), pid, "Item".into(), 3.0, 10.0);
+        let item_id = ctx.db.purchase_order_line_item().iter().next().unwrap().id.clone();
+        receive_po_item(&ctx, item_id, 3.0);
+        // PO status should be "received" when fully received
+        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        assert_eq!(po.status, "received");
+    }
+
+    #[test]
+    fn test_delete_purchase_order() {
+        let ctx = test_ctx();
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        // Add line items
+        add_po_line_item(&ctx, poid.clone(), "p1".into(), "Item A".into(), 2.0, 10.0);
+        add_po_line_item(&ctx, poid.clone(), "p2".into(), "Item B".into(), 1.0, 20.0);
+        assert_eq!(ctx.db.purchase_order().iter().count(), 1);
+        assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 2);
+        delete_purchase_order(&ctx, poid);
+        assert_eq!(ctx.db.purchase_order().iter().count(), 0);
+        assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  TICKET: delete_ticket_timer
+    // ──────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_delete_ticket_timer() {
+        let ctx = test_ctx();
+        create_ticket(&ctx, "t_tmr".into(), "c1".into(), "Timer test delete".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        let tid = ctx.db.ticket().iter().next().unwrap().id.clone();
+        start_ticket_timer(&ctx, tid, "user_1".into());
+        use crate::ticket::ticket_timer;
+        assert_eq!(ctx.db.ticket_timer().iter().count(), 1);
+        let timer_id = ctx.db.ticket_timer().iter().next().unwrap().id.clone();
+        delete_ticket_timer(&ctx, timer_id);
+        assert_eq!(ctx.db.ticket_timer().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_delete_nonexistent_ticket_timer_doesnt_panic() {
+        let ctx = test_ctx();
+        delete_ticket_timer(&ctx, "tmr_nonexistent".into());
+        assert_eq!(ctx.db.ticket_timer().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  USER: set_user_pin, upsert_user_settings, delete_user_settings
+    // ──────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_set_user_pin() {
+        let ctx = test_ctx();
+        create_user(&ctx, "pin_user".into(), "pin@test.com".into(), "front_desk".into());
+        let uid = ctx.db.user().iter().next().unwrap().id.clone();
+        assert!(ctx.db.user().id().find(&uid).unwrap().pin.is_empty());
+        set_user_pin(&ctx, uid.clone(), "4321".into());
+        assert_eq!(ctx.db.user().id().find(&uid).unwrap().pin, "4321");
+    }
+
+    #[test]
+    fn test_set_nonexistent_user_pin_doesnt_panic() {
+        let ctx = test_ctx();
+        set_user_pin(&ctx, "user_nope".into(), "0000".into());
+        assert_eq!(ctx.db.user().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_upsert_user_settings_create() {
+        let ctx = test_ctx();
+        create_user(&ctx, "settings_test".into(), "s@test.com".into(), "tech".into());
+        let uid = ctx.db.user().iter().next().unwrap().id.clone();
+        upsert_user_settings(&ctx, uid.clone(), "dark".into(), "in_progress".into());
+        use crate::user::user_settings;
+        let settings: Vec<UserSettings> = ctx.db.user_settings().iter().collect();
+        assert_eq!(settings.len(), 1);
+        let s = &settings[0];
+        assert_eq!(s.user_id, uid);
+        assert_eq!(s.theme, "dark");
+        assert_eq!(s.default_ticket_status, "in_progress");
+        assert!(s.created_at > 0);
+        assert_eq!(s.created_at, s.updated_at);
+    }
+
+    #[test]
+    fn test_upsert_user_settings_update() {
+        let ctx = test_ctx();
+        create_user(&ctx, "upd_test".into(), "upd@test.com".into(), "admin".into());
+        let uid = ctx.db.user().iter().next().unwrap().id.clone();
+        upsert_user_settings(&ctx, uid.clone(), "light".into(), "new".into());
+        let original = ctx.db.user_settings().user_id().find(&uid).unwrap();
+        assert_eq!(original.theme, "light");
+        // Update
+        upsert_user_settings(&ctx, uid.clone(), "dark".into(), "in_progress".into());
+        let updated = ctx.db.user_settings().user_id().find(&uid).unwrap();
+        assert_eq!(updated.theme, "dark");
+        assert_eq!(updated.default_ticket_status, "in_progress");
+        assert_eq!(updated.user_id, uid);
+        assert!(updated.updated_at >= original.updated_at);
+        assert_eq!(ctx.db.user_settings().iter().count(), 1); // still 1 row
+    }
+
+    #[test]
+    fn test_delete_user_settings() {
+        let ctx = test_ctx();
+        create_user(&ctx, "del_settings".into(), "ds@test.com".into(), "tech".into());
+        let uid = ctx.db.user().iter().next().unwrap().id.clone();
+        upsert_user_settings(&ctx, uid.clone(), "dark".into(), "new".into());
+        assert_eq!(ctx.db.user_settings().iter().count(), 1);
+        delete_user_settings(&ctx, uid);
+        assert_eq!(ctx.db.user_settings().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  RECURRING INVOICE: generate_recurring_invoices
+    // ──────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_generate_recurring_invoices() {
+        let ctx = test_ctx();
+        // Create a recurring rule with past-due next_generation_date
+        let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+        let items = r#"[{"description":"Monthly rent","quantity":1,"unit_price":500}]"#;
+        create_recurring_invoice_rule(&ctx, "t_gr".into(), "cust_1".into(),
+            "Monthly Rent".into(), "monthly".into(), 1, 15,
+            items.into(), now - 1000); // due now
+        // Generate invoices
+        assert_eq!(ctx.db.invoices().iter().count(), 0);
+        generate_recurring_invoices(&ctx);
+        // Should have created 1 invoice
+        assert_eq!(ctx.db.invoices().iter().count(), 1);
+        let inv = ctx.db.invoices().iter().next().unwrap();
+        assert_eq!(inv.tenant_id, "t_gr");
+        assert_eq!(inv.customer_id, "cust_1");
+        assert!(inv.notes.contains("Monthly Rent"));
+        // Line items should be copied
+        assert_eq!(ctx.db.invoice_line_items().iter().count(), 1);
+        let li = ctx.db.invoice_line_items().iter().next().unwrap();
+        assert_eq!(li.description, "Monthly rent");
+        assert!((li.total - 500.0).abs() < 0.01);
+        // Rule's next_generation_date should be updated
+        use crate::recurring_invoice_rules;
+        let rule = ctx.db.recurring_invoice_rules().iter().next().unwrap();
+        assert!(rule.next_generation_date > now - 1000);
+        assert_eq!(rule.last_generated_date, now);
+    }
+
+    #[test]
+    fn test_generate_recurring_no_due_rules() {
+        let ctx = test_ctx();
+        // Create a rule with future date
+        let far_future = 9999999999999999;
+        create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Future".into(),
+            "monthly".into(), 1, 15, "[]".into(), far_future);
+        generate_recurring_invoices(&ctx);
+        assert_eq!(ctx.db.invoices().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_generate_recurring_paused_rule_skipped() {
+        let ctx = test_ctx();
+        let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+        create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Paused".into(),
+            "monthly".into(), 1, 15, "[]".into(), now - 1000);
+        // Pause it
+        let id = ctx.db.recurring_invoice_rules().iter().next().unwrap().id.clone();
+        update_recurring_invoice_rule(&ctx, id, "Paused".into(), "monthly".into(), 1, 15, "[]".into(), now - 1000, "paused".into());
+        generate_recurring_invoices(&ctx);
+        assert_eq!(ctx.db.invoices().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_generate_recurring_empty_customer_skipped() {
+        let ctx = test_ctx();
+        let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+        // Rule with empty customer_id
+        create_recurring_invoice_rule(&ctx, "t".into(), "".into(), "NoCust".into(),
+            "monthly".into(), 1, 15, "[]".into(), now - 1000);
+        generate_recurring_invoices(&ctx);
+        assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
 }
