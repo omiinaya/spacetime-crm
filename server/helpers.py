@@ -112,11 +112,17 @@ async def _paginated(
     order_desc: bool = True,
     where_extra: str = "",
     max_fetch: int = 1000,
+    sensitive_fields: set[str] | None = None,
 ) -> tuple[list[dict], int]:
     """Paginated list with tenant isolation.
 
     STDB SQL is limited (no ORDER BY, no OFFSET) so we fetch up to
     `max_fetch` records, sort in-memory, and apply offset/limit.
+
+    If `sensitive_fields` is provided, those keys are stripped from
+    every row before returning.  This is a safety net — callers should
+    still use table-specific helpers (e.g. ``_safe_customer``) for
+    explicit intent.
 
     Returns (rows_slice, total_count).
     """
@@ -135,6 +141,8 @@ async def _paginated(
     rows = await _sql(query)
 
     rows.sort(key=lambda r: (r.get(order_by) or ""), reverse=order_desc)
+    if sensitive_fields:
+        rows = [{k: v for k, v in r.items() if k not in sensitive_fields} for r in rows]
     return rows[offset:offset + limit], total
 
 
