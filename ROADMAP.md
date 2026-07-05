@@ -287,9 +287,13 @@ The `UserSettings` STDB table (theme, default_ticket_status) exists but previous
 - **Models**: `UserSettingsUpdate` Pydantic model in `models.py`
 - **Tests**: `TestUserSettings` in `tests/test_settings.py` — 4 tests covering get, update, and auth guards
 
-### 7E — `Pin` field on User table unused
+### 7E — `Pin` field on User table unused — ✅ Done
 
-The `pin` field exists in the STDB `User` table but has no API endpoint to set/get it and no frontend usage. Either implement POS PIN login or remove the field.
+**Implemented**: POS PIN login with bcrypt-hashed PIN.
+- **STDB**: `pin` field on `User` table, `set_user_pin` reducer in `user.rs`
+- **Backend**: `POST /api/auth/set-pin` (set PIN, bcrypt-hashed) + `POST /api/auth/pos-login` (PIN-based login, rate-limited) in `routes/auth.py`
+- **Frontend**: `PinSection` component in `SettingsPage.tsx` for setting PIN; PIN gate on `PosPage.tsx` for quick POS terminal login
+- **API client**: `api.auth.setPin` + `api.auth.posLogin` in `api.ts`
 
 ### 7F — STDB unit tests are compile-only (18 tests) — ✅ Done
 
