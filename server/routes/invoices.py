@@ -5,7 +5,8 @@ import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pdf import html_to_pdf
-from mail import send_email, _notify_invoice_created
+from mail import send_email, _notify_invoice_created, _customer_email as _mail_customer_email, _notify_overdue_reminder as _mail_reminder
+from sms import _customer_phone as _sms_customer_phone, _notify_invoice_created as _sms_invoice_created, _notify_overdue_reminder as _sms_reminder
 
 from config import settings
 from helpers import (

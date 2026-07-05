@@ -9,6 +9,12 @@ from helpers import (
     _sql, _paginated, _call, _log_audit, _fire_webhook,
     require_role, logger,
 )
+from mail import _customer_email as _mail_customer_email
+from mail import _notify_appointment_created
+from mail import _notify_appointment_reminder as _mail
+from sms import _customer_phone as _sms_customer_phone
+from sms import _notify_appointment_created as _sms_appointment_created
+from sms import _notify_appointment_reminder as _sms
 from models import AppointmentCreate, AppointmentStatusUpdate, AppointmentRecurrence, GenerateNextOccurrence
 
 router = APIRouter()
@@ -65,10 +71,6 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
 
     async def _notify():
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
-        from mail import _customer_email as _mail_customer_email
-        from mail import _notify_appointment_created
-        from sms import _customer_phone as _sms_customer_phone
-        from sms import _notify_appointment_created as _sms_appointment_created
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
             link = f"{settings.app_url}/portal/"
@@ -180,13 +182,11 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
 
         email = c.get("email") or None
         if email:
-            from mail import _notify_appointment_reminder as _mail
             _mail(email, appt.get("title", "Appointment"), appt.get("start_time", 0), link)
             sent["email"] += 1
 
         phone = c.get("mobile") or c.get("phone") or None
         if phone:
-            from sms import _notify_appointment_reminder as _sms
             _sms(phone, appt.get("title", "Appointment"), appt.get("start_time", 0))
             sent["sms"] += 1
 

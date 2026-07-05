@@ -4,6 +4,7 @@ from __future__ import annotations
 import secrets
 from pathlib import Path
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -61,5 +62,4 @@ async def spa_fallback(full_path: str):
 # ── ENTRY ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=True)

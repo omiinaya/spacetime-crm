@@ -14,6 +14,7 @@ from models import (
     SetPinRequest, PosLoginRequest,
 )
 from rate_limit import limiter
+from mail import send_email as _send_email
 
 import pyotp
 import base64
@@ -408,8 +409,6 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
     )
 
     reset_link = f"{settings.app_url}/reset-password?token={token}"
-
-    from mail import send_email as _send_email
 
     html = f"""<!DOCTYPE html>
 <html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
