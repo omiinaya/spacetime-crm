@@ -1257,6 +1257,16 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ code }),
       }),
+    setPin: (pin: string) =>
+      apiFetch<{ ok: boolean }>("/auth/set-pin", {
+        method: "POST",
+        body: JSON.stringify({ pin }),
+      }),
+    posLogin: (user_id: string, pin: string) =>
+      apiFetch<{ token: string; user: { id: string; name: string; email: string; role: string; tenant_id: string } }>("/auth/pos-login", {
+        method: "POST",
+        body: JSON.stringify({ user_id, pin }),
+      }),
   },
   userSettings: {
     get: () => apiFetch<{ settings: { user_id: string; theme: string; default_ticket_status: string; created_at: number; updated_at: number } | null }>("/users/settings"),
