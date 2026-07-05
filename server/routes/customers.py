@@ -7,6 +7,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
+    CUSTOMER_SENSITIVE_FIELDS,
     _sql, _sql_t, _paginated, _call, _sort, _log_audit, _fire_webhook,
     _safe_id, _safe_customer, require_role, get_current_user, logger,
 )
@@ -23,6 +24,7 @@ async def list_customers(search: str = "", offset: int = 0, limit: int = 50, use
         user["tenant_id"], "customer",
         offset=offset, limit=limit,
         order_by="created_at", order_desc=True,
+        sensitive_fields=CUSTOMER_SENSITIVE_FIELDS,
     )
     q = search.lower().strip()
     if q:
