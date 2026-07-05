@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from config import settings
 from helpers import (
     _sql, _call, _sort, _log_audit, _fire_webhook,
-    logger, security,
+    _safe_customer, logger, security,
 )
 from rate_limit import limiter
 from models import (
@@ -47,7 +47,7 @@ async def get_current_customer(credentials: HTTPAuthorizationCredentials = Depen
     rows = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
     if not rows:
         raise HTTPException(401, "Customer not found")
-    return rows[0]
+    return _safe_customer(rows[0])
 
 
 # ── Auth ───────────────────────────────────────────────────────
