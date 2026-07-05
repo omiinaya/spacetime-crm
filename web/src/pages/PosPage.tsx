@@ -8,9 +8,10 @@ import { Badge } from "../components/ui/badge";
 import {
   ShoppingCart, Printer, Search, X, Plus, Minus,
   DollarSign, Receipt, RotateCcw, Trash2, CreditCard,
-  Banknote, Loader2, ArrowLeft, Check, FileDown,
+  Banknote, Loader2, ArrowLeft, Check, FileDown, Lock, Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "../lib/auth";
 
 interface CartItem {
   product_id: string;
@@ -41,6 +42,41 @@ export default function PosPage() {
   const [scanning, setScanning] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
   const [refunding, setRefunding] = useState(false);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinVerifying, setPinVerifying] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const pinRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+
+  // ── PIN verification ──
+  const handlePinSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pinInput || pinInput.length < 4) {
+      setPinError("PIN must be at least 4 digits");
+      return;
+    }
+    if (!user) {
+      setPinError("Not authenticated");
+      return;
+    }
+    setPinVerifying(true);
+    setPinError("");
+    try {
+      await api.auth.posLogin(user.id, pinInput);
+      setPinVerified(true);
+      setLocked(false);
+      setPinInput("");
+      setPinError("");
+    } catch (err: any) {
+      setPinError("Invalid PIN — try again");
+      setPinInput("");
+      pinRef.current?.focus();
+    } finally {
+      setPinVerifying(false);
+    }
+  }, [pinInput, user]);
 
   // ── Product search ──
   const { data: searchResults } = useQuery({
@@ -233,6 +269,59 @@ export default function PosPage() {
   const tendered = parseFloat(amountTendered) || 0;
   const changeDue = tendered > total ? tendered - total : 0;
 
+  // ── PIN gate ──
+  if (!pinVerified || locked) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <Lock className="w-5 h-5" />
+              Employee PIN Required
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground text-center mb-4">
+              Enter your PIN to access the Point of Sale terminal
+            </p>
+            <form onSubmit={handlePinSubmit} className="space-y-4">
+              <Input
+                ref={pinRef}
+                type="password"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="Enter your PIN"
+                className="text-center text-2xl tracking-[0.5em] py-6"
+                value={pinInput}
+                onChange={(e) => {
+                  setPinInput(e.target.value.replace(/\D/g, "").slice(0, 10));
+                  setPinError("");
+                }}
+                autoFocus
+                disabled={pinVerifying}
+              />
+              {pinError && (
+                <p className="text-sm text-destructive text-center">{pinError}</p>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={pinInput.length < 4 || pinVerifying}
+              >
+                {pinVerifying ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" />Verifying...</>
+                ) : (
+                  <><Unlock className="w-4 h-4 mr-2" />Unlock POS</>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // ── Receipt view ──
   if (mode === "receipt" && lastReceipt) {
     const { sale, items } = lastReceipt;
@@ -246,6 +335,9 @@ export default function PosPage() {
           {sale.status === "refunded" && <Badge variant="destructive">Refunded</Badge>}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-1" /> Print
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLocked(true)} title="Lock POS terminal">
+            <Lock className="w-4 h-4" />
           </Button>
           <a
             href={`/api/pos/sales/${sale.id}/receipt-pdf`}
@@ -359,6 +451,9 @@ export default function PosPage() {
           <Button variant="outline" size="sm" onClick={() => setMode("sale")}>
             <ShoppingCart className="w-4 h-4 mr-1" /> New Sale
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLocked(true)} title="Lock POS terminal">
+            <Lock className="w-4 h-4" />
+          </Button>
         </div>
 
         {loadingHistory ? (
@@ -410,6 +505,9 @@ export default function PosPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setMode("history")}>
             <Receipt className="w-4 h-4 mr-1" /> History
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setLocked(true)} title="Lock POS terminal">
+            <Lock className="w-4 h-4" />
           </Button>
         </div>
       </div>
