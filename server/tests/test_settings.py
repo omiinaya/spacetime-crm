@@ -82,3 +82,52 @@ class TestSettingsErrors:
     def test_sms_unauthorized(self, client: httpx.Client):
         resp = client.get("/api/settings/sms", timeout=10)
         assert resp.status_code in (401, 403)
+
+
+class TestUserSettings:
+    """User preferences — theme, default_ticket_status."""
+
+    def test_get_user_settings_default(self, auth_headers: dict):
+        """GET user settings returns null when not yet set."""
+        resp = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "settings" in data
+
+    def test_update_user_settings(self, auth_headers: dict):
+        """PUT user settings saves theme + default_ticket_status, GET returns them."""
+        payload = {"theme": "dark", "default_ticket_status": "open"}
+        resp = httpx.put(
+            f"{SERVER_URL}/api/users/settings",
+            json=payload,
+            headers=auth_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        # Verify saved
+        r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
+        data = assert_ok(r2)
+        assert data["settings"] is not None
+        assert data["settings"]["theme"] == "dark"
+        assert data["settings"]["default_ticket_status"] == "open"
+
+    def test_update_user_settings_light(self, auth_headers: dict):
+        """PUT user settings with light theme."""
+        payload = {"theme": "light", "default_ticket_status": "new"}
+        resp = httpx.put(
+            f"{SERVER_URL}/api/users/settings",
+            json=payload,
+            headers=auth_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
+        data = assert_ok(r2)
+        assert data["settings"]["theme"] == "light"
+
+    def test_user_settings_unauthorized(self, client: httpx.Client):
+        """GET/PUT user settings without auth returns 401/403."""
+        resp = client.get("/api/users/settings", timeout=10)
+        assert resp.status_code in (401, 403)
+
+        resp = client.put("/api/users/settings", json={"theme": "dark", "default_ticket_status": "new"}, timeout=10)
+        assert resp.status_code in (401, 403)
