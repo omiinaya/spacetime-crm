@@ -8,7 +8,8 @@ from helpers import (
     require_role, get_current_user, logger,
 )
 from models import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
-from webhooks import ALL_EVENTS as WEBHOOK_EVENTS
+from webhooks import ALL_EVENTS as WEBHOOK_EVENTS, _deliver
+from stripe_payments import verify_webhook
 
 router = APIRouter()
 
@@ -16,7 +17,6 @@ router = APIRouter()
 @router.post("/api/webhooks/stripe")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events (checkout.session.completed)."""
-    from stripe_payments import verify_webhook
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
@@ -142,7 +142,6 @@ async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_ro
         "id": "test_001",
         "message": "This is a test webhook event from SpacetimeCRM.",
     }
-    from webhooks import _deliver
     result = await _deliver(
         url=sub["url"],
         event_type="test.ping",

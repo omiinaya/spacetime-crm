@@ -50,10 +50,6 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
 
     async def _notify():
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
-        from mail import _customer_email as _mail_customer_email
-        from mail import _notify_invoice_created
-        from sms import _customer_phone as _sms_customer_phone
-        from sms import _notify_invoice_created as _sms_invoice_created
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
             invs = await _sql("SELECT * FROM invoices LIMIT 1")
@@ -205,11 +201,9 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
         total = float(inv.get("total", 0))
 
         if email:
-            from mail import _notify_overdue_reminder as _mail_reminder
             _mail_reminder(email, inv_num, total, due_str, link)
             sent["email"] += 1
         if phone:
-            from sms import _notify_overdue_reminder as _sms_reminder
             _sms_reminder(phone, inv_num, total)
             sent["sms"] += 1
         sent["total"] += 1

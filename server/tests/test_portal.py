@@ -2,10 +2,11 @@
 import bcrypt
 import httpx
 import pytest
+import time
 from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW
 
 PORTAL_PW = "TestPortal123!"
-PORTAL_EMAIL = f"portal-{int(__import__('time').time())}@test.com"
+PORTAL_EMAIL = f"portal-{int(time.time())}@test.com"
 
 # Track whether we've created the portal customer already (module-level flag)
 _created = False
@@ -56,7 +57,6 @@ def _create_and_login() -> str:
     # Login
     resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": PORTAL_EMAIL, "password": PORTAL_PW}, timeout=10)
     if resp.status_code == 429:
-        import time
         time.sleep(6)
         resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": PORTAL_EMAIL, "password": PORTAL_PW}, timeout=10)
 

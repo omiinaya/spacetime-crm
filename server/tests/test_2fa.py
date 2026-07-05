@@ -4,12 +4,12 @@ Uses a dedicated test user to avoid interfering with the admin account.
 """
 import pyotp
 import httpx
+import time
 from .conftest import SERVER_URL, assert_ok
 
 
 def _create_test_user() -> tuple[str, str]:
     """Create a test user for 2FA tests. Returns (user_id, name)."""
-    import time
     suffix = str(int(time.time() * 1000))[-8:]
     name = f"2fa-test-{suffix}"
     email = f"{name}@test.com"

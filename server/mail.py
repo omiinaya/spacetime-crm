@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from typing import Optional
+from helpers import jinja_env
 
 logger = logging.getLogger(__name__)
 
@@ -156,8 +157,6 @@ def test_connection() -> dict:
 
 
 # ── Notification templates ──
-
-from helpers import jinja_env
 
 _STATUS_LABELS = {
     "new": "New", "in_progress": "In Progress",

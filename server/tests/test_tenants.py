@@ -1,6 +1,7 @@
 """Tenant management integration tests."""
 import pytest
 import httpx
+import uuid
 from .conftest import SERVER_URL, assert_ok
 
 
@@ -25,7 +26,6 @@ class TestTenants:
 
     def test_create_tenant(self, auth_headers: dict):
         """Create a new tenant."""
-        import uuid
         slug = f"test-tenant-{uuid.uuid4().hex[:8]}"
         resp = httpx.post(
             f"{SERVER_URL}/api/tenants",
