@@ -505,7 +505,7 @@ class Disable2FARequest(BaseModel):
 
 
 class SetPinRequest(BaseModel):
-    pin: str = Field(..., min_length=4, max_length=10, pattern=r"^\d{4,10}$")
+    pin: str = Field(default="", min_length=0, max_length=10, pattern=r"^\d{0,10}$")
 
 
 class PosLoginRequest(BaseModel):
