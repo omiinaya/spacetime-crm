@@ -117,6 +117,7 @@ async def list_customer_geolocations(user: dict = Depends(require_role("admin", 
     geo_map = {g["customer_id"]: g for g in geos}
     result = []
     for c in customers:
+        c = _safe_customer(c)
         loc = geo_map.get(c["id"])
         full_name = f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
         addr_parts = [c.get("address_line1", ""), c.get("city", ""), c.get("state", ""), c.get("zip", "")]
