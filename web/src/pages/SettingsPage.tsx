@@ -850,21 +850,12 @@ function PinSection() {
     }
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/set-pin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail || "Failed to set PIN");
-        return;
-      }
+      await api.auth.setPin(pin);
       toast.success("POS PIN set successfully");
       setPin("");
       setConfirmPin("");
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message || "Failed to set PIN");
     } finally {
       setBusy(false);
     }
