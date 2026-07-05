@@ -208,6 +208,9 @@ async def auth_me(user: dict = Depends(get_current_user)):
     except Exception:
         pass
 
+    # Check if user has a POS PIN set
+    has_pin = bool(user.get("pin", ""))
+
     result = {
         "id": user["id"],
         "name": user["name"],
@@ -216,6 +219,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
         "tenant_id": user.get("tenant_id", ""),
         "tenant": tenant_info,
         "totp_enabled": totp_enabled,
+        "has_pin": has_pin,
     }
     return result
 
@@ -311,10 +315,15 @@ async def set_password(body: SetPasswordRequest, user: dict = Depends(get_curren
 
 @router.post("/api/auth/set-pin")
 async def set_pin(body: SetPinRequest, user: dict = Depends(get_current_user)):
-    """Set or change the POS PIN for the current user. PIN is stored as bcrypt hash."""
+    """Set, change, or remove the POS PIN for the current user. PIN is stored as bcrypt hash.
+    Pass an empty string to remove the PIN."""
     pin = body.pin
+    if not pin:
+        # Remove PIN
+        await _call("set_user_pin", [user["id"], ""])
+        return {"ok": True, "message": "POS PIN removed"}
     if not pin.isdigit() or len(pin) < 4 or len(pin) > 10:
-        raise HTTPException(400, "PIN must be 4–10 digits")
+        raise HTTPException(400, "PIN must be 4–10 digits or empty to remove")
     hashed = bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
     await _call("set_user_pin", [user["id"], hashed])
     return {"ok": True}

@@ -48,7 +48,19 @@ export default function PosPage() {
   const [pinVerifying, setPinVerifying] = useState(false);
   const [locked, setLocked] = useState(false);
   const pinRef = useRef<HTMLInputElement>(null);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+
+  // ── Check if user has a PIN set ──
+  const [hasPin, setHasPin] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!token) return;
+    fetch("/api/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setHasPin(data.has_pin ?? false))
+      .catch(() => setHasPin(false));
+  }, [token]);
 
   // ── PIN verification ──
   const handlePinSubmit = useCallback(async (e: React.FormEvent) => {
@@ -270,7 +282,16 @@ export default function PosPage() {
   const changeDue = tendered > total ? tendered - total : 0;
 
   // ── PIN gate ──
-  if (!pinVerified || locked) {
+  if (hasPin === null) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+  if (!hasPin) {
+    // No PIN set — skip gate
+  } else if (!pinVerified || locked) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Card className="w-full max-w-sm">
