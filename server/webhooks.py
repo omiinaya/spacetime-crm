@@ -1,6 +1,7 @@
 """Webhook delivery engine for SpacetimeCRM.
 Dispatches events to all active, matching webhook subscriptions with HMAC-SHA256 signing.
 """
+import asyncio
 import hashlib
 import hmac
 import json
@@ -104,7 +105,6 @@ async def _deliver(
 
         if attempt < max_retries:
             # Exponential backoff: 1s, 2s, 4s
-            import asyncio
             await asyncio.sleep(1 * (2 ** (attempt - 1)))
 
     return {
