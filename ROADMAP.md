@@ -13,7 +13,7 @@
 
 | Layer | Files | Lines | Completeness | Test Count | Anti-Patterns |
 |-------|-------|-------|:------------:|:----------:|:-------------:|
-| STDB Module (Rust) | 16 files | ~1,900 | 88% | 18 unit (compile-only) | 1 major, 3 minor |
+| STDB Module (Rust) | 16 files | ~1,900 | 88% | ~200 #[cfg(test)] + container CI | 1 major, 3 minor |
 | Backend API (Python) | 30 files | ~4,500 | 92% | 273 integration | 2 major, 5 minor |
 | Frontend (TypeScript) | 45+ files | ~8,000 | 82% | 94 unit | 4 major, 8 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
@@ -291,11 +291,20 @@ The `UserSettings` STDB table (theme, default_ticket_status) exists but previous
 
 The `pin` field exists in the STDB `User` table but has no API endpoint to set/get it and no frontend usage. Either implement POS PIN login or remove the field.
 
-### 7F — STDB unit tests are compile-only (18 tests)
+### 7F — STDB unit tests are compile-only (18 tests) — ✅ Done
 
-The existing Rust tests in `lib.rs` compile but can't run — they need a running STDB host. Either:
-1. Add `#[cfg(test)]` integration tests that spin up a test STDB container
-2. Or accept they're compile-time validation only
+The existing Rust tests use `ReducerContext::__dummy()` for in-memory STDB testing.
+Added container-based integration test infrastructure:
+- `docker-compose.test.yml` — ephemeral STDB container on port 3002
+- `scripts/run-integration-tests.sh` — full orchestration: build → container → publish → test → cleanup
+- `make test-container` — one-command test runner
+- Python integration tests now runnable against isolated container
+
+Run with:
+```bash
+make test-container           # Full pipeline
+bash scripts/run-integration-tests.sh --quick   # Skip WASM rebuild
+```
 
 ### 7G — Test isolation
 

@@ -175,7 +175,7 @@ clean-all: clean ## Thorough clean including lockfiles
 
 # ── Agent-Friendly Targets ─────────────────────────────────────────────
 
-.PHONY: test-unit test-integration test-quick coverage check-ports deps-check health setup-git-hooks
+.PHONY: test-unit test-integration test-container test-quick coverage check-ports deps-check health setup-git-hooks
 
 test-unit:  ## Run fast offline-safe unit tests
 	@echo "--- Backend unit tests ---"
@@ -190,6 +190,10 @@ test-unit:  ## Run fast offline-safe unit tests
 	else \
 		echo "⚠️  vitest not found. Install: cd web && npm install -D vitest"; \
 	fi
+
+test-container: ## Spin up test STDB container and run full integration suite
+\t@echo "🚀 Starting integration tests in containerized STDB..."
+\t@bash scripts/run-integration-tests.sh
 
 test-integration:  ## Tests needing running services (STDB + backend + frontend)
 	@echo "⚠️  Integration tests require STDB on :3001 and backend on :8723"
