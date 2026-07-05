@@ -10,6 +10,7 @@ from helpers import (
     _sql, _sql_t, _call, _log_audit,
     require_role, _safe_id, logger,
 )
+from mail import send_email
 
 router = APIRouter()
 
@@ -155,7 +156,6 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
             if not email or "@" not in email:
                 continue
             try:
-                from mail import send_email
                 ok = send_email(email, f"📊 Scheduled Report: {schedule.get('name', 'Report')}", html)
                 if ok:
                     sent_count += 1

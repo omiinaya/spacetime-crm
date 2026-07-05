@@ -1,4 +1,6 @@
 """Auth and permissions integration tests."""
+import base64
+import json
 import pytest
 import httpx
 from .conftest import SERVER_URL, ADMIN_EMAIL, ADMIN_PW, assert_ok, assert_unauthorized
@@ -47,7 +49,6 @@ class TestAuth:
         """Expired JWT returns 401."""
         # Craft a token that looks like a JWT but is clearly expired
         # Base64-encode a dummy expired payload
-        import base64, json
         header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).rstrip(b"=").decode()
         payload = base64.urlsafe_b64encode(json.dumps({"sub": "user_test", "exp": 1000000, "role": "admin"}).encode()).rstrip(b"=").decode()
         sig = base64.urlsafe_b64encode(b"bad-signature").rstrip(b"=").decode()

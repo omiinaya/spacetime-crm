@@ -8,6 +8,7 @@ from helpers import (
     _sql, _call, _sort, _log_audit, require_role, logger,
 )
 from models import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
+from stripe_payments import create_setup_intent, is_configured
 
 router = APIRouter()
 
@@ -35,7 +36,6 @@ async def create_payment_setup_intent(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Create a Stripe SetupIntent for securely collecting a payment method."""
-    from stripe_payments import create_setup_intent, is_configured
     if not is_configured():
         raise HTTPException(400, "Stripe is not configured")
     result = await create_setup_intent(body.customer_id)

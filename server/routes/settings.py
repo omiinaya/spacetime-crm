@@ -26,7 +26,6 @@ async def mail_settings_get(user: dict = Depends(require_role("admin"))):
 @limiter.limit("30/minute")
 async def mail_settings_save(request: Request, body: MailSettingsUpdate, user: dict = Depends(require_role("admin"))):
     """Save mail settings."""
-    from mail import update_settings as _update
     data = {
         "host": body.smtp_host,
         "port": body.smtp_port,

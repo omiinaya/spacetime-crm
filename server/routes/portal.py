@@ -15,6 +15,7 @@ from models import (
     PortalLoginRequest, PortalNoteCreate, PortalPaymentCreate,
     PortalSetPassword, PortalCheckoutSessionCreate, PortalPayWithSavedCard,
 )
+from stripe_payments import create_checkout_session, create_payment_intent, is_configured as stripe_configured
 
 router = APIRouter()
 
@@ -282,7 +283,6 @@ async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(
 @router.post("/api/portal/payments/create-checkout-session")
 async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, customer: dict = Depends(get_current_customer)):
     """Create a Stripe Checkout Session for an invoice payment."""
-    from stripe_payments import create_checkout_session, is_configured as stripe_configured
     if not stripe_configured():
         raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
 
@@ -374,7 +374,6 @@ async def portal_pay_with_saved_card(
         raise HTTPException(400, "Invoice is already fully paid")
 
     # Create + confirm Stripe PaymentIntent
-    from stripe_payments import create_payment_intent, is_configured as stripe_configured
     if not stripe_configured():
         raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
 
