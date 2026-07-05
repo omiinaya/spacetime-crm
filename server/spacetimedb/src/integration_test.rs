@@ -9,6 +9,10 @@
 #[cfg(test)]
 mod tests {
     use crate::*;
+    // STDB accessor traits for table methods
+    use crate::appointment::appointment;
+    use crate::ticket::ticket;
+    use crate::user::user;
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -233,7 +237,7 @@ mod tests {
         let ctx = test_ctx();
         create_custom_field_definition(&ctx, "t".into(), "cfd_1".into(), "cust".into(), "Old".into(), "text".into(), "".into(), 1, false, true);
         update_custom_field_definition(&ctx, "cfd_1".into(), "New Label".into(), "number".into(), "".into(), 2, true, true);
-        let updated = ctx.db.custom_field_definitions().id().find(&"cfd_1").unwrap();
+        let updated = ctx.db.custom_field_definitions().id().find("cfd_1".to_string()).unwrap();
         assert_eq!(updated.label, "New Label");
         assert_eq!(updated.field_type, "number");
         assert!(updated.required);
@@ -829,7 +833,7 @@ mod tests {
         create_scheduled_report(&ctx, "t".into(), "Old".into(), "rev".into(), "d".into(), "{}".into(), "[]".into(), "{}".into(), 1000);
         let id = ctx.db.scheduled_reports().iter().next().unwrap().id.clone();
         update_scheduled_report(&ctx, id.clone(), "New Name".into(), "expenses".into(), "monthly".into(),
-            r#"{"day":1}"#.into(), r#"["b@t.com"]"#.into(), r#"{"x":1}"#.into(), false);
+            r#"{"day":1}"#.into(), r#"["b@t.com"]"#.into(), r#"{"x":1}"#.into(), 2000, false);
         let updated = ctx.db.scheduled_reports().id().find(&id).unwrap();
         assert_eq!(updated.name, "New Name");
         assert_eq!(updated.report_type, "expenses");

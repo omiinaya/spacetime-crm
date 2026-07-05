@@ -41,6 +41,8 @@ pub use pos::*;
 pub use audit::*;
 pub use custom_field::*;
 pub use webhook::*;
+pub use tenant::*;
+pub use sla_config::*;
 
 // ─── Recurring Invoice Rule ──
 
