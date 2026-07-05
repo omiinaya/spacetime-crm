@@ -1,17 +1,17 @@
 """Route registrations for SpacetimeCRM."""
 from __future__ import annotations
 
+from . import (
+    auth, appointments, checklists, custom_fields, customers,
+    dashboard, estimates, export_import, health, invoices,
+    payment_methods, payments, portal, pos, products, purchase_orders,
+    recurring_invoices, report_schedules, settings, tax_rates, tenants, tickets, users,
+    webhooks,
+)
+
 
 def register_routers(app):
     """Import and register all APIRouter modules on the app."""
-    from . import (
-        auth, appointments, checklists, custom_fields, customers,
-        dashboard, estimates, export_import, health, invoices,
-        payment_methods, payments, portal, pos, products, purchase_orders,
-        recurring_invoices, report_schedules, settings, tax_rates, tenants, tickets, users,
-        webhooks,
-    )
-
     app.include_router(auth.router)
     app.include_router(appointments.router)
     app.include_router(checklists.router)
