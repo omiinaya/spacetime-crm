@@ -5,6 +5,7 @@ import json
 import logging
 import smtplib
 import ssl
+from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
@@ -191,7 +192,6 @@ def _notify_invoice_created(customer_email: str, invoice_number: int, total: flo
 
 def _notify_appointment_created(customer_email: str, title: str, start_time: int, link: str) -> None:
     """Send appointment notification."""
-    from datetime import datetime
     dt = datetime.fromtimestamp(start_time / 1000)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     html = jinja_env.get_template("email/appointment_created.html").render(
@@ -233,7 +233,6 @@ def _notify_low_stock(admin_email: str, products: list[dict]) -> None:
 
 def _notify_appointment_reminder(customer_email: str, title: str, start_time: int, link: str) -> None:
     """Send appointment reminder email (24h before)."""
-    from datetime import datetime
     dt = datetime.fromtimestamp(start_time / 1000)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     html = jinja_env.get_template("email/appointment_reminder.html").render(

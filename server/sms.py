@@ -3,8 +3,10 @@ Uses Twilio REST API with configurable settings stored in a JSON file.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -167,53 +169,44 @@ def _notify_ticket_status_change(phone: str, ticket_number: int, title: str, sta
     }
     status_label = status_labels.get(status, status)
     body = f"Ticket #{ticket_number} — {status_label}: \"{title[:40]}\""
-    import asyncio
     asyncio.ensure_future(send_sms(phone, body))
 
 
 def _notify_invoice_created(phone: str, invoice_number: int, total: float) -> None:
     """Send invoice created SMS notification."""
     body = f"Invoice #{invoice_number} for ${total:.2f} is ready. View & pay in your customer portal."
-    import asyncio
     asyncio.ensure_future(send_sms(phone, body))
 
 
 def _notify_payment_received(phone: str, invoice_number: int, amount: float) -> None:
     """Send payment confirmation SMS."""
     body = f"Payment of ${amount:.2f} received for Invoice #{invoice_number}. Thank you!"
-    import asyncio
     asyncio.ensure_future(send_sms(phone, body))
 
 
 def _notify_appointment_created(phone: str, title: str, start_time: int) -> None:
     """Send appointment reminder SMS."""
-    from datetime import datetime
     dt = datetime.fromtimestamp(start_time / 1000)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     body = f"Appointment scheduled: {title} on {date_str}"
-    import asyncio
     asyncio.ensure_future(send_sms(phone, body))
 
 
 def _notify_appointment_reminder(phone: str, title: str, start_time: int) -> None:
     """Send appointment reminder SMS (24h before)."""
-    from datetime import datetime
     dt = datetime.fromtimestamp(start_time / 1000)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     body = f"Reminder: {title} tomorrow at {date_str}. See you then!"
-    import asyncio
     asyncio.ensure_future(send_sms(phone, body))
 
 
 def _notify_estimate_approved(phone: str, estimate_number: int, total: float) -> None:
     """Send estimate approved SMS notification."""
     body = f"Estimate #{estimate_number} for ${total:.2f} approved. An invoice is being created."
-    import asyncio
     asyncio.ensure_future(send_sms(phone, body))
 
 
 def _notify_overdue_reminder(phone: str, invoice_number: int, total: float) -> None:
     """Send overdue invoice reminder SMS."""
     body = f"Reminder: Invoice #{invoice_number} for ${total:.2f} is overdue. Please arrange payment. Reply or call us to discuss."
-    import asyncio
     asyncio.ensure_future(send_sms(phone, body))
