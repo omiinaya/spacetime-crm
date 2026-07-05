@@ -7,7 +7,7 @@ from helpers import (
     _sql, _paginated, _call, _log_audit,
     require_role, logger,
 )
-from models import UserCreate, UserUpdate
+from models import UserCreate, UserUpdate, UserSettingsUpdate
 
 router = APIRouter()
 
@@ -31,4 +31,25 @@ async def create_user(body: UserCreate, user: dict = Depends(require_role("admin
         body.role,
     ])
     await _log_audit(user, "create", "user", body.email, f"role={body.role}")
+    return {"ok": True}
+
+
+@router.get("/api/users/settings")
+async def get_user_settings(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Get the current user's settings (theme, default_ticket_status)."""
+    rows = await _sql(f"SELECT * FROM user_settings WHERE user_id = {{}}", [user["id"]])
+    if not rows:
+        return {"settings": None}
+    return {"settings": rows[0]}
+
+
+@router.put("/api/users/settings")
+async def update_user_settings(body: UserSettingsUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+    """Upsert the current user's settings."""
+    await _call("upsert_user_settings", [
+        user["id"],
+        body.theme,
+        body.default_ticket_status,
+    ])
+    await _log_audit(user, "update", "user_settings", user["id"], f"theme={body.theme}, default_ticket_status={body.default_ticket_status}")
     return {"ok": True}
