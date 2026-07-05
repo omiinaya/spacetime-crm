@@ -165,6 +165,34 @@ else
   echo -e "${YELLOW}⚠ No tests/ directory found${NC}"
 fi
 
+# ── Phase 5b: Rust container integration tests ──────────────────
+echo ""
+echo -e "${INFO} Rust container integration tests..."
+cd "$REPO_DIR"
+
+export STDB_CONTAINER_URL="${SERVER_URL}"
+export STDB_CONTAINER_DB="${STDB_DB}"
+
+# Build the standalone container-test binary
+if ! cargo build --manifest-path server/container-tests/Cargo.toml 2>&1; then
+  echo -e "${FAIL} Rust container test build failed"
+  RUST_EXIT=1
+  if [ "$TEST_EXIT" -eq 0 ]; then TEST_EXIT=$RUST_EXIT; fi
+else
+  if ./server/container-tests/target/debug/container-tests 2>&1; then
+    echo -e "${PASS} All Rust container integration tests passed"
+  else
+    RUST_EXIT=$?
+    echo -e "${FAIL} Rust container integration tests failed (exit=${RUST_EXIT})"
+    if [ "$TEST_EXIT" -eq 0 ]; then
+      TEST_EXIT=$RUST_EXIT
+    fi
+  fi
+fi
+
+# Unset container test env vars
+unset STDB_CONTAINER_URL STDB_CONTAINER_DB
+
 # ── Phase 6: Report ───────────────────────────────────────────────
 echo ""
 if [ "$TEST_EXIT" -eq 0 ]; then

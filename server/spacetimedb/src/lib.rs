@@ -25,6 +25,8 @@ pub mod customer_test;
 pub mod lib_test;
 #[cfg(test)]
 pub mod integration_test;
+#[cfg(test)]
+pub mod container_test;
 
 pub use customer::*;
 pub use customer_geolocation::*;
