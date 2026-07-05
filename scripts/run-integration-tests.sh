@@ -195,6 +195,7 @@ step "4" "Bootstrap test data"
 
 cd "$REPO_DIR"
 if STDB_HOST="$STDB_HOST" STDB_PORT="$STDB_PORT" STDB_DB="$STDB_DB" \
+  CRM_API_URL="$BACKEND_URL" \
   python3 scripts/bootstrap.py 2>&1; then
   log_pass "Bootstrap data seeded$(elapsed)"
 else
