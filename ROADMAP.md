@@ -277,7 +277,15 @@ Refactor to top-level imports if no circular dependency.
 
 ### 7D — `UserSettings` table unused
 
-The `UserSettings` STDB table (theme, default_ticket_status) exists but has NO API endpoints, NO frontend UI, and NO test coverage. Either implement it or remove it.
+The `UserSettings` STDB table (theme, default_ticket_status) exists but previously had NO API endpoints, NO frontend UI, and NO test coverage.
+
+**✅ Done — Full implementation:**
+- **API endpoints**: `GET /api/users/settings` and `PUT /api/users/settings` in `routes/users.py` (registered via `routes/__init__.py`)
+- **Frontend UI**: `UserPreferencesSection` on `SettingsPage.tsx` — theme toggle (light/dark) + default ticket status selector
+- **API client**: `api.userSettings.get()` / `api.userSettings.update()` in `web/src/lib/api.ts`
+- **STDB reducers**: `upsert_user_settings` / `delete_user_settings` in `user.rs`
+- **Models**: `UserSettingsUpdate` Pydantic model in `models.py`
+- **Tests**: `TestUserSettings` in `tests/test_settings.py` — 4 tests covering get, update, and auth guards
 
 ### 7E — `Pin` field on User table unused
 
@@ -406,7 +414,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | 6 | **Missing empty states** on PaymentsPage, ProductsPage, EstimatesPage | 🟡 MEDIUM | 15 min |
 | 7 | **Missing error states** on PortalDashboard, AuditLogPage | 🟡 MEDIUM | 20 min |
 | 8 | **11 TypeScript `any` files** in catch blocks and API response shapes | 🟡 MEDIUM | 30 min |
-| 9 | **`UserSettings` table has no API or UI** — dead code | 🟡 MEDIUM | Either implement or remove |
+|| 9 | **`UserSettings` table has no API or UI** — dead code | 🟡 MEDIUM | ✅ **Done** — API + UI + tests implemented (`cyber-elf/task_f7002a184d824426_`) |
 | 10 | **`User.pin` field unused** — dead field in STDB | 🟡 MEDIUM | Implement POS PIN or remove |
 
 ### 🟢 LOW
@@ -496,5 +504,5 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 ### Next sprint
 11. **Service type breakdown on reports**
 12. **Duplicate detection UI on CustomersPage**
-13. **Implement `UserSettings` API + UI or remove**
+13. ~~**Implement `UserSettings` API + UI or remove**~~ ✅ Done
 14. **Implement `User.pin` POS login or remove**
