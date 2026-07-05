@@ -271,9 +271,16 @@ Route files do `from mail import ...` and `from sms import ...` inside function 
 
 Refactor to top-level imports if no circular dependency.
 
-### 7C — `Customer.portal_password_hash` exposed in API response
+### 7C — `Customer.portal_password_hash` exposed in API response — ✅ Done
 
 `SELECT * FROM customer` returns `portal_password_hash` in every customer list endpoint. This is a bcrypt hash, so it's not exploitable directly, but it's unnecessary exposure. Fix: add an exclude list to the customer response serializer, or use explicit column selection instead of `SELECT *`.
+
+**Implemented**:
+- `CUSTOMER_SENSITIVE_FIELDS = {"portal_password_hash"}` in `helpers.py` — central exclude list
+- `_safe_customer(c)` strips those keys from customer dicts before returning
+- Applied to all customer-list-returning endpoints: `list_customers`, geolocations, duplicates, portal `get_current_customer`
+- `_paginated()` now accepts optional `sensitive_fields` param as belt-and-suspenders safety net
+- Internal-use sites (dashboard, invoices, tickets, estimates, appointments, payments, report_schedules) only use customer data for aggregates/email/SMS/PDF — never return raw customer dict in API responses
 
 ### 7D — `UserSettings` table unused
 
