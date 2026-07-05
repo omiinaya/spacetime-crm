@@ -54,6 +54,12 @@ spacetime-crm/
 │   ├── vite.config.ts
 │   ├── index.html
 │   └── tsconfig.json
+├── deploy/
+│   ├── nginx/
+│   │   ├── spacetime-crm.conf   # Nginx reverse proxy + TLS config
+│   │   └── deploy.sh            # One-command nginx deploy script
+│   ├── docker-compose.prod.yml  # Production overrides (resource limits, nginx)
+│   └── .env.prod.example        # Production env template (CORS, JWT, SMTP, etc.)
 ├── README.md
 ├── ROADMAP.md
 ├── IMPROVEMENTS.md
@@ -96,9 +102,9 @@ Open http://localhost:5185
 
 ---
 
-## 🐳 Docker Compose (Production)
+## 🐳 Docker Compose Production
 
-One-command deploy with SpacetimeDB + backend bundled together:
+### Quick start (dev-mode Docker, no TLS)
 
 ```bash
 cp .env.example .env
@@ -115,11 +121,32 @@ docker compose up -d
 
 Open http://localhost:8723
 
-**To publish the STDB module manually after deploy:**
+### Production with nginx reverse proxy + TLS
 
 ```bash
-./scripts/publish-stdb.sh
+# 1. Copy and fill in production env (sets CORS, APP_URL, etc.)
+cp deploy/.env.prod.example .env
+# Edit .env — set JWT_SECRET to a long random string
+
+# 2. Build STDB module (required for auto-publish)
+cd server/spacetimedb
+cargo build --release --target wasm32-unknown-unknown
+cd ../..
+
+# 3. Deploy nginx config with self-signed TLS cert
+sudo bash deploy/nginx/deploy.sh
+
+# 4. Start the stack with production overrides
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 ```
+
+Open https://192.168.1.10 (or your configured domain)
+
+> ⚠️ Self-signed TLS produces a browser warning — expected for local/testing.
+> For production with a real domain:
+> ```bash
+> sudo certbot --nginx -d your-domain.com
+> ```
 
 ### What happens:
 

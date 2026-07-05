@@ -1,0 +1,92 @@
+# ── SpacetimeCRM Production Docker Compose ───────────────────
+# Production overrides for docker-compose.yml
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
+#
+# This adds:
+#   - Resource limits for all services
+#   - Restart policies with backoff
+#   - Log rotation
+#   - nginx service with TLS reverse proxy
+#   - Named volumes for STDB data persistence
+#
+# Requires:
+#   - .env file with JWT_SECRET set (see .env.example)
+#   - TLS certificates at /etc/ssl/certs/spacetime-crm.crt and /etc/ssl/private/spacetime-crm.key
+#     (Or run: sudo bash deploy/nginx/deploy.sh)
+
+services:
+  spacetime:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - WORKERS=${WORKERS:-4}
+      # CORS must match the nginx proxy URL
+      - CORS_ORIGIN=https://${CRM_DOMAIN:-spacetime-crm.local}
+      - APP_URL=https://${CRM_DOMAIN:-spacetime-crm.local}
+
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/spacetime-crm.conf:/etc/nginx/conf.d/spacetime-crm.conf:ro
+      - /etc/ssl/certs/spacetime-crm.crt:/etc/ssl/certs/spacetime-crm.crt:ro
+      - /etc/ssl/private/spacetime-crm.key:/etc/ssl/private/spacetime-crm.key:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  nginx_logs:

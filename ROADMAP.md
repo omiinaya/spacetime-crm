@@ -130,6 +130,9 @@ All core infrastructure complete. No gaps.
 - [x] CI/CD pipeline (GitHub Actions: STDB build, seed, test, lint)
 - [x] E2E tests (Playwright: 33 tests across 5 suites)
 - [x] Port 8723 → vite build → nginx/gateway update flow
+- [x] Reverse-proxy + TLS config (nginx, self-signed cert, deploy script)
+- [x] Production docker-compose overrides (deploy/docker-compose.prod.yml: resource limits, nginx service)
+- [x] Production env template (deploy/.env.prod.example: CORS, APP_URL, SMTP, Stripe for production)
 
 ---
 
@@ -333,14 +336,14 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 ### 9A — Missing for production deployment
 
-| # | Item | Effort | Criticality |
-|---|------|--------|:----------:|
-| 1 | **Reverse proxy** (nginx.conf or Caddyfile) for TLS termination + static file serving | 1h | 🔴 HIGH |
-| 2 | **TLS/SSL** — Let's Encrypt certbot or Caddy auto-TLS | 30m | 🔴 HIGH |
-| 3 | **Production env template** — `.env.prod.example` with LOG_LEVEL, WORKERS, SENTRY_DSN | 20m | 🟡 MEDIUM |
-| 4 | **docker-compose.prod.yml** — Prod overrides with TLS, volumes, resource limits | 30m | 🟡 MEDIUM |
-| 5 | **Structured logging** — JSON logs for log aggregation (Datadog, Loki) | 30m | 🟡 MEDIUM |
-| 6 | **Healthcheck on Dockerfile** — Dockerfile-level HEALTHCHECK directive | 10m | 🟢 QUICK |
+| # | Item | Effort | Criticality | Status |
+|---|------|--------|:----------:|:------:|
+| 1 | **Reverse proxy** (nginx.conf or Caddyfile) for TLS termination + static file serving | 1h | 🔴 HIGH | ✅ Done |
+| 2 | **TLS/SSL** — Let's Encrypt certbot or Caddy auto-TLS | 30m | 🔴 HIGH | ✅ Done (self-signed + LE docs) |
+| 3 | **Production env template** — `.env.prod.example` with LOG_LEVEL, WORKERS, SENTRY_DSN | 20m | 🟡 MEDIUM | ✅ Done |
+| 4 | **docker-compose.prod.yml** — Prod overrides with TLS, volumes, resource limits | 30m | 🟡 MEDIUM | ✅ Done |
+| 5 | **Structured logging** — JSON logs for log aggregation (Datadog, Loki) | 30m | 🟡 MEDIUM | ❌ Pending |
+| 6 | **Healthcheck on Dockerfile** — Dockerfile-level HEALTHCHECK directive | 10m | 🟢 QUICK | ❌ Pending |
 
 ### 9B — CI/CD gaps
 
@@ -394,7 +397,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | 2 | **No ErrorBoundary wrapping** on any page — unhandled render error = blank screen | 🔴 HIGH | Add per-page ErrorBoundary |
 | 3 | **`Customer.portal_password_hash` exposed** — returned by SELECT * in every customer API response | 🔴 HIGH | Exclude from response |
 | 4 | **Test isolation** — tests share STDB state, no cleanup per session | 🔴 HIGH | Fresh DB per test session |
-| 5 | **No TLS/reverse-proxy config** — production deployment will serve HTTP directly | 🔴 HIGH | Add nginx/Caddy |
+| 5 | **No TLS/reverse-proxy config** — ⚠️ WAS: production deployment would serve HTTP directly | 🔴 HIGH | ✅ **Fixed** — nginx config with TLS + deploy script at `deploy/nginx/` |
 
 ### 🟡 MEDIUM
 
@@ -469,7 +472,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | **6: UX Gaps** | 4 error states, 3 empty states, 1 loading state, 2 bugs, TS `any` cleanup | **~2h** | 🟡 MEDIUM |
 | **7: Code Quality** | 9 hardcoded URLs, inline imports, password hash leak, dead code, test isolation | **~3h** | 🔴 HIGH |
 | **8: Feature Additions** | ~15 small features + ~9 larger features | **~15h** | 🟢 LOW |
-| **9: Infrastructure** | Reverse proxy, TLS, prod compose, CI/CD, dev tooling | **~4h** | 🔴 HIGH (deploy) |
+|| **9: Infrastructure** | ✅ Reverse proxy + TLS + prod compose + env template done (~2h saved). Remaining: structured logging, Dockerfile healthcheck, CI/CD, dev tooling | **~2h** | 🟡 MEDIUM |
 | **Test coverage** | Negative tests, concurrent tests, Rust runtime tests, load tests | **~6h** | 🟡 MEDIUM |
 | **Overall remaining** | **~33 hours** | | |
 
@@ -491,7 +494,6 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 9. **Add structured logging**
 
 ### Next sprint
-10. **Reverse-proxy + TLS config** for production deploy
 11. **Service type breakdown on reports**
 12. **Duplicate detection UI on CustomersPage**
 13. **Implement `UserSettings` API + UI or remove**
