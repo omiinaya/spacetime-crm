@@ -1,0 +1,22 @@
+version: "3.8"
+
+# Test-only SpacetimeDB stack.
+# Starts a fresh STDB instance on port 3002 (non-conflicting with dev :3001)
+# with no persistent volume — clean state every run.
+#
+# Usage: docker compose -f docker-compose.test.yml up -d --wait
+#        ./scripts/run-integration-tests.sh
+
+services:
+  spacetime-test:
+    image: spacetimedb/spacetimedb:latest
+    ports:
+      - "3002:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3001/"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 10s
+    # No volumes — ephemeral for clean test state each run
+    tmpfs: /var/lib/spacetimedb

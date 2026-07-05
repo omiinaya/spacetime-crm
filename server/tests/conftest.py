@@ -16,6 +16,10 @@ SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
 ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "PLACEHOLDER_ADMIN_PW")
 
+# Test STDB container settings
+STDB_TEST_PORT = int(os.environ.get("STDB_TEST_PORT", "3002"))
+STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
+
 
 # ── Fixtures ──────────────────────────────────────────────────────
 
