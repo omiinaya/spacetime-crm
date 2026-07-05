@@ -246,9 +246,9 @@ These are gaps between STDB table fields, Python API models, and frontend TypeSc
 
 ## 🟡 PHASE 7: Code Quality & Refactoring (MEDIUM PRIORITY)
 
-### 7A — Hardcoded portal URL (9 instances, HIGH impact)
+### 7A — Hardcoded portal URL (9 instances, HIGH impact) ✅ DONE
 
-All 9 instances in route files hardcode `http://localhost:8723/portal/` instead of using `settings.app_url`:
+All 9 instances in route files have been replaced with `f"{settings.app_url}/portal/"`.
 
 | File | Lines | Fix |
 |------|-------|-----|
@@ -257,7 +257,7 @@ All 9 instances in route files hardcode `http://localhost:8723/portal/` instead 
 | `routes/payments.py` | 61 | `f"{settings.app_url}/portal/"` |
 | `routes/tickets.py` | 103 | `f"{settings.app_url}/portal/"` |
 
-**This WILL break portal links on any non-localhost deployment.** Fix ASAP.
+**Fixed in `5d1ec57`.**
 
 ### 7B — Inline lazy imports (3 files, LOW impact)
 
@@ -393,9 +393,9 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
-| 1 | **9 hardcoded `localhost` URLs** in route files — will break portal link emails in production | 🔴 HIGH | Use `settings.app_url` |
+| 1 | **9 hardcoded `localhost` URLs** in route files — will break portal link emails in production | 🔴 HIGH | ✅ **Fixed** — `f"{settings.app_url}/portal/"` in all 8 portal link routes (`5d1ec57`) |
 | 2 | **No ErrorBoundary wrapping** on any page — unhandled render error = blank screen | 🔴 HIGH | Add per-page ErrorBoundary |
-| 3 | **`Customer.portal_password_hash` exposed** — returned by SELECT * in every customer API response | 🔴 HIGH | Exclude from response |
+| 3 | **`Customer.portal_password_hash` exposed** — returned by SELECT * in every customer API response | 🔴 HIGH | ✅ **Fixed** — `_safe_customer()` helper strips it from all list endpoints (`5d1ec57`) |
 | 4 | **Test isolation** — tests share STDB state, no cleanup per session | 🔴 HIGH | Fresh DB per test session |
 | 5 | **No TLS/reverse-proxy config** — ⚠️ WAS: production deployment would serve HTTP directly | 🔴 HIGH | ✅ **Fixed** — nginx config with TLS + deploy script at `deploy/nginx/` |
 
@@ -481,8 +481,8 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 ## 🎯 Priority Recommendation (next session)
 
 ### Immediate (fix 1st)
-1. **Fix 9 hardcoded `localhost:8723/portal/` URLs** — will break all portal links in production
-2. **Hide `portal_password_hash`** from customer API responses
+1. ~~**Fix 9 hardcoded `localhost:8723/portal/` URLs** — will break all portal links in production~~ ✅ Done (`5d1ec57`)
+2. ~~**Hide `portal_password_hash`** from customer API responses~~ ✅ Done (`5d1ec57`)
 3. **Add TS interfaces** for Tenant, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition
 4. **Add missing empty/error states** on PaymentsPage, ProductsPage, PortalDashboard
 
