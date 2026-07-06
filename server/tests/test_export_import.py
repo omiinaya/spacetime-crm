@@ -37,7 +37,8 @@ class TestImport:
         assert resp.status_code == 400
 
     def test_import_products(self, auth_headers: dict):
-        csv_content = "name,sku,price,cost\nImported Widget,IMP-001,29.99,15.00\nImported Gadget,IMP-002,49.99,25.00\n"
+        suf = unique_suffix()
+        csv_content = f"name,sku,price,cost\nImported Widget,IMP-{suf}-01,29.99,15.00\nImported Gadget,IMP-{suf}-02,49.99,25.00\n"
         files = {"file": ("products.csv", csv_content, "text/csv")}
         resp = httpx.post(f"{SERVER_URL}/api/import/products", files=files, headers=auth_headers, timeout=15)
         data = assert_ok(resp)

@@ -1,7 +1,7 @@
 """Error handling and input validation tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix
 
 
 class TestValidation:
@@ -57,7 +57,7 @@ class TestValidation:
         """Creating product with negative quantity is handled."""
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
-            json={"name": "Bad", "sku": "BAD-001", "price": -5.00, "quantity_on_hand": -10},
+            json={"name": "Bad", "sku": f"BAD-{unique_suffix()}", "price": -5.00, "quantity_on_hand": -10},
             headers=auth_headers, timeout=10,
         )
         # Should not crash — acceptable behavior is to create with negative or return 400
