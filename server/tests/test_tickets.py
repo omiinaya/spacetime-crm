@@ -1,7 +1,7 @@
 """Ticket, invoice, and payment flow integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _reset_sla_targets(auth_headers: dict) -> None:
@@ -138,11 +138,12 @@ class TestProductFlow:
 
     def test_create_product(self, auth_headers: dict):
         """Create a product."""
+        sku = f"SCR-{unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
             json={
                 "name": "Screen Protector",
-                "sku": "SCR-001",
+                "sku": sku,
                 "price": 19.99,
                 "cost": 3.50,
                 "quantity_on_hand": 100,

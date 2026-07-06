@@ -1,15 +1,16 @@
 """Appointment CRUD, recurrence, and status workflow integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 class TestAppointmentCRUD:
     """Appointment create, list, status update, delete lifecycle."""
 
     def _make_customer(self, auth_headers: dict, suffix: str = "") -> str:
-        email = f"appt-cust-{suffix or 'main'}@example.com"
-        c = create_customer(auth_headers, first_name="Appt", last_name=f"Test{suffix}", email=email)
+        suf = suffix or unique_suffix()
+        email = f"appt-cust-{suf}@example.com"
+        c = create_customer(auth_headers, first_name="Appt", last_name=f"Test{suf}", email=email)
         cid = c.get("id")
         assert cid
         return cid
@@ -75,7 +76,7 @@ class TestRecurringAppointments:
     """Recurring appointment series and occurrence generation."""
 
     def _make_customer(self, auth_headers: dict) -> str:
-        c = create_customer(auth_headers, first_name="Recur", last_name="Appt", email="recur-appt@example.com")
+        c = create_customer(auth_headers, first_name="Recur", last_name="Appt", email=f"recur-appt-{unique_suffix()}@example.com")
         return c["id"]
 
     def test_create_recurring_appointment(self, auth_headers: dict):
