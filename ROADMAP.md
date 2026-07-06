@@ -259,17 +259,23 @@ All 9 instances in route files have been replaced with `f"{settings.app_url}/por
 
 **Fixed in `5d1ec57`.**
 
-### 7B — Inline lazy imports (3 files, LOW impact) ✅ DONE
+### 7B — Inline lazy imports (9 files, LOW impact) ✅ DONE
 
 Route files did `from mail import ...` and `from sms import ...` inside function bodies. All have been refactored to top-level imports — no circular dependencies found.
 
 | File | Lines | Status |
 |------|-------|--------|
-| `routes/payments.py` | 55-58 | ✅ Refactored in `a7c6fcb` |
-| `routes/tickets.py` | 98-99 | ✅ Refactored in `a7c6fcb` |
-| `routes/appointments.py` | 68-70 | ✅ Refactored in `a7c6fcb` |
+| `routes/settings.py` | 6 functions | ✅ Refactored |
+| `routes/payments.py` | 55-56 | ✅ Refactored |
+| `routes/products.py` | 140 | ✅ Refactored |
+| `routes/invoices.py` | 50-51, 187-188, 351, 388 | ✅ Refactored |
+| `routes/appointments.py` | 67-70, 160-161 | ✅ Refactored |
+| `routes/tickets.py` | 96-97 | ✅ Refactored |
+| `routes/estimates.py` | 109 | ✅ Refactored |
+| `routes/report_schedules.py` | 127 | ✅ Refactored |
+| `routes/auth.py` | 429 | ✅ Refactored |
 
-**Fixed in `a7c6fcb`.**
+**Fixed in `81a4671`.**
 
 ### 7C — `Customer.portal_password_hash` exposed in API response — ✅ Done
 
