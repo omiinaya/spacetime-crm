@@ -1,7 +1,7 @@
 """User management tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix
 
 
 class TestUserCRUD:
@@ -12,10 +12,10 @@ class TestUserCRUD:
         assert "total" in data
 
     def test_create(self, auth_headers: dict):
-        ts = int(__import__('time').time())
+        suf = unique_suffix()
         resp = httpx.post(f"{SERVER_URL}/api/users", json={
-            "name": f"Tech User {ts}",
-            "email": f"tech-{ts}@test.com",
+            "name": f"Tech User {suf}",
+            "email": f"tech-{suf}@test.com",
             "role": "tech",
         }, headers=auth_headers, timeout=10)
         assert_ok(resp)
@@ -24,7 +24,7 @@ class TestUserCRUD:
         r2 = httpx.get(f"{SERVER_URL}/api/users", headers=auth_headers, timeout=10)
         data = r2.json()
         emails = [u.get("email", "") for u in data.get("users", [])]
-        assert any(f"tech-{ts}" in e for e in emails)
+        assert any(f"tech-{suf}" in e for e in emails)
 
     def test_create_invalid_role(self, auth_headers: dict):
         resp = httpx.post(f"{SERVER_URL}/api/users", json={

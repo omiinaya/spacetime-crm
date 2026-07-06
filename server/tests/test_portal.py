@@ -3,10 +3,10 @@ import bcrypt
 import httpx
 import pytest
 import time
-from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW
+from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW, unique_suffix
 
 PORTAL_PW = "TestPortal123!"
-PORTAL_EMAIL = f"portal-{int(time.time())}@test.com"
+PORTAL_EMAIL = f"portal-{unique_suffix()}@test.com"
 
 # Track whether we've created the portal customer already (module-level flag)
 _created = False

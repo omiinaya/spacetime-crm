@@ -1,12 +1,13 @@
 """Webhook routes: Stripe webhook, subscription CRUD, and test delivery."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix
 
 
 def _create_webhook(auth_headers: dict, suffix: str = "") -> str:
     """Create a webhook subscription and return its ID."""
-    url = f"https://example-{suffix or 'a'}.com/webhook"
+    suf = suffix or unique_suffix()
+    url = f"https://example-{suf}.com/webhook"
     resp = httpx.post(
         f"{SERVER_URL}/api/webhook-subscriptions",
         json={"url": url, "events": "customer.created,ticket.created", "secret": "test-secret"},
@@ -24,9 +25,10 @@ class TestWebhookCRUD:
     """Webhook subscription create, list, update, delete."""
 
     def test_create(self, auth_headers: dict):
+        url = f"https://hooks-{unique_suffix()}.example.com/crm"
         resp = httpx.post(
             f"{SERVER_URL}/api/webhook-subscriptions",
-            json={"url": "https://hooks.example.com/crm", "events": "customer.created,invoice.paid", "secret": "whsec_abc123"},
+            json={"url": url, "events": "customer.created,invoice.paid", "secret": "whsec_abc123"},
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
