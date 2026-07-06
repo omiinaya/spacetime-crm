@@ -1,13 +1,15 @@
 """Report schedule CRUD + run-now + check-due tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
 
 
-def _create_schedule(auth_headers: dict, suffix: str = "") -> str:
+def _create_schedule(auth_headers: dict, suffix: str = "", session_suffix: str = "") -> str:
     """Create a report schedule and return its ID."""
     suf = suffix or unique_suffix()
     name = f"Schedule-{suf}"
+    if session_suffix:
+        name = f"{session_suffix}-{name}"
     resp = httpx.post(f"{SERVER_URL}/api/report-schedules", json={
         "name": name,
         "report_type": "revenue",
@@ -22,7 +24,9 @@ def _create_schedule(auth_headers: dict, suffix: str = "") -> str:
     r = httpx.get(f"{SERVER_URL}/api/report-schedules", params={"search": name}, headers=auth_headers, timeout=10)
     schedules = r.json().get("schedules", [])
     assert len(schedules) >= 1
-    return schedules[0]["id"]
+    schedule_id = schedules[0]["id"]
+    _track_entity('report_schedule', schedule_id)
+    return schedule_id
 
 
 class TestReportScheduleCRUD:

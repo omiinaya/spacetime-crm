@@ -8,20 +8,21 @@ import pytest
 import httpx
 from .conftest import (
     SERVER_URL, STDB_SQL_URL, assert_ok, create_customer, unique_suffix,
-    _stdb_sql, save_sla_targets, restore_sla_targets, reset_sla_targets,
-    DEFAULT_SLA_TARGETS,
+    _stdb_sql, _track_entity, save_sla_targets, restore_sla_targets,
+    reset_sla_targets, DEFAULT_SLA_TARGETS,
 )
 
 
-def _create_ticket(auth_headers: dict, suffix: str = "", **overrides) -> str:
+def _create_ticket(auth_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> str:
     """Create a customer + ticket and return the ticket ID.
 
     Uses a unique serial number and direct STDB SQL to find the ticket,
-    ensuring full isolation from other test data.
+    ensuring full isolation from other test data. Tracks created entities
+    for session cleanup.
     """
     suf = suffix or unique_suffix()
-    email = f"tkt-cust-{suf}@example.com"
-    cust = create_customer(auth_headers, first_name="Ticket", last_name=f"Test{suf}", email=email)
+    email = f"tkt-cust-{session_suffix}-{suf}@example.com"
+    cust = create_customer(auth_headers, session_suffix=session_suffix, first_name="Ticket", last_name=f"Test{suf}", email=email)
     cid = cust.get("id")
     assert cid, f"Failed to create customer: {cust}"
 
@@ -44,15 +45,17 @@ def _create_ticket(auth_headers: dict, suffix: str = "", **overrides) -> str:
     # Look up ticket by unique device_serial via STDB SQL
     rows = _stdb_sql(f"SELECT * FROM ticket WHERE device_serial = '{device_serial}'")
     assert len(rows) == 1, f"Expected 1 ticket with serial {device_serial}, got {len(rows)}"
-    return rows[0]["id"]
+    tid = rows[0]["id"]
+    _track_entity("ticket", tid)
+    return tid
 
 
 class TestTicketFlow:
     """Full ticket lifecycle."""
 
-    def test_create_ticket(self, auth_headers: dict):
+    def test_create_ticket(self, auth_headers: dict, session_suffix: str):
         """Create a ticket with linked customer."""
-        tid = _create_ticket(auth_headers, "create")
+        tid = _create_ticket(auth_headers, session_suffix, "create")
         assert tid, "Expected a ticket ID"
         assert tid.startswith("tkt_"), f"Unexpected ticket ID format: {tid}"
 
@@ -65,9 +68,9 @@ class TestTicketFlow:
         data = assert_ok(resp)
         assert "tickets" in data
 
-    def test_update_ticket_status(self, auth_headers: dict):
+    def test_update_ticket_status(self, auth_headers: dict, session_suffix: str):
         """Update ticket status using own ticket data."""
-        tid = _create_ticket(auth_headers, "updstatus", title="Status Update Test")
+        tid = _create_ticket(auth_headers, session_suffix, "updstatus", title="Status Update Test")
         resp = httpx.put(
             f"{SERVER_URL}/api/tickets/{tid}/status",
             json={"status": "in_progress"},
@@ -75,9 +78,9 @@ class TestTicketFlow:
         )
         assert_ok(resp)
 
-    def test_add_ticket_note(self, auth_headers: dict):
+    def test_add_ticket_note(self, auth_headers: dict, session_suffix: str):
         """Add a note to a ticket using own ticket data."""
-        tid = _create_ticket(auth_headers, "note", title="Note Test")
+        tid = _create_ticket(auth_headers, session_suffix, "note", title="Note Test")
         resp = httpx.post(
             f"{SERVER_URL}/api/tickets/{tid}/notes",
             json={"author": "Test Tech", "content": "Inspected device", "internal": False},
@@ -98,9 +101,9 @@ class TestTicketFlow:
 class TestInvoiceFlow:
     """Invoice creation and management."""
 
-    def test_create_invoice(self, auth_headers: dict):
+    def test_create_invoice(self, auth_headers: dict, session_suffix: str):
         """Create a basic invoice."""
-        customer = create_customer(auth_headers, first_name="Invoice", last_name="Test")
+        customer = create_customer(auth_headers, session_suffix=session_suffix, first_name="Invoice", last_name="Test")
         cid = customer.get("id")
         assert cid
 
@@ -131,9 +134,9 @@ class TestInvoiceFlow:
 class TestProductFlow:
     """Product/inventory CRUD."""
 
-    def test_create_product(self, auth_headers: dict):
+    def test_create_product(self, auth_headers: dict, session_suffix: str):
         """Create a product."""
-        sku = f"SCR-{unique_suffix()}"
+        sku = f"SCR-{session_suffix}-{unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
             json={
@@ -162,10 +165,10 @@ class TestProductFlow:
 class TestTicketSLA:
     """SLA breach detection."""
 
-    def test_sla_breach_list(self, auth_headers: dict):
+    def test_sla_breach_list(self, auth_headers: dict, session_suffix: str):
         """SLA breaches endpoint returns a list with count."""
         reset_sla_targets(auth_headers)
-        tid = _create_ticket(auth_headers, "sla", priority="urgent")
+        tid = _create_ticket(auth_headers, session_suffix, "sla", priority="urgent")
         resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-breached", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert "breaches" in data

@@ -7,11 +7,11 @@ from .conftest import SERVER_URL, assert_ok, create_customer
 class TestCustomerCRUD:
     """Basic customer create, read, update, delete."""
 
-    def test_create_customer(self, auth_headers: dict):
+    def test_create_customer(self, auth_headers: dict, session_suffix: str):
         """Create a customer returns ok."""
         from .conftest import unique_suffix
         suf = unique_suffix()
-        email = f"jane-{suf}@example.com"
+        email = f"jane-{session_suffix}-{suf}@example.com"
         resp = httpx.post(
             f"{SERVER_URL}/api/customers",
             json={"first_name": "Jane", "last_name": "Doe", "email": email, "phone": "555-1111"},
@@ -27,12 +27,12 @@ class TestCustomerCRUD:
         data = assert_ok(r2)
         assert any(c["email"] == email for c in data.get("customers", []))
 
-    def test_search_customer(self, auth_headers: dict):
+    def test_search_customer(self, auth_headers: dict, session_suffix: str):
         """Search by email works."""
         from .conftest import unique_suffix
         suf = unique_suffix()
-        email = f"searchme-{suf}@example.com"
-        customer = create_customer(auth_headers, email=email)
+        email = f"searchme-{session_suffix}-{suf}@example.com"
+        customer = create_customer(auth_headers, session_suffix=session_suffix, email=email)
         assert customer.get("id"), f"Customer creation failed: {customer}"
 
         resp = httpx.get(
@@ -46,9 +46,9 @@ class TestCustomerCRUD:
             for c in data.get("customers", [])
         )
 
-    def test_update_customer(self, auth_headers: dict):
+    def test_update_customer(self, auth_headers: dict, session_suffix: str):
         """Update customer fields."""
-        customer = create_customer(auth_headers, first_name="Update", last_name="Test")
+        customer = create_customer(auth_headers, session_suffix=session_suffix, first_name="Update", last_name="Test")
         cid = customer.get("id")
         assert cid, f"No customer ID returned: {customer}"
 
@@ -70,9 +70,9 @@ class TestCustomerCRUD:
         assert found is not None
         assert found["first_name"] == "Updated"
 
-    def test_delete_customer(self, auth_headers: dict):
+    def test_delete_customer(self, auth_headers: dict, session_suffix: str):
         """Delete a customer (admin only)."""
-        customer = create_customer(auth_headers, first_name="Delete", last_name="Me")
+        customer = create_customer(auth_headers, session_suffix=session_suffix, first_name="Delete", last_name="Me")
         cid = customer.get("id")
         assert cid
 
@@ -129,8 +129,8 @@ class TestCustomerErrors:
 class TestTenantIsolation:
     """Verify tenant_id is correctly set on created entities."""
 
-    def test_customer_has_tenant_id(self, auth_headers: dict):
+    def test_customer_has_tenant_id(self, auth_headers: dict, session_suffix: str):
         """Created customer has a non-empty tenant_id."""
-        customer = create_customer(auth_headers, first_name="Tenant", last_name="Check")
+        customer = create_customer(auth_headers, session_suffix=session_suffix, first_name="Tenant", last_name="Check")
         assert customer.get("tenant_id"), f"Missing tenant_id: {customer}"
         assert len(customer["tenant_id"]) > 5, f"tenant_id too short: {customer}"

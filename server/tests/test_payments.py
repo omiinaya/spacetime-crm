@@ -1,17 +1,18 @@
 """Payment recording, listing, and deletion integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity
 
 
-def _create_test_invoice(auth_headers: dict, suffix: str = "") -> str:
+def _create_test_invoice(auth_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a customer + invoice and return the invoice ID.
 
     Filters by customer_id for safe parallel/out-of-order execution.
+    Tracks created entities for session cleanup.
     """
     suf = suffix or unique_suffix()
-    email = f"pay-cust-{suf}@example.com"
-    c = create_customer(auth_headers, first_name="Pay", last_name=f"Test{suf}", email=email)
+    email = f"pay-cust-{session_suffix}-{suf}@example.com"
+    c = create_customer(auth_headers, session_suffix=session_suffix, first_name="Pay", last_name=f"Test{suf}", email=email)
     cid = c.get("id")
     assert cid
     httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": f"Pay test {suffix}", "due_date": 0}, headers=auth_headers, timeout=10)
@@ -20,6 +21,7 @@ def _create_test_invoice(auth_headers: dict, suffix: str = "") -> str:
     invs = r.json().get("invoices", [])
     assert len(invs) >= 1, f"No invoice found for customer {cid}"
     inv_id = invs[0]["id"]
+    _track_entity("invoice", inv_id)
 
     # Add a line item so invoice has a total
     httpx.post(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", json={"description": "Service", "quantity": 1, "unit_price": 100}, headers=auth_headers, timeout=10)
@@ -29,9 +31,9 @@ def _create_test_invoice(auth_headers: dict, suffix: str = "") -> str:
 class TestPaymentCRUD:
     """Payment recording, listing, and full lifecycle."""
 
-    def test_record_payment(self, auth_headers: dict):
+    def test_record_payment(self, auth_headers: dict, session_suffix: str):
         """Record a payment against an invoice."""
-        inv_id = _create_test_invoice(auth_headers, "record")
+        inv_id = _create_test_invoice(auth_headers, session_suffix, "record")
 
         resp = httpx.post(
             f"{SERVER_URL}/api/payments",
@@ -52,9 +54,9 @@ class TestPaymentCRUD:
         assert "total" in data
         assert isinstance(data["payments"], list)
 
-    def test_list_payments_filter_by_invoice(self, auth_headers: dict):
+    def test_list_payments_filter_by_invoice(self, auth_headers: dict, session_suffix: str):
         """Filter payments by invoice_id."""
-        inv_id = _create_test_invoice(auth_headers, "filterbyinv")
+        inv_id = _create_test_invoice(auth_headers, session_suffix, "filterbyinv")
 
         # Record 2 payments on this invoice
         for i in range(2):
@@ -70,9 +72,9 @@ class TestPaymentCRUD:
             assert p["invoice_id"] == inv_id
         assert len(data["payments"]) >= 2
 
-    def test_payment_updates_invoice_status(self, auth_headers: dict):
+    def test_payment_updates_invoice_status(self, auth_headers: dict, session_suffix: str):
         """Recording a full payment marks invoice as paid."""
-        inv_id = _create_test_invoice(auth_headers, "statuscheck")
+        inv_id = _create_test_invoice(auth_headers, session_suffix, "statuscheck")
 
         # Record payment for the full invoice amount
         resp = httpx.post(f"{SERVER_URL}/api/payments", json={"invoice_id": inv_id, "customer_id": "any", "amount": 999, "method": "check", "reference": "CHECK001"}, headers=auth_headers, timeout=10)
@@ -86,9 +88,9 @@ class TestPaymentCRUD:
         if target:
             assert target["status"] in ("paid", "partial", "sent"), f"Unexpected status after payment: {target['status']}"
 
-    def test_delete_payment(self, auth_headers: dict):
+    def test_delete_payment(self, auth_headers: dict, session_suffix: str):
         """Delete a payment (admin only)."""
-        inv_id = _create_test_invoice(auth_headers, "deletepay")
+        inv_id = _create_test_invoice(auth_headers, session_suffix, "deletepay")
 
         # Record a payment
         httpx.post(f"{SERVER_URL}/api/payments", json={"invoice_id": inv_id, "customer_id": "any", "amount": 50, "method": "cash"}, headers=auth_headers, timeout=10)
@@ -106,9 +108,9 @@ class TestPaymentCRUD:
         )
         assert_ok(resp)
 
-    def test_multiple_payment_methods(self, auth_headers: dict):
+    def test_multiple_payment_methods(self, auth_headers: dict, session_suffix: str):
         """Payments can use different methods: cash, card, check, bank_transfer."""
-        inv_id = _create_test_invoice(auth_headers, "methods")
+        inv_id = _create_test_invoice(auth_headers, session_suffix, "methods")
         methods = ["cash", "card", "check", "bank_transfer"]
 
         for i, method in enumerate(methods):
