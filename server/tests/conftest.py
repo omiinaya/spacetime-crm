@@ -24,11 +24,6 @@ STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
 STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
 
 
-def unique_suffix() -> str:
-    """Return a short unique string for creating unique test entities."""
-    return uuid.uuid4().hex[:8]
-
-
 def _stdb_sql(query: str) -> list[dict]:
     """Run raw SQL against the STDB test instance and return rows.
 
