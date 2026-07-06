@@ -1,7 +1,12 @@
 """Settings (mail/SMS) routes — get/save/test."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import (
+    SERVER_URL, assert_ok,
+    save_mail_settings, restore_mail_settings,
+    save_sms_settings, restore_sms_settings,
+    save_user_settings, restore_user_settings,
+)
 
 
 class TestMailSettings:
@@ -13,26 +18,32 @@ class TestMailSettings:
         assert "configured" in data
 
     def test_save_mail_settings(self, auth_headers: dict):
-        resp = httpx.post(
-            f"{SERVER_URL}/api/settings/mail",
-            json={
-                "smtp_host": "mail.example.com",
-                "smtp_port": 587,
-                "smtp_user": "user@example.com",
-                "smtp_password": "secret",
-                "smtp_from_email": "noreply@example.com",
-                "smtp_from_name": "CRM",
-                "smtp_tls": True,
-            },
-            headers=auth_headers, timeout=10,
-        )
-        assert_ok(resp)
+        # Save current settings for restoration
+        prev = save_mail_settings(auth_headers)
+        try:
+            resp = httpx.post(
+                f"{SERVER_URL}/api/settings/mail",
+                json={
+                    "smtp_host": "mail.example.com",
+                    "smtp_port": 587,
+                    "smtp_user": "user@example.com",
+                    "smtp_password": "secret",
+                    "smtp_from_email": "noreply@example.com",
+                    "smtp_from_name": "CRM",
+                    "smtp_tls": True,
+                },
+                headers=auth_headers, timeout=10,
+            )
+            assert_ok(resp)
 
-        # Verify saved
-        r2 = httpx.get(f"{SERVER_URL}/api/settings/mail", headers=auth_headers, timeout=10)
-        data = r2.json()
-        if data.get("configured") and data.get("settings"):
-            assert "mail.example.com" in str(data["settings"])
+            # Verify saved
+            r2 = httpx.get(f"{SERVER_URL}/api/settings/mail", headers=auth_headers, timeout=10)
+            data = r2.json()
+            if data.get("configured") and data.get("settings"):
+                assert "mail.example.com" in str(data["settings"])
+        finally:
+            # Always restore original settings
+            restore_mail_settings(auth_headers, prev)
 
     def test_mail_test_no_connection(self, auth_headers: dict):
         """Test endpoint should return gracefully without a real SMTP server."""
@@ -50,20 +61,26 @@ class TestSMSSettings:
         assert "configured" in data
 
     def test_save_sms_settings(self, auth_headers: dict):
-        resp = httpx.post(
-            f"{SERVER_URL}/api/settings/sms",
-            json={
-                "twilio_account_sid": "AC_test123",
-                "twilio_auth_token": "tok_test456",
-                "twilio_from_number": "+15551234567",
-            },
-            headers=auth_headers, timeout=10,
-        )
-        assert_ok(resp)
+        # Save current settings for restoration
+        prev = save_sms_settings(auth_headers)
+        try:
+            resp = httpx.post(
+                f"{SERVER_URL}/api/settings/sms",
+                json={
+                    "twilio_account_sid": "AC_test123",
+                    "twilio_auth_token": "tok_test456",
+                    "twilio_from_number": "+15551234567",
+                },
+                headers=auth_headers, timeout=10,
+            )
+            assert_ok(resp)
 
-        # Verify
-        r2 = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=auth_headers, timeout=10)
-        assert r2.status_code == 200
+            # Verify
+            r2 = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=auth_headers, timeout=10)
+            assert r2.status_code == 200
+        finally:
+            # Always restore original settings
+            restore_sms_settings(auth_headers, prev)
 
     def test_sms_test_no_connection(self, auth_headers: dict):
         """Test endpoint should return without crashing — may fail without creds."""
@@ -95,34 +112,42 @@ class TestUserSettings:
 
     def test_update_user_settings(self, auth_headers: dict):
         """PUT user settings saves theme + default_ticket_status, GET returns them."""
-        payload = {"theme": "dark", "default_ticket_status": "open"}
-        resp = httpx.put(
-            f"{SERVER_URL}/api/users/settings",
-            json=payload,
-            headers=auth_headers, timeout=10,
-        )
-        assert_ok(resp)
+        prev = save_user_settings(auth_headers)
+        try:
+            payload = {"theme": "dark", "default_ticket_status": "open"}
+            resp = httpx.put(
+                f"{SERVER_URL}/api/users/settings",
+                json=payload,
+                headers=auth_headers, timeout=10,
+            )
+            assert_ok(resp)
 
-        # Verify saved
-        r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
-        data = assert_ok(r2)
-        assert data["settings"] is not None
-        assert data["settings"]["theme"] == "dark"
-        assert data["settings"]["default_ticket_status"] == "open"
+            # Verify saved
+            r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
+            data = assert_ok(r2)
+            assert data["settings"] is not None
+            assert data["settings"]["theme"] == "dark"
+            assert data["settings"]["default_ticket_status"] == "open"
+        finally:
+            restore_user_settings(auth_headers, prev)
 
     def test_update_user_settings_light(self, auth_headers: dict):
         """PUT user settings with light theme."""
-        payload = {"theme": "light", "default_ticket_status": "new"}
-        resp = httpx.put(
-            f"{SERVER_URL}/api/users/settings",
-            json=payload,
-            headers=auth_headers, timeout=10,
-        )
-        assert_ok(resp)
+        prev = save_user_settings(auth_headers)
+        try:
+            payload = {"theme": "light", "default_ticket_status": "new"}
+            resp = httpx.put(
+                f"{SERVER_URL}/api/users/settings",
+                json=payload,
+                headers=auth_headers, timeout=10,
+            )
+            assert_ok(resp)
 
-        r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
-        data = assert_ok(r2)
-        assert data["settings"]["theme"] == "light"
+            r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
+            data = assert_ok(r2)
+            assert data["settings"]["theme"] == "light"
+        finally:
+            restore_user_settings(auth_headers, prev)
 
     def test_user_settings_unauthorized(self, client: httpx.Client):
         """GET/PUT user settings without auth returns 401/403."""

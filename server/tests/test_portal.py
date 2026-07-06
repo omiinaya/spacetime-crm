@@ -3,72 +3,58 @@ import bcrypt
 import httpx
 import pytest
 import time
-from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW, unique_suffix
+import uuid
+from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW
 
-PORTAL_PW = "TestPortal123!"
-PORTAL_EMAIL = f"portal-{unique_suffix()}@test.com"
-
-# Track whether we've created the portal customer already (module-level flag)
-_created = False
-_cached_token = None
-_cached_admin_token = None
+_PORTAL_PW = "TestPortal123!"
 
 
 def _admin_token() -> str:
-    """Get an admin JWT (cached per session)."""
-    global _cached_admin_token
-    if _cached_admin_token:
-        return _cached_admin_token
+    """Get a fresh admin JWT."""
     resp = httpx.post(f"{SERVER_URL}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PW}, timeout=10)
     assert resp.status_code == 200, f"Admin login failed: {resp.text[:200]}"
-    _cached_admin_token = resp.json()["token"]
-    return _cached_admin_token
+    return resp.json()["token"]
 
 
-def _create_and_login() -> str:
-    """Create the portal customer, set password, log in, return token."""
-    global _created, _cached_token
-    if _created and _cached_token:
-        return _cached_token
+@pytest.fixture(scope="session")
+def portal_email() -> str:
+    """Generate a unique portal customer email per session."""
+    return f"portal-{uuid.uuid4().hex[:12]}@test.com"
 
+
+@pytest.fixture(scope="session")
+def portal_token(portal_email: str) -> str:
+    """Create portal customer, set password, log in, return token."""
+    email = portal_email
     token = _admin_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create customer
     create_resp = httpx.post(f"{SERVER_URL}/api/customers", json={
-        "first_name": "Portal", "last_name": "User", "email": PORTAL_EMAIL, "phone": "555-0000",
+        "first_name": "Portal", "last_name": "User", "email": email, "phone": "555-0000",
     }, headers=headers, timeout=10)
     assert create_resp.status_code == 200, f"Customer create: {create_resp.text[:200]}"
 
     # Get STDB-assigned ID
-    r2 = httpx.get(f"{SERVER_URL}/api/customers", params={"search": PORTAL_EMAIL}, headers=headers, timeout=10)
+    r2 = httpx.get(f"{SERVER_URL}/api/customers", params={"search": email}, headers=headers, timeout=10)
     items = r2.json().get("customers", [])
     assert items, f"Customer not found: {r2.text[:200]}"
-    cid = items[0]["id"]
 
     # Set password via STDB reducer
-    hashed = bcrypt.hashpw(PORTAL_PW.encode(), bcrypt.gensalt()).decode()
+    hashed = bcrypt.hashpw(_PORTAL_PW.encode(), bcrypt.gensalt()).decode()
     r = httpx.post(
         "http://localhost:3001/v1/database/spacetime-crm/call/set_customer_password",
-        json=[cid, hashed], timeout=10,
+        json=[items[0]["id"], hashed], timeout=10,
     )
     assert r.status_code < 300, f"Set password: {r.status_code} {r.text[:200]}"
 
     # Login
-    resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": PORTAL_EMAIL, "password": PORTAL_PW}, timeout=10)
+    resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": email, "password": _PORTAL_PW}, timeout=10)
     if resp.status_code == 429:
         time.sleep(6)
-        resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": PORTAL_EMAIL, "password": PORTAL_PW}, timeout=10)
-
+        resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": email, "password": _PORTAL_PW}, timeout=10)
     assert resp.status_code == 200, f"Portal login failed ({resp.status_code}): {resp.text[:200]}"
-    _cached_token = resp.json()["token"]
-    _created = True
-    return _cached_token
-
-
-@pytest.fixture(scope="session")
-def portal_token() -> str:
-    return _create_and_login()
+    return resp.json()["token"]
 
 
 @pytest.fixture
@@ -87,10 +73,10 @@ class TestPortalAuth:
         resp = client.post("/api/portal/login", json={}, timeout=10)
         assert resp.status_code == 422
 
-    def test_portal_me(self, portal_headers: dict):
+    def test_portal_me(self, portal_headers: dict, portal_email: str):
         resp = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
-        assert data["email"] == PORTAL_EMAIL
+        assert data["email"] == portal_email
         assert "first_name" in data
         assert "last_name" in data
 
@@ -106,11 +92,10 @@ class TestPortalAuth:
 class TestPortalTickets:
     """Customer ticket viewing and note adding."""
 
-    def test_list_tickets(self, portal_headers: dict, portal_token: str):
+    def test_list_tickets(self, portal_headers: dict, portal_token: str, portal_email: str):
         r = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
         cid = r.json()["id"]
-        token = _admin_token()
-        admin_hdrs = {"Authorization": f"Bearer {token}"}
+        admin_hdrs = {"Authorization": f"Bearer {_admin_token()}"}
 
         httpx.post(f"{SERVER_URL}/api/tickets", json={
             "customer_id": cid, "title": "Portal Test Ticket", "description": "Issue for portal testing",
@@ -151,11 +136,10 @@ class TestPortalTickets:
 class TestPortalInvoices:
     """Customer invoice viewing."""
 
-    def test_list_invoices(self, portal_headers: dict):
+    def test_list_invoices(self, portal_headers: dict, portal_email: str):
         r = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
         cid = r.json()["id"]
-        token = _admin_token()
-        admin_hdrs = {"Authorization": f"Bearer {token}"}
+        admin_hdrs = {"Authorization": f"Bearer {_admin_token()}"}
 
         httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": "Portal invoice test", "due_date": 0}, headers=admin_hdrs, timeout=10)
 
@@ -186,11 +170,10 @@ class TestPortalInvoices:
 class TestPortalPayments:
     """Customer making payments and checking payment methods."""
 
-    def test_make_payment(self, portal_headers: dict):
+    def test_make_payment(self, portal_headers: dict, portal_email: str):
         r = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
         cid = r.json()["id"]
-        token = _admin_token()
-        admin_hdrs = {"Authorization": f"Bearer {token}"}
+        admin_hdrs = {"Authorization": f"Bearer {_admin_token()}"}
 
         httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": "Portal payment test", "due_date": 0}, headers=admin_hdrs, timeout=10)
 
@@ -229,11 +212,11 @@ class TestPortalAppointments:
 class TestPortalSettings:
     """Customer password change."""
 
-    def test_set_password(self, portal_headers: dict):
+    def test_set_password(self, portal_headers: dict, portal_email: str, portal_token: str):
         resp = httpx.post(f"{SERVER_URL}/api/portal/customer/set-password", json={"password": "NewPortalPass456!"}, headers=portal_headers, timeout=10)
         assert_ok(resp)
 
-        resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": PORTAL_EMAIL, "password": "NewPortalPass456!"}, timeout=10)
+        resp = httpx.post(f"{SERVER_URL}/api/portal/login", json={"email": portal_email, "password": "NewPortalPass456!"}, timeout=10)
         assert resp.status_code == 200, f"New password login: {resp.text[:200]}"
 
 

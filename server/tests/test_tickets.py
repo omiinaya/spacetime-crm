@@ -6,39 +6,11 @@ run in parallel or in any order.
 """
 import pytest
 import httpx
-from .conftest import SERVER_URL, STDB_SQL_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
-
-
-DEFAULT_SLA_TARGETS = {"urgent": 4, "high": 24, "medium": 72, "low": 120}
-
-
-def _save_sla_targets(auth_headers: dict) -> dict:
-    """Fetch current SLA targets and return them for later restoration."""
-    resp = httpx.get(
-        f"{SERVER_URL}/api/tickets/sla-settings",
-        headers=auth_headers, timeout=10,
-    )
-    data = resp.json()
-    return data.get("targets", dict(DEFAULT_SLA_TARGETS))
-
-
-def _reset_sla_targets(auth_headers: dict) -> None:
-    """Reset SLA targets back to defaults for test isolation."""
-    httpx.post(
-        f"{SERVER_URL}/api/tickets/sla-settings",
-        json={"targets": dict(DEFAULT_SLA_TARGETS)},
-        headers=auth_headers, timeout=10,
-    )
-
-
-def _restore_sla_targets(auth_headers: dict, targets: dict) -> None:
-    """Restore SLA targets to previously saved values."""
-    if targets:
-        httpx.post(
-            f"{SERVER_URL}/api/tickets/sla-settings",
-            json={"targets": targets},
-            headers=auth_headers, timeout=10,
-        )
+from .conftest import (
+    SERVER_URL, STDB_SQL_URL, assert_ok, create_customer, unique_suffix,
+    _stdb_sql, save_sla_targets, restore_sla_targets, reset_sla_targets,
+    DEFAULT_SLA_TARGETS,
+)
 
 
 def _create_ticket(auth_headers: dict, suffix: str = "", **overrides) -> str:
@@ -121,9 +93,6 @@ class TestTicketFlow:
         notes_data = assert_ok(notes_resp)
         notes = notes_data.get("notes", [])
         assert len(notes) > 0
-        # FIXME: tenant_id will be non-empty after STDB module re-publish with the fix
-        # Currently the Rust module running on the server still has the old code
-        # assert note.get("tenant_id", "") != ""
 
 
 class TestInvoiceFlow:
@@ -195,7 +164,7 @@ class TestTicketSLA:
 
     def test_sla_breach_list(self, auth_headers: dict):
         """SLA breaches endpoint returns a list with count."""
-        _reset_sla_targets(auth_headers)
+        reset_sla_targets(auth_headers)
         tid = _create_ticket(auth_headers, "sla", priority="urgent")
         resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-breached", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
@@ -206,7 +175,7 @@ class TestTicketSLA:
 
     def test_sla_targets(self, auth_headers: dict):
         """SLA targets endpoint returns priority thresholds."""
-        _reset_sla_targets(auth_headers)
+        reset_sla_targets(auth_headers)
         resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert "targets" in data
@@ -224,7 +193,7 @@ class TestTicketSLA:
 
     def test_sla_settings_get(self, auth_headers: dict):
         """GET sla-settings returns current config."""
-        _reset_sla_targets(auth_headers)
+        reset_sla_targets(auth_headers)
         resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-settings", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert "targets" in data
@@ -233,7 +202,7 @@ class TestTicketSLA:
 
     def test_sla_settings_save(self, auth_headers: dict):
         """POST sla-settings saves and returns new config. Always restores afterwards."""
-        saved = _save_sla_targets(auth_headers)
+        saved = save_sla_targets(auth_headers)
         try:
             custom = {"urgent": 1, "high": 8, "medium": 24, "low": 48}
             resp = httpx.post(
@@ -250,33 +219,37 @@ class TestTicketSLA:
             assert data2["targets"]["urgent"] == 1.0
         finally:
             # Always restore original SLA settings for other tests
-            _restore_sla_targets(auth_headers, saved)
+            restore_sla_targets(auth_headers, saved)
 
     def test_sla_settings_validation(self, auth_headers: dict):
         """POST sla-settings validates inputs."""
-        _reset_sla_targets(auth_headers)
-        # Missing key
-        resp = httpx.post(
-            f"{SERVER_URL}/api/tickets/sla-settings",
-            json={"targets": {"urgent": 4, "high": 24, "medium": 72}},
-            headers=auth_headers, timeout=10,
-        )
-        assert resp.status_code == 400
-        # Non-positive value
-        resp = httpx.post(
-            f"{SERVER_URL}/api/tickets/sla-settings",
-            json={"targets": {"urgent": 0, "high": 24, "medium": 72, "low": 120}},
-            headers=auth_headers, timeout=10,
-        )
-        assert resp.status_code == 400
-        # Exceeds max
-        resp = httpx.post(
-            f"{SERVER_URL}/api/tickets/sla-settings",
-            json={"targets": {"urgent": 9000, "high": 24, "medium": 72, "low": 120}},
-            headers=auth_headers, timeout=10,
-        )
-        assert resp.status_code == 400
-        assert "exceeds max" in resp.text
+        saved = save_sla_targets(auth_headers)
+        try:
+            reset_sla_targets(auth_headers)
+            # Missing key
+            resp = httpx.post(
+                f"{SERVER_URL}/api/tickets/sla-settings",
+                json={"targets": {"urgent": 4, "high": 24, "medium": 72}},
+                headers=auth_headers, timeout=10,
+            )
+            assert resp.status_code == 400
+            # Non-positive value
+            resp = httpx.post(
+                f"{SERVER_URL}/api/tickets/sla-settings",
+                json={"targets": {"urgent": 0, "high": 24, "medium": 72, "low": 120}},
+                headers=auth_headers, timeout=10,
+            )
+            assert resp.status_code == 400
+            # Exceeds max
+            resp = httpx.post(
+                f"{SERVER_URL}/api/tickets/sla-settings",
+                json={"targets": {"urgent": 9000, "high": 24, "medium": 72, "low": 120}},
+                headers=auth_headers, timeout=10,
+            )
+            assert resp.status_code == 400
+            assert "exceeds max" in resp.text
+        finally:
+            restore_sla_targets(auth_headers, saved)
 
     def test_sla_settings_auth_guard(self, client: httpx.Client):
         """sla-settings endpoints require auth."""
