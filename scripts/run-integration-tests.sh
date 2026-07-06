@@ -38,6 +38,7 @@ IMAGE="spacetimedb/spacetimedb:latest"
 CLEANUP=true
 BUILD_WASM=true
 BUILD_WEB=false
+SKIP_CONTAINER=false
 BACKEND_PID=""
 START_TIME=$(date +%s)
 
@@ -76,13 +77,14 @@ cleanup_container() {
 }
 
 # Trap ensures backend is always cleaned up on exit
-trap 'cleanup_backend; if [ "$CLEANUP" = true ]; then cleanup_container; fi' EXIT
+trap 'cleanup_backend; if [ "$CLEANUP" = true ] && [ "$SKIP_CONTAINER" = false ]; then cleanup_container; fi' EXIT
 
 # ── Parse args ──────────────────────────────────────────────────────
 for arg in "$@"; do
   case "$arg" in
     --no-cleanup) CLEANUP=false   ;;
     --quick)      BUILD_WASM=false ;;
+    --local-stdb) SKIP_CONTAINER=true ;;
     --with-web)   BUILD_WEB=true   ;;
     --help|-h)
       echo "Usage: $0 [--no-cleanup] [--quick] [--with-web]"
@@ -137,54 +139,65 @@ if [ "$BUILD_WEB" = true ]; then
 fi
 
 # ════════════════════════════════════════════════════════════════════
-# Phase 2 — Start test STDB container
+# Phase 2 — Start STDB test container (or use existing local STDB)
 # ════════════════════════════════════════════════════════════════════
-step "2" "Start STDB test container"
+step "2" "STDB instance"
 
-# Pre-check: Docker must be available
-if ! command -v docker &>/dev/null; then
-  log_fail "docker not found on PATH — required to start STDB container"
-  exit 1
-fi
-if ! docker info &>/dev/null; then
-  log_fail "Docker daemon is not running — start it with: sudo systemctl start docker"
-  exit 1
-fi
-
-# Kill any leftover container from a previous run
-if docker ps -q -f name="$CONTAINER_NAME" 2>/dev/null | grep -q .; then
-  log_warn "Container ${CONTAINER_NAME} already exists — removing first"
-  docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
-  docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
-fi
-
-log_info "Starting ${IMAGE} on port ${STDB_PORT}..."
-docker run -d \
-  --name "$CONTAINER_NAME" \
-  -p "${STDB_PORT}:3001" \
-  --health-cmd "curl -sf http://localhost:3001/" \
-  --health-interval 3s \
-  --health-timeout 2s \
-  --health-retries 20 \
-  --health-start-period 8s \
-  --tmpfs /var/lib/spacetimedb \
-  "$IMAGE" >/dev/null
-
-log_info "Waiting for STDB to become healthy..."
-
-RETRIES=30
-for i in $(seq 1 $RETRIES); do
-  if curl -sf "$STDB_URL/" >/dev/null 2>&1; then
-    log_pass "STDB is ready at ${STDB_URL}$(elapsed)"
-    break
-  fi
-  if [ "$i" -eq "$RETRIES" ]; then
-    log_fail "STDB did not become healthy after ${RETRIES} attempts"
-    docker logs "$CONTAINER_NAME" 2>&1 | tail -20
+if [ "$SKIP_CONTAINER" = true ]; then
+  log_info "Using existing STDB at ${STDB_URL} (--local-stdb)"
+  if ! curl -sf "${STDB_URL}/" >/dev/null 2>&1; then
+    log_fail "Cannot reach STDB at ${STDB_URL}"
     exit 1
   fi
-  sleep 2
-done
+  log_pass "STDB reachable at ${STDB_URL}$(elapsed)"
+else
+  # Pre-check: Docker must be available
+  if ! command -v docker &>/dev/null; then
+    log_fail "docker not found on PATH — required to start STDB container"
+    log_fail "Use --local-stdb to use an existing STDB instance instead"
+    exit 1
+  fi
+  if ! docker info &>/dev/null; then
+    log_fail "Docker daemon is not running — start it with: sudo systemctl start docker"
+    log_fail "Or use --local-stdb to use an existing STDB instance"
+    exit 1
+  fi
+
+  # Kill any leftover container from a previous run
+  if docker ps -q -f name="$CONTAINER_NAME" 2>/dev/null | grep -q .; then
+    log_warn "Container ${CONTAINER_NAME} already exists — removing first"
+    docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
+    docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  fi
+
+  log_info "Starting ${IMAGE} on port ${STDB_PORT}..."
+  docker run -d \
+    --name "$CONTAINER_NAME" \
+    -p "${STDB_PORT}:3001" \
+    --health-cmd "curl -sf http://localhost:3001/" \
+    --health-interval 3s \
+    --health-timeout 2s \
+    --health-retries 20 \
+    --health-start-period 8s \
+    --tmpfs /var/lib/spacetimedb \
+    "$IMAGE" >/dev/null
+
+  log_info "Waiting for STDB to become healthy..."
+
+  RETRIES=30
+  for i in $(seq 1 $RETRIES); do
+    if curl -sf "$STDB_URL/" >/dev/null 2>&1; then
+      log_pass "STDB is ready at ${STDB_URL}$(elapsed)"
+      break
+    fi
+    if [ "$i" -eq "$RETRIES" ]; then
+      log_fail "STDB did not become healthy after ${RETRIES} attempts"
+      docker logs "$CONTAINER_NAME" 2>&1 | tail -20
+      exit 1
+    fi
+    sleep 2
+  done
+fi
 
 # ════════════════════════════════════════════════════════════════════
 # Phase 3 — Publish module to test instance
@@ -200,7 +213,9 @@ if spacetime publish \
   log_pass "Module published to '${STDB_DB}'$(elapsed)"
 else
   log_fail "Module publish failed"
-  docker logs "$CONTAINER_NAME" 2>&1 | tail -10
+  if [ "$SKIP_CONTAINER" = false ]; then
+    docker logs "$CONTAINER_NAME" 2>&1 | tail -10
+  fi
   exit 1
 fi
 
@@ -334,7 +349,9 @@ echo ""
 if [ "$CLEANUP" = true ]; then
   log_info "Cleaning up..."
   cleanup_backend
-  cleanup_container
+  if [ "$SKIP_CONTAINER" = false ]; then
+    cleanup_container
+  fi
   log_pass "Cleanup complete$(elapsed)"
 else
   log_info "Container left running (--no-cleanup). Backend was already stopped."
