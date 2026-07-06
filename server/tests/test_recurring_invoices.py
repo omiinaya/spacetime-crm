@@ -39,9 +39,10 @@ class TestRecurringInvoiceCRUD:
 
     def test_create(self, auth_headers: dict):
         cid = _customer_id(auth_headers, "cr-create")
+        name = f"Weekly Cleaning {unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/recurring-invoices", json={
             "customer_id": cid,
-            "name": "Weekly Cleaning",
+            "name": name,
             "frequency": "weekly",
             "interval_count": 1,
             "due_date_days": 14,
@@ -111,11 +112,12 @@ class TestRecurringInvoiceCRUD:
     def test_generate_with_data(self, auth_headers: dict):
         """Create a rule, then generate — should create invoices."""
         cid = _customer_id(auth_headers, "gen-data")
+        name = f"Generate Test {unique_suffix()}"
         # Set next gen to now
         now = int(__import__("time").time() * 1000)
         httpx.post(f"{SERVER_URL}/api/recurring-invoices", json={
             "customer_id": cid,
-            "name": "Generate Test",
+            "name": name,
             "frequency": "monthly",
             "interval_count": 1,
             "due_date_days": 30,

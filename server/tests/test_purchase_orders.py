@@ -32,7 +32,9 @@ class TestPurchaseOrderCRUD:
     """PO create, get, list, delete lifecycle."""
 
     def test_create_purchase_order(self, auth_headers: dict):
-        resp = httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": "Acme Supplies", "notes": "Monthly restock"}, headers=auth_headers, timeout=10)
+        from .conftest import unique_suffix
+        vendor = f"Acme Supplies {unique_suffix()}"
+        resp = httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": "Monthly restock"}, headers=auth_headers, timeout=10)
         assert_ok(resp)
 
     def test_list_purchase_orders(self, auth_headers: dict):
