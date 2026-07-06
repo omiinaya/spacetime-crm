@@ -10,7 +10,6 @@ from helpers import (
     _sql, _sql_t, _call, _log_audit,
     require_role, _safe_id, logger,
 )
-from mail import send_email
 from models import ScheduledReportCreate, ScheduledReportUpdate
 
 router = APIRouter()
@@ -125,6 +124,7 @@ async def check_due_schedules(user: dict = Depends(require_role("admin"))):
 
 async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
     """Generate report data, render as HTML, and email to all recipients."""
+    from mail import send_email
     report_type = schedule.get("report_type", "revenue")
     recipients = json.loads(schedule.get("recipients_json", "[]") or "[]")
     filters = json.loads(schedule.get("filters_json", "{}") or "{}")
