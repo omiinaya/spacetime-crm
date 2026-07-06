@@ -1,17 +1,24 @@
-"""Custom fields routes — definitions CRUD, values get/set."""
+"""Custom fields routes — definitions CRUD, values get/set.
+
+Uses unique_suffix for all identifiers to avoid parallel-session collisions.
+"""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix
 
 
 def _create_field(auth_headers: dict, suffix: str = "") -> dict:
-    """Create a custom field definition and return full response."""
-    ts = int(__import__('time').time())
+    """Create a custom field definition and return full response.
+
+    Uses unique_suffix for label to prevent collisions between parallel
+    test sessions.
+    """
+    sfx = f"{suffix}-{unique_suffix()}" if suffix else unique_suffix()
     resp = httpx.post(
         f"{SERVER_URL}/api/custom-field-definitions",
         json={
             "entity_type": "customer",
-            "label": f"Test Field {suffix or 'A'}-{ts}",
+            "label": f"Test Field-{sfx}",
             "field_type": "text",
             "options": [],
             "sort_order": 0,
@@ -89,7 +96,7 @@ class TestCustomFieldValues:
 
     def test_get_values_empty(self, auth_headers: dict):
         """Get values for a non-existent entity — should return empty array."""
-        entity_id = f"entity-empty-{int(__import__('time').time())}"
+        entity_id = f"entity-empty-{unique_suffix()}"
         resp = httpx.get(f"{SERVER_URL}/api/custom-field-values/{entity_id}", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert data.get("values") == []
@@ -100,7 +107,8 @@ class TestCustomFieldValues:
         field_id = data["id"]
 
         # Create a customer entity to attach values to
-        email = f"field-test-{int(__import__('time').time())}@example.com"
+        suf = unique_suffix()
+        email = f"field-test-{suf}@example.com"
         httpx.post(f"{SERVER_URL}/api/customers", json={
             "first_name": "Field", "last_name": "Test", "email": email, "phone": "555-0000",
         }, headers=auth_headers, timeout=10)
@@ -132,7 +140,7 @@ class TestCustomFieldValues:
 
     def test_set_values_invalid_entity(self, auth_headers: dict):
         """Set values on nonexistent entity — should still work (STDB allows it)."""
-        entity_id = f"entity-nonexistent-{int(__import__('time').time())}"
+        entity_id = f"entity-nonexistent-{unique_suffix()}"
         data = _create_field(auth_headers, "inv")
         resp = httpx.put(
             f"{SERVER_URL}/api/custom-field-values/{entity_id}",

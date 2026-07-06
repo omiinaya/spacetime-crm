@@ -1,39 +1,47 @@
 """Purchase Order CRUD, line items, receiving, and status workflow tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity
 
 
 @pytest.fixture
-def test_product_id(auth_headers: dict) -> str:
-    """Create a product for PO line items and return its ID."""
-    sku = f"PO-WDG-{unique_suffix()}"
+def test_product_id(auth_headers: dict, session_suffix: str) -> str:
+    """Create a product for PO line items and return its ID.
+
+    Uses a session-unique SKU and tracks the product for cleanup.
+    """
+    suf = unique_suffix()
+    sku = f"PO-WDG-{session_suffix}-{suf}"
     httpx.post(f"{SERVER_URL}/api/products", json={"name": "PO Test Widget", "sku": sku, "price": 15, "cost": 8, "quantity_on_hand": 100}, headers=auth_headers, timeout=10)
     r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
     prods = r.json().get("products", [])
     assert len(prods) > 0, "Product not created"
-    return prods[0]["id"]
+    pid = prods[0]["id"]
+    _track_entity("product", pid)
+    return pid
 
 
-def _create_po(auth_headers: dict, suffix: str = "") -> str:
+def _create_po(auth_headers: dict, session_suffix: str, tag: str = "") -> str:
     """Create a PO and return its ID.
 
-    Uses unique vendor_name and STDB SQL lookup for isolation.
+    Uses session_suffix + random suffix for isolation across sessions
+    and parallel workers.  Tracks the PO for session cleanup.
     """
-    suf = suffix or unique_suffix()
+    suf = f"{session_suffix}-{tag}-{unique_suffix()}" if tag else f"{session_suffix}-{unique_suffix()}"
     vendor = f"Vendor-{suf}"
     httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": f"PO test {suf}"}, headers=auth_headers, timeout=10)
     rows = _stdb_sql(f"SELECT id FROM purchase_order WHERE vendor_name = '{vendor}'")
     assert len(rows) > 0, f"PO not found for vendor {vendor}"
-    return rows[0]["id"]
+    po_id = rows[0]["id"]
+    _track_entity("purchase_order", po_id)
+    return po_id
 
 
 class TestPurchaseOrderCRUD:
     """PO create, get, list, delete lifecycle."""
 
-    def test_create_purchase_order(self, auth_headers: dict):
-        from .conftest import unique_suffix
-        vendor = f"Acme Supplies {unique_suffix()}"
+    def test_create_purchase_order(self, auth_headers: dict, session_suffix: str):
+        vendor = f"Acme Supplies {session_suffix}-{unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": "Monthly restock"}, headers=auth_headers, timeout=10)
         assert_ok(resp)
 
@@ -43,8 +51,8 @@ class TestPurchaseOrderCRUD:
         assert "purchase_orders" in data
         assert "total" in data
 
-    def test_get_purchase_order(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "get")
+    def test_get_purchase_order(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "get")
         resp = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert "purchase_order" in data
@@ -57,8 +65,8 @@ class TestPurchaseOrderCRUD:
         resp = httpx.get(f"{SERVER_URL}/api/purchase-orders/nonexistent-999", headers=auth_headers, timeout=10)
         assert resp.status_code == 404
 
-    def test_delete_purchase_order(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "delete")
+    def test_delete_purchase_order(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "delete")
         resp = httpx.delete(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
         assert_ok(resp)
 
@@ -66,8 +74,8 @@ class TestPurchaseOrderCRUD:
 class TestPOLineItems:
     """PO line item lifecycle: add, list, delete."""
 
-    def test_add_line_item(self, auth_headers: dict, test_product_id: str):
-        po_id = _create_po(auth_headers, "addli")
+    def test_add_line_item(self, auth_headers: dict, test_product_id: str, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "addli")
         resp = httpx.post(
             f"{SERVER_URL}/api/purchase-orders/{po_id}/line-items",
             json={"product_id": test_product_id, "description": "Widget box", "quantity": 10, "unit_price": 12.50},
@@ -75,8 +83,8 @@ class TestPOLineItems:
         )
         assert_ok(resp)
 
-    def test_list_line_items_in_get(self, auth_headers: dict, test_product_id: str):
-        po_id = _create_po(auth_headers, "listli")
+    def test_list_line_items_in_get(self, auth_headers: dict, test_product_id: str, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "listli")
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/line-items", json={"product_id": test_product_id, "description": "Gadget", "quantity": 5, "unit_price": 25}, headers=auth_headers, timeout=10)
 
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
@@ -85,8 +93,8 @@ class TestPOLineItems:
         assert len(items) >= 1
         assert items[0]["description"] == "Gadget"
 
-    def test_delete_line_item(self, auth_headers: dict, test_product_id: str):
-        po_id = _create_po(auth_headers, "delli")
+    def test_delete_line_item(self, auth_headers: dict, test_product_id: str, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "delli")
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/line-items", json={"product_id": test_product_id, "description": "Temp item", "quantity": 3, "unit_price": 10}, headers=auth_headers, timeout=10)
 
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
@@ -102,8 +110,8 @@ class TestPOLineItems:
         remaining = [i["id"] for i in r2.json()["purchase_order"]["line_items"]]
         assert item_id not in remaining
 
-    def test_update_po_status(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "postatus")
+    def test_update_po_status(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "postatus")
         for status in ["sent", "received", "cancelled"]:
             resp = httpx.put(f"{SERVER_URL}/api/purchase-orders/{po_id}/status", json={"status": status}, headers=auth_headers, timeout=10)
             assert_ok(resp)
@@ -112,9 +120,9 @@ class TestPOLineItems:
 class TestPOReceiving:
     """Purchase order receiving flow — partial and full receive."""
 
-    def test_receive_item_updates_stock(self, auth_headers: dict, test_product_id: str):
+    def test_receive_item_updates_stock(self, auth_headers: dict, test_product_id: str, session_suffix: str):
         """Receiving a PO item adds to product stock."""
-        po_id = _create_po(auth_headers, "receive")
+        po_id = _create_po(auth_headers, session_suffix, "receive")
         product_id = test_product_id
 
         # Add line item
@@ -148,9 +156,9 @@ class TestPOReceiving:
         assert len(adj) >= 1, f"Expected at least 1 adjustment, got {adj}"
         assert any(a.get("reason") == "received" for a in adj), f"Expected 'received' adjustment, got: {adj}"
 
-    def test_full_receive_updates_progress(self, auth_headers: dict, test_product_id: str):
+    def test_full_receive_updates_progress(self, auth_headers: dict, test_product_id: str, session_suffix: str):
         """Receiving all items shows 100% receipt_progress."""
-        po_id = _create_po(auth_headers, "fullrecv")
+        po_id = _create_po(auth_headers, session_suffix, "fullrecv")
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/line-items", json={"product_id": test_product_id, "description": "Full box", "quantity": 5, "unit_price": 20}, headers=auth_headers, timeout=10)
 
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
@@ -182,15 +190,15 @@ class TestPOErrors:
 class TestPOApproval:
     """Purchase order approval workflow: submit, approve, reject."""
 
-    def test_submit_for_approval(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "submit")
+    def test_submit_for_approval(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "submit")
         resp = httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
         assert_ok(resp)
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
         assert r.json()["purchase_order"]["status"] == "pending_approval"
 
-    def test_approve_po(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "approve")
+    def test_approve_po(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "approve")
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
         resp = httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/approve", json={"user_id": "admin-user"}, headers=auth_headers, timeout=10)
         assert_ok(resp)
@@ -200,16 +208,16 @@ class TestPOApproval:
         assert po["approved_by"] == "admin-user"
         assert po["approved_at"] > 0
 
-    def test_reject_po(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "reject")
+    def test_reject_po(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "reject")
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
         resp = httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/reject", headers=auth_headers, timeout=10)
         assert_ok(resp)
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
         assert r.json()["purchase_order"]["status"] == "draft"
 
-    def test_reapprove_after_rejection(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "reauth")
+    def test_reapprove_after_rejection(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "reauth")
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/reject", headers=auth_headers, timeout=10)
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
@@ -217,9 +225,9 @@ class TestPOApproval:
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
         assert r.json()["purchase_order"]["status"] == "approved"
 
-    def test_cannot_approve_from_sent_status(self, auth_headers: dict):
+    def test_cannot_approve_from_sent_status(self, auth_headers: dict, session_suffix: str):
         """Approve should only work from pending_approval status."""
-        po_id = _create_po(auth_headers, "wrongstate")
+        po_id = _create_po(auth_headers, session_suffix, "wrongstate")
         # Go directly to sent via status update
         httpx.put(f"{SERVER_URL}/api/purchase-orders/{po_id}/status", json={"status": "sent"}, headers=auth_headers, timeout=10)
         # Approve should silently no-op (status != pending_approval)
@@ -227,8 +235,8 @@ class TestPOApproval:
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)
         assert r.json()["purchase_order"]["status"] == "sent"
 
-    def test_approve_shows_approved_by(self, auth_headers: dict):
-        po_id = _create_po(auth_headers, "showappr")
+    def test_approve_shows_approved_by(self, auth_headers: dict, session_suffix: str):
+        po_id = _create_po(auth_headers, session_suffix, "showappr")
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval", headers=auth_headers, timeout=10)
         httpx.post(f"{SERVER_URL}/api/purchase-orders/{po_id}/approve", json={"user_id": "jane-admin"}, headers=auth_headers, timeout=10)
         r = httpx.get(f"{SERVER_URL}/api/purchase-orders/{po_id}", headers=auth_headers, timeout=10)

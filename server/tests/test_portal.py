@@ -1,10 +1,14 @@
-"""Customer portal integration tests — login, tickets, invoices, payments, appointments."""
+"""Customer portal integration tests — login, tickets, invoices, payments, appointments.
+
+Each test creates its own data — no inter-test ordering dependencies.
+All entities tracked for session cleanup.
+Uses session_suffix isolation for parallel-session safety.
+"""
 import bcrypt
 import httpx
 import pytest
 import time
-import uuid
-from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW
+from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW, _track_entity
 
 _PORTAL_PW = "TestPortal123!"
 
@@ -17,9 +21,9 @@ def _admin_token() -> str:
 
 
 @pytest.fixture(scope="session")
-def portal_email() -> str:
+def portal_email(session_suffix: str) -> str:
     """Generate a unique portal customer email per session."""
-    return f"portal-{uuid.uuid4().hex[:12]}@test.com"
+    return f"portal-{session_suffix}@test.com"
 
 
 @pytest.fixture(scope="session")
@@ -39,6 +43,7 @@ def portal_token(portal_email: str) -> str:
     r2 = httpx.get(f"{SERVER_URL}/api/customers", params={"search": email}, headers=headers, timeout=10)
     items = r2.json().get("customers", [])
     assert items, f"Customer not found: {r2.text[:200]}"
+    _track_entity("customer", items[0]["id"])
 
     # Set password via STDB reducer
     hashed = bcrypt.hashpw(_PORTAL_PW.encode(), bcrypt.gensalt()).decode()
@@ -60,6 +65,48 @@ def portal_token(portal_email: str) -> str:
 @pytest.fixture
 def portal_headers(portal_token: str) -> dict:
     return {"Authorization": f"Bearer {portal_token}"}
+
+
+@pytest.fixture
+def portal_customer_id(portal_headers: dict) -> str:
+    """Fetch the portal customer's ID for creating related entities."""
+    resp = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
+    data = assert_ok(resp)
+    return data["id"]
+
+
+@pytest.fixture
+def admin_headers() -> dict:
+    """Function-scoped admin auth headers."""
+    return {"Authorization": f"Bearer {_admin_token()}"}
+
+
+def _create_portal_ticket(customer_id: str, admin_headers: dict, tag: str = "") -> str:
+    """Create a ticket for the portal customer and return its ID."""
+    title = f"Portal Test Ticket {tag}" if tag else "Portal Test Ticket"
+    resp = httpx.post(f"{SERVER_URL}/api/tickets", json={
+        "customer_id": customer_id, "title": title, "description": "Issue for portal testing",
+    }, headers=admin_headers, timeout=10)
+    data = assert_ok(resp)
+    if "ticket" in data:
+        tid = data["ticket"]["id"]
+        _track_entity("ticket", tid)
+        return tid
+    return ""
+
+
+def _create_portal_invoice(customer_id: str, admin_headers: dict, tag: str = "") -> str:
+    """Create an invoice for the portal customer and return its ID."""
+    notes = f"Portal invoice test {tag}" if tag else "Portal invoice test"
+    resp = httpx.post(f"{SERVER_URL}/api/invoices", json={
+        "customer_id": customer_id, "notes": notes, "due_date": 0,
+    }, headers=admin_headers, timeout=10)
+    data = assert_ok(resp)
+    if "invoice" in data:
+        inv_id = data["invoice"]["id"]
+        _track_entity("invoice", inv_id)
+        return inv_id
+    return ""
 
 
 class TestPortalAuth:
@@ -90,29 +137,17 @@ class TestPortalAuth:
 
 
 class TestPortalTickets:
-    """Customer ticket viewing and note adding."""
+    """Customer ticket viewing and note adding — each test creates its own ticket."""
 
-    def test_list_tickets(self, portal_headers: dict, portal_token: str, portal_email: str):
-        r = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
-        cid = r.json()["id"]
-        admin_hdrs = {"Authorization": f"Bearer {_admin_token()}"}
-
-        httpx.post(f"{SERVER_URL}/api/tickets", json={
-            "customer_id": cid, "title": "Portal Test Ticket", "description": "Issue for portal testing",
-        }, headers=admin_hdrs, timeout=10)
-
+    def test_list_tickets(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+        _create_portal_ticket(portal_customer_id, admin_headers, "list")
         resp = httpx.get(f"{SERVER_URL}/api/portal/tickets", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "tickets" in data
         assert len(data["tickets"]) >= 1
 
-    def test_ticket_detail(self, portal_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/portal/tickets", headers=portal_headers, timeout=10)
-        tickets = resp.json().get("tickets", [])
-        if not tickets:
-            pytest.skip("No tickets")
-        tid = tickets[0]["id"]
-
+    def test_ticket_detail(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+        tid = _create_portal_ticket(portal_customer_id, admin_headers, "detail")
         resp = httpx.get(f"{SERVER_URL}/api/portal/tickets/{tid}", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "ticket" in data
@@ -122,39 +157,24 @@ class TestPortalTickets:
         resp = httpx.get(f"{SERVER_URL}/api/portal/tickets/fake-id-99999", headers=portal_headers, timeout=10)
         assert resp.status_code == 404
 
-    def test_add_note(self, portal_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/portal/tickets", headers=portal_headers, timeout=10)
-        tickets = resp.json().get("tickets", [])
-        if not tickets:
-            pytest.skip("No tickets")
-        tid = tickets[0]["id"]
-
+    def test_add_note(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+        tid = _create_portal_ticket(portal_customer_id, admin_headers, "note")
         resp = httpx.post(f"{SERVER_URL}/api/portal/tickets/{tid}/notes", json={"content": "Customer update about my issue."}, headers=portal_headers, timeout=10)
         assert_ok(resp)
 
 
 class TestPortalInvoices:
-    """Customer invoice viewing."""
+    """Customer invoice viewing — each test creates its own invoice."""
 
-    def test_list_invoices(self, portal_headers: dict, portal_email: str):
-        r = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
-        cid = r.json()["id"]
-        admin_hdrs = {"Authorization": f"Bearer {_admin_token()}"}
-
-        httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": "Portal invoice test", "due_date": 0}, headers=admin_hdrs, timeout=10)
-
+    def test_list_invoices(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+        _create_portal_invoice(portal_customer_id, admin_headers, "list")
         resp = httpx.get(f"{SERVER_URL}/api/portal/invoices", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "invoices" in data
         assert len(data["invoices"]) >= 1
 
-    def test_invoice_detail(self, portal_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/portal/invoices", headers=portal_headers, timeout=10)
-        invoices = resp.json().get("invoices", [])
-        if not invoices:
-            pytest.skip("No invoices")
-        inv_id = invoices[0]["id"]
-
+    def test_invoice_detail(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+        inv_id = _create_portal_invoice(portal_customer_id, admin_headers, "detail")
         resp = httpx.get(f"{SERVER_URL}/api/portal/invoices/{inv_id}", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "invoice" in data
@@ -170,20 +190,10 @@ class TestPortalInvoices:
 class TestPortalPayments:
     """Customer making payments and checking payment methods."""
 
-    def test_make_payment(self, portal_headers: dict, portal_email: str):
-        r = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
-        cid = r.json()["id"]
-        admin_hdrs = {"Authorization": f"Bearer {_admin_token()}"}
-
-        httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": "Portal payment test", "due_date": 0}, headers=admin_hdrs, timeout=10)
-
-        resp = httpx.get(f"{SERVER_URL}/api/portal/invoices", headers=portal_headers, timeout=10)
-        invoices = resp.json().get("invoices", [])
-        if not invoices:
-            pytest.skip("No invoices")
-        inv_id = invoices[0]["id"]
-
-        httpx.post(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", json={"description": "Service", "quantity": 1, "unit_price": 50}, headers=admin_hdrs, timeout=10)
+    def test_make_payment(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+        inv_id = _create_portal_invoice(portal_customer_id, admin_headers, "payment")
+        # Add a line item so invoice has a balance
+        httpx.post(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", json={"description": "Service", "quantity": 1, "unit_price": 50}, headers=admin_headers, timeout=10)
 
         resp = httpx.post(f"{SERVER_URL}/api/portal/payments", json={"invoice_id": inv_id, "amount": 25, "method": "card", "reference": "PORTAL-TEST-1"}, headers=portal_headers, timeout=10)
         assert_ok(resp)
