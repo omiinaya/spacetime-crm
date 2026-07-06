@@ -99,8 +99,8 @@ class TestEstimateConversion:
         invoice_id = data.get("invoice_id", "")
         assert invoice_id, f"Expected invoice_id in response: {data}"
 
-        # Verify invoice exists
-        r2 = httpx.get(f"{SERVER_URL}/api/invoices", headers=auth_headers, timeout=10)
+        # Verify invoice exists (high limit to account for accumulated test data)
+        r2 = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 500}, headers=auth_headers, timeout=10)
         inv_ids = [inv["id"] for inv in r2.json().get("invoices", [])]
         assert invoice_id in inv_ids, f"Invoice {invoice_id} not found in list"
 
