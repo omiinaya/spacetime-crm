@@ -8,7 +8,7 @@ import pyotp
 import httpx
 import time
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, test_admin_headers
 
 
 def _admin_login() -> dict:
