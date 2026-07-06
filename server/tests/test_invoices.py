@@ -1,13 +1,14 @@
 """Invoice CRUD, line items, tax, PDF, and status workflow integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _create_test_customer(auth_headers: dict, suffix: str = "") -> str:
     """Create a customer and return their ID."""
-    email = f"inv-cust-{suffix or 'main'}@example.com"
-    c = create_customer(auth_headers, first_name="Invoice", last_name=f"Test{suffix}", email=email)
+    suf = suffix or unique_suffix()
+    email = f"inv-cust-{suf}@example.com"
+    c = create_customer(auth_headers, first_name="Invoice", last_name=f"Test{suf}", email=email)
     cid = c.get("id")
     assert cid, f"Failed to create customer: {c}"
     return cid

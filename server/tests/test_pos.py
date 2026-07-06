@@ -1,14 +1,15 @@
 """POS / Counter Sale endpoint tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix
 
 
 @pytest.fixture
 def test_product_id(auth_headers: dict) -> str:
     """Create a product for POS line items and return its ID."""
-    httpx.post(f"{SERVER_URL}/api/products", json={"name": "POS Widget", "sku": "POS-WDG-001", "price": 19.99, "cost": 10, "quantity_on_hand": 50}, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "POS-WDG-001"}, headers=auth_headers, timeout=10)
+    sku = f"POS-WDG-{unique_suffix()}"
+    httpx.post(f"{SERVER_URL}/api/products", json={"name": "POS Widget", "sku": sku, "price": 19.99, "cost": 10, "quantity_on_hand": 50}, headers=auth_headers, timeout=10)
+    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
     prods = r.json().get("products", [])
     assert len(prods) > 0, "Product not created"
     return prods[0]["id"]

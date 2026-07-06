@@ -1,12 +1,13 @@
 """Recurring invoice rules CRUD + generate trigger tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _customer_id(auth_headers: dict, suffix: str = "") -> str:
     """Create a customer and return ID."""
-    c = create_customer(auth_headers, email=f"rec-{suffix or 'main'}@example.com")
+    suf = suffix or unique_suffix()
+    c = create_customer(auth_headers, email=f"rec-{suf}@example.com")
     return c.get("id", "")
 
 

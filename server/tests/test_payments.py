@@ -1,13 +1,14 @@
 """Payment recording, listing, and deletion integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _create_test_invoice(auth_headers: dict, suffix: str = "") -> str:
     """Create a customer + invoice and return the invoice ID."""
-    email = f"pay-cust-{suffix or 'main'}@example.com"
-    c = create_customer(auth_headers, first_name="Pay", last_name=f"Test{suffix}", email=email)
+    suf = suffix or unique_suffix()
+    email = f"pay-cust-{suf}@example.com"
+    c = create_customer(auth_headers, first_name="Pay", last_name=f"Test{suf}", email=email)
     cid = c.get("id")
     assert cid
     httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": f"Pay test {suffix}", "due_date": 0}, headers=auth_headers, timeout=10)

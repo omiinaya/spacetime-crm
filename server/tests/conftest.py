@@ -9,6 +9,7 @@ Run against a dedicated test database when available.
 """
 import os
 import json
+import uuid
 import pytest
 import httpx
 
@@ -19,6 +20,11 @@ ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "PLACEHOLDER_ADMIN_PW")
 # Test STDB container settings
 STDB_TEST_PORT = int(os.environ.get("STDB_TEST_PORT", "3002"))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
+
+
+def unique_suffix() -> str:
+    """Return a short unique identifier for test data isolation."""
+    return uuid.uuid4().hex[:12]
 
 
 # ── Fixtures ──────────────────────────────────────────────────────
@@ -87,11 +93,16 @@ def assert_unauthorized(resp: httpx.Response):
 
 
 def create_customer(auth_headers: dict, **overrides) -> dict:
-    """Create a customer and return the parsed response + ID."""
+    """Create a customer and return the parsed response + ID.
+    
+    Uses a unique email by default to avoid collisions between test runs.
+    Pass 'email' in overrides to use a specific email instead.
+    """
+    default_email = f"test-{unique_suffix()}@example.com"
     data = {
         "first_name": overrides.get("first_name", "Test"),
         "last_name": overrides.get("last_name", "Customer"),
-        "email": overrides.get("email", "test@example.com"),
+        "email": overrides.get("email", default_email),
         "phone": overrides.get("phone", "555-0000"),
     }
     resp = httpx.post(

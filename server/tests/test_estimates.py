@@ -1,11 +1,12 @@
 """Estimate CRUD, line items, status workflow, and conversion integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _create_customer(auth_headers: dict, suffix: str = "") -> str:
-    c = create_customer(auth_headers, first_name="Est", last_name=f"Test{suffix}", email=f"est-{suffix or 'main'}@example.com")
+    suf = suffix or unique_suffix()
+    c = create_customer(auth_headers, first_name="Est", last_name=f"Test{suf}", email=f"est-{suf}@example.com")
     return c["id"]
 
 
