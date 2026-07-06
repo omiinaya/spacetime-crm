@@ -8,7 +8,6 @@ from helpers import (
     require_role, logger,
 )
 from models import ProductCreate, ProductQuantityUpdate, InventoryAdjustmentCreate, StockTransferRequest
-from mail import _notify_low_stock
 
 router = APIRouter()
 
@@ -138,6 +137,7 @@ async def lookup_product_by_barcode(barcode: str, user: dict = Depends(require_r
 @router.post("/api/products/low-stock/notify")
 async def notify_low_stock(user: dict = Depends(require_role("admin"))):
     """Check low stock and send email alert to admin."""
+    from mail import _notify_low_stock
     rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
     low_stock = [
         r for r in rows

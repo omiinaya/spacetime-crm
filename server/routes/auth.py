@@ -14,7 +14,6 @@ from models import (
     SetPinRequest, PosLoginRequest,
 )
 from rate_limit import limiter
-from mail import send_email as _send_email
 
 import pyotp
 import base64
@@ -427,6 +426,7 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 <hr style="border:none;border-top:1px solid #eee" />
 <p style="color:#999;font-size:12px">SpacetimeCRM</p>
 </body></html>"""
+    from mail import send_email as _send_email
     _send_email(email, "Password Reset — SpacetimeCRM", html)
 
     logger.info("Password reset email sent to %s (%s)", email, user_type)
