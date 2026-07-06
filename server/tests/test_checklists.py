@@ -25,8 +25,10 @@ def _create_template(auth_headers: dict, suffix: str = "") -> str:
 
 class TestChecklistCRUD:
     def test_create(self, auth_headers: dict):
+        from .conftest import unique_suffix
+        name = f"Inspection Checklist {unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/checklist-templates", json={
-            "name": "Inspection Checklist",
+            "name": name,
             "description": "Standard equipment inspection steps",
             "items": [
                 {"label": "Check power", "order": 1},
@@ -37,8 +39,10 @@ class TestChecklistCRUD:
         assert_ok(resp)
 
     def test_create_minimal(self, auth_headers: dict):
+        from .conftest import unique_suffix
+        name = f"Minimal Checklist {unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/checklist-templates", json={
-            "name": "Minimal Checklist", "description": "", "items": [],
+            "name": name, "description": "", "items": [],
         }, headers=auth_headers, timeout=10)
         assert_ok(resp)
 

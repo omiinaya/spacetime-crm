@@ -23,8 +23,10 @@ def _create_rate(auth_headers: dict, suffix: str = "") -> str:
 
 class TestTaxRateCRUD:
     def test_create(self, auth_headers: dict):
+        from .conftest import unique_suffix
+        name = f"Sales Tax {unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/tax-rates", json={
-            "name": "Sales Tax", "rate": 7.5, "is_default": False,
+            "name": name, "rate": 7.5, "is_default": False,
         }, headers=auth_headers, timeout=10)
         assert_ok(resp)
 
