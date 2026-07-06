@@ -12,7 +12,7 @@ from .conftest import SERVER_URL, assert_ok
 
 
 def _admin_login() -> dict:
-    """Log in as admin and return token + auth headers dict."""
+    """Log in as admin and return auth headers dict."""
     r = httpx.post(
         f"{SERVER_URL}/api/auth/login",
         json={"email": "admin@crm.local", "password": "admin123"},
@@ -44,7 +44,6 @@ def _2fa_user() -> tuple[str, str, str]:
         headers=admin_h, timeout=10,
     )
     assert resp.status_code == 200, f"Create 2FA test user failed: {resp.text[:200]}"
-    user_data = resp.json()
 
     # Get user ID
     list_resp = httpx.get(
@@ -59,27 +58,38 @@ def _2fa_user() -> tuple[str, str, str]:
     yield email, pw, uid
 
     # --- Cleanup ---
-    clean_h = _admin_login()
-
-    # Log in as test user to disable 2FA if it's still enabled
+    # Delete the test user from admin side (regardless of 2FA state)
     try:
+        clean_h = _admin_login()
+        httpx.delete(f"{SERVER_URL}/api/users/{uid}", headers=clean_h, timeout=10)
+    except Exception:
+        pass
+
+
+def _disable_2fa_user(email: str, pw: str, secret: str) -> None:
+    """Disable 2FA on a user account. Safe to call even if 2FA is not enabled."""
+    try:
+        totp = pyotp.TOTP(secret)
         login2 = httpx.post(
             f"{SERVER_URL}/api/auth/login",
             json={"email": email, "password": pw},
             timeout=10,
         )
-        if login2.status_code == 200:
-            data2 = login2.json()
-            if data2.get("requires_2fa") and data2.get("temp_token"):
-                # Need to complete 2FA login — can't disable without TOTP
-                # So we just delete the user from admin side
-                pass
-    except Exception:
-        pass
-
-    # Delete the test user from admin side
-    try:
-        httpx.delete(f"{SERVER_URL}/api/users/{uid}", headers=clean_h, timeout=10)
+        if login2.status_code != 200:
+            return
+        data2 = login2.json()
+        if data2.get("requires_2fa") and data2.get("temp_token"):
+            complete = httpx.post(
+                f"{SERVER_URL}/api/auth/complete-login",
+                json={"temp_token": data2["temp_token"], "code": totp.now()},
+                timeout=10,
+            )
+            if complete.status_code != 200:
+                return
+            h2 = {"Authorization": f"Bearer {complete.json()['token']}", "Content-Type": "application/json"}
+        else:
+            h2 = {"Authorization": f"Bearer {data2['token']}", "Content-Type": "application/json"}
+        httpx.post(f"{SERVER_URL}/api/auth/disable-2fa", json={"code": totp.now()}, headers=h2, timeout=10)
     except Exception:
         pass
 
@@ -132,36 +142,6 @@ def test_verify_valid_code_enables_2fa(_2fa_user):
     _disable_2fa_user(email, pw, secret)
 
 
-def _disable_2fa_user(email: str, pw: str, secret: str) -> None:
-    """Disable 2FA on a user account. Safe to call even if 2FA is not enabled."""
-    try:
-        totp = pyotp.TOTP(secret)
-        login2 = httpx.post(
-            f"{SERVER_URL}/api/auth/login",
-            json={"email": email, "password": pw},
-            timeout=10,
-        )
-        if login2.status_code != 200:
-            return
-        data2 = login2.json()
-        if data2.get("requires_2fa") and data2.get("temp_token"):
-            # Complete 2FA login
-            complete = httpx.post(
-                f"{SERVER_URL}/api/auth/complete-login",
-                json={"temp_token": data2["temp_token"], "code": totp.now()},
-                timeout=10,
-            )
-            if complete.status_code != 200:
-                return
-            h2 = {"Authorization": f"Bearer {complete.json()['token']}", "Content-Type": "application/json"}
-        else:
-            h2 = {"Authorization": f"Bearer {data2['token']}", "Content-Type": "application/json"}
-
-        httpx.post(f"{SERVER_URL}/api/auth/disable-2fa", json={"code": totp.now()}, headers=h2, timeout=10)
-    except Exception:
-        pass
-
-
 def test_verify_invalid_code_fails(_2fa_user):
     """Verify with wrong code returns 401."""
     email, pw, _uid = _2fa_user
@@ -173,7 +153,6 @@ def test_verify_invalid_code_fails(_2fa_user):
     )
     h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
 
-    # Setup first
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
 
