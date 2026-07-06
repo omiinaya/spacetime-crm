@@ -3,7 +3,7 @@ import base64
 import json
 import pytest
 import httpx
-from .conftest import SERVER_URL, ADMIN_EMAIL, ADMIN_PW, assert_ok, assert_unauthorized
+from .conftest import SERVER_URL, ADMIN_EMAIL, ADMIN_PW, assert_ok, assert_unauthorized, test_admin_headers
 
 
 class TestAuth:

@@ -1,31 +1,31 @@
 """Saved payment methods CRUD tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity, test_admin_headers
 
 
-def _customer_id(auth_headers: dict, suffix: str = "") -> str:
+def _customer_id(test_admin_headers: dict, suffix: str = "") -> str:
     suf = suffix or unique_suffix()
-    c = create_customer(auth_headers, email=f"pm-{suf}@example.com")
+    c = create_customer(test_admin_headers, email=f"pm-{suf}@example.com")
     return c.get("id", "")
 
 
 class TestPaymentMethods:
     """Saved payment method CRUD."""
 
-    def test_list_empty(self, auth_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/payment-methods", headers=auth_headers, timeout=10)
+    def test_list_empty(self, test_admin_headers: dict):
+        resp = httpx.get(f"{SERVER_URL}/api/payment-methods", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "payment_methods" in data
 
-    def test_list_filtered_by_customer(self, auth_headers: dict):
-        cid = _customer_id(auth_headers, "lst-cust")
-        resp = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=auth_headers, timeout=10)
+    def test_list_filtered_by_customer(self, test_admin_headers: dict):
+        cid = _customer_id(test_admin_headers, "lst-cust")
+        resp = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "payment_methods" in data
 
-    def test_save_method(self, auth_headers: dict):
-        cid = _customer_id(auth_headers, "save")
+    def test_save_method(self, test_admin_headers: dict):
+        cid = _customer_id(test_admin_headers, "save")
         resp = httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_test_12345",
@@ -33,11 +33,11 @@ class TestPaymentMethods:
             "last4": "4242",
             "exp_month": 12,
             "exp_year": 2028,
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
 
         # Verify it appears in list
-        r2 = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=auth_headers, timeout=10)
+        r2 = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10)
         r2_data = r2.json()
         methods = [m for m in r2_data["payment_methods"] if m.get("stripe_payment_method_id") == "pm_test_12345"]
         assert len(methods) >= 1, f"Saved method not found: {r2_data['payment_methods']}"
@@ -45,8 +45,8 @@ class TestPaymentMethods:
         for m in methods:
             _track_entity("saved_payment_method", m["id"])
 
-    def test_save_method_invalid_last4(self, auth_headers: dict):
-        cid = _customer_id(auth_headers, "bad-last4")
+    def test_save_method_invalid_last4(self, test_admin_headers: dict):
+        cid = _customer_id(test_admin_headers, "bad-last4")
         resp = httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_bad",
@@ -54,21 +54,21 @@ class TestPaymentMethods:
             "last4": "abc",
             "exp_month": 12,
             "exp_year": 2028,
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_save_method_missing_customer(self, auth_headers: dict):
+    def test_save_method_missing_customer(self, test_admin_headers: dict):
         resp = httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "stripe_payment_method_id": "pm_test",
             "brand": "Visa",
             "last4": "1234",
             "exp_month": 1,
             "exp_year": 2029,
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_set_default(self, auth_headers: dict):
-        cid = _customer_id(auth_headers, "default")
+    def test_set_default(self, test_admin_headers: dict):
+        cid = _customer_id(test_admin_headers, "default")
         httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_default_test",
@@ -76,9 +76,9 @@ class TestPaymentMethods:
             "last4": "5555",
             "exp_month": 6,
             "exp_year": 2029,
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
 
-        r = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10)
         methods = r.json().get("payment_methods", [])
         if not methods:
             pytest.skip("No payment methods to set default")
@@ -87,17 +87,17 @@ class TestPaymentMethods:
 
         resp = httpx.put(f"{SERVER_URL}/api/payment-methods/{method_id}/default", json={
             "customer_id": cid,
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_set_default_nonexistent(self, auth_headers: dict):
+    def test_set_default_nonexistent(self, test_admin_headers: dict):
         resp = httpx.put(f"{SERVER_URL}/api/payment-methods/nonexistent-999/default", json={
             "customer_id": "cust_fake",
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_delete_method(self, auth_headers: dict):
-        cid = _customer_id(auth_headers, "delete-pm")
+    def test_delete_method(self, test_admin_headers: dict):
+        cid = _customer_id(test_admin_headers, "delete-pm")
         httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_delete_test",
@@ -105,28 +105,28 @@ class TestPaymentMethods:
             "last4": "6011",
             "exp_month": 3,
             "exp_year": 2027,
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
 
-        r = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10)
         methods = r.json().get("payment_methods", [])
         if not methods:
             pytest.skip("No payment methods to delete")
         method_id = methods[0]["id"]
         _track_entity("saved_payment_method", method_id)
 
-        resp = httpx.delete(f"{SERVER_URL}/api/payment-methods/{method_id}", headers=auth_headers, timeout=10)
+        resp = httpx.delete(f"{SERVER_URL}/api/payment-methods/{method_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_delete_nonexistent(self, auth_headers: dict):
-        resp = httpx.delete(f"{SERVER_URL}/api/payment-methods/nonexistent-999", headers=auth_headers, timeout=10)
+    def test_delete_nonexistent(self, test_admin_headers: dict):
+        resp = httpx.delete(f"{SERVER_URL}/api/payment-methods/nonexistent-999", headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_setup_intent_no_stripe(self, auth_headers: dict):
+    def test_setup_intent_no_stripe(self, test_admin_headers: dict):
         """Without Stripe configured, setup-intent should return 400."""
-        cid = _customer_id(auth_headers, "si")
+        cid = _customer_id(test_admin_headers, "si")
         resp = httpx.post(f"{SERVER_URL}/api/payment-methods/setup-intent", json={
             "customer_id": cid,
-        }, headers=auth_headers, timeout=10)
+        }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 400
 
 

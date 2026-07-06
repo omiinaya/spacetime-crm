@@ -8,7 +8,7 @@ import bcrypt
 import httpx
 import pytest
 import time
-from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW, _track_entity
+from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW, _track_entity, test_admin_headers
 
 _PORTAL_PW = "TestPortal123!"
 
