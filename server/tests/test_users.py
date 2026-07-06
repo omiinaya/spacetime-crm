@@ -1,7 +1,7 @@
 """User management tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix
+from .conftest import SERVER_URL, _track_entity, assert_ok, unique_suffix
 
 
 class TestUserCRUD:
@@ -23,8 +23,14 @@ class TestUserCRUD:
         # Verify it appears in listing
         r2 = httpx.get(f"{SERVER_URL}/api/users", params={"limit": 500}, headers=auth_headers, timeout=10)
         data = r2.json()
-        emails = [u.get("email", "") for u in data.get("users", [])]
+        users = data.get("users", [])
+        emails = [u.get("email", "") for u in users]
         assert any(f"tech-{suf}" in e for e in emails)
+        # Track the created user for cleanup
+        for u in users:
+            if f"tech-{suf}" in u.get("email", ""):
+                _track_entity("user", u["id"])
+                break
 
     def test_create_invalid_role(self, auth_headers: dict):
         resp = httpx.post(f"{SERVER_URL}/api/users", json={

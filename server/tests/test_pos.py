@@ -1,27 +1,29 @@
 """POS / Counter Sale endpoint tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity
 
 
 @pytest.fixture
-def test_product_id(auth_headers: dict) -> str:
+def test_product_id(auth_headers: dict, session_suffix: str) -> str:
     """Create a product for POS line items and return its ID."""
-    sku = f"POS-WDG-{unique_suffix()}"
+    sku = f"POS-WDG-{session_suffix}-{unique_suffix()}"
     httpx.post(f"{SERVER_URL}/api/products", json={"name": "POS Widget", "sku": sku, "price": 19.99, "cost": 10, "quantity_on_hand": 50}, headers=auth_headers, timeout=10)
     r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
     prods = r.json().get("products", [])
     assert len(prods) > 0, "Product not created"
-    return prods[0]["id"]
+    pid = prods[0]["id"]
+    _track_entity("product", pid)
+    return pid
 
 
-def _create_sale(auth_headers: dict, suffix: str = "") -> str:
+def _create_sale(auth_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a counter sale and return its ID.
 
     Uses unique customer_name and STDB SQL lookup for isolation.
     """
     suf = suffix or unique_suffix()
-    name = f"Walk-in-{suf}"
+    name = f"Walk-in-{session_suffix}-{suf}"
     httpx.post(f"{SERVER_URL}/api/pos/create", json={
         "customer_name": name,
         "payment_method": "cash",
@@ -31,15 +33,17 @@ def _create_sale(auth_headers: dict, suffix: str = "") -> str:
     }, headers=auth_headers, timeout=10)
     rows = _stdb_sql(f"SELECT id FROM counter_sale WHERE customer_name = '{name}'")
     assert len(rows) > 0, f"Sale not found for customer '{name}'"
-    return rows[0]["id"]
+    sale_id = rows[0]["id"]
+    _track_entity("counter_sale", sale_id)
+    return sale_id
 
 
 class TestPOSCRUD:
     """Counter sale lifecycle: create, list, get, delete."""
 
-    def test_create_sale(self, auth_headers: dict):
+    def test_create_sale(self, auth_headers: dict, session_suffix: str):
         from .conftest import unique_suffix
-        name = f"Jane Customer {unique_suffix()}"
+        name = f"Jane Customer {session_suffix}-{unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/pos/create", json={
             "customer_name": name,
             "payment_method": "card",
@@ -55,8 +59,8 @@ class TestPOSCRUD:
         assert "sales" in data
         assert "total" in data
 
-    def test_get_sale(self, auth_headers: dict):
-        sale_id = _create_sale(auth_headers, "get")
+    def test_get_sale(self, auth_headers: dict, session_suffix: str):
+        sale_id = _create_sale(auth_headers, session_suffix, "get")
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert "sale" in data
@@ -67,8 +71,8 @@ class TestPOSCRUD:
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/nonexistent-999", headers=auth_headers, timeout=10)
         assert resp.status_code in (404, 500)
 
-    def test_delete_sale_admin_only(self, auth_headers: dict):
-        sale_id = _create_sale(auth_headers, "delete")
+    def test_delete_sale_admin_only(self, auth_headers: dict, session_suffix: str):
+        sale_id = _create_sale(auth_headers, session_suffix, "delete")
         resp = httpx.delete(f"{SERVER_URL}/api/pos/sales/{sale_id}", headers=auth_headers, timeout=10)
         assert_ok(resp)
 
@@ -82,8 +86,8 @@ class TestPOSCRUD:
 class TestPOSItems:
     """Counter sale line item operations."""
 
-    def test_add_item(self, auth_headers: dict, test_product_id: str):
-        sale_id = _create_sale(auth_headers, "add")
+    def test_add_item(self, auth_headers: dict, test_product_id: str, session_suffix: str):
+        sale_id = _create_sale(auth_headers, session_suffix, "add")
         resp = httpx.post(f"{SERVER_URL}/api/pos/items", json={
             "sale_id": sale_id,
             "product_id": test_product_id,
@@ -100,8 +104,8 @@ class TestPOSItems:
         assert sale["items_count"] >= 1
         assert sale["subtotal"] >= 39.98  # 2 * 19.99
 
-    def test_multiple_items_update_totals(self, auth_headers: dict, test_product_id: str):
-        sale_id = _create_sale(auth_headers, "multi")
+    def test_multiple_items_update_totals(self, auth_headers: dict, test_product_id: str, session_suffix: str):
+        sale_id = _create_sale(auth_headers, session_suffix, "multi")
         # Add first item
         httpx.post(f"{SERVER_URL}/api/pos/items", json={
             "sale_id": sale_id, "product_id": test_product_id,
@@ -123,8 +127,8 @@ class TestPOSItems:
         assert sale["total"] == 43.30  # 40 + 3.30
         assert sale["change_due"] == 56.70  # 100 - 43.30
 
-    def test_item_line_item_ordering(self, auth_headers: dict, test_product_id: str):
-        sale_id = _create_sale(auth_headers, "order")
+    def test_item_line_item_ordering(self, auth_headers: dict, test_product_id: str, session_suffix: str):
+        sale_id = _create_sale(auth_headers, session_suffix, "order")
         for i in range(3):
             httpx.post(f"{SERVER_URL}/api/pos/items", json={
                 "sale_id": sale_id, "product_id": test_product_id,
@@ -143,8 +147,8 @@ class TestPOSItems:
 class TestPOSRefund:
     """Counter sale refund operations."""
 
-    def test_refund_sale(self, auth_headers: dict):
-        sale_id = _create_sale(auth_headers, "refund")
+    def test_refund_sale(self, auth_headers: dict, session_suffix: str):
+        sale_id = _create_sale(auth_headers, session_suffix, "refund")
         resp = httpx.post(f"{SERVER_URL}/api/pos/refund/{sale_id}", headers=auth_headers, timeout=10)
         assert_ok(resp)
 
@@ -156,9 +160,9 @@ class TestPOSRefund:
 class TestPOSReceiptPdf:
     """POS receipt PDF generation."""
 
-    def test_receipt_pdf_returns_pdf(self, auth_headers: dict):
+    def test_receipt_pdf_returns_pdf(self, auth_headers: dict, session_suffix: str):
         """Getting receipt PDF for a completed sale returns PDF content type."""
-        sale_id = _create_sale(auth_headers, "pdf")
+        sale_id = _create_sale(auth_headers, session_suffix, "pdf")
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}/receipt-pdf", headers=auth_headers, timeout=10)
         assert resp.status_code == 200
         assert resp.headers.get("content-type", "").startswith("application/pdf")
@@ -175,9 +179,9 @@ class TestPOSReceiptPdf:
         resp = client.get(f"{SERVER_URL}/api/pos/sales/fake-id/receipt-pdf", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_receipt_pdf_has_content_disposition(self, auth_headers: dict):
+    def test_receipt_pdf_has_content_disposition(self, auth_headers: dict, session_suffix: str):
         """Receipt PDF response includes a Content-Disposition header."""
-        sale_id = _create_sale(auth_headers, "disp")
+        sale_id = _create_sale(auth_headers, session_suffix, "disp")
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}/receipt-pdf", headers=auth_headers, timeout=10)
         assert resp.status_code == 200
         assert "Content-Disposition" in resp.headers

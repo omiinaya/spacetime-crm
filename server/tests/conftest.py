@@ -7,11 +7,13 @@ Requirements:
 These tests exercise the live HTTP API — they mutate real STDB tables.
 Every test session gets a unique session_suffix so data from different
 sessions (parallel/sequential) never collides. Created entities are
-tracked and cleaned up at session end.
+tracked and cleaned up at session end via STDB SQL DELETE (not fragile
+HTTP endpoint calls).
 """
 import os
 import json
 import uuid
+import time
 import pytest
 import httpx
 
@@ -44,14 +46,54 @@ def _stdb_sql(query: str) -> list[dict]:
     return resp.json()
 
 
+def _stdb_write(query: str) -> None:
+    """Run a write SQL statement (DELETE, INSERT, etc) against STDB.
+
+    Ignores errors on DELETE — the table may not exist or be empty.
+    """
+    try:
+        httpx.post(
+            STDB_SQL_URL,
+            content=query,
+            headers={"Content-Type": "application/sql"},
+            timeout=30,
+        )
+    except Exception:
+        pass
+
+
 def unique_suffix() -> str:
     """Return a short unique string for creating unique test entities."""
     return uuid.uuid4().hex[:8]
 
 
+# ── STDB table-to-entity map for SQL-based cleanup ─────────────────
+# Maps entity type names (used with _track_entity) to STDB table names.
+# These tables are explicitly known to exist in the module.
+_STDB_TABLES = {
+    "ticket": "ticket",
+    "customer": "customer",
+    "invoice": "invoice",
+    "payment": "payment",
+    "product": "product",
+    "appointment": "appointment",
+    "estimate": "estimate",
+    "purchase_order": "purchase_order",
+    "tax_rate": "tax_rate",
+    "user": "user",
+    "webhook_subscription": "webhook_subscription",
+    "recurring_invoice_rule": "recurring_invoice_rule",
+    "report_schedule": "report_schedule",
+    "checklist_template": "checklist_template",
+    "custom_field_definition": "custom_field_definition",
+    "counter_sale": "counter_sale",
+    "adjustment": "inventory_adjustment",
+    "pos_line_item": "pos_line_item",
+}
+
 # ── Session-isolation tracker ──────────────────────────────────────
 # Tracks entities created during a test session so they can be cleaned
-# up at session end. Keyed by entity type for optional targeted cleanup.
+# up at session end via STDB SQL DELETE. Keyed by entity type.
 
 _CREATED_ENTITIES: dict[str, list[str]] = {}
 
@@ -61,31 +103,87 @@ def _track_entity(entity_type: str, entity_id: str) -> None:
     _CREATED_ENTITIES.setdefault(entity_type, []).append(entity_id)
 
 
-def _cleanup_tracked(auth_headers: dict, session_suffix: str) -> int:
-    """Delete all entities tracked during this session.
+def _cleanup_tracked(auth_headers: dict, session_suffix: str) -> tuple[int, int]:
+    """Delete all entities tracked during this session via STDB SQL.
 
-    Deletes by entity type in dependency order (children before parents).
-    Returns count of deletions attempted.
+    Returns (success_count, fail_count). Uses STDB SQL DELETE which
+    avoids the fragility of HTTP endpoint calls (wrong paths, side
+    effects, missing DELETE routes).
     """
-    # Delete in reverse-dependency order (children first)
-    order = ["webhook_subscription", "payment", "adjustment", "pos_line_item",
-             "customer", "invoice", "estimate", "purchase_order", "appointment",
-             "product", "checklist_template", "tax_rate", "user",
-             "recurring_invoice_rule", "custom_field_definition", "counter_sale",
-             "ticket"]
-    count = 0
-    for etype in reversed(order):
-        ids = _CREATED_ENTITIES.pop(etype, [])
+    success = 0
+    fail = 0
+    for etype, ids in _CREATED_ENTITIES.items():
+        table = _STDB_TABLES.get(etype)
+        if not table:
+            continue
         for eid in ids:
+            sql = f"DELETE FROM {table} WHERE id = '{eid}'"
             try:
-                resp = httpx.delete(
-                    f"{SERVER_URL}/api/{etype}/{eid}",
-                    headers=auth_headers, timeout=10,
-                )
-                if resp.status_code < 500:
-                    count += 1
+                _stdb_write(sql)
+                success += 1
             except Exception:
-                pass
+                fail += 1
+    _CREATED_ENTITIES.clear()
+    return success, fail
+
+
+def _cleanup_by_suffix(session_suffix: str) -> int:
+    """STDB SQL delete for entities whose IDs contain the session_suffix.
+
+    This catches entities created by helpers that embed the session_suffix
+    in their ID (e.g., device_serial contains session_suffix in ticket IDs).
+    Also handles line items and notes that cascade-delete.
+    """
+    count = 0
+    suffix = session_suffix
+    # Delete in dependency-safe order (children first)
+    # These are best-effort — tables may not exist or have no matching rows
+    tables_order = [
+        # POS child tables
+        "pos_line_item",
+        # Ticket child tables
+        "ticket_note",
+        "ticket_timer",
+        # Invoice/estimate child tables
+        "invoice_line_item",
+        "estimate_line_item",
+        "payment",
+        "purchase_order_line_item",
+        "inventory_adjustment",
+        "appointment",
+        "recurring_invoice_rule",
+        "webhook_subscription",
+        "report_schedule",
+        "custom_field_value",
+        "custom_field_definition",
+        "checklist_template",
+        # Main entities
+        "ticket",
+        "invoice",
+        "estimate",
+        "purchase_order",
+        "counter_sale",
+        "adjustment",
+        "product",
+        "customer",
+        "tax_rate",
+        "user",
+    ]
+    for table in tables_order:
+        try:
+            _stdb_write(
+                f"DELETE FROM {table} "
+                f"WHERE id LIKE '%{suffix}%' "
+                f"OR (email IS NOT NULL AND email LIKE '%{suffix}%') "
+                f"OR (vendor_name IS NOT NULL AND vendor_name LIKE '%{suffix}%') "
+                f"OR (name IS NOT NULL AND name LIKE '%{suffix}%') "
+                f"OR (title IS NOT NULL AND title LIKE '%{suffix}%') "
+                f"OR (sku IS NOT NULL AND sku LIKE '%{suffix}%') "
+                f"OR (customer_name IS NOT NULL AND customer_name LIKE '%{suffix}%')"
+            )
+            count += 1
+        except Exception:
+            pass
     return count
 
 
@@ -99,8 +197,15 @@ def session_suffix() -> str:
     Use this as a prefix when creating entities so all data from one
     session run can be distinguished from data left by previous runs.
     Example: email=f"test-{session_suffix}-{unique_suffix()}@example.com"
+
+    Before use, cleans up any leftover test data with this suffix
+    (from a prior interrupted run that never cleaned up).
     """
-    return uuid.uuid4().hex[:12]
+    suf = uuid.uuid4().hex[:12]
+    # Pre-session cleanup: remove stale data from the previous session
+    # that might still match this suffix (edge case for very fast re-runs)
+    _cleanup_by_suffix(suf)
+    return suf
 
 
 @pytest.fixture(scope="session")
@@ -160,13 +265,16 @@ def auth_headers(admin_token) -> dict:
 def _session_cleanup(request, session_suffix: str, auth_headers_session: dict):
     """Clean up all entities created during this test session.
 
-    Runs once at session end. Cleans up tracked entities and any other
-    data identifiable by session_suffix.
+    Runs once at session end. Uses STDB SQL DELETE for reliable cleanup
+    that doesn't depend on HTTP endpoint paths.
     """
     yield  # Session runs here
 
-    # Cleanup after all tests complete
+    # Cleanup after all tests complete — two strategies:
+    # 1. Delete tracked entities by ID
     _cleanup_tracked(auth_headers_session, session_suffix)
+    # 2. Delete any remaining entities identifiable by session_suffix
+    _cleanup_by_suffix(session_suffix)
 
 
 # ── Helpers ───────────────────────────────────────────────────────

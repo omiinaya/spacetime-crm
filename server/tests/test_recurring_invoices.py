@@ -1,7 +1,7 @@
 """Recurring invoice rules CRUD + generate trigger tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity
 
 
 def _customer_id(auth_headers: dict, suffix: str = "") -> str:
@@ -11,14 +11,14 @@ def _customer_id(auth_headers: dict, suffix: str = "") -> str:
     return c.get("id", "")
 
 
-def _create_rule(auth_headers: dict, suffix: str = "") -> str:
+def _create_rule(auth_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a recurring invoice rule and return its ID.
 
     Uses unique name and STDB SQL lookup for isolation.
     """
     suf = suffix or unique_suffix()
     cid = _customer_id(auth_headers, suf)
-    name = f"Monthly Service {suf}"
+    name = f"Monthly Service {session_suffix}-{suf}"
     httpx.post(f"{SERVER_URL}/api/recurring-invoices", json={
         "customer_id": cid,
         "name": name,
@@ -31,7 +31,9 @@ def _create_rule(auth_headers: dict, suffix: str = "") -> str:
 
     rows = _stdb_sql(f"SELECT id FROM recurring_invoice_rule WHERE name = '{name}'")
     assert len(rows) >= 1, f"No rule found with name '{name}'"
-    return rows[0]["id"]
+    rule_id = rows[0]["id"]
+    _track_entity("recurring_invoice_rule", rule_id)
+    return rule_id
 
 
 class TestRecurringInvoiceCRUD:

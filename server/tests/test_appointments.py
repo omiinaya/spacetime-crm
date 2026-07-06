@@ -4,18 +4,19 @@ Each test method creates its own data for STDB state isolation.
 """
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity
 
 
-def _create_appointment(auth_headers: dict, suffix: str = "", **overrides) -> str:
+def _create_appointment(auth_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> str:
     """Create a customer + appointment and return the appointment ID.
 
     Uses a unique title and STDB SQL lookup for isolation.
+    Tracks created entities for session cleanup.
     """
     suf = suffix or unique_suffix()
-    title = overrides.get("title", f"Appt-{suf}")
-    email = f"appt-cust-{suf}@example.com"
-    c = create_customer(auth_headers, first_name="Appt", last_name=f"Test{suf}", email=email)
+    title = overrides.get("title", f"Appt-{session_suffix}-{suf}")
+    email = f"appt-cust-{session_suffix}-{suf}@example.com"
+    c = create_customer(auth_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Test{suf}", email=email)
     cid = c.get("id")
     assert cid
 
@@ -31,15 +32,17 @@ def _create_appointment(auth_headers: dict, suffix: str = "", **overrides) -> st
 
     rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
     assert len(rows) >= 1, f"No appointment found with title '{title}'"
-    return rows[0]["id"]
+    appt_id = rows[0]["id"]
+    _track_entity("appointment", appt_id)
+    return appt_id
 
 
 class TestAppointmentCRUD:
     """Appointment create, list, status update, delete lifecycle."""
 
-    def test_create_appointment(self, auth_headers: dict):
+    def test_create_appointment(self, auth_headers: dict, session_suffix: str):
         """Create a basic appointment."""
-        appt_id = _create_appointment(auth_headers, "create", title="Basic Appointment")
+        appt_id = _create_appointment(auth_headers, session_suffix, "create", title="Basic Appointment")
         assert appt_id, "Expected non-empty appointment ID"
 
     def test_list_appointments(self, auth_headers: dict):
@@ -50,9 +53,9 @@ class TestAppointmentCRUD:
         assert "total" in data
         assert isinstance(data["appointments"], list)
 
-    def test_update_appointment_status(self, auth_headers: dict):
+    def test_update_appointment_status(self, auth_headers: dict, session_suffix: str):
         """Update appointment status to completed."""
-        appt_id = _create_appointment(auth_headers, "status", title="Status Test")
+        appt_id = _create_appointment(auth_headers, session_suffix, "status", title="Status Test")
 
         for status in ["completed", "no_show", "cancelled"]:
             resp = httpx.put(
@@ -62,9 +65,9 @@ class TestAppointmentCRUD:
             )
             assert_ok(resp)
 
-    def test_delete_appointment(self, auth_headers: dict):
+    def test_delete_appointment(self, auth_headers: dict, session_suffix: str):
         """Delete an appointment (admin only)."""
-        appt_id = _create_appointment(auth_headers, "delete", title="Delete Me")
+        appt_id = _create_appointment(auth_headers, session_suffix, "delete", title="Delete Me")
         resp = httpx.delete(f"{SERVER_URL}/api/appointments/{appt_id}", headers=auth_headers, timeout=10)
         assert_ok(resp)
 
@@ -72,13 +75,13 @@ class TestAppointmentCRUD:
 class TestRecurringAppointments:
     """Recurring appointment series and occurrence generation."""
 
-    def _make_customer(self, auth_headers: dict) -> str:
-        c = create_customer(auth_headers, first_name="Recur", last_name="Appt", email=f"recur-appt-{unique_suffix()}@example.com")
+    def _make_customer(self, auth_headers: dict, session_suffix: str = "") -> str:
+        c = create_customer(auth_headers, session_suffix=session_suffix, first_name="Recur", last_name="Appt", email=f"recur-appt-{session_suffix}-{unique_suffix()}@example.com")
         return c["id"]
 
-    def test_create_recurring_appointment(self, auth_headers: dict):
+    def test_create_recurring_appointment(self, auth_headers: dict, session_suffix: str):
         """Create an appointment with recurrence rule."""
-        cid = self._make_customer(auth_headers)
+        cid = self._make_customer(auth_headers, session_suffix)
         resp = httpx.post(
             f"{SERVER_URL}/api/appointments",
             json={
@@ -99,12 +102,12 @@ class TestRecurringAppointments:
         assert "series" in data
         assert isinstance(data["series"], list)
 
-    def test_generate_next_occurrence(self, auth_headers: dict):
+    def test_generate_next_occurrence(self, auth_headers: dict, session_suffix: str):
         """Generate next occurrence of a recurring series."""
         # Create an appointment with recurrence via the helper
         suf = unique_suffix()
-        title = f"Biweekly-{suf}"
-        appt_id = _create_appointment(auth_headers, suf, title=title, recurrence_rule="weekly")
+        title = f"Biweekly-{session_suffix}-{suf}"
+        appt_id = _create_appointment(auth_headers, session_suffix, suf, title=title, recurrence_rule="weekly")
 
         # Find the series via recurring API (filter by our unique title)
         r = httpx.get(f"{SERVER_URL}/api/appointments/recurring", headers=auth_headers, timeout=10)
@@ -127,9 +130,9 @@ class TestRecurringAppointments:
         assert data.get("start_time", 0) > 0, f"Expected start_time, got: {data}"
         assert data.get("end_time", 0) > 0
 
-    def test_set_recurrence_on_existing(self, auth_headers: dict):
+    def test_set_recurrence_on_existing(self, auth_headers: dict, session_suffix: str):
         """Set recurrence rule on an existing appointment."""
-        appt_id = _create_appointment(auth_headers, "setrecur", title="Make Recurring")
+        appt_id = _create_appointment(auth_headers, session_suffix, "setrecur", title="Make Recurring")
 
         resp = httpx.put(
             f"{SERVER_URL}/api/appointments/{appt_id}/recurrence",
@@ -138,11 +141,11 @@ class TestRecurringAppointments:
         )
         assert_ok(resp)
 
-    def test_recurring_series_with_children(self, auth_headers: dict):
+    def test_recurring_series_with_children(self, auth_headers: dict, session_suffix: str):
         """After generating occurrences, series shows child count."""
         suf = unique_suffix()
-        title = f"MultiGen-{suf}"
-        appt_id = _create_appointment(auth_headers, suf, title=title, recurrence_rule="daily")
+        title = f"MultiGen-{session_suffix}-{suf}"
+        appt_id = _create_appointment(auth_headers, session_suffix, suf, title=title, recurrence_rule="daily")
 
         # Get our series ID from STDB
         rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")

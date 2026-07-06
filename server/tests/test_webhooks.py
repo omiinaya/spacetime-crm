@@ -1,19 +1,20 @@
 """Webhook routes: Stripe webhook, subscription CRUD, and test delivery."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity
 
 
-def _create_webhook(auth_headers: dict, suffix: str = "") -> str:
+def _create_webhook(auth_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a webhook subscription and return its ID.
 
     Uses a unique URL and STDB SQL lookup for test isolation.
+    Tracks created entity for session cleanup.
     """
     suf = suffix or unique_suffix()
-    url = f"https://example-{suf}.com/webhook"
+    url = f"https://example-{session_suffix}-{suf}.com/webhook"
     resp = httpx.post(
         f"{SERVER_URL}/api/webhook-subscriptions",
-        json={"url": url, "events": "customer.created,ticket.created", "secret": "test-secret"},
+        json=dict(url=url, events="customer.created,ticket.created", secret="test-secret"),
         headers=auth_headers, timeout=10,
     )
     assert_ok(resp)
@@ -21,7 +22,9 @@ def _create_webhook(auth_headers: dict, suffix: str = "") -> str:
     # Look up by unique URL to avoid picking up data from other tests
     rows = _stdb_sql(f"SELECT id FROM webhook_subscription WHERE url = '{url}'")
     assert len(rows) >= 1, f"No webhook found with URL '{url}'"
-    return rows[0]["id"]
+    sub_id = rows[0]["id"]
+    _track_entity("webhook_subscription", sub_id)
+    return sub_id
 
 
 class TestWebhookCRUD:

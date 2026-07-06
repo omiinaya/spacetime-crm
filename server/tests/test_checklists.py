@@ -1,16 +1,17 @@
 """Checklist template CRUD tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity
 
 
-def _create_template(auth_headers: dict, suffix: str = "") -> str:
+def _create_template(auth_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a checklist template and return its ID.
 
     Uses unique name and STDB SQL lookup for isolation.
     """
     suf = suffix or unique_suffix()
-    name = f"Checklist-{suf}"
+    prefix = f"{session_suffix}-" if session_suffix else ""
+    name = f"Checklist-{prefix}{suf}"
     resp = httpx.post(f"{SERVER_URL}/api/checklist-templates", json={
         "name": name,
         "description": f"Test checklist {suf}",
@@ -20,7 +21,9 @@ def _create_template(auth_headers: dict, suffix: str = "") -> str:
 
     rows = _stdb_sql(f"SELECT id FROM checklist_template WHERE name = '{name}'")
     assert len(rows) >= 1, f"Template not found with name '{name}'"
-    return rows[0]["id"]
+    template_id = rows[0]["id"]
+    _track_entity("checklist_template", template_id)
+    return template_id
 
 
 class TestChecklistCRUD:
