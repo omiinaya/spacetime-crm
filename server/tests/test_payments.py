@@ -15,6 +15,7 @@ def _create_test_invoice(auth_headers: dict, session_suffix: str = "", suffix: s
     c = create_customer(auth_headers, session_suffix=session_suffix, first_name="Pay", last_name=f"Test{suf}", email=email)
     cid = c.get("id")
     assert cid
+    _track_entity("customer", cid)
     httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": f"Pay test {suffix}", "due_date": 0}, headers=auth_headers, timeout=10)
     # Find invoice by customer_id (unique per test call)
     r = httpx.get(f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=auth_headers, timeout=10)

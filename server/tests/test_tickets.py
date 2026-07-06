@@ -8,21 +8,20 @@ import pytest
 import httpx
 from .conftest import (
     SERVER_URL, STDB_SQL_URL, assert_ok, create_customer, unique_suffix,
-    _stdb_sql, _track_entity, save_sla_targets, restore_sla_targets,
-    reset_sla_targets, DEFAULT_SLA_TARGETS,
+    _stdb_sql, _track_entity, save_sla_targets, restore_sla_targets, reset_sla_targets,
+    DEFAULT_SLA_TARGETS,
 )
 
 
-def _create_ticket(auth_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> str:
+def _create_ticket(auth_headers: dict, suffix: str = "", **overrides) -> str:
     """Create a customer + ticket and return the ticket ID.
 
     Uses a unique serial number and direct STDB SQL to find the ticket,
-    ensuring full isolation from other test data. Tracks created entities
-    for session cleanup.
+    ensuring full isolation from other test data.
     """
     suf = suffix or unique_suffix()
-    email = f"tkt-cust-{session_suffix}-{suf}@example.com"
-    cust = create_customer(auth_headers, session_suffix=session_suffix, first_name="Ticket", last_name=f"Test{suf}", email=email)
+    email = f"tkt-cust-{suf}@example.com"
+    cust = create_customer(auth_headers, first_name="Ticket", last_name=f"Test{suf}", email=email)
     cid = cust.get("id")
     assert cid, f"Failed to create customer: {cust}"
 
@@ -53,9 +52,9 @@ def _create_ticket(auth_headers: dict, session_suffix: str = "", suffix: str = "
 class TestTicketFlow:
     """Full ticket lifecycle."""
 
-    def test_create_ticket(self, auth_headers: dict, session_suffix: str):
+    def test_create_ticket(self, auth_headers: dict):
         """Create a ticket with linked customer."""
-        tid = _create_ticket(auth_headers, session_suffix, "create")
+        tid = _create_ticket(auth_headers, "create")
         assert tid, "Expected a ticket ID"
         assert tid.startswith("tkt_"), f"Unexpected ticket ID format: {tid}"
 
@@ -68,9 +67,9 @@ class TestTicketFlow:
         data = assert_ok(resp)
         assert "tickets" in data
 
-    def test_update_ticket_status(self, auth_headers: dict, session_suffix: str):
+    def test_update_ticket_status(self, auth_headers: dict):
         """Update ticket status using own ticket data."""
-        tid = _create_ticket(auth_headers, session_suffix, "updstatus", title="Status Update Test")
+        tid = _create_ticket(auth_headers, "updstatus", title="Status Update Test")
         resp = httpx.put(
             f"{SERVER_URL}/api/tickets/{tid}/status",
             json={"status": "in_progress"},
@@ -78,9 +77,9 @@ class TestTicketFlow:
         )
         assert_ok(resp)
 
-    def test_add_ticket_note(self, auth_headers: dict, session_suffix: str):
+    def test_add_ticket_note(self, auth_headers: dict):
         """Add a note to a ticket using own ticket data."""
-        tid = _create_ticket(auth_headers, session_suffix, "note", title="Note Test")
+        tid = _create_ticket(auth_headers, "note", title="Note Test")
         resp = httpx.post(
             f"{SERVER_URL}/api/tickets/{tid}/notes",
             json={"author": "Test Tech", "content": "Inspected device", "internal": False},
@@ -101,9 +100,9 @@ class TestTicketFlow:
 class TestInvoiceFlow:
     """Invoice creation and management."""
 
-    def test_create_invoice(self, auth_headers: dict, session_suffix: str):
+    def test_create_invoice(self, auth_headers: dict):
         """Create a basic invoice."""
-        customer = create_customer(auth_headers, session_suffix=session_suffix, first_name="Invoice", last_name="Test")
+        customer = create_customer(auth_headers, first_name="Invoice", last_name="Test")
         cid = customer.get("id")
         assert cid
 
@@ -134,9 +133,9 @@ class TestInvoiceFlow:
 class TestProductFlow:
     """Product/inventory CRUD."""
 
-    def test_create_product(self, auth_headers: dict, session_suffix: str):
+    def test_create_product(self, auth_headers: dict):
         """Create a product."""
-        sku = f"SCR-{session_suffix}-{unique_suffix()}"
+        sku = f"SCR-{unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
             json={
@@ -165,29 +164,37 @@ class TestProductFlow:
 class TestTicketSLA:
     """SLA breach detection."""
 
-    def test_sla_breach_list(self, auth_headers: dict, session_suffix: str):
+    def test_sla_breach_list(self, auth_headers: dict):
         """SLA breaches endpoint returns a list with count."""
-        reset_sla_targets(auth_headers)
-        tid = _create_ticket(auth_headers, session_suffix, "sla", priority="urgent")
-        resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-breached", headers=auth_headers, timeout=10)
-        data = assert_ok(resp)
-        assert "breaches" in data
-        assert "count" in data
-        # The just-created ticket may or may not be breached depending on elapsed time
-        assert isinstance(data["count"], int)
+        saved = save_sla_targets(auth_headers)
+        try:
+            reset_sla_targets(auth_headers)
+            tid = _create_ticket(auth_headers, "sla", priority="urgent")
+            resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-breached", headers=auth_headers, timeout=10)
+            data = assert_ok(resp)
+            assert "breaches" in data
+            assert "count" in data
+            # The just-created ticket may or may not be breached depending on elapsed time
+            assert isinstance(data["count"], int)
+        finally:
+            restore_sla_targets(auth_headers, saved)
 
     def test_sla_targets(self, auth_headers: dict):
         """SLA targets endpoint returns priority thresholds."""
-        reset_sla_targets(auth_headers)
-        resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=auth_headers, timeout=10)
-        data = assert_ok(resp)
-        assert "targets" in data
-        targets = data["targets"]
-        assert "urgent" in targets
-        assert targets["urgent"] == 4
-        assert targets["high"] == 24
-        assert targets["medium"] == 72
-        assert targets["low"] == 120
+        saved = save_sla_targets(auth_headers)
+        try:
+            reset_sla_targets(auth_headers)
+            resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=auth_headers, timeout=10)
+            data = assert_ok(resp)
+            assert "targets" in data
+            targets = data["targets"]
+            assert "urgent" in targets
+            assert targets["urgent"] == 4
+            assert targets["high"] == 24
+            assert targets["medium"] == 72
+            assert targets["low"] == 120
+        finally:
+            restore_sla_targets(auth_headers, saved)
 
     def test_sla_breach_unauthed(self, client: httpx.Client):
         """SLA endpoints require auth."""
@@ -196,12 +203,16 @@ class TestTicketSLA:
 
     def test_sla_settings_get(self, auth_headers: dict):
         """GET sla-settings returns current config."""
-        reset_sla_targets(auth_headers)
-        resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-settings", headers=auth_headers, timeout=10)
-        data = assert_ok(resp)
-        assert "targets" in data
-        assert "updated_at" in data
-        assert data["targets"]["urgent"] == 4
+        saved = save_sla_targets(auth_headers)
+        try:
+            reset_sla_targets(auth_headers)
+            resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-settings", headers=auth_headers, timeout=10)
+            data = assert_ok(resp)
+            assert "targets" in data
+            assert "updated_at" in data
+            assert data["targets"]["urgent"] == 4
+        finally:
+            restore_sla_targets(auth_headers, saved)
 
     def test_sla_settings_save(self, auth_headers: dict):
         """POST sla-settings saves and returns new config. Always restores afterwards."""

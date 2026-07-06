@@ -11,6 +11,7 @@ def _create_test_customer(auth_headers: dict, session_suffix: str = "", suffix: 
     c = create_customer(auth_headers, session_suffix=session_suffix, first_name="Invoice", last_name=f"Test{suf}", email=email)
     cid = c.get("id")
     assert cid, f"Failed to create customer: {c}"
+    _track_entity("customer", cid)
     return cid
 
 

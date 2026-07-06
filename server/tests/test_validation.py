@@ -1,7 +1,26 @@
 """Error handling and input validation tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, unique_suffix
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
+
+
+@pytest.fixture
+def product_id_for_validation(auth_headers: dict, session_suffix: str) -> str:
+    """Create a product for validation tests and track for cleanup."""
+    suf = unique_suffix()
+    sku = f"BAD-{session_suffix}-{suf}"
+    resp = httpx.post(
+        f"{SERVER_URL}/api/products",
+        json={"name": "Bad", "sku": sku, "price": -5.00, "quantity_on_hand": -10},
+        headers=auth_headers, timeout=10,
+    )
+    assert resp.status_code < 500
+    # Track for cleanup
+    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
+    prods = r.json().get("products", [])
+    if prods:
+        _track_entity("product", prods[0]["id"])
+    return sku
 
 
 class TestValidation:
@@ -53,12 +72,7 @@ class TestValidation:
         # In production, the SPA serves index.html for non-API paths
         assert resp.status_code < 500
 
-    def test_negative_quantity_product(self, auth_headers: dict):
+    def test_negative_quantity_product(self, auth_headers: dict, product_id_for_validation: str):
         """Creating product with negative quantity is handled."""
-        resp = httpx.post(
-            f"{SERVER_URL}/api/products",
-            json={"name": "Bad", "sku": f"BAD-{unique_suffix()}", "price": -5.00, "quantity_on_hand": -10},
-            headers=auth_headers, timeout=10,
-        )
-        # Should not crash — acceptable behavior is to create with negative or return 400
-        assert resp.status_code < 500
+        # Product created in product_id_for_validation fixture
+        assert True  # Fixture verifies the product creation doesn't crash

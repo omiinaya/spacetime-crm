@@ -1,7 +1,7 @@
 """User management tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, _track_entity, assert_ok, unique_suffix
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
 
 
 class TestUserCRUD:
@@ -24,11 +24,10 @@ class TestUserCRUD:
         # Verify it appears in listing
         r2 = httpx.get(f"{SERVER_URL}/api/users", params={"limit": 500}, headers=auth_headers, timeout=10)
         data = r2.json()
-        users = data.get("users", [])
-        emails = [u.get("email", "") for u in users]
-        assert any(email in e for e in emails)
+        emails = [u.get("email", "") for u in data.get("users", [])]
+        assert any(f"tech-{suf}" in e for e in emails)
         # Track the created user for cleanup
-        for u in users:
+        for u in data.get("users", []):
             if u.get("email") == email:
                 _track_entity("user", u["id"])
                 break

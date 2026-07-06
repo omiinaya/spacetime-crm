@@ -7,22 +7,18 @@ import pytest
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
 
 
-def _create_field(auth_headers: dict, suffix: str = "", session_suffix: str = "") -> dict:
+def _create_field(auth_headers: dict, suffix: str = "") -> dict:
     """Create a custom field definition and return full response.
 
     Uses unique_suffix for label to prevent collisions between parallel
-    test sessions. When session_suffix is provided, it's incorporated into
-    the label for session-level cleanup.
+    test sessions.
     """
     sfx = f"{suffix}-{unique_suffix()}" if suffix else unique_suffix()
-    label = f"Test Field-{sfx}"
-    if session_suffix:
-        label = f"{session_suffix}-{label}"
     resp = httpx.post(
         f"{SERVER_URL}/api/custom-field-definitions",
         json={
             "entity_type": "customer",
-            "label": label,
+            "label": f"Test Field-{sfx}",
             "field_type": "text",
             "options": [],
             "sort_order": 0,
@@ -33,7 +29,7 @@ def _create_field(auth_headers: dict, suffix: str = "", session_suffix: str = ""
     )
     data = assert_ok(resp)
     assert "id" in data
-    _track_entity('custom_field_definition', data['id'])
+    _track_entity("custom_field_definition", data["id"])
     return data
 
 
