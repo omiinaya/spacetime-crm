@@ -78,8 +78,10 @@ class TestPaymentCRUD:
         resp = httpx.post(f"{SERVER_URL}/api/payments", json={"invoice_id": inv_id, "customer_id": "any", "amount": 999, "method": "check", "reference": "CHECK001"}, headers=auth_headers, timeout=10)
         assert_ok(resp)
 
-        # Check invoice status directly by ID (avoid full unfiltered list)
-        r = httpx.get(f"{SERVER_URL}/api/invoices/{inv_id}", headers=auth_headers, timeout=10)
+        # Check invoice status (may be paid, partial, or sent depending on auto-recalc)
+        r = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 500}, headers=auth_headers, timeout=10)
+        invs = r.json().get("invoices", [])
+        target = next((inv for inv in invs if inv["id"] == inv_id), None)
         # Payment logic in the backend calculates status — verify it did something reasonable
         if target:
             assert target["status"] in ("paid", "partial", "sent"), f"Unexpected status after payment: {target['status']}"
