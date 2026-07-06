@@ -208,6 +208,7 @@ cd "$REPO_DIR/server/spacetimedb"
 if spacetime publish \
   --server "$STDB_URL" \
   --yes \
+  --anonymous \
   --delete-data=always \
   "$STDB_DB" 2>&1; then
   log_pass "Module published to '${STDB_DB}'$(elapsed)"

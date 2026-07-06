@@ -19,7 +19,6 @@ import pyotp
 import base64
 import os
 import json
-from mail import send_email as _send_email
 
 router = APIRouter()
 
@@ -426,7 +425,16 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 <p style="color:#999;font-size:13px">This link expires in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
 <hr style="border:none;border-top:1px solid #eee" />
 <p style="color:#999;font-size:12px">SpacetimeCRM</p>
-</body></html>"""
+</body></html>""" % (reset_link, reset_link)
+    # Lazy import to avoid top-level import side effects
+    from mail import send_email as _send_email
+    _send_email(email, "Password Reset \u2014 SpacetimeCRM", html % (reset_link, reset_link))
+    _send_email(email, "Password Reset \u2014 SpacetimeCRM", html)
+    """
+    Uses _send_email import lazily to avoid top-level import side effects.
+    """
+    # Lazy import inside the function body
+    from mail import send_email as _send_email
     _send_email(email, "Password Reset \u2014 SpacetimeCRM", html)
 
     logger.info("Password reset email sent to %s (%s)", email, user_type)
