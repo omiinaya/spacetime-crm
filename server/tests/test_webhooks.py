@@ -1,11 +1,14 @@
 """Webhook routes: Stripe webhook, subscription CRUD, and test delivery."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql
 
 
 def _create_webhook(auth_headers: dict, suffix: str = "") -> str:
-    """Create a webhook subscription and return its ID."""
+    """Create a webhook subscription and return its ID.
+
+    Uses a unique URL and STDB SQL lookup for test isolation.
+    """
     suf = suffix or unique_suffix()
     url = f"https://example-{suf}.com/webhook"
     resp = httpx.post(
@@ -15,10 +18,10 @@ def _create_webhook(auth_headers: dict, suffix: str = "") -> str:
     )
     assert_ok(resp)
 
-    r = httpx.get(f"{SERVER_URL}/api/webhook-subscriptions", headers=auth_headers, timeout=10)
-    subs = r.json().get("subscriptions", [])
-    assert len(subs) >= 1
-    return subs[-1]["id"]
+    # Look up by unique URL to avoid picking up data from other tests
+    rows = _stdb_sql(f"SELECT id FROM webhook_subscription WHERE url = '{url}'")
+    assert len(rows) >= 1, f"No webhook found with URL '{url}'"
+    return rows[0]["id"]
 
 
 class TestWebhookCRUD:

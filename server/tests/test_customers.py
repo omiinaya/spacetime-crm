@@ -18,14 +18,14 @@ class TestCustomerCRUD:
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
-        # Verify it appears in list
+        # Verify it appears in search results (scoped by unique email)
         r2 = httpx.get(
             f"{SERVER_URL}/api/customers",
+            params={"search": email},
             headers=auth_headers, timeout=10,
         )
         data = assert_ok(r2)
-        emails = [c["email"] for c in data.get("customers", [])]
-        assert email in emails
+        assert any(c["email"] == email for c in data.get("customers", []))
 
     def test_search_customer(self, auth_headers: dict):
         """Search by email works."""
