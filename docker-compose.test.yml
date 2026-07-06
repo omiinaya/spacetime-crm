@@ -1,15 +1,28 @@
 version: "3.8"
 
-# Test-only SpacetimeDB stack.
-# Starts a fresh STDB instance on port 3002 (non-conflicting with dev :3001)
-# with no persistent volume — clean state every run.
+# ──────────────────────────────────────────────────────────────────────
+# SpacetimeCRM — Container-based Integration Test Stack
 #
-# Usage: docker compose -f docker-compose.test.yml up -d --wait
-#        ./scripts/run-integration-tests.sh
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d --wait
+#   make test-container              # full lifecycle via Makefile
+#   bash scripts/run-container-tests.sh  # direct script execution
+#
+# Key design choices:
+# - STDB on port 3002 (non-conflicting with dev :3001)
+# - Backend on port 8724 (non-conflicting with dev :8723)
+# - Ephemeral storage (tmpfs) — clean state every run
+# - Backend built with test-specific Dockerfile (includes test deps)
+# - Health checks for proper service ordering
+# ──────────────────────────────────────────────────────────────────────
 
 services:
+  # ─── SpacetimeDB Test Instance ─────────────────────────────────────
+  # Uses the official SpacetimeDB image with in-memory storage for fast,
+  # isolated test runs. No persistent volumes = clean state every run.
   spacetime-test:
-    image: spacetimedb/spacetimedb:latest
+    image: spacetimedb/spacetimedb:2.6.1
+    container_name: spacetime-crm-stdb-test
     ports:
       - "3002:3001"
     healthcheck:
@@ -18,5 +31,90 @@ services:
       timeout: 3s
       retries: 15
       start_period: 10s
-    # No volumes — ephemeral for clean test state each run
-    tmpfs: /var/lib/spacetimedb
+    # Ephemeral storage — no persistence between test runs
+    tmpfs:
+      - /var/lib/spacetimedb
+    # Reduce resource usage for CI
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+
+  # ─── Backend Test Service ──────────────────────────────────────────
+  # Custom-built image that includes the SpacetimeCRM backend + test dependencies.
+  # Connects to spacetime-test via Docker network (service name resolution).
+  backend-test:
+    build:
+      context: .
+      dockerfile: server/Dockerfile.test
+    container_name: spacetime-crm-backend-test
+    ports:
+      - "8724:8723"
+    environment:
+      - STDB_HOST=spacetime-test
+      - STDB_PORT=3001
+      - STDB_DB=spacetime-crm-test
+      - SERVER_PORT=8723
+      - JWT_SECRET=test-secret-change-in-production
+      - JWT_EXPIRE_HOURS=24
+      - CRM_ADMIN_EMAIL=admin@crm.local
+      - CRM_ADMIN_PW=PLACEHOLDER_ADMIN_PW
+      - LOG_LEVEL=debug
+    depends_on:
+      spacetime-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8723/api/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # Use tmpfs for any temp files to keep container stateless
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  # ─── Test Runner (optional) ────────────────────────────────────────
+  # Runs pytest against the backend-test service. Used for one-shot test runs.
+  test-runner:
+    build:
+      context: .
+      dockerfile: server/Dockerfile.test
+    container_name: spacetime-crm-test-runner
+    environment:
+      - CRM_TEST_SERVER=http://backend-test:8723
+      - CRM_ADMIN_EMAIL=admin@crm.local
+      - CRM_ADMIN_PW=PLACEHOLDER_ADMIN_PW
+      - STDB_HOST=spacetime-test
+      - STDB_PORT=3001
+      - STDB_DB=spacetime-crm-test
+    depends_on:
+      backend-test:
+        condition: service_healthy
+    # Run tests and exit; compose will capture exit code
+    command: >
+      sh -c "
+        echo 'Waiting for backend to be fully ready...' &&
+        sleep 5 &&
+        cd /app/server &&
+        python3 -m pytest tests/ -v --tb=short
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+# ─── Networks ────────────────────────────────────────────────────────
+# Default bridge network allows service name resolution
+# No external networks needed for isolated test runs
+
+networks:
+  default:
+    name: spacetime-crm-test-network
+    driver: bridge
