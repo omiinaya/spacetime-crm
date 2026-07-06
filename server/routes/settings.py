@@ -7,6 +7,8 @@ from helpers import (
 from models import MailSettingsUpdate, SMSSettingsUpdate, BusinessHoursUpdate
 from rate_limit import limiter
 from business_hours import get_settings as _bh_get, DEFAULT_HOURS, update_settings as _bh_update
+from mail import get_settings as _mail_get, update_settings as _mail_update, test_connection as _mail_test
+from sms import get_settings as _sms_get, update_settings as _sms_update, test_connection as _sms_test
 
 router = APIRouter()
 
@@ -14,7 +16,6 @@ router = APIRouter()
 @router.get("/api/settings/mail")
 async def mail_settings_get(user: dict = Depends(require_role("admin"))):
     """Get current mail settings (without password)."""
-    from mail import get_settings as _mail_get
     settings = _mail_get()
     if settings is None:
         return {"configured": False, "settings": None}
@@ -25,7 +26,6 @@ async def mail_settings_get(user: dict = Depends(require_role("admin"))):
 @limiter.limit("30/minute")
 async def mail_settings_save(request: Request, body: MailSettingsUpdate, user: dict = Depends(require_role("admin"))):
     """Save mail settings."""
-    from mail import update_settings as _mail_update
     data = {
         "host": body.smtp_host,
         "port": body.smtp_port,
@@ -43,7 +43,6 @@ async def mail_settings_save(request: Request, body: MailSettingsUpdate, user: d
 @limiter.limit("10/minute")
 async def mail_settings_test(request: Request, user: dict = Depends(require_role("admin"))):
     """Test SMTP connection with current settings."""
-    from mail import test_connection as _mail_test
     result = _mail_test()
     return result
 
@@ -51,7 +50,6 @@ async def mail_settings_test(request: Request, user: dict = Depends(require_role
 @router.get("/api/settings/sms")
 async def sms_settings_get(user: dict = Depends(require_role("admin"))):
     """Get current SMS settings."""
-    from sms import get_settings as _sms_get
     settings = _sms_get()
     if settings is None:
         return {"configured": False, "settings": None}
@@ -62,7 +60,6 @@ async def sms_settings_get(user: dict = Depends(require_role("admin"))):
 @limiter.limit("30/minute")
 async def sms_settings_save(request: Request, body: SMSSettingsUpdate, user: dict = Depends(require_role("admin"))):
     """Save SMS settings."""
-    from sms import update_settings as _sms_update
     _sms_update(body.model_dump())
     return {"ok": True}
 
@@ -71,7 +68,6 @@ async def sms_settings_save(request: Request, body: SMSSettingsUpdate, user: dic
 @limiter.limit("10/minute")
 async def sms_settings_test(request: Request, user: dict = Depends(require_role("admin"))):
     """Test SMS connection with current settings."""
-    from sms import test_connection as _sms_test
     result = _sms_test()
     return result
 

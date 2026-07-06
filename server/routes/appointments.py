@@ -10,6 +10,8 @@ from helpers import (
     require_role, logger,
 )
 from models import AppointmentCreate, AppointmentStatusUpdate, AppointmentRecurrence, GenerateNextOccurrence
+from mail import _customer_email as _mail_customer_email, _notify_appointment_created, _notify_appointment_reminder as _mail
+from sms import _customer_phone as _sms_customer_phone, _notify_appointment_created as _sms_appointment_created, _notify_appointment_reminder as _sms
 
 router = APIRouter()
 
@@ -64,10 +66,6 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
     ])
 
     async def _notify():
-        from mail import _customer_email as _mail_customer_email
-        from mail import _notify_appointment_created
-        from sms import _customer_phone as _sms_customer_phone
-        from sms import _notify_appointment_created as _sms_appointment_created
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
@@ -157,8 +155,6 @@ async def get_appointments_due_soon(user: dict = Depends(require_role("admin", "
 @router.post("/api/appointments/send-reminders")
 async def send_appointment_reminders(user: dict = Depends(require_role("admin"))):
     """Send reminder notifications for appointments starting in the next 24 hours."""
-    from mail import _notify_appointment_reminder as _mail
-    from sms import _notify_appointment_reminder as _sms
     now_ms = int(__import__("time").time() * 1000)
     in_24h = now_ms + 86_400_000
 

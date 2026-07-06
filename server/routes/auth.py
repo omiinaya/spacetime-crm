@@ -19,6 +19,7 @@ import pyotp
 import base64
 import os
 import json
+from mail import send_email as _send_email
 
 router = APIRouter()
 
@@ -426,8 +427,7 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 <hr style="border:none;border-top:1px solid #eee" />
 <p style="color:#999;font-size:12px">SpacetimeCRM</p>
 </body></html>"""
-    from mail import send_email as _send_email
-    _send_email(email, "Password Reset — SpacetimeCRM", html)
+    _send_email(email, "Password Reset \u2014 SpacetimeCRM", html)
 
     logger.info("Password reset email sent to %s (%s)", email, user_type)
     return {"ok": True, "message": "If that email exists, a reset link has been sent."}

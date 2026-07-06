@@ -9,6 +9,7 @@ from helpers import (
     require_role, logger,
 )
 from models import EstimateCreate, EstimateStatusUpdate, EstimateLineItemCreate
+from sms import _customer_phone as _sms_customer_phone, _notify_estimate_approved as _sms_estimate_approved
 
 router = APIRouter()
 
@@ -106,7 +107,6 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
     }))
 
     async def _sms_notify():
-        from sms import _customer_phone as _sms_customer_phone, _notify_estimate_approved as _sms_estimate_approved
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{est.get('customer_id', '')}'")
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:

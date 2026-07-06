@@ -51,6 +51,17 @@ def unique_suffix() -> str:
 
 
 @pytest.fixture(scope="session")
+def session_suffix() -> str:
+    """A unique identifier shared across the entire test session.
+
+    Use this as a prefix when creating entities so all data from one
+    session run can be distinguished from data left by previous runs.
+    Example: email=f"test-{session_suffix}-{unique_suffix()}@example.com"
+    """
+    return uuid.uuid4().hex[:12]
+
+
+@pytest.fixture(scope="session")
 def admin_token() -> str:
     """Log in as admin once per session and return the JWT."""
     resp = httpx.post(f"{SERVER_URL}/api/auth/login", json={

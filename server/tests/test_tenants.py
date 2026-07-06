@@ -51,19 +51,25 @@ class TestTenants:
         assert resp.status_code in (401, 403)
 
     def test_tenant_update(self, auth_headers: dict, admin_user: dict):
-        """Update tenant settings."""
+        """Update tenant settings. Always restores original name/slug."""
         tid = admin_user["tenant_id"]
-        resp = httpx.put(
-            f"{SERVER_URL}/api/tenants/{tid}",
-            json={"name": "Updated Shop", "slug": "updated-shop"},
-            headers=auth_headers, timeout=10,
-        )
-        assert_ok(resp)
-
-        # Restore
-        resp = httpx.put(
-            f"{SERVER_URL}/api/tenants/{tid}",
-            json={"name": "Main Shop", "slug": "main-shop"},
-            headers=auth_headers, timeout=10,
-        )
-        assert_ok(resp)
+        # Fetch current tenant so we can restore
+        current = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=auth_headers, timeout=10).json()
+        orig_tenant = current.get("tenant", {})
+        orig_name = orig_tenant.get("name", "Main Shop")
+        orig_slug = orig_tenant.get("slug", "main-shop")
+        try:
+            resp = httpx.put(
+                f"{SERVER_URL}/api/tenants/{tid}",
+                json={"name": "Updated Shop", "slug": "updated-shop"},
+                headers=auth_headers, timeout=10,
+            )
+            assert_ok(resp)
+        finally:
+            # Always restore
+            resp = httpx.put(
+                f"{SERVER_URL}/api/tenants/{tid}",
+                json={"name": orig_name, "slug": orig_slug},
+                headers=auth_headers, timeout=10,
+            )
+            assert_ok(resp)

@@ -21,7 +21,7 @@ class TestUserCRUD:
         assert_ok(resp)
 
         # Verify it appears in listing
-        r2 = httpx.get(f"{SERVER_URL}/api/users", headers=auth_headers, timeout=10)
+        r2 = httpx.get(f"{SERVER_URL}/api/users", params={"limit": 500}, headers=auth_headers, timeout=10)
         data = r2.json()
         emails = [u.get("email", "") for u in data.get("users", [])]
         assert any(f"tech-{suf}" in e for e in emails)

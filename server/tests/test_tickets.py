@@ -9,14 +9,36 @@ import httpx
 from .conftest import SERVER_URL, STDB_SQL_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
 
 
-def _reset_sla_targets(auth_headers: dict) -> None:
-    """Reset SLA targets back to defaults for test isolation."""
-    defaults = {"urgent": 4, "high": 24, "medium": 72, "low": 120}
-    httpx.post(
+DEFAULT_SLA_TARGETS = {"urgent": 4, "high": 24, "medium": 72, "low": 120}
+
+
+def _save_sla_targets(auth_headers: dict) -> dict:
+    """Fetch current SLA targets and return them for later restoration."""
+    resp = httpx.get(
         f"{SERVER_URL}/api/tickets/sla-settings",
-        json={"targets": defaults},
         headers=auth_headers, timeout=10,
     )
+    data = resp.json()
+    return data.get("targets", dict(DEFAULT_SLA_TARGETS))
+
+
+def _reset_sla_targets(auth_headers: dict) -> None:
+    """Reset SLA targets back to defaults for test isolation."""
+    httpx.post(
+        f"{SERVER_URL}/api/tickets/sla-settings",
+        json={"targets": dict(DEFAULT_SLA_TARGETS)},
+        headers=auth_headers, timeout=10,
+    )
+
+
+def _restore_sla_targets(auth_headers: dict, targets: dict) -> None:
+    """Restore SLA targets to previously saved values."""
+    if targets:
+        httpx.post(
+            f"{SERVER_URL}/api/tickets/sla-settings",
+            json={"targets": targets},
+            headers=auth_headers, timeout=10,
+        )
 
 
 def _create_ticket(auth_headers: dict, suffix: str = "", **overrides) -> str:
@@ -210,22 +232,25 @@ class TestTicketSLA:
         assert data["targets"]["urgent"] == 4
 
     def test_sla_settings_save(self, auth_headers: dict):
-        """POST sla-settings saves and returns new config. Resets afterwards."""
-        custom = {"urgent": 1, "high": 8, "medium": 24, "low": 48}
-        resp = httpx.post(
-            f"{SERVER_URL}/api/tickets/sla-settings",
-            json={"targets": custom},
-            headers=auth_headers, timeout=10,
-        )
-        data = assert_ok(resp)
-        assert data["ok"] is True
-        assert data["targets"]["urgent"] == 1.0
-        # Verify persistence
-        resp2 = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=auth_headers, timeout=10)
-        data2 = assert_ok(resp2)
-        assert data2["targets"]["urgent"] == 1.0
-        # Reset for other tests
-        _reset_sla_targets(auth_headers)
+        """POST sla-settings saves and returns new config. Always restores afterwards."""
+        saved = _save_sla_targets(auth_headers)
+        try:
+            custom = {"urgent": 1, "high": 8, "medium": 24, "low": 48}
+            resp = httpx.post(
+                f"{SERVER_URL}/api/tickets/sla-settings",
+                json={"targets": custom},
+                headers=auth_headers, timeout=10,
+            )
+            data = assert_ok(resp)
+            assert data["ok"] is True
+            assert data["targets"]["urgent"] == 1.0
+            # Verify persistence
+            resp2 = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=auth_headers, timeout=10)
+            data2 = assert_ok(resp2)
+            assert data2["targets"]["urgent"] == 1.0
+        finally:
+            # Always restore original SLA settings for other tests
+            _restore_sla_targets(auth_headers, saved)
 
     def test_sla_settings_validation(self, auth_headers: dict):
         """POST sla-settings validates inputs."""
