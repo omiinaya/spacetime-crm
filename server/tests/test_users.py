@@ -11,11 +11,12 @@ class TestUserCRUD:
         assert "users" in data
         assert "total" in data
 
-    def test_create(self, auth_headers: dict):
+    def test_create(self, auth_headers: dict, session_suffix: str):
         suf = unique_suffix()
+        email = f"tech-{session_suffix}-{suf}@test.com"
         resp = httpx.post(f"{SERVER_URL}/api/users", json={
-            "name": f"Tech User {suf}",
-            "email": f"tech-{suf}@test.com",
+            "name": f"Tech User {session_suffix}-{suf}",
+            "email": email,
             "role": "tech",
         }, headers=auth_headers, timeout=10)
         assert_ok(resp)
@@ -25,10 +26,10 @@ class TestUserCRUD:
         data = r2.json()
         users = data.get("users", [])
         emails = [u.get("email", "") for u in users]
-        assert any(f"tech-{suf}" in e for e in emails)
+        assert any(email in e for e in emails)
         # Track the created user for cleanup
         for u in users:
-            if f"tech-{suf}" in u.get("email", ""):
+            if u.get("email") == email:
                 _track_entity("user", u["id"])
                 break
 
