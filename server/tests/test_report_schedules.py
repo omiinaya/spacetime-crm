@@ -1,12 +1,13 @@
 """Report schedule CRUD + run-now + check-due tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix
 
 
 def _create_schedule(auth_headers: dict, suffix: str = "") -> str:
     """Create a report schedule and return its ID."""
-    name = f"Schedule {suffix or 'A'}"
+    suf = suffix or unique_suffix()
+    name = f"Schedule-{suf}"
     resp = httpx.post(f"{SERVER_URL}/api/report-schedules", json={
         "name": name,
         "report_type": "revenue",
@@ -16,8 +17,9 @@ def _create_schedule(auth_headers: dict, suffix: str = "") -> str:
         "filters": {"months_back": 3},
     }, headers=auth_headers, timeout=10)
     data = assert_ok(resp)
-
-    r = httpx.get(f"{SERVER_URL}/api/report-schedules", headers=auth_headers, timeout=10)
+    assert data.get("ok") is True
+    # Look it up by unique name via GET
+    r = httpx.get(f"{SERVER_URL}/api/report-schedules", params={"search": name}, headers=auth_headers, timeout=10)
     schedules = r.json().get("schedules", [])
     assert len(schedules) >= 1
     return schedules[0]["id"]
@@ -25,8 +27,9 @@ def _create_schedule(auth_headers: dict, suffix: str = "") -> str:
 
 class TestReportScheduleCRUD:
     def test_create(self, auth_headers: dict):
+        name = f"Weekly Revenue Report {unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/report-schedules", json={
-            "name": "Weekly Revenue Report",
+            "name": name,
             "report_type": "revenue",
             "schedule_frequency": "weekly",
             "recipients": ["manager@test.com", "admin@test.com"],

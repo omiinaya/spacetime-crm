@@ -14,8 +14,6 @@ from models import (
     TicketCreate, TicketStatusUpdate, TicketAssign, TicketNoteCreate, TicketTimerStart,
     ChecklistApply, ChecklistToggle,
 )
-from mail import _customer_email as _mail_customer_email, _notify_ticket_status_change
-from sms import _customer_phone as _sms_customer_phone, _notify_ticket_status_change as _sms_ticket_status
 
 router = APIRouter()
 
@@ -95,6 +93,8 @@ async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: d
     await _call("update_ticket_status", [ticket_id, status])
 
     async def _notify():
+        from mail import _customer_email as _mail_customer_email, _notify_ticket_status_change
+        from sms import _customer_phone as _sms_customer_phone, _notify_ticket_status_change as _sms_ticket_status
         rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}'")
         if rows:
             t = rows[0]

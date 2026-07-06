@@ -5,8 +5,6 @@ import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pdf import html_to_pdf
-from mail import send_email, _notify_invoice_created, _customer_email as _mail_customer_email, _notify_overdue_reminder as _mail_reminder
-from sms import _customer_phone as _sms_customer_phone, _notify_invoice_created as _sms_invoice_created, _notify_overdue_reminder as _sms_reminder
 
 from config import settings
 from helpers import (
@@ -49,6 +47,8 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
     ])
 
     async def _notify():
+        from mail import _customer_email as _mail_customer_email, _notify_invoice_created
+        from sms import _customer_phone as _sms_customer_phone, _notify_invoice_created as _sms_invoice_created
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
@@ -184,6 +184,8 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
 @router.post("/api/invoices/send-overdue-reminders")
 async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
     """Find overdue invoices and send email/SMS reminders to each customer."""
+    from mail import _notify_overdue_reminder as _mail_reminder
+    from sms import _notify_overdue_reminder as _sms_reminder
     now = int(datetime.utcnow().timestamp() * 1000)
     rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}))")
     sent = {"email": 0, "sms": 0, "total": 0}
@@ -346,6 +348,7 @@ async def send_invoice_email(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Send a single invoice by email. Body: {"invoice_id": "..."}"""
+    from mail import _notify_invoice_created
     invoice_id = body.get("invoice_id", "")
     if not invoice_id:
         raise HTTPException(400, "invoice_id required")
@@ -382,6 +385,7 @@ async def send_batch_invoice_email(
     user: dict = Depends(require_role("admin")),
 ):
     """Send multiple invoices by email. Body: {"invoice_ids": ["id1", "id2", ...]}"""
+    from mail import _notify_invoice_created
     invoice_ids = body.get("invoice_ids", [])
     if not invoice_ids:
         raise HTTPException(400, "invoice_ids array required")
