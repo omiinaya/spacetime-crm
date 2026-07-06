@@ -1,7 +1,7 @@
 """Saved payment methods CRUD tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity
 
 
 def _customer_id(auth_headers: dict, suffix: str = "") -> str:
@@ -34,13 +34,16 @@ class TestPaymentMethods:
             "exp_month": 12,
             "exp_year": 2028,
         }, headers=auth_headers, timeout=10)
-        assert_ok(resp)
+        data = assert_ok(resp)
 
         # Verify it appears in list
         r2 = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=auth_headers, timeout=10)
-        data = r2.json()
-        methods = [m for m in data["payment_methods"] if m.get("stripe_payment_method_id") == "pm_test_12345"]
-        assert len(methods) >= 1, f"Saved method not found: {data['payment_methods']}"
+        r2_data = r2.json()
+        methods = [m for m in r2_data["payment_methods"] if m.get("stripe_payment_method_id") == "pm_test_12345"]
+        assert len(methods) >= 1, f"Saved method not found: {r2_data['payment_methods']}"
+        # Track for cleanup
+        for m in methods:
+            _track_entity("saved_payment_method", m["id"])
 
     def test_save_method_invalid_last4(self, auth_headers: dict):
         cid = _customer_id(auth_headers, "bad-last4")
@@ -80,6 +83,7 @@ class TestPaymentMethods:
         if not methods:
             pytest.skip("No payment methods to set default")
         method_id = methods[0]["id"]
+        _track_entity("saved_payment_method", method_id)
 
         resp = httpx.put(f"{SERVER_URL}/api/payment-methods/{method_id}/default", json={
             "customer_id": cid,
@@ -108,6 +112,7 @@ class TestPaymentMethods:
         if not methods:
             pytest.skip("No payment methods to delete")
         method_id = methods[0]["id"]
+        _track_entity("saved_payment_method", method_id)
 
         resp = httpx.delete(f"{SERVER_URL}/api/payment-methods/{method_id}", headers=auth_headers, timeout=10)
         assert_ok(resp)

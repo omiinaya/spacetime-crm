@@ -89,6 +89,7 @@ _STDB_TABLES = {
     "counter_sale": "counter_sale",
     "adjustment": "inventory_adjustment",
     "pos_line_item": "pos_line_item",
+    "saved_payment_method": "saved_payment_methods",
 }
 
 # ── Session-isolation tracker ──────────────────────────────────────
@@ -144,6 +145,7 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
         # Ticket child tables
         "ticket_note",
         "ticket_timer",
+        "saved_payment_methods",
         # Invoice/estimate child tables
         "invoice_line_item",
         "estimate_line_item",

@@ -4,21 +4,27 @@ import httpx
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
 
 
-def _unique_sku(base: str, session_suffix: str = "") -> str:
-    return f"{base}-{session_suffix}-{unique_suffix()}"
+def _unique_sku(base: str) -> str:
+    return f"{base}-{unique_suffix()}"
 
 
 class TestProductCRUD:
     """Product create, list, update, delete lifecycle."""
 
-    def test_create_product(self, auth_headers: dict, session_suffix: str):
+    def test_create_product(self, auth_headers: dict):
         """Create a basic product."""
+        sku = _unique_sku("TST")
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
-            json={"name": "Test Product", "sku": _unique_sku("TST", session_suffix), "price": 29.99, "cost": 15.00, "quantity_on_hand": 50},
+            json={"name": "Test Product", "sku": sku, "price": 29.99, "cost": 15.00, "quantity_on_hand": 50},
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
+        # Track for cleanup
+        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
+        prods = r.json().get("products", [])
+        if prods:
+            _track_entity("product", prods[0]["id"])
 
     def test_list_products(self, auth_headers: dict):
         """List products returns paginated results."""
@@ -27,10 +33,10 @@ class TestProductCRUD:
         assert "products" in data
         assert "total" in data
 
-    def test_update_product_quantity(self, auth_headers: dict, session_suffix: str):
+    def test_update_product_quantity(self, auth_headers: dict):
         """Update product quantity."""
         # Create product first
-        sku = _unique_sku("QTY", session_suffix)
+        sku = _unique_sku("QTY")
         httpx.post(f"{SERVER_URL}/api/products", json={"name": "Qty Test", "sku": sku, "price": 10, "quantity_on_hand": 25}, headers=auth_headers, timeout=10)
         r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
@@ -46,9 +52,9 @@ class TestProductCRUD:
         )
         assert_ok(resp)
 
-    def test_update_product(self, auth_headers: dict, session_suffix: str):
+    def test_update_product(self, auth_headers: dict):
         """Update product fields (name, price, min_stock)."""
-        sku = _unique_sku("UPD", session_suffix)
+        sku = _unique_sku("UPD")
         httpx.post(f"{SERVER_URL}/api/products", json={"name": "Update Test", "sku": sku, "price": 20, "cost": 10, "quantity_on_hand": 10, "min_stock": 2}, headers=auth_headers, timeout=10)
         r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
@@ -58,28 +64,29 @@ class TestProductCRUD:
         _track_entity("product", pid)
 
         resp = httpx.put(
-            f"{SERVER_URL}/api/products/{prods[0]['id']}",
+            f"{SERVER_URL}/api/products/{pid}",
             json={"name": "Updated Name", "sku": sku, "price": 25, "cost": 12, "quantity_on_hand": 10, "min_stock": 5, "location": "Aisle 3"},
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
 
-    def test_delete_product(self, auth_headers: dict, session_suffix: str):
+    def test_delete_product(self, auth_headers: dict):
         """Delete a product (admin only)."""
-        sku = _unique_sku("DEL", session_suffix)
+        sku = _unique_sku("DEL")
         httpx.post(f"{SERVER_URL}/api/products", json={"name": "Delete Test", "sku": sku, "price": 5, "quantity_on_hand": 0}, headers=auth_headers, timeout=10)
         r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
         if not prods:
             pytest.skip("Product not found")
         pid = prods[0]["id"]
+        _track_entity("product", pid)
 
         resp = httpx.delete(f"{SERVER_URL}/api/products/{pid}", headers=auth_headers, timeout=10)
         assert_ok(resp)
 
-    def test_inventory_adjustment(self, auth_headers: dict, session_suffix: str):
+    def test_inventory_adjustment(self, auth_headers: dict):
         """Create an inventory adjustment for a product."""
-        sku = _unique_sku("ADJ", session_suffix)
+        sku = _unique_sku("ADJ")
         httpx.post(f"{SERVER_URL}/api/products", json={"name": "Adj Test", "sku": sku, "price": 8, "quantity_on_hand": 30}, headers=auth_headers, timeout=10)
         r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
@@ -95,9 +102,9 @@ class TestProductCRUD:
         )
         assert_ok(resp)
 
-    def test_list_adjustments(self, auth_headers: dict, session_suffix: str):
+    def test_list_adjustments(self, auth_headers: dict):
         """List inventory adjustments for a product."""
-        sku = _unique_sku("ADJL", session_suffix)
+        sku = _unique_sku("ADJL")
         httpx.post(f"{SERVER_URL}/api/products", json={"name": "List Adj", "sku": sku, "price": 12, "quantity_on_hand": 20}, headers=auth_headers, timeout=10)
         r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
@@ -114,11 +121,15 @@ class TestProductCRUD:
         assert "adjustments" in data
         assert len(data["adjustments"]) >= 1
 
-    def test_low_stock_list(self, auth_headers: dict, session_suffix: str):
+    def test_low_stock_list(self, auth_headers: dict):
         """Low stock endpoint returns products below threshold."""
         # Create a product with min_stock > quantity_on_hand
-        sku = _unique_sku("LOW", session_suffix)
+        sku = _unique_sku("LOW")
         httpx.post(f"{SERVER_URL}/api/products", json={"name": "Low Stock Test", "sku": sku, "price": 5, "quantity_on_hand": 1, "min_stock": 5}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
+        prods = r.json().get("products", [])
+        if prods:
+            _track_entity("product", prods[0]["id"])
 
         resp = httpx.get(f"{SERVER_URL}/api/products/low-stock", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
@@ -164,11 +175,16 @@ class TestProductErrors:
 class TestBarcodeLookup:
     """Barcode-based product lookup."""
 
-    def test_lookup_by_barcode(self, auth_headers: dict, session_suffix: str):
-        sku = _unique_sku("BAR", session_suffix)
+    def test_lookup_by_barcode(self, auth_headers: dict):
+        sku = _unique_sku("BAR")
         barcode = f"59{unique_suffix()[:10]}"
         product = {"name": "Barcode Test", "sku": sku, "barcode": barcode, "price": 25, "cost": 10, "quantity_on_hand": 5}
         httpx.post(f"{SERVER_URL}/api/products", json=product, headers=auth_headers, timeout=10)
+        # Track for session cleanup
+        r_search = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
+        prods = r_search.json().get("products", [])
+        if prods:
+            _track_entity("product", prods[0]["id"])
         resp = httpx.get(f"{SERVER_URL}/api/products/by-barcode/{barcode}", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert data["product"]["name"] == "Barcode Test"
