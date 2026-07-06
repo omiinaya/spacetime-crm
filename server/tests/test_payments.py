@@ -79,7 +79,7 @@ class TestPaymentCRUD:
         assert_ok(resp)
 
         # Check invoice status (may be paid, partial, or sent depending on auto-recalc)
-        r = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 50}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 500}, headers=auth_headers, timeout=10)
         invs = r.json().get("invoices", [])
         target = next((inv for inv in invs if inv["id"] == inv_id), None)
         # Payment logic in the backend calculates status — verify it did something reasonable
