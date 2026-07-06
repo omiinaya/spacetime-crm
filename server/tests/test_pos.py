@@ -38,8 +38,10 @@ class TestPOSCRUD:
     """Counter sale lifecycle: create, list, get, delete."""
 
     def test_create_sale(self, auth_headers: dict):
+        from .conftest import unique_suffix
+        name = f"Jane Customer {unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/pos/create", json={
-            "customer_name": "Jane Customer",
+            "customer_name": name,
             "payment_method": "card",
             "amount_tendered": 75,
             "tax_rate": 0,

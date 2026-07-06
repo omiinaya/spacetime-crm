@@ -24,9 +24,11 @@ class TestEstimateCRUD:
 
     def test_create_estimate(self, auth_headers: dict):
         cid = _create_customer(auth_headers, "create")
+        from .conftest import unique_suffix
+        notes = f"Test estimate {unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/estimates",
-            json={"customer_id": cid, "notes": "Test estimate", "expires_at": 0},
+            json={"customer_id": cid, "notes": notes, "expires_at": 0},
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
