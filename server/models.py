@@ -66,6 +66,8 @@ class TicketCreate(BaseModel):
     device_type: str = Field(default="", max_length=100)
     device_model: str = Field(default="", max_length=100)
     device_serial: str = Field(default="", max_length=100)
+    device_imei: str = Field(default="", max_length=100)
+    device_password: str = Field(default="", max_length=100)
     priority: str = Field(default="normal", max_length=50)
 
 
@@ -96,6 +98,8 @@ class InvoiceCreate(BaseModel):
     terms: str = Field(default="", max_length=500)
     due_date: int = Field(default=0, ge=0)
     currency: str = Field(default="USD", max_length=3)
+    discount_amount: float = Field(default=0, ge=0)
+    discount_percent: float = Field(default=0, ge=0, le=100)
 
 
 class InvoiceStatusUpdate(BaseModel):
@@ -148,6 +152,7 @@ class AppointmentCreate(BaseModel):
     all_day: bool = False
     series_id: str = Field(default="", max_length=100)
     recurrence_rule: str = Field(default="", max_length=50)
+    color: str = Field(default="", max_length=20)
 
 
 class AppointmentStatusUpdate(BaseModel):
@@ -188,6 +193,7 @@ class PurchaseOrderCreate(BaseModel):
     vendor_name: str = Field(..., min_length=1, max_length=255)
     notes: str = Field(default="", max_length=2000)
     currency: str = Field(default="USD", max_length=3)
+    shipping_cost: float = Field(default=0, ge=0)
 
 
 class PurchaseOrderStatusUpdate(BaseModel):
@@ -210,6 +216,27 @@ class POApprovalAction(BaseModel):
     user_id: str = Field(..., min_length=1, max_length=100)
 
 
+# ─── Scheduled Reports ──────────────────────────────────────────
+
+class ScheduledReportCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    report_type: str = Field(..., pattern=r"^(revenue|tickets|invoices|appointments|tech_productivity|customers)$")
+    schedule_frequency: str = Field(..., pattern=r"^(daily|weekly|monthly)$")
+    schedule_config: dict = Field(default_factory=dict)
+    recipients: list[str] = Field(..., min_length=1)
+    filters: dict = Field(default_factory=dict)
+
+
+class ScheduledReportUpdate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    report_type: str = Field(..., pattern=r"^(revenue|tickets|invoices|appointments|tech_productivity|customers)$")
+    schedule_frequency: str = Field(..., pattern=r"^(daily|weekly|monthly)$")
+    schedule_config: dict = Field(default_factory=dict)
+    recipients: list[str] = Field(..., min_length=1)
+    filters: dict = Field(default_factory=dict)
+    enabled: bool = True
+
+
 # ─── Estimates ───────────────────────────────────────────────────
 
 class EstimateCreate(BaseModel):
@@ -218,6 +245,8 @@ class EstimateCreate(BaseModel):
     notes: str = Field(default="", max_length=2000)
     expires_at: int = Field(default=0, ge=0)
     currency: str = Field(default="USD", max_length=3)
+    tax_rate: float = Field(default=0, ge=0, le=100)
+    discount_amount: float = Field(default=0, ge=0)
 
 
 class EstimateStatusUpdate(BaseModel):

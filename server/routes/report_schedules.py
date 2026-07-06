@@ -11,6 +11,7 @@ from helpers import (
     require_role, _safe_id, logger,
 )
 from mail import send_email
+from models import ScheduledReportCreate, ScheduledReportUpdate
 
 router = APIRouter()
 
@@ -32,59 +33,46 @@ async def list_schedules(
 
 
 @router.post("/api/report-schedules")
-async def create_schedule(body: dict, user: dict = Depends(require_role("admin"))):
+async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))):
     """Create a new scheduled report."""
-    required = ["name", "report_type", "schedule_frequency", "recipients"]
-    for field in required:
-        if field not in body:
-            raise HTTPException(400, f"Missing required field: {field}")
-
-    valid_types = ["revenue", "tickets", "invoices", "appointments", "tech_productivity", "customers"]
-    if body["report_type"] not in valid_types:
-        raise HTTPException(400, f"Invalid report_type. Valid: {', '.join(valid_types)}")
-
-    valid_freq = ["daily", "weekly", "monthly"]
-    if body["schedule_frequency"] not in valid_freq:
-        raise HTTPException(400, f"Invalid schedule_frequency. Valid: {', '.join(valid_freq)}")
-
     now_ms = int(datetime.utcnow().timestamp() * 1000)
-    next_run_at = _calc_next_run(body["schedule_frequency"], body.get("schedule_config", {}), now_ms)
+    next_run_at = _calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
 
     result = await _call("create_scheduled_report", [
         user["tenant_id"],
-        body["name"],
-        body["report_type"],
-        body["schedule_frequency"],
-        json.dumps(body.get("schedule_config", {})),
-        json.dumps(body["recipients"] if isinstance(body["recipients"], list) else [body["recipients"]]),
-        json.dumps(body.get("filters", {})),
+        body.name,
+        body.report_type,
+        body.schedule_frequency,
+        json.dumps(body.schedule_config),
+        json.dumps(body.recipients if isinstance(body.recipients, list) else [body.recipients]),
+        json.dumps(body.filters),
         next_run_at,
     ])
 
-    await _log_audit(user, "create", "scheduled_report", "", body["name"])
+    await _log_audit(user, "create", "scheduled_report", "", body.name)
     return {"ok": True, "id": result.get("id", "") if isinstance(result, dict) else "", "next_run_at": next_run_at}
 
 
 @router.put("/api/report-schedules/{schedule_id}")
-async def update_schedule(schedule_id: str, body: dict, user: dict = Depends(require_role("admin"))):
+async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: dict = Depends(require_role("admin"))):
     """Update an existing scheduled report."""
     _safe_id(schedule_id)
     existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
     if not existing:
         raise HTTPException(404, "Schedule not found")
 
-    name = body.get("name", existing[0].get("name", ""))
-    report_type = body.get("report_type", existing[0].get("report_type", ""))
-    schedule_frequency = body.get("schedule_frequency", existing[0].get("schedule_frequency", ""))
-    enabled = body.get("enabled", existing[0].get("enabled", True))
+    name = body.name
+    report_type = body.report_type
+    schedule_frequency = body.schedule_frequency
+    enabled = body.enabled
 
-    schedule_config = body.get("schedule_config", json.loads(existing[0].get("schedule_config_json", "{}") or "{}"))
-    recipients_raw = body.get("recipients", json.loads(existing[0].get("recipients_json", "[]") or "[]"))
-    filters = body.get("filters", json.loads(existing[0].get("filters_json", "{}") or "{}"))
+    schedule_config = body.schedule_config
+    recipients_raw = body.recipients
+    filters = body.filters
 
     recipients = recipients_raw if isinstance(recipients_raw, list) else [recipients_raw]
     now_ms = int(datetime.utcnow().timestamp() * 1000)
-    next_run_at = body.get("next_run_at", _calc_next_run(schedule_frequency, schedule_config, now_ms))
+    next_run_at = _calc_next_run(schedule_frequency, schedule_config, now_ms)
 
     await _call("update_scheduled_report", [
         schedule_id, name, report_type, schedule_frequency,

@@ -90,6 +90,10 @@ export interface Ticket {
   device_type: string;
   device_model: string;
   device_serial: string;
+  device_imei: string;
+  device_password: string;
+  estimate_id: string;
+  invoice_id: string;
   status: string;
   priority: string;
   assigned_user_id: string;
@@ -138,6 +142,7 @@ export interface Invoice {
   tax_amount: number;
   total: number;
   discount_amount: number;
+  discount_percent: number;
   notes: string;
   terms: string;
   due_date: number;
@@ -192,6 +197,7 @@ export interface Appointment {
   series_id: string;
   recurrence_rule: string;
   created_at: number;
+  updated_at: number;
 }
 export interface Product {
   id: string;
@@ -226,6 +232,7 @@ export interface Estimate {
   id: string;
   customer_id: string;
   ticket_id: string;
+  invoice_id: string;
   estimate_number: number;
   status: string;
   subtotal: number;
@@ -236,6 +243,7 @@ export interface Estimate {
   notes: string;
   expires_at: number;
   created_at: number;
+  updated_at: number;
   currency: string;
 }
 
@@ -259,6 +267,7 @@ export interface PurchaseOrder {
   approved_at: number;
   subtotal: number;
   tax_amount: number;
+  shipping_cost: number;
   total: number;
   notes: string;
   created_at: number;
@@ -281,9 +290,12 @@ export interface PurchaseOrderLineItem {
 export interface User {
   id: string;
   name: string;
+  pin: string;
   email: string;
   role: string;
   active: boolean;
+  totp_secret: string;
+  totp_enabled: boolean;
   created_at: number;
 }
 
@@ -487,6 +499,98 @@ export const WEBHOOK_EVENTS = [
   "estimate.approved",
   "appointment.created",
 ] as const;
+
+// ── Entity interfaces ──
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string;
+  settings: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface TenantMember {
+  id: string;
+  tenant_id: string;
+  username: string;
+  role: string;
+  created_at: number;
+}
+
+export interface RecurringInvoiceRule {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  name: string;
+  frequency: string;
+  interval_count: number;
+  next_generation_date: number;
+  last_generated_date: number;
+  due_date_days: number;
+  line_items_json: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface SavedPaymentMethod {
+  id: string;
+  tenant_id: string;
+  customer_id: string;
+  stripe_payment_method_id: string;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  is_default: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface CustomFieldDefinition {
+  id: string;
+  entity_type: string;
+  label: string;
+  field_type: string;
+  options: string;
+  sort_order: number;
+  required: boolean;
+  active: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface CustomFieldValue {
+  id: string;
+  entity_id: string;
+  field_id: string;
+  value: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface UserSettings {
+  user_id: string;
+  theme: string;
+  default_ticket_status: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  user_name: string;
+  action: string;
+  entity: string;
+  entity_id: string;
+  details: string;
+  created_at: number;
+}
 
 // ── API client ──
 
@@ -1035,7 +1139,7 @@ export const api = {
       const params = new URLSearchParams({ limit: String(limit) });
       if (entity) params.set("entity", entity);
       if (action) params.set("action", action);
-      return apiFetch<{ entries: any[] }>(`/audit-log?${params}`);
+      return apiFetch<{ entries: AuditLogEntry[] }>(`/audit-log?${params}`);
     },
   },
   export: {
@@ -1057,7 +1161,7 @@ export const api = {
   customFields: {
     definitions: {
       list: (entityType?: string) =>
-        apiFetch<{ definitions: any[] }>(
+        apiFetch<{ definitions: CustomFieldDefinition[] }>(
           `/custom-field-definitions${entityType ? `?entity_type=${entityType}` : ""}`
         ),
       create: (data: {
@@ -1090,7 +1194,7 @@ export const api = {
     },
     values: {
       get: (entityId: string) =>
-        apiFetch<{ values: any[] }>(`/custom-field-values/${entityId}`),
+        apiFetch<{ values: CustomFieldValue[] }>(`/custom-field-values/${entityId}`),
       set: (entityId: string, values: Record<string, string>) =>
         apiFetch<{ ok: boolean; count: number }>(`/custom-field-values/${entityId}`, {
           method: "PUT",
@@ -1112,9 +1216,9 @@ export const api = {
   },
   tenants: {
     list: () =>
-      apiFetch<{ tenants: any[] }>("/tenants"),
+      apiFetch<{ tenants: Tenant[] }>("/tenants"),
     get: (id: string) =>
-      apiFetch<{ tenant: any }>(`/tenants/${id}`),
+      apiFetch<{ tenant: Tenant }>(`/tenants/${id}`),
     create: (data: { name: string; slug?: string }) =>
       apiFetch<{ ok: boolean }>("/tenants", {
         method: "POST",
@@ -1167,7 +1271,7 @@ export const api = {
   },
   recurringInvoices: {
     list: () =>
-      apiFetch<{ rules: any[] }>("/recurring-invoices"),
+      apiFetch<{ rules: RecurringInvoiceRule[] }>("/recurring-invoices"),
     create: (data: any) =>
       apiFetch<{ ok: boolean }>("/recurring-invoices", {
         method: "POST",
@@ -1186,7 +1290,7 @@ export const api = {
   paymentMethods: {
     list: (customerId?: string) => {
       const qs = customerId ? `?customer_id=${encodeURIComponent(customerId)}` : "";
-      return apiFetch<{ payment_methods: any[] }>(`/payment-methods${qs}`);
+      return apiFetch<{ payment_methods: SavedPaymentMethod[] }>(`/payment-methods${qs}`);
     },
     createSetupIntent: (customer_id: string) =>
       apiFetch<{ client_secret: string; id: string }>("/payment-methods/setup-intent", {
