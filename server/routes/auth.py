@@ -199,17 +199,16 @@ async def auth_me(user: dict = Depends(get_current_user)):
         except Exception:
             pass
 
-    # Check 2FA status from DB
+    # Check 2FA status and PIN from DB (JWT doesn't contain pin)
     totp_enabled = False
+    has_pin = False
     try:
         rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
         if rows:
             totp_enabled = rows[0].get("totp_enabled", False)
+            has_pin = bool(rows[0].get("pin", ""))
     except Exception:
         pass
-
-    # Check if user has a POS PIN set
-    has_pin = bool(user.get("pin", ""))
 
     result = {
         "id": user["id"],
