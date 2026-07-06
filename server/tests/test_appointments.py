@@ -1,36 +1,46 @@
-"""Appointment CRUD, recurrence, and status workflow integration tests."""
+"""Appointment CRUD, recurrence, and status workflow integration tests.
+
+Each test method creates its own data for STDB state isolation.
+"""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
+
+
+def _create_appointment(auth_headers: dict, suffix: str = "", **overrides) -> str:
+    """Create a customer + appointment and return the appointment ID.
+
+    Uses a unique title and STDB SQL lookup for isolation.
+    """
+    suf = suffix or unique_suffix()
+    title = overrides.get("title", f"Appt-{suf}")
+    email = f"appt-cust-{suf}@example.com"
+    c = create_customer(auth_headers, first_name="Appt", last_name=f"Test{suf}", email=email)
+    cid = c.get("id")
+    assert cid
+
+    httpx.post(f"{SERVER_URL}/api/appointments", json={
+        "customer_id": cid,
+        "title": title,
+        "description": overrides.get("description", "Auto-generated"),
+        "start_time": overrides.get("start_time", 1783000000000),
+        "end_time": overrides.get("end_time", 1783003600000),
+        "all_day": overrides.get("all_day", False),
+        "recurrence_rule": overrides.get("recurrence_rule", ""),
+    }, headers=auth_headers, timeout=10)
+
+    rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
+    assert len(rows) >= 1, f"No appointment found with title '{title}'"
+    return rows[0]["id"]
 
 
 class TestAppointmentCRUD:
     """Appointment create, list, status update, delete lifecycle."""
 
-    def _make_customer(self, auth_headers: dict, suffix: str = "") -> str:
-        suf = suffix or unique_suffix()
-        email = f"appt-cust-{suf}@example.com"
-        c = create_customer(auth_headers, first_name="Appt", last_name=f"Test{suf}", email=email)
-        cid = c.get("id")
-        assert cid
-        return cid
-
     def test_create_appointment(self, auth_headers: dict):
         """Create a basic appointment."""
-        cid = self._make_customer(auth_headers, "create")
-        resp = httpx.post(
-            f"{SERVER_URL}/api/appointments",
-            json={
-                "customer_id": cid,
-                "title": "Test Appointment",
-                "description": "Annual checkup",
-                "start_time": 1783000000000,
-                "end_time": 1783003600000,
-                "all_day": False,
-            },
-            headers=auth_headers, timeout=10,
-        )
-        assert_ok(resp)
+        appt_id = _create_appointment(auth_headers, "create", title="Basic Appointment")
+        assert appt_id, "Expected non-empty appointment ID"
 
     def test_list_appointments(self, auth_headers: dict):
         """List appointments returns paginated results."""
@@ -42,13 +52,7 @@ class TestAppointmentCRUD:
 
     def test_update_appointment_status(self, auth_headers: dict):
         """Update appointment status to completed."""
-        cid = self._make_customer(auth_headers, "status")
-        httpx.post(f"{SERVER_URL}/api/appointments", json={"customer_id": cid, "title": "Status Test", "start_time": 1783000000000, "end_time": 1783003600000}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/appointments", params={"limit": 1}, headers=auth_headers, timeout=10)
-        appts = r.json().get("appointments", [])
-        if not appts:
-            pytest.skip("No appointments found")
-        appt_id = appts[0]["id"]
+        appt_id = _create_appointment(auth_headers, "status", title="Status Test")
 
         for status in ["completed", "no_show", "cancelled"]:
             resp = httpx.put(
@@ -60,14 +64,7 @@ class TestAppointmentCRUD:
 
     def test_delete_appointment(self, auth_headers: dict):
         """Delete an appointment (admin only)."""
-        cid = self._make_customer(auth_headers, "delete")
-        httpx.post(f"{SERVER_URL}/api/appointments", json={"customer_id": cid, "title": "Delete Me", "start_time": 1783000000000, "end_time": 1783003600000}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/appointments", params={"limit": 1}, headers=auth_headers, timeout=10)
-        appts = r.json().get("appointments", [])
-        if not appts:
-            pytest.skip("No appointments found")
-        appt_id = appts[0]["id"]
-
+        appt_id = _create_appointment(auth_headers, "delete", title="Delete Me")
         resp = httpx.delete(f"{SERVER_URL}/api/appointments/{appt_id}", headers=auth_headers, timeout=10)
         assert_ok(resp)
 
@@ -104,15 +101,23 @@ class TestRecurringAppointments:
 
     def test_generate_next_occurrence(self, auth_headers: dict):
         """Generate next occurrence of a recurring series."""
-        cid = self._make_customer(auth_headers)
-        httpx.post(f"{SERVER_URL}/api/appointments", json={"customer_id": cid, "title": "Biweekly", "start_time": 1783000000000, "end_time": 1783003600000, "recurrence_rule": "weekly"}, headers=auth_headers, timeout=10)
+        # Create an appointment with recurrence via the helper
+        suf = unique_suffix()
+        title = f"Biweekly-{suf}"
+        appt_id = _create_appointment(auth_headers, suf, title=title, recurrence_rule="weekly")
 
+        # Find the series via recurring API (filter by our unique title)
         r = httpx.get(f"{SERVER_URL}/api/appointments/recurring", headers=auth_headers, timeout=10)
-        series = r.json().get("series", [])
-        if not series:
-            pytest.skip("No recurring series found")
+        series_list = r.json().get("series", [])
+        # Find our series (the one matching our appointment's series_id)
+        series = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
+        assert len(series) > 0
+        series_id = series[0].get("series_id", "")
+        # If the appointment itself is the series parent, its series_id is empty
+        # and its id is the series id
+        if not series_id:
+            series_id = appt_id
 
-        series_id = series[0]["id"]
         resp = httpx.post(
             f"{SERVER_URL}/api/appointments/generate-next",
             json={"series_id": series_id},
@@ -124,13 +129,7 @@ class TestRecurringAppointments:
 
     def test_set_recurrence_on_existing(self, auth_headers: dict):
         """Set recurrence rule on an existing appointment."""
-        cid = self._make_customer(auth_headers)
-        httpx.post(f"{SERVER_URL}/api/appointments", json={"customer_id": cid, "title": "Make Recurring", "start_time": 1783000000000, "end_time": 1783003600000}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/appointments", params={"limit": 1}, headers=auth_headers, timeout=10)
-        appts = r.json().get("appointments", [])
-        if not appts:
-            pytest.skip("No appointments found")
-        appt_id = appts[0]["id"]
+        appt_id = _create_appointment(auth_headers, "setrecur", title="Make Recurring")
 
         resp = httpx.put(
             f"{SERVER_URL}/api/appointments/{appt_id}/recurrence",
@@ -141,25 +140,24 @@ class TestRecurringAppointments:
 
     def test_recurring_series_with_children(self, auth_headers: dict):
         """After generating occurrences, series shows child count."""
-        cid = self._make_customer(auth_headers)
-        httpx.post(f"{SERVER_URL}/api/appointments", json={"customer_id": cid, "title": "Multi Gen", "start_time": 1783000000000, "end_time": 1783003600000, "recurrence_rule": "daily"}, headers=auth_headers, timeout=10)
+        suf = unique_suffix()
+        title = f"MultiGen-{suf}"
+        appt_id = _create_appointment(auth_headers, suf, title=title, recurrence_rule="daily")
 
-        r = httpx.get(f"{SERVER_URL}/api/appointments/recurring", headers=auth_headers, timeout=10)
-        series = r.json().get("series", [])
-        if not series:
-            pytest.skip("No recurring series")
-        sid = series[0]["id"]
+        # Get our series ID from STDB
+        rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
+        assert len(rows) > 0
+        series_id = rows[0].get("series_id", "")
+        if not series_id:
+            series_id = appt_id
 
         # Generate 2 occurrences
         for _ in range(2):
-            httpx.post(f"{SERVER_URL}/api/appointments/generate-next", json={"series_id": sid}, headers=auth_headers, timeout=10)
+            httpx.post(f"{SERVER_URL}/api/appointments/generate-next", json={"series_id": series_id}, headers=auth_headers, timeout=10)
 
-        # Check series again
-        r2 = httpx.get(f"{SERVER_URL}/api/appointments/recurring", headers=auth_headers, timeout=10)
-        for s in r2.json().get("series", []):
-            if s["id"] == sid:
-                assert s.get("occurrence_count", 0) >= 2, f"Expected >=2 children, got {s.get('occurrence_count')}"
-                break
+        # Check series again via STDB SQL
+        children = _stdb_sql(f"SELECT * FROM appointment WHERE series_id = '{series_id}'")
+        assert len(children) >= 2, f"Expected >=2 children, got {len(children)}"
 
 
 class TestAppointmentErrors:

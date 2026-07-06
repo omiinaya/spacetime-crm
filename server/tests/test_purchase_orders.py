@@ -1,7 +1,7 @@
 """Purchase Order CRUD, line items, receiving, and status workflow tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
 
 
 @pytest.fixture
@@ -16,13 +16,16 @@ def test_product_id(auth_headers: dict) -> str:
 
 
 def _create_po(auth_headers: dict, suffix: str = "") -> str:
-    """Create a PO and return its ID."""
+    """Create a PO and return its ID.
+
+    Uses unique vendor_name and STDB SQL lookup for isolation.
+    """
     suf = suffix or unique_suffix()
-    httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": f"Vendor {suf}", "notes": f"PO test {suf}"}, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/purchase-orders", params={"limit": 1}, headers=auth_headers, timeout=10)
-    pos = r.json().get("purchase_orders", [])
-    assert len(pos) > 0
-    return pos[0]["id"]
+    vendor = f"Vendor-{suf}"
+    httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": f"PO test {suf}"}, headers=auth_headers, timeout=10)
+    rows = _stdb_sql(f"SELECT id FROM purchase_order WHERE vendor_name = '{vendor}'")
+    assert len(rows) > 0, f"PO not found for vendor {vendor}"
+    return rows[0]["id"]
 
 
 class TestPurchaseOrderCRUD:
