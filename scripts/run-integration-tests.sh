@@ -8,8 +8,8 @@
 #   Phase 1 — Build artifacts (STDB WASM module; optionally frontend dist)
 #   Phase 2 — Start ephemeral STDB container on port 3002
 #   Phase 3 — Publish module to the test instance
-#   Phase 4 — Bootstrap test data (admin user + tenant)
-#   Phase 5 — Start FastAPI backend against test STDB
+#   Phase 4 — Start FastAPI backend against test STDB
+#   Phase 5 — Bootstrap test data (admin user + tenant)
 #   Phase 6 — Run Python integration tests (pytest) through the backend
 #   Phase 7 — Run standalone Rust container tests directly against STDB
 #   Cleanup — Stop backend, remove container, report summary
@@ -116,7 +116,13 @@ if [ "$BUILD_WASM" = true ]; then
     exit 1
   fi
 else
-  log_info "Skipping WASM build (--quick)"
+  WASM_BINARY="$REPO_DIR/server/spacetimedb/target/wasm32-unknown-unknown/release/spacetime_crm.wasm"
+  if [ ! -f "$WASM_BINARY" ]; then
+    log_fail "--quick specified but WASM binary not found at ${WASM_BINARY}"
+    log_fail "Run without --quick once to build it, or rebuild with: make build-stdb"
+    exit 1
+  fi
+  log_info "Skipping WASM build (--quick) — using existing binary"
 fi
 
 if [ "$BUILD_WEB" = true ]; then
@@ -134,6 +140,16 @@ fi
 # Phase 2 — Start test STDB container
 # ════════════════════════════════════════════════════════════════════
 step "2" "Start STDB test container"
+
+# Pre-check: Docker must be available
+if ! command -v docker &>/dev/null; then
+  log_fail "docker not found on PATH — required to start STDB container"
+  exit 1
+fi
+if ! docker info &>/dev/null; then
+  log_fail "Docker daemon is not running — start it with: sudo systemctl start docker"
+  exit 1
+fi
 
 # Kill any leftover container from a previous run
 if docker ps -q -f name="$CONTAINER_NAME" 2>/dev/null | grep -q .; then
@@ -189,23 +205,9 @@ else
 fi
 
 # ════════════════════════════════════════════════════════════════════
-# Phase 4 — Bootstrap test data
+# Phase 4 — Start FastAPI backend (before bootstrap so login check works)
 # ════════════════════════════════════════════════════════════════════
-step "4" "Bootstrap test data"
-
-cd "$REPO_DIR"
-if STDB_HOST="$STDB_HOST" STDB_PORT="$STDB_PORT" STDB_DB="$STDB_DB" \
-  CRM_API_URL="$BACKEND_URL" \
-  python3 scripts/bootstrap.py 2>&1; then
-  log_pass "Bootstrap data seeded$(elapsed)"
-else
-  log_warn "bootstrap.py failed — tests may fail if they expect seeded data"
-fi
-
-# ════════════════════════════════════════════════════════════════════
-# Phase 5 — Start FastAPI backend
-# ════════════════════════════════════════════════════════════════════
-step "5" "Start FastAPI backend"
+step "4" "Start FastAPI backend"
 
 cd "$REPO_DIR/server"
 STDB_HOST="$STDB_HOST" STDB_PORT="$STDB_PORT" STDB_DB="$STDB_DB" \
@@ -229,7 +231,22 @@ for i in $(seq 1 25); do
 done
 
 # ════════════════════════════════════════════════════════════════════
-# Phase 6 — Python backend integration tests
+# Phase 5 — Bootstrap test data (backend is running, login check works)
+# ════════════════════════════════════════════════════════════════════
+step "5" "Bootstrap test data"
+
+cd "$REPO_DIR"
+if STDB_HOST="$STDB_HOST" STDB_PORT="$STDB_PORT" STDB_DB="$STDB_DB" \
+  CRM_API_URL="$BACKEND_URL" \
+  python3 scripts/bootstrap.py 2>&1; then
+  log_pass "Bootstrap data seeded$(elapsed)"
+else
+  log_fail "bootstrap.py failed — admin user or seed data not created"
+  exit 1
+fi
+
+# ════════════════════════════════════════════════════════════════════
+# Phase 6 — Python backend integration tests (backend from Phase 4)
 # ════════════════════════════════════════════════════════════════════
 step "6" "Python backend integration tests"
 
