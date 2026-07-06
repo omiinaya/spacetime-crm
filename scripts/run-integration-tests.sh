@@ -145,7 +145,7 @@ step "2" "STDB instance"
 
 if [ "$SKIP_CONTAINER" = true ]; then
   log_info "Using existing STDB at ${STDB_URL} (--local-stdb)"
-  if ! curl -sf "${STDB_URL}/" >/dev/null 2>&1; then
+  if ! curl -sf "${STDB_URL}/v1/health" >/dev/null 2>&1; then
     log_fail "Cannot reach STDB at ${STDB_URL}"
     exit 1
   fi
