@@ -1,7 +1,7 @@
 """Estimate CRUD, line items, status workflow, and conversion integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
 
 
 def _create_customer(auth_headers: dict, suffix: str = "") -> str:
@@ -12,11 +12,11 @@ def _create_customer(auth_headers: dict, suffix: str = "") -> str:
 
 def _create_estimate(auth_headers: dict, suffix: str = "") -> str:
     cid = _create_customer(auth_headers, suffix)
-    httpx.post(f"{SERVER_URL}/api/estimates", json={"customer_id": cid, "notes": f"Est test {suffix}", "expires_at": 0}, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/estimates", params={"limit": 1}, headers=auth_headers, timeout=10)
-    ests = r.json().get("estimates", [])
-    assert len(ests) > 0
-    return ests[0]["id"]
+    notes = f"Est test {suffix or unique_suffix()}"
+    httpx.post(f"{SERVER_URL}/api/estimates", json={"customer_id": cid, "notes": notes, "expires_at": 0}, headers=auth_headers, timeout=10)
+    rows = _stdb_sql(f"SELECT id FROM estimate WHERE notes = '{notes}'")
+    assert len(rows) > 0, f"Estimate not found for notes '{notes}'"
+    return rows[0]["id"]
 
 
 class TestEstimateCRUD:
@@ -83,10 +83,8 @@ class TestEstimateConversion:
 
     def test_convert_approved_estimate(self, auth_headers: dict):
         """Full conversion: create estimate → approve → convert → get invoice."""
-        cid = _create_customer(auth_headers, "convert")
-        httpx.post(f"{SERVER_URL}/api/estimates", json={"customer_id": cid, "notes": "Will convert", "expires_at": 0}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/estimates", params={"limit": 1}, headers=auth_headers, timeout=10)
-        est_id = r.json()["estimates"][0]["id"]
+        est_id = _create_estimate(auth_headers, "convert")
+        cid = _create_customer(auth_headers, "conv2")
 
         # Add line item (so estimate has content)
         httpx.post(f"{SERVER_URL}/api/estimates/{est_id}/line-items", json={"description": "Repair service", "quantity": 1, "unit_price": 150}, headers=auth_headers, timeout=10)
