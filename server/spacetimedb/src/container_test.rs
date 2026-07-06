@@ -74,14 +74,14 @@ mod tests {
 
     #[test]
     fn container_stdb_is_reachable() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = run_curl("GET", &stdb_url(), None);
         // If we get here without panic, STDB is reachable
     }
 
     #[test]
     fn container_module_is_published() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let out = run_sql("SELECT count(*) AS cnt FROM customer");
         assert!(out.contains("cnt") || out.contains("rows"),
             "Expected customer table to exist, got: {:.200}", out);
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn container_list_tables() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         for tbl in &["customer", "ticket", "invoice", "payment",
                      "appointment", "user", "products", "tenant", "audit_log"] {
             let out = run_sql(&format!("SELECT count(*) AS cnt FROM {tbl}"));
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn container_create_customer() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("create_customer",
             r#"["tenant_ct","Container","Test","container@test.com","555-9999"]"#);
 
@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn container_create_ticket() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("create_ticket",
             r#"["tenant_tk","cust_tk1","Broken screen - container","Cracked glass","iPhone","15","SN001","high"]"#);
 
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn container_update_ticket_status() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("create_ticket",
             r#"["t_upd","c_upd","Status update test","","","","","low"]"#);
 
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn container_create_invoice() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("create_invoice",
             r#"["tenant_inv","cust_inv1","","Container invoice test","Net 30",1710000000000,"USD"]"#);
 
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn container_record_payment() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("record_payment",
             r#"["tenant_pay","inv_pay1","cust_pay1",150.0,"cash","REF-001","Walk-in payment","USD"]"#);
 
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn container_create_user() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("create_user",
             r#"["container_user","container@user.com","tech"]"#);
 
@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn container_create_tenant() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("create_tenant",
             r#"["Container Shop","container-shop"]"#);
 
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn container_create_appointment() {
-        if !should_run() { eprintln!("SKIP: STDB_RUN_CONTAINER_TESTS not set"); return; }
+        if !should_run() { /* skip */ return; }
         let _ = call_reducer("create_appointment",
             r#"["tenant_appt","cust_appt1","","Screen repair - container",
                "Replace cracked screen",1700000000000,1700003600000,false,"",""]"#);

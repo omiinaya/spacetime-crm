@@ -23,7 +23,8 @@ class TestExport:
 class TestImport:
     def test_import_customers_without_id(self, auth_headers: dict):
         """Import customers CSV without ID column."""
-        csv_content = "first_name,last_name,email,phone\nImp,Test1,imp1@test.com,555-0101\nImp,Test2,imp2@test.com,555-0102\n"
+        ts = int(__import__("time").time() * 1000)
+        csv_content = f"first_name,last_name,email,phone\nImp,Test1,imp1-{ts}@test.com,555-0101\nImp,Test2,imp2-{ts}@test.com,555-0102\n"
         files = {"file": ("import.csv", csv_content, "text/csv")}
         resp = httpx.post(f"{SERVER_URL}/api/import/customers", files=files, headers=auth_headers, timeout=15)
         data = assert_ok(resp)
