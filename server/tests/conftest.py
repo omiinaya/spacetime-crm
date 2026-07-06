@@ -9,6 +9,7 @@ Run against a dedicated test database when available.
 """
 import os
 import json
+import uuid
 import pytest
 import httpx
 
@@ -19,6 +20,11 @@ ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "admin123")
 # Test STDB container settings
 STDB_TEST_PORT = int(os.environ.get("STDB_TEST_PORT", "3002"))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
+
+
+def unique_suffix() -> str:
+    """Return a short unique string for creating unique test entities."""
+    return uuid.uuid4().hex[:8]
 
 
 # ── Fixtures ──────────────────────────────────────────────────────
