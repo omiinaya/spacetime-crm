@@ -1,21 +1,27 @@
 """Recurring invoice rules CRUD + generate trigger tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
 
 
 def _customer_id(auth_headers: dict, suffix: str = "") -> str:
     """Create a customer and return ID."""
-    c = create_customer(auth_headers, email=f"rec-{suffix or 'main'}@example.com")
+    suf = suffix or unique_suffix()
+    c = create_customer(auth_headers, email=f"rec-{suf}@example.com")
     return c.get("id", "")
 
 
 def _create_rule(auth_headers: dict, suffix: str = "") -> str:
-    """Create a recurring invoice rule and return its ID."""
-    cid = _customer_id(auth_headers, suffix)
+    """Create a recurring invoice rule and return its ID.
+
+    Uses unique name and STDB SQL lookup for isolation.
+    """
+    suf = suffix or unique_suffix()
+    cid = _customer_id(auth_headers, suf)
+    name = f"Monthly Service {suf}"
     httpx.post(f"{SERVER_URL}/api/recurring-invoices", json={
         "customer_id": cid,
-        "name": f"Monthly Service {suffix}",
+        "name": name,
         "frequency": "monthly",
         "interval_count": 1,
         "due_date_days": 30,
@@ -23,10 +29,9 @@ def _create_rule(auth_headers: dict, suffix: str = "") -> str:
         "next_generation_date": int(__import__("time").time() * 1000) + 86400000,
     }, headers=auth_headers, timeout=10)
 
-    resp = httpx.get(f"{SERVER_URL}/api/recurring-invoices", headers=auth_headers, timeout=10)
-    rules = resp.json().get("rules", [])
-    assert len(rules) >= 1
-    return rules[0]["id"]
+    rows = _stdb_sql(f"SELECT id FROM recurring_invoice_rule WHERE name = '{name}'")
+    assert len(rows) >= 1, f"No rule found with name '{name}'"
+    return rows[0]["id"]
 
 
 class TestRecurringInvoiceCRUD:

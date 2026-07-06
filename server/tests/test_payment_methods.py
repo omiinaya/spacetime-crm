@@ -1,11 +1,12 @@
 """Saved payment methods CRUD tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _customer_id(auth_headers: dict, suffix: str = "") -> str:
-    c = create_customer(auth_headers, email=f"pm-{suffix or 'main'}@example.com")
+    suf = suffix or unique_suffix()
+    c = create_customer(auth_headers, email=f"pm-{suf}@example.com")
     return c.get("id", "")
 
 

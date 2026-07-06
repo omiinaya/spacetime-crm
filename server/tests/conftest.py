@@ -17,9 +17,34 @@ SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
 ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "admin123")
 
-# Test STDB container settings
-STDB_TEST_PORT = int(os.environ.get("STDB_TEST_PORT", "3002"))
+# Test STDB container settings (used by test helpers for direct SQL lookups)
+STDB_HOST = os.environ.get("STDB_HOST", "localhost")
+STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3002")))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
+STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
+
+
+def unique_suffix() -> str:
+    """Return a short unique string for creating unique test entities."""
+    return uuid.uuid4().hex[:8]
+
+
+def _stdb_sql(query: str) -> list[dict]:
+    """Run raw SQL against the STDB test instance and return rows.
+
+    Used by test helpers to look up entities by unique identifiers
+    when the REST API doesn't support search/filter for that entity type.
+    """
+    resp = httpx.post(
+        STDB_SQL_URL,
+        content=query,
+        headers={"Content-Type": "application/sql"},
+        timeout=10,
+    )
+    assert resp.status_code == 200, (
+        f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
+    )
+    return resp.json()
 
 
 def unique_suffix() -> str:
@@ -93,11 +118,16 @@ def assert_unauthorized(resp: httpx.Response):
 
 
 def create_customer(auth_headers: dict, **overrides) -> dict:
-    """Create a customer and return the parsed response + ID."""
+    """Create a customer and return the parsed response + ID.
+
+    Uses a unique email by default to avoid collisions between test runs.
+    Pass 'email' in overrides to use a specific email instead.
+    """
+    default_email = f"test-{unique_suffix()}@example.com"
     data = {
         "first_name": overrides.get("first_name", "Test"),
         "last_name": overrides.get("last_name", "Customer"),
-        "email": overrides.get("email", "test@example.com"),
+        "email": overrides.get("email", default_email),
         "phone": overrides.get("phone", "555-0000"),
     }
     resp = httpx.post(

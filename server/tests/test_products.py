@@ -1,7 +1,11 @@
 """Product CRUD, inventory adjustments, low stock alert integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix
+
+
+def _unique_sku(base: str) -> str:
+    return f"{base}-{unique_suffix()}"
 
 
 class TestProductCRUD:
@@ -11,7 +15,7 @@ class TestProductCRUD:
         """Create a basic product."""
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
-            json={"name": "Test Product", "sku": "TST-001", "price": 29.99, "cost": 15.00, "quantity_on_hand": 50},
+            json={"name": "Test Product", "sku": _unique_sku("TST"), "price": 29.99, "cost": 15.00, "quantity_on_hand": 50},
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
@@ -26,8 +30,9 @@ class TestProductCRUD:
     def test_update_product_quantity(self, auth_headers: dict):
         """Update product quantity."""
         # Create product first
-        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Qty Test", "sku": "QTY-001", "price": 10, "quantity_on_hand": 25}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "QTY-001"}, headers=auth_headers, timeout=10)
+        sku = _unique_sku("QTY")
+        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Qty Test", "sku": sku, "price": 10, "quantity_on_hand": 25}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
         if not prods:
             pytest.skip("Product not found after creation")
@@ -42,23 +47,25 @@ class TestProductCRUD:
 
     def test_update_product(self, auth_headers: dict):
         """Update product fields (name, price, min_stock)."""
-        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Update Test", "sku": "UPD-001", "price": 20, "cost": 10, "quantity_on_hand": 10, "min_stock": 2}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "UPD-001"}, headers=auth_headers, timeout=10)
+        sku = _unique_sku("UPD")
+        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Update Test", "sku": sku, "price": 20, "cost": 10, "quantity_on_hand": 10, "min_stock": 2}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
         if not prods:
             pytest.skip("Product not found")
 
         resp = httpx.put(
             f"{SERVER_URL}/api/products/{prods[0]['id']}",
-            json={"name": "Updated Name", "sku": "UPD-001", "price": 25, "cost": 12, "quantity_on_hand": 10, "min_stock": 5, "location": "Aisle 3"},
+            json={"name": "Updated Name", "sku": sku, "price": 25, "cost": 12, "quantity_on_hand": 10, "min_stock": 5, "location": "Aisle 3"},
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
 
     def test_delete_product(self, auth_headers: dict):
         """Delete a product (admin only)."""
-        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Delete Test", "sku": "DEL-001", "price": 5, "quantity_on_hand": 0}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "DEL-001"}, headers=auth_headers, timeout=10)
+        sku = _unique_sku("DEL")
+        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Delete Test", "sku": sku, "price": 5, "quantity_on_hand": 0}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
         if not prods:
             pytest.skip("Product not found")
@@ -69,8 +76,9 @@ class TestProductCRUD:
 
     def test_inventory_adjustment(self, auth_headers: dict):
         """Create an inventory adjustment for a product."""
-        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Adj Test", "sku": "ADJ-001", "price": 8, "quantity_on_hand": 30}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "ADJ-001"}, headers=auth_headers, timeout=10)
+        sku = _unique_sku("ADJ")
+        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Adj Test", "sku": sku, "price": 8, "quantity_on_hand": 30}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
         if not prods:
             pytest.skip("Product not found")
@@ -85,8 +93,9 @@ class TestProductCRUD:
 
     def test_list_adjustments(self, auth_headers: dict):
         """List inventory adjustments for a product."""
-        httpx.post(f"{SERVER_URL}/api/products", json={"name": "List Adj", "sku": "ADJL-001", "price": 12, "quantity_on_hand": 20}, headers=auth_headers, timeout=10)
-        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "ADJL-001"}, headers=auth_headers, timeout=10)
+        sku = _unique_sku("ADJL")
+        httpx.post(f"{SERVER_URL}/api/products", json={"name": "List Adj", "sku": sku, "price": 12, "quantity_on_hand": 20}, headers=auth_headers, timeout=10)
+        r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
         prods = r.json().get("products", [])
         if not prods:
             pytest.skip("Product not found")
@@ -103,7 +112,7 @@ class TestProductCRUD:
     def test_low_stock_list(self, auth_headers: dict):
         """Low stock endpoint returns products below threshold."""
         # Create a product with min_stock > quantity_on_hand
-        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Low Stock Test", "sku": "LOW-001", "price": 5, "quantity_on_hand": 1, "min_stock": 5}, headers=auth_headers, timeout=10)
+        httpx.post(f"{SERVER_URL}/api/products", json={"name": "Low Stock Test", "sku": _unique_sku("LOW"), "price": 5, "quantity_on_hand": 1, "min_stock": 5}, headers=auth_headers, timeout=10)
 
         resp = httpx.get(f"{SERVER_URL}/api/products/low-stock", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
@@ -149,14 +158,15 @@ class TestProductErrors:
 class TestBarcodeLookup:
     """Barcode-based product lookup."""
 
-    PRODUCT = {"name": "Barcode Test", "sku": "BAR-001", "barcode": "5901234567890", "price": 25, "cost": 10, "quantity_on_hand": 5}
-
     def test_lookup_by_barcode(self, auth_headers: dict):
-        httpx.post(f"{SERVER_URL}/api/products", json=self.PRODUCT, headers=auth_headers, timeout=10)
-        resp = httpx.get(f"{SERVER_URL}/api/products/by-barcode/5901234567890", headers=auth_headers, timeout=10)
+        sku = _unique_sku("BAR")
+        barcode = f"59{unique_suffix()[:10]}"
+        product = {"name": "Barcode Test", "sku": sku, "barcode": barcode, "price": 25, "cost": 10, "quantity_on_hand": 5}
+        httpx.post(f"{SERVER_URL}/api/products", json=product, headers=auth_headers, timeout=10)
+        resp = httpx.get(f"{SERVER_URL}/api/products/by-barcode/{barcode}", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert data["product"]["name"] == "Barcode Test"
-        assert data["product"]["barcode"] == "5901234567890"
+        assert data["product"]["barcode"] == barcode
 
     def test_lookup_nonexistent(self, auth_headers: dict):
         resp = httpx.get(f"{SERVER_URL}/api/products/by-barcode/nonexistent-999", headers=auth_headers, timeout=10)
