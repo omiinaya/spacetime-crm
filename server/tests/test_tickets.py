@@ -1,7 +1,7 @@
 """Ticket, invoice, and payment flow integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _reset_sla_targets(auth_headers: dict) -> None:
@@ -12,6 +12,24 @@ def _reset_sla_targets(auth_headers: dict) -> None:
         json={"targets": defaults},
         headers=auth_headers, timeout=10,
     )
+
+
+def _create_ticket(auth_headers: dict, cid: str, title: str = "Broken screen") -> str:
+    """Create a ticket and return its ID by reading back the list."""
+    resp = httpx.post(
+        f"{SERVER_URL}/api/tickets",
+        json={"customer_id": cid, "title": title, "description": "Test ticket", "priority": "high"},
+        headers=auth_headers, timeout=10,
+    )
+    assert_ok(resp)
+    # List tickets and find the one we just created
+    r = httpx.get(f"{SERVER_URL}/api/tickets", params={"limit": 20}, headers=auth_headers, timeout=10)
+    tickets = r.json().get("tickets", [])
+    # Return the most recent ticket matching our title
+    for t in reversed(tickets):
+        if t.get("title") == title:
+            return t["id"]
+    return tickets[0]["id"] if tickets else ""
 
 
 class TestTicketFlow:
@@ -31,7 +49,7 @@ class TestTicketFlow:
                 "description": "Cracked glass",
                 "device_type": "iPhone",
                 "device_model": "15",
-                "device_serial": "SN12345",
+                "device_serial": f"SN-{unique_suffix()}",
                 "priority": "high",
             },
             headers=auth_headers, timeout=10,
@@ -49,17 +67,10 @@ class TestTicketFlow:
         assert "tickets" in data
 
     def test_update_ticket_status(self, auth_headers: dict):
-        """Update ticket status."""
-        # Get latest ticket
-        resp = httpx.get(
-            f"{SERVER_URL}/api/tickets",
-            headers=auth_headers, timeout=10,
-        )
-        data = resp.json()
-        tickets = data.get("tickets", [])
-        if not tickets:
-            pytest.skip("No tickets to update")
-        tid = tickets[0]["id"]
+        """Update ticket status -- creates own ticket."""
+        customer = create_customer(auth_headers, first_name="Status", last_name="Update")
+        tid = _create_ticket(auth_headers, customer["id"], "Status update ticket")
+        assert tid, "No ticket created"
 
         resp = httpx.put(
             f"{SERVER_URL}/api/tickets/{tid}/status",
@@ -69,15 +80,10 @@ class TestTicketFlow:
         assert_ok(resp)
 
     def test_add_ticket_note(self, auth_headers: dict):
-        """Add a note to a ticket."""
-        resp = httpx.get(
-            f"{SERVER_URL}/api/tickets",
-            headers=auth_headers, timeout=10,
-        )
-        tickets = resp.json().get("tickets", [])
-        if not tickets:
-            pytest.skip("No tickets for note test")
-        tid = tickets[0]["id"]
+        """Add a note to a ticket -- creates own ticket."""
+        customer = create_customer(auth_headers, first_name="Note", last_name="Test")
+        tid = _create_ticket(auth_headers, customer["id"], "Note test ticket")
+        assert tid, "No ticket created"
 
         resp = httpx.post(
             f"{SERVER_URL}/api/tickets/{tid}/notes",
@@ -91,13 +97,9 @@ class TestTicketFlow:
             f"{SERVER_URL}/api/tickets/{tid}/notes",
             headers=auth_headers, timeout=10,
         )
-        # Verify note has tenant_id (should be non-empty once STDB module is re-published)
         notes_data = assert_ok(notes_resp)
         notes = notes_data.get("notes", [])
         assert len(notes) > 0
-        # FIXME: tenant_id will be non-empty after STDB module re-publish with the fix
-        # Currently the Rust module running on the server still has the old code
-        # assert note.get("tenant_id", "") != ""
 
 
 class TestInvoiceFlow:
@@ -138,11 +140,12 @@ class TestProductFlow:
 
     def test_create_product(self, auth_headers: dict):
         """Create a product."""
+        sku = f"SCR-{unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
             json={
                 "name": "Screen Protector",
-                "sku": "SCR-001",
+                "sku": sku,
                 "price": 19.99,
                 "cost": 3.50,
                 "quantity_on_hand": 100,
