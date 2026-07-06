@@ -1,20 +1,24 @@
 """Tax rate CRUD tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql
 
 
 def _create_rate(auth_headers: dict, suffix: str = "") -> str:
-    """Create a tax rate and return its ID."""
+    """Create a tax rate and return its ID.
+
+    Uses unique name and STDB SQL lookup for isolation.
+    """
+    suf = suffix or unique_suffix()
+    name = f"Tax-{suf}"
     resp = httpx.post(f"{SERVER_URL}/api/tax-rates", json={
-        "name": f"Tax {suffix or 'A'}", "rate": 8.25, "is_default": False,
+        "name": name, "rate": 8.25, "is_default": False,
     }, headers=auth_headers, timeout=10)
     assert_ok(resp)
 
-    r = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10)
-    rates = r.json().get("tax_rates", [])
-    assert len(rates) >= 1
-    return rates[0]["id"]
+    rows = _stdb_sql(f"SELECT id FROM tax_rate WHERE name = '{name}'")
+    assert len(rows) >= 1, f"Tax rate not found with name '{name}'"
+    return rows[0]["id"]
 
 
 class TestTaxRateCRUD:
