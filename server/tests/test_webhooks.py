@@ -30,8 +30,8 @@ def _create_webhook(auth_headers: dict, session_suffix: str = "", suffix: str = 
 class TestWebhookCRUD:
     """Webhook subscription create, list, update, delete."""
 
-    def test_create(self, auth_headers: dict):
-        url = f"https://hooks-{unique_suffix()}.example.com/crm"
+    def test_create(self, auth_headers: dict, session_suffix: str):
+        url = f"https://hooks-{session_suffix}-{unique_suffix()}.example.com/crm"
         resp = httpx.post(
             f"{SERVER_URL}/api/webhook-subscriptions",
             json={"url": url, "events": "customer.created,invoice.paid", "secret": "whsec_abc123"},
