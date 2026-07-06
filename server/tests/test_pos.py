@@ -1,32 +1,37 @@
 """POS / Counter Sale endpoint tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql
 
 
 @pytest.fixture
 def test_product_id(auth_headers: dict) -> str:
     """Create a product for POS line items and return its ID."""
-    httpx.post(f"{SERVER_URL}/api/products", json={"name": "POS Widget", "sku": "POS-WDG-001", "price": 19.99, "cost": 10, "quantity_on_hand": 50}, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "POS-WDG-001"}, headers=auth_headers, timeout=10)
+    sku = f"POS-WDG-{unique_suffix()}"
+    httpx.post(f"{SERVER_URL}/api/products", json={"name": "POS Widget", "sku": sku, "price": 19.99, "cost": 10, "quantity_on_hand": 50}, headers=auth_headers, timeout=10)
+    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
     prods = r.json().get("products", [])
     assert len(prods) > 0, "Product not created"
     return prods[0]["id"]
 
 
 def _create_sale(auth_headers: dict, suffix: str = "") -> str:
-    """Create a counter sale and return its ID."""
+    """Create a counter sale and return its ID.
+
+    Uses unique customer_name and STDB SQL lookup for isolation.
+    """
+    suf = suffix or unique_suffix()
+    name = f"Walk-in-{suf}"
     httpx.post(f"{SERVER_URL}/api/pos/create", json={
-        "customer_name": f"Walk-in {suffix}",
+        "customer_name": name,
         "payment_method": "cash",
         "amount_tendered": 100,
         "tax_rate": 8.25,
         "discount_amount": 0,
     }, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/pos/sales", params={"limit": 1}, headers=auth_headers, timeout=10)
-    sales = r.json().get("sales", [])
-    assert len(sales) > 0
-    return sales[0]["id"]
+    rows = _stdb_sql(f"SELECT id FROM counter_sale WHERE customer_name = '{name}'")
+    assert len(rows) > 0, f"Sale not found for customer '{name}'"
+    return rows[0]["id"]
 
 
 class TestPOSCRUD:

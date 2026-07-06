@@ -9,9 +9,12 @@ class TestCustomerCRUD:
 
     def test_create_customer(self, auth_headers: dict):
         """Create a customer returns ok."""
+        from .conftest import unique_suffix
+        suf = unique_suffix()
+        email = f"jane-{suf}@example.com"
         resp = httpx.post(
             f"{SERVER_URL}/api/customers",
-            json={"first_name": "Jane", "last_name": "Doe", "email": "jane@example.com", "phone": "555-1111"},
+            json={"first_name": "Jane", "last_name": "Doe", "email": email, "phone": "555-1111"},
             headers=auth_headers, timeout=10,
         )
         assert_ok(resp)
@@ -22,21 +25,24 @@ class TestCustomerCRUD:
         )
         data = assert_ok(r2)
         emails = [c["email"] for c in data.get("customers", [])]
-        assert "jane@example.com" in emails
+        assert email in emails
 
     def test_search_customer(self, auth_headers: dict):
         """Search by email works."""
-        customer = create_customer(auth_headers, email="searchme@example.com")
+        from .conftest import unique_suffix
+        suf = unique_suffix()
+        email = f"searchme-{suf}@example.com"
+        customer = create_customer(auth_headers, email=email)
         assert customer.get("id"), f"Customer creation failed: {customer}"
 
         resp = httpx.get(
             f"{SERVER_URL}/api/customers",
-            params={"search": "searchme@example.com"},
+            params={"search": email},
             headers=auth_headers, timeout=10,
         )
         data = assert_ok(resp)
         assert any(
-            c["email"] == "searchme@example.com"
+            c["email"] == email
             for c in data.get("customers", [])
         )
 

@@ -1,26 +1,31 @@
 """Purchase Order CRUD, line items, receiving, and status workflow tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql
 
 
 @pytest.fixture
 def test_product_id(auth_headers: dict) -> str:
     """Create a product for PO line items and return its ID."""
-    httpx.post(f"{SERVER_URL}/api/products", json={"name": "PO Test Widget", "sku": "PO-WDG-001", "price": 15, "cost": 8, "quantity_on_hand": 100}, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": "PO-WDG-001"}, headers=auth_headers, timeout=10)
+    sku = f"PO-WDG-{unique_suffix()}"
+    httpx.post(f"{SERVER_URL}/api/products", json={"name": "PO Test Widget", "sku": sku, "price": 15, "cost": 8, "quantity_on_hand": 100}, headers=auth_headers, timeout=10)
+    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
     prods = r.json().get("products", [])
     assert len(prods) > 0, "Product not created"
     return prods[0]["id"]
 
 
 def _create_po(auth_headers: dict, suffix: str = "") -> str:
-    """Create a PO and return its ID."""
-    httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": f"Vendor {suffix or 'A'}", "notes": f"PO test {suffix}"}, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/purchase-orders", params={"limit": 1}, headers=auth_headers, timeout=10)
-    pos = r.json().get("purchase_orders", [])
-    assert len(pos) > 0
-    return pos[0]["id"]
+    """Create a PO and return its ID.
+
+    Uses unique vendor_name and STDB SQL lookup for isolation.
+    """
+    suf = suffix or unique_suffix()
+    vendor = f"Vendor-{suf}"
+    httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": f"PO test {suf}"}, headers=auth_headers, timeout=10)
+    rows = _stdb_sql(f"SELECT id FROM purchase_order WHERE vendor_name = '{vendor}'")
+    assert len(rows) > 0, f"PO not found for vendor {vendor}"
+    return rows[0]["id"]
 
 
 class TestPurchaseOrderCRUD:

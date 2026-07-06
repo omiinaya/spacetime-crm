@@ -1,18 +1,25 @@
 """Payment recording, listing, and deletion integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix
 
 
 def _create_test_invoice(auth_headers: dict, suffix: str = "") -> str:
-    """Create a customer + invoice and return the invoice ID."""
-    email = f"pay-cust-{suffix or 'main'}@example.com"
-    c = create_customer(auth_headers, first_name="Pay", last_name=f"Test{suffix}", email=email)
+    """Create a customer + invoice and return the invoice ID.
+
+    Filters by customer_id for safe parallel/out-of-order execution.
+    """
+    suf = suffix or unique_suffix()
+    email = f"pay-cust-{suf}@example.com"
+    c = create_customer(auth_headers, first_name="Pay", last_name=f"Test{suf}", email=email)
     cid = c.get("id")
     assert cid
     httpx.post(f"{SERVER_URL}/api/invoices", json={"customer_id": cid, "notes": f"Pay test {suffix}", "due_date": 0}, headers=auth_headers, timeout=10)
-    r = httpx.get(f"{SERVER_URL}/api/invoices", params={"limit": 1}, headers=auth_headers, timeout=10)
-    inv_id = r.json()["invoices"][0]["id"]
+    # Find invoice by customer_id (unique per test call)
+    r = httpx.get(f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=auth_headers, timeout=10)
+    invs = r.json().get("invoices", [])
+    assert len(invs) >= 1, f"No invoice found for customer {cid}"
+    inv_id = invs[0]["id"]
 
     # Add a line item so invoice has a total
     httpx.post(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", json={"description": "Service", "quantity": 1, "unit_price": 100}, headers=auth_headers, timeout=10)
