@@ -92,6 +92,7 @@ _STDB_TABLES = {
     "adjustment": "inventory_adjustment",
     "pos_line_item": "pos_line_item",
     "saved_payment_method": "saved_payment_methods",
+    "tenant": "tenants",
 }
 
 # ── Session-isolation tracker ──────────────────────────────────────
@@ -148,7 +149,8 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
         "ticket_note",
         "ticket_timer",
         "saved_payment_methods",
-        "tenant",
+        "tenant_members",
+        "tenants",
         "counter_sale_line_item",
         "pos_line_item",
         "invoice_line_item",
@@ -355,7 +357,8 @@ def isolated_tenant(
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-        httpx.post(f"{STDB_CALL_URL}/set_user_password", json=[admin_user_id, hashed], timeout=10)
+    _stdb_write(f"DELETE FROM user WHERE id = '{admin_user_id}'")
+    _stdb_write(f"SET user_password_{admin_user_id} = '{hashed}'")
 
     # Log in as the test admin to get a token
     resp = httpx.post(
