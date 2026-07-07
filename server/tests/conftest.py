@@ -16,6 +16,7 @@ import uuid
 import time
 import pytest
 import httpx
+import bcrypt
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
@@ -23,9 +24,10 @@ ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "admin123")
 
 # Test STDB container settings (used by test helpers for direct SQL lookups)
 STDB_HOST = os.environ.get("STDB_HOST", "localhost")
-STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3002")))
+STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3001")))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
 STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
+STDB_CALL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/call"
 
 
 def _stdb_sql(query: str) -> list[dict]:
@@ -73,23 +75,24 @@ def unique_suffix() -> str:
 _STDB_TABLES = {
     "ticket": "ticket",
     "customer": "customer",
-    "invoice": "invoice",
+    "invoice": "invoices",
     "payment": "payment",
-    "product": "product",
+    "product": "products",
     "appointment": "appointment",
-    "estimate": "estimate",
+    "estimate": "estimates",
     "purchase_order": "purchase_order",
-    "tax_rate": "tax_rate",
+    "tax_rate": "tax_rates",
     "user": "user",
-    "webhook_subscription": "webhook_subscription",
-    "recurring_invoice_rule": "recurring_invoice_rule",
-    "report_schedule": "report_schedule",
-    "checklist_template": "checklist_template",
-    "custom_field_definition": "custom_field_definition",
+    "webhook_subscription": "webhook_subscriptions",
+    "recurring_invoice_rule": "recurring_invoice_rules",
+    "report_schedule": "scheduled_reports",
+    "checklist_template": "checklist_templates",
+    "custom_field_definition": "custom_field_definitions",
     "counter_sale": "counter_sale",
     "adjustment": "inventory_adjustment",
     "pos_line_item": "pos_line_item",
     "saved_payment_method": "saved_payment_methods",
+    "tenant": "tenants",
 }
 
 # ── Session-isolation tracker ──────────────────────────────────────
@@ -141,37 +144,36 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
     # These are best-effort — tables may not exist or have no matching rows
     tables_order = [
         # Child/dependent tables (must delete before parents)
-        "tenant_member",
-        "ticket_checklist_item",
+        "ticket_checklist_items",
         "ticket_note",
         "ticket_timer",
         "saved_payment_methods",
-        "tenant",
+        "tenant_members",
+        "tenants",
         "counter_sale_line_item",
         "pos_line_item",
-        "invoice_line_item",
-        "estimate_line_item",
+        "invoice_line_items",
+        "estimate_line_items",
         "payment",
         "purchase_order_line_item",
         "inventory_adjustment",
         "appointment",
-        "recurring_invoice_rule",
-        "webhook_subscription",
-        "report_schedule",
-        "custom_field_value",
-        "custom_field_definition",
-        "checklist_template",
-        "customer_geolocation",
+        "recurring_invoice_rules",
+        "webhook_subscriptions",
+        "scheduled_reports",
+        "custom_field_values",
+        "custom_field_definitions",
+        "checklist_templates",
+        "customer_geolocations",
         # Main entities
         "ticket",
-        "invoice",
-        "estimate",
+        "invoices",
+        "estimates",
         "purchase_order",
         "counter_sale",
-        "adjustment",
-        "product",
+        "products",
         "customer",
-        "tax_rate",
+        "tax_rates",
         "user",
         "user_settings",
         # Audit/config tables
@@ -306,7 +308,7 @@ def isolated_tenant(
     test_tenant_name: str,
     test_admin_email: str,
     test_admin_password: str,
-    auth_headers: dict,
+    auth_headers_session: dict,
 ) -> dict:
     """
     Create an isolated tenant with an admin user for this test session.
@@ -318,7 +320,7 @@ def isolated_tenant(
     resp = httpx.post(
         f"{SERVER_URL}/api/tenants",
         json={"name": test_tenant_name, "slug": test_tenant_slug},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Failed to create tenant: {resp.text}"
@@ -332,7 +334,7 @@ def isolated_tenant(
     resp = httpx.post(
         f"{SERVER_URL}/api/users",
         json={"name": f"test-admin-{test_tenant_slug}", "email": test_admin_email, "role": "admin"},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Failed to create admin user: {resp.text}"
@@ -346,7 +348,7 @@ def isolated_tenant(
     resp = httpx.post(
         f"{SERVER_URL}/api/tenants/{tenant_id}/members",
         json={"username": f"test-admin-{test_tenant_slug}", "role": "admin"},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Failed to add tenant member: {resp.text}"
@@ -382,7 +384,7 @@ def isolated_tenant(
     try:
         httpx.delete(
             f"{SERVER_URL}/api/tenants/{tenant_id}",
-            headers=auth_headers,
+            headers=auth_headers_session,
             timeout=10,
         )
     except Exception:
@@ -464,7 +466,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     resp = httpx.post(
         f"{SERVER_URL}/api/customers",
         json=data,
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Customer create failed: {resp.text[:200]}"
@@ -472,7 +474,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     r2 = httpx.get(
         f"{SERVER_URL}/api/customers",
         params={"search": data["email"]},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert r2.status_code == 200
