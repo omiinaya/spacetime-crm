@@ -318,7 +318,7 @@ def isolated_tenant(
     resp = httpx.post(
         f"{SERVER_URL}/api/tenants",
         json={"name": test_tenant_name, "slug": test_tenant_slug},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Failed to create tenant: {resp.text}"
