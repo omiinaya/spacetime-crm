@@ -34,7 +34,7 @@ class TestTenants:
         data = assert_ok(resp)
         assert data.get("ok") is True
 
-    def test_tenant_members(self, test_admin_headers: dict, test_tenant_id: str):
+    def test_tenant_members(self, test_admin_headers: dict, test_tenant_id: str, test_tenant_slug: str):
         """Tenant members list includes admin."""
         tid = test_tenant_id
         resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10)
@@ -43,7 +43,6 @@ class TestTenants:
         assert "members" in tenant
         member_names = [m["username"] for m in tenant["members"]]
         # The isolated tenant admin username follows the pattern test-admin-{tenant_slug}
-        from .conftest import test_tenant_slug
         expected_username = f"test-admin-{test_tenant_slug}"
         assert expected_username in member_names, f"Admin {expected_username} not in {member_names}"
 

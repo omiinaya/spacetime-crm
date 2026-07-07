@@ -140,13 +140,15 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
     # Delete in dependency-safe order (children first)
     # These are best-effort — tables may not exist or have no matching rows
     tables_order = [
-        # POS child tables
-        "pos_line_item",
-        # Ticket child tables
+        # Child/dependent tables (must delete before parents)
+        "tenant_member",
+        "ticket_checklist_item",
         "ticket_note",
         "ticket_timer",
         "saved_payment_methods",
-        # Invoice/estimate child tables
+        "tenant",
+        "counter_sale_line_item",
+        "pos_line_item",
         "invoice_line_item",
         "estimate_line_item",
         "payment",
@@ -159,6 +161,7 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
         "custom_field_value",
         "custom_field_definition",
         "checklist_template",
+        "customer_geolocation",
         # Main entities
         "ticket",
         "invoice",
@@ -170,6 +173,9 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
         "customer",
         "tax_rate",
         "user",
+        "user_settings",
+        # Audit/config tables
+        "audit_log",
     ]
     for table in tables_order:
         try:
@@ -181,7 +187,11 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
                 f"OR (name IS NOT NULL AND name LIKE '%{suffix}%') "
                 f"OR (title IS NOT NULL AND title LIKE '%{suffix}%') "
                 f"OR (sku IS NOT NULL AND sku LIKE '%{suffix}%') "
-                f"OR (customer_name IS NOT NULL AND customer_name LIKE '%{suffix}%')"
+                f"OR (customer_name IS NOT NULL AND customer_name LIKE '%{suffix}%') "
+                f"OR (slug IS NOT NULL AND slug LIKE '%{suffix}%') "
+                f"OR (label IS NOT NULL AND label LIKE '%{suffix}%') "
+                f"OR (url IS NOT NULL AND url LIKE '%{suffix}%') "
+                f"OR (username IS NOT NULL AND username LIKE '%{suffix}%')"
             )
             count += 1
         except Exception:
@@ -605,3 +615,92 @@ def restore_sla_targets(auth_headers: dict, targets: dict) -> None:
 def reset_sla_targets(auth_headers: dict) -> None:
     """Reset SLA targets back to defaults for test isolation."""
     restore_sla_targets(auth_headers, dict(DEFAULT_SLA_TARGETS))
+
+
+# ── Default tax rate save/restore helpers ──────────────────────────
+
+
+def save_default_tax_rate(auth_headers: dict) -> dict | None:
+    """Fetch current default tax rate so it can be restored later."""
+    try:
+        resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10)
+        if resp.status_code == 200:
+            rates = resp.json().get("tax_rates", [])
+            for rate in rates:
+                if rate.get("is_default"):
+                    return {"id": rate["id"], "rate": rate["rate"], "name": rate["name"]}
+    except Exception:
+        pass
+    return None
+
+
+def restore_default_tax_rate(auth_headers: dict, saved: dict | None) -> None:
+    """Restore previously saved default tax rate, or clear default if none existed."""
+    if saved is None:
+        return
+    try:
+        # Remove default from all rates first
+        rates_resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10)
+        if rates_resp.status_code == 200:
+            for rate in rates_resp.json().get("tax_rates", []):
+                if rate.get("is_default") and rate["id"] != saved.get("id"):
+                    httpx.put(
+                        f"{SERVER_URL}/api/tax-rates/{rate['id']}",
+                        json={"name": rate["name"], "rate": rate["rate"], "is_default": False},
+                        headers=auth_headers, timeout=10,
+                    )
+        # Restore the saved rate as default
+        httpx.put(
+            f"{SERVER_URL}/api/tax-rates/{saved['id']}",
+            json={"name": saved["name"], "rate": saved["rate"], "is_default": True},
+            headers=auth_headers, timeout=10,
+        )
+    except Exception:
+        pass
+
+
+# ── Global state reset ─────────────────────────────────────────────
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _reset_global_state(auth_headers_session: dict, session_suffix: str):
+    """Reset all global mutable state (settings, SLA targets, defaults) before session starts.
+
+    This runs BEFORE the first test in each session to ensure clean settings
+    regardless of what previous test sessions may have left behind.
+    Settings tests use their own save/restore within test methods, so
+    this is a safety net for interrupted runs that never cleaned up.
+    """
+    # Reset SLA targets
+    reset_sla_targets(auth_headers_session)
+    # Reset mail settings
+    try:
+        httpx.post(
+            f"{SERVER_URL}/api/settings/mail",
+            json={
+                "smtp_host": "",
+                "smtp_port": 587,
+                "smtp_user": "",
+                "smtp_password": "",
+                "smtp_from_email": "",
+                "smtp_from_name": "",
+                "smtp_tls": True,
+            },
+            headers=auth_headers_session, timeout=10,
+        )
+    except Exception:
+        pass
+    # Reset SMS settings
+    try:
+        httpx.post(
+            f"{SERVER_URL}/api/settings/sms",
+            json={
+                "twilio_account_sid": "",
+                "twilio_auth_token": "",
+                "twilio_from_number": "",
+            },
+            headers=auth_headers_session, timeout=10,
+        )
+    except Exception:
+        pass
+    yield  # Session runs here — no post-session reset needed, cleanup fixture handles entities
