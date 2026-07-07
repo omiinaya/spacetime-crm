@@ -26,6 +26,7 @@ STDB_HOST = os.environ.get("STDB_HOST", "localhost")
 STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3002")))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
 STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
+STDB_CALL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/call"
 
 
 def _stdb_sql(query: str) -> list[dict]:
