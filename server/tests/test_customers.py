@@ -1,7 +1,7 @@
 """Customer CRUD and tenant isolation integration tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, create_customer, test_admin_headers, _track_entity
 
 
 class TestCustomerCRUD:
@@ -25,7 +25,13 @@ class TestCustomerCRUD:
             headers=test_admin_headers, timeout=10,
         )
         data = assert_ok(r2)
-        assert any(c["email"] == email for c in data.get("customers", []))
+        customers = data.get("customers", [])
+        assert any(c["email"] == email for c in customers)
+        # Track the created customer for session-level cleanup
+        for c in customers:
+            if c["email"] == email:
+                _track_entity("customer", c["id"])
+                break
 
     def test_search_customer(self, test_admin_headers: dict, session_suffix: str):
         """Search by email works."""
