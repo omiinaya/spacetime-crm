@@ -417,7 +417,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 - ❌ No performance/load tests
 - ❌ Tests share STDB state (no fresh DB per run)
 - ❌ No Rust runtime tests (need STDB host)
-- ❌ No contract/API spec tests (no OpenAPI)
+- ✅ OpenAPI spec tests with schema validation, auth enforcement, response contracts, error contracts, CORS contracts, and request body field requirements (30 tests in `test_openapi_spec.py`)
 
 ---
 
