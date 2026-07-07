@@ -17,7 +17,7 @@
 | Backend API (Python) | 30 files | ~4,500 | 92% | 273 integration | 2 major, 5 minor |
 | Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit | 3 major, 6 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
-| **Overall** | **~110 files** | **~20,000** | **~95%** | **367** | **~20 items** |
+| **Overall** | **~110 files** | **~20,000** | **~96%** | **367** | **~20 items** |
 
 ---
 
@@ -517,14 +517,14 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 ### Immediate (fix 1st)
 1. ~~**Fix 9 hardcoded `localhost:8723/portal/` URLs** — will break all portal links in production~~ ✅ Done (`5d1ec57`)
 2. ~~**Hide `portal_password_hash`** from customer API responses~~ ✅ Done (`5d1ec57`)
-3. **Add TS interfaces** for Tenant, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition
+3. ~~**Add TS interfaces** for Tenant, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition~~ ✅ Done (`320d2aa`)
 4. **Add missing empty/error states** on PaymentsPage, ProductsPage, PortalDashboard
 
 ### This sprint
 5. **Add ErrorBoundary** to each page
-6. **Add device_imei/device_password** to TicketCreate + Ticket TS interface
+6. ~~**Add device_imei/device_password** to TicketCreate + Ticket TS interface~~ ✅ Done (`320d2aa`)
 7. **Fix PaymentsPage currency display bug**
-8. **Add missing Pydantic models** for ScheduledReport, Invoice discount fields
+8. ~~**Add missing Pydantic models** for ScheduledReport, Invoice discount fields~~ ✅ Done (`320d2aa`)
 9. **Add structured logging**
 
 ### Next sprint
