@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** | 2026-07-02 |
-| **Overall completeness:** | ~95% |
+| **Last assessed:** | 2026-07-07 |
+| **Overall completeness:** | ~96% |
 | **Total endpoints:** | 99 API routes (25 route files) |
 | **Total STDB artifacts:** | 27 tables + 73 reducers |
 | **Total frontend pages:** | 22 admin + 3 auth + 5 portal = 30 pages |
@@ -15,7 +15,7 @@
 |-------|-------|-------|:------------:|:----------:|:-------------:|
 | STDB Module (Rust) | 16 files | ~1,900 | 88% | ~200 #[cfg(test)] + container CI | 1 major, 3 minor |
 | Backend API (Python) | 30 files | ~4,500 | 92% | 273 integration | 2 major, 5 minor |
-| Frontend (TypeScript) | 45+ files | ~8,000 | 82% | 94 unit | 4 major, 8 minor |
+| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit | 3 major, 6 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
 | **Overall** | **~110 files** | **~20,000** | **~95%** | **367** | **~20 items** |
 
@@ -502,13 +502,13 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | Phase | Items | Hours | Priority |
 |-------|-------|:-----:|:--------:|
-| **5: Field & Type Gaps** | 11 TS fields, 7 whole-table types, 10 API models | **~3h** | 🔴 HIGH |
+| **5: Field & Type Gaps** | 11 TS fields, 7 whole-table types, 10 API models | **✅ DONE** | ✅ DONE |
 | **6: UX Gaps** | 4 error states, 3 empty states, 1 loading state, 2 bugs, TS `any` cleanup | **~2h** | 🟡 MEDIUM |
 | **7: Code Quality** | 9 hardcoded URLs, inline imports, password hash leak, dead code, test isolation | **~3h** | 🔴 HIGH |
 | **8: Feature Additions** | ~15 small features + ~9 larger features | **~15h** | 🟢 LOW |
 || **9: Infrastructure** | ✅ Reverse proxy + TLS + prod compose + env template done (~2h saved). Remaining: structured logging, Dockerfile healthcheck, CI/CD, dev tooling | **~2h** | 🟡 MEDIUM |
 | **Test coverage** | Negative tests, concurrent tests, Rust runtime tests, load tests | **~6h** | 🟡 MEDIUM |
-| **Overall remaining** | **~33 hours** | | |
+| **Overall remaining** | **~30 hours** | | |
 
 ---
 
