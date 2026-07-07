@@ -48,7 +48,7 @@ log_fail()  { echo -e "\033[0;31m[FAIL]\033[0m  $*"; }
 log_info "Waiting for SpacetimeDB at ${STDB_URL}..."
 
 for i in $(seq 1 60); do
-    if curl -sf "${STDB_URL}/" > /dev/null 2>&1; then
+    if curl -sf "${STDB_URL}/v1/health" > /dev/null 2>&1; then
         log_pass "SpacetimeDB is ready at ${STDB_URL}"
         break
     fi
