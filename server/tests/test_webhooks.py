@@ -4,13 +4,14 @@ import pytest
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
-def _create_webhook(test_admin_headers: dict, suffix: str = "") -> str:
+def _create_webhook(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a webhook subscription and return its ID.
 
     Uses a unique URL and STDB SQL lookup for test isolation.
+    session_suffix ensures cleanup by suffix works across sessions.
     """
     suf = suffix or unique_suffix()
-    url = f"https://example-{suf}.com/webhook"
+    url = f"https://example-{session_suffix}-{suf}.com/webhook"
     resp = httpx.post(
         f"{SERVER_URL}/api/webhook-subscriptions",
         json={"url": url, "events": "customer.created,ticket.created", "secret": "test-secret"},
@@ -50,16 +51,16 @@ class TestWebhookCRUD:
         )
         assert resp.status_code == 400
 
-    def test_list(self, test_admin_headers: dict):
+    def test_list(self, test_admin_headers: dict, session_suffix: str):
         # Create one first so list is non-empty
-        _create_webhook(test_admin_headers, "list")
+        _create_webhook(test_admin_headers, session_suffix, "list")
         resp = httpx.get(f"{SERVER_URL}/api/webhook-subscriptions", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "subscriptions" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict):
-        sub_id = _create_webhook(test_admin_headers, "update")
+    def test_update(self, test_admin_headers: dict, session_suffix: str):
+        sub_id = _create_webhook(test_admin_headers, session_suffix, "update")
         resp = httpx.put(
             f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}",
             json={"url": "https://updated.example.com/hook", "events": "ticket.updated", "secret": "new-secret", "active": False},
@@ -67,8 +68,8 @@ class TestWebhookCRUD:
         )
         assert_ok(resp)
 
-    def test_update_invalid_events(self, test_admin_headers: dict):
-        sub_id = _create_webhook(test_admin_headers, "inv")
+    def test_update_invalid_events(self, test_admin_headers: dict, session_suffix: str):
+        sub_id = _create_webhook(test_admin_headers, session_suffix, "inv")
         resp = httpx.put(
             f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}",
             json={"url": "https://example.com/hook", "events": "made.up.event", "secret": "", "active": True},
@@ -76,8 +77,8 @@ class TestWebhookCRUD:
         )
         assert resp.status_code == 400
 
-    def test_delete(self, test_admin_headers: dict):
-        sub_id = _create_webhook(test_admin_headers, "delete")
+    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+        sub_id = _create_webhook(test_admin_headers, session_suffix, "delete")
         resp = httpx.delete(f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
@@ -89,9 +90,9 @@ class TestWebhookCRUD:
 class TestWebhookTest:
     """Test delivery endpoint."""
 
-    def test_test_endpoint(self, test_admin_headers: dict):
+    def test_test_endpoint(self, test_admin_headers: dict, session_suffix: str):
         """Test endpoint should attempt delivery (may fail, that's ok)."""
-        sub_id = _create_webhook(test_admin_headers, "test")
+        sub_id = _create_webhook(test_admin_headers, session_suffix, "test")
         resp = httpx.post(f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}/test", headers=test_admin_headers, timeout=10)
         # The delivery attempt might fail or succeed depending on network
         assert resp.status_code < 500, f"Test endpoint returned {resp.status_code}: {resp.text[:200]}"

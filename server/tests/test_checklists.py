@@ -4,13 +4,14 @@ import pytest
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
-def _create_template(test_admin_headers: dict, suffix: str = "") -> str:
+def _create_template(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a checklist template and return its ID.
 
     Uses unique name and STDB SQL lookup for isolation.
+    session_suffix ensures cleanup by suffix works across sessions.
     """
     suf = suffix or unique_suffix()
-    name = f"Checklist-{suf}"
+    name = f"Checklist-{session_suffix}-{suf}"
     resp = httpx.post(f"{SERVER_URL}/api/checklist-templates", json={
         "name": name,
         "description": f"Test checklist {suf}",
@@ -52,15 +53,15 @@ class TestChecklistCRUD:
         resp = httpx.post(f"{SERVER_URL}/api/checklist-templates", json={}, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_list(self, test_admin_headers: dict):
-        _create_template(test_admin_headers, "lst")
+    def test_list(self, test_admin_headers: dict, session_suffix: str):
+        _create_template(test_admin_headers, session_suffix, "lst")
         resp = httpx.get(f"{SERVER_URL}/api/checklist-templates", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "templates" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict):
-        tid = _create_template(test_admin_headers, "upd")
+    def test_update(self, test_admin_headers: dict, session_suffix: str):
+        tid = _create_template(test_admin_headers, session_suffix, "upd")
         resp = httpx.put(f"{SERVER_URL}/api/checklist-templates/{tid}", json={
             "name": "Updated Checklist",
             "description": "Revised steps",
@@ -74,8 +75,8 @@ class TestChecklistCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_delete(self, test_admin_headers: dict):
-        tid = _create_template(test_admin_headers, "del")
+    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+        tid = _create_template(test_admin_headers, session_suffix, "del")
         resp = httpx.delete(f"{SERVER_URL}/api/checklist-templates/{tid}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 

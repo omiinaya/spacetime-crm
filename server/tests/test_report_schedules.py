@@ -4,10 +4,10 @@ import pytest
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
 
 
-def _create_schedule(test_admin_headers: dict, suffix: str = "") -> str:
+def _create_schedule(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a report schedule and return its ID."""
     suf = suffix or unique_suffix()
-    name = f"Schedule-{suf}"
+    name = f"Schedule-{session_suffix}-{suf}"
     resp = httpx.post(f"{SERVER_URL}/api/report-schedules", json={
         "name": name,
         "report_type": "revenue",
@@ -28,8 +28,8 @@ def _create_schedule(test_admin_headers: dict, suffix: str = "") -> str:
 
 
 class TestReportScheduleCRUD:
-    def test_create(self, test_admin_headers: dict):
-        name = f"Weekly Revenue Report {unique_suffix()}"
+    def test_create(self, test_admin_headers: dict, session_suffix: str):
+        name = f"Weekly Revenue Report {session_suffix}-{unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/report-schedules", json={
             "name": name,
             "report_type": "revenue",
@@ -60,15 +60,15 @@ class TestReportScheduleCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 400
 
-    def test_list(self, test_admin_headers: dict):
-        _create_schedule(test_admin_headers, "lst")
+    def test_list(self, test_admin_headers: dict, session_suffix: str):
+        _create_schedule(test_admin_headers, session_suffix, "lst")
         resp = httpx.get(f"{SERVER_URL}/api/report-schedules", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "schedules" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict):
-        sid = _create_schedule(test_admin_headers, "upd")
+    def test_update(self, test_admin_headers: dict, session_suffix: str):
+        sid = _create_schedule(test_admin_headers, session_suffix, "upd")
         resp = httpx.put(f"{SERVER_URL}/api/report-schedules/{sid}", json={
             "name": "Updated Report",
             "report_type": "tickets",
@@ -84,8 +84,8 @@ class TestReportScheduleCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 404
 
-    def test_delete(self, test_admin_headers: dict):
-        sid = _create_schedule(test_admin_headers, "del")
+    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+        sid = _create_schedule(test_admin_headers, session_suffix, "del")
         resp = httpx.delete(f"{SERVER_URL}/api/report-schedules/{sid}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
@@ -95,9 +95,9 @@ class TestReportScheduleCRUD:
 
 
 class TestReportScheduleRun:
-    def test_run_now(self, test_admin_headers: dict):
+    def test_run_now(self, test_admin_headers: dict, session_suffix: str):
         """Run-now should attempt delivery (may fail without mail config, that's ok)."""
-        sid = _create_schedule(test_admin_headers, "run")
+        sid = _create_schedule(test_admin_headers, session_suffix, "run")
         # Need to ensure recipients includes an email to avoid validation issues
         resp = httpx.post(f"{SERVER_URL}/api/report-schedules/{sid}/run-now", headers=test_admin_headers, timeout=15)
         # Should not crash — may fail gracefully due to no mail config
