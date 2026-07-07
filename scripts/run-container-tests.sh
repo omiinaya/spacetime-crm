@@ -143,7 +143,7 @@ step "3" "Verify service health"
 # Check STDB
 log_info "Checking STDB at ${STDB_URL}..."
 for i in $(seq 1 15); do
-  if curl -sf "${STDB_URL}/" >/dev/null 2>&1; then
+  if curl -sf "${STDB_URL}/v1/health" >/dev/null 2>&1; then
     log_pass "STDB is healthy$(elapsed)"
     break
   fi
