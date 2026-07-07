@@ -2,22 +2,15 @@
 
 Each test creates its own data — no inter-test ordering dependencies.
 All entities tracked for session cleanup.
-Uses session_suffix isolation for parallel-session safety.
+Uses isolated tenant admin (not global admin) for all admin operations.
 """
 import bcrypt
 import httpx
 import pytest
 import time
-from .conftest import SERVER_URL, assert_ok, ADMIN_EMAIL, ADMIN_PW, _track_entity, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, _track_entity, test_admin_headers
 
 _PORTAL_PW = "TestPortal123!"
-
-
-def _admin_token() -> str:
-    """Get a fresh admin JWT."""
-    resp = httpx.post(f"{SERVER_URL}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PW}, timeout=10)
-    assert resp.status_code == 200, f"Admin login failed: {resp.text[:200]}"
-    return resp.json()["token"]
 
 
 @pytest.fixture(scope="session")
@@ -27,11 +20,10 @@ def portal_email(session_suffix: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def portal_token(portal_email: str) -> str:
+def portal_token(portal_email: str, test_admin_headers: dict) -> str:
     """Create portal customer, set password, log in, return token."""
     email = portal_email
-    token = _admin_token()
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = test_admin_headers
 
     # Create customer
     create_resp = httpx.post(f"{SERVER_URL}/api/customers", json={
@@ -76,9 +68,9 @@ def portal_customer_id(portal_headers: dict) -> str:
 
 
 @pytest.fixture
-def admin_headers() -> dict:
-    """Function-scoped admin auth headers."""
-    return {"Authorization": f"Bearer {_admin_token()}"}
+def admin_headers(test_admin_headers: dict) -> dict:
+    """Function-scoped admin auth headers using isolated tenant admin."""
+    return test_admin_headers
 
 
 def _create_portal_ticket(customer_id: str, admin_headers: dict, tag: str = "") -> str:
@@ -233,9 +225,9 @@ class TestPortalSettings:
 class TestPortalErrors:
     """Portal auth enforcement."""
 
-    def test_admin_token_rejected(self):
-        token = _admin_token()
-        headers = {"Authorization": f"Bearer {token}"}
+    def test_admin_token_rejected(self, test_admin_headers: dict):
+        """Admin token (even from isolated tenant) should be rejected by portal endpoints."""
+        headers = test_admin_headers
         resp = httpx.get(f"{SERVER_URL}/api/portal/me", headers=headers, timeout=10)
         assert resp.status_code == 401, f"Admin token should be rejected, got {resp.status_code}"
 
