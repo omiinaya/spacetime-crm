@@ -4,13 +4,13 @@ import pytest
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, save_default_tax_rate, restore_default_tax_rate, _track_entity, test_admin_headers
 
 
-def _create_rate(test_admin_headers: dict, suffix: str = "") -> str:
+def _create_rate(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a tax rate and return its ID.
 
-    Uses unique name and STDB SQL lookup for isolation.
+    Uses unique name + session_suffix for isolation and cleanup.
     """
     suf = suffix or unique_suffix()
-    name = f"Tax-{suf}"
+    name = f"Tax-{session_suffix}-{suf}"
     resp = httpx.post(f"{SERVER_URL}/api/tax-rates", json={
         "name": name, "rate": 8.25, "is_default": False,
     }, headers=test_admin_headers, timeout=10)
@@ -24,9 +24,9 @@ def _create_rate(test_admin_headers: dict, suffix: str = "") -> str:
 
 
 class TestTaxRateCRUD:
-    def test_create(self, test_admin_headers: dict):
+    def test_create(self, test_admin_headers: dict, session_suffix: str):
         from .conftest import unique_suffix, test_admin_headers
-        name = f"Sales Tax {unique_suffix()}"
+        name = f"Sales Tax {session_suffix}-{unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/tax-rates", json={
             "name": name, "rate": 7.5, "is_default": False,
         }, headers=test_admin_headers, timeout=10)
@@ -42,15 +42,15 @@ class TestTaxRateCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_list(self, test_admin_headers: dict):
-        _create_rate(test_admin_headers, "lst")
+    def test_list(self, test_admin_headers: dict, session_suffix: str):
+        _create_rate(test_admin_headers, session_suffix, "lst")
         resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "tax_rates" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict):
-        rate_id = _create_rate(test_admin_headers, "upd")
+    def test_update(self, test_admin_headers: dict, session_suffix: str):
+        rate_id = _create_rate(test_admin_headers, session_suffix, "upd")
         saved = save_default_tax_rate(test_admin_headers)
         try:
             resp = httpx.put(f"{SERVER_URL}/api/tax-rates/{rate_id}", json={
@@ -66,8 +66,8 @@ class TestTaxRateCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_delete(self, test_admin_headers: dict):
-        rate_id = _create_rate(test_admin_headers, "del")
+    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+        rate_id = _create_rate(test_admin_headers, session_suffix, "del")
         resp = httpx.delete(f"{SERVER_URL}/api/tax-rates/{rate_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
@@ -75,8 +75,8 @@ class TestTaxRateCRUD:
         resp = httpx.delete(f"{SERVER_URL}/api/tax-rates/nonexistent-999", headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_set_default(self, test_admin_headers: dict):
-        rate_id = _create_rate(test_admin_headers, "def")
+    def test_set_default(self, test_admin_headers: dict, session_suffix: str):
+        rate_id = _create_rate(test_admin_headers, session_suffix, "def")
         saved = save_default_tax_rate(test_admin_headers)
         try:
             resp = httpx.put(f"{SERVER_URL}/api/tax-rates/{rate_id}", json={

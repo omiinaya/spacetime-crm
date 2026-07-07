@@ -4,9 +4,9 @@ import pytest
 from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity, test_admin_headers
 
 
-def _customer_id(test_admin_headers: dict, suffix: str = "") -> str:
+def _customer_id(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     suf = suffix or unique_suffix()
-    c = create_customer(test_admin_headers, email=f"pm-{suf}@example.com")
+    c = create_customer(test_admin_headers, session_suffix=session_suffix, email=f"pm-{session_suffix}-{suf}@example.com")
     return c.get("id", "")
 
 
@@ -18,14 +18,14 @@ class TestPaymentMethods:
         data = assert_ok(resp)
         assert "payment_methods" in data
 
-    def test_list_filtered_by_customer(self, test_admin_headers: dict):
-        cid = _customer_id(test_admin_headers, "lst-cust")
+    def test_list_filtered_by_customer(self, test_admin_headers: dict, session_suffix: str):
+        cid = _customer_id(test_admin_headers, session_suffix, "lst-cust")
         resp = httpx.get(f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "payment_methods" in data
 
-    def test_save_method(self, test_admin_headers: dict):
-        cid = _customer_id(test_admin_headers, "save")
+    def test_save_method(self, test_admin_headers: dict, session_suffix: str):
+        cid = _customer_id(test_admin_headers, session_suffix, "save")
         resp = httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_test_12345",
@@ -45,8 +45,8 @@ class TestPaymentMethods:
         for m in methods:
             _track_entity("saved_payment_method", m["id"])
 
-    def test_save_method_invalid_last4(self, test_admin_headers: dict):
-        cid = _customer_id(test_admin_headers, "bad-last4")
+    def test_save_method_invalid_last4(self, test_admin_headers: dict, session_suffix: str):
+        cid = _customer_id(test_admin_headers, session_suffix, "bad-last4")
         resp = httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_bad",
@@ -67,8 +67,8 @@ class TestPaymentMethods:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_set_default(self, test_admin_headers: dict):
-        cid = _customer_id(test_admin_headers, "default")
+    def test_set_default(self, test_admin_headers: dict, session_suffix: str):
+        cid = _customer_id(test_admin_headers, session_suffix, "default")
         httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_default_test",
@@ -96,8 +96,8 @@ class TestPaymentMethods:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_delete_method(self, test_admin_headers: dict):
-        cid = _customer_id(test_admin_headers, "delete-pm")
+    def test_delete_method(self, test_admin_headers: dict, session_suffix: str):
+        cid = _customer_id(test_admin_headers, session_suffix, "delete-pm")
         httpx.post(f"{SERVER_URL}/api/payment-methods", json={
             "customer_id": cid,
             "stripe_payment_method_id": "pm_delete_test",
@@ -121,9 +121,9 @@ class TestPaymentMethods:
         resp = httpx.delete(f"{SERVER_URL}/api/payment-methods/nonexistent-999", headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_setup_intent_no_stripe(self, test_admin_headers: dict):
+    def test_setup_intent_no_stripe(self, test_admin_headers: dict, session_suffix: str):
         """Without Stripe configured, setup-intent should return 400."""
-        cid = _customer_id(test_admin_headers, "si")
+        cid = _customer_id(test_admin_headers, session_suffix, "si")
         resp = httpx.post(f"{SERVER_URL}/api/payment-methods/setup-intent", json={
             "customer_id": cid,
         }, headers=test_admin_headers, timeout=10)

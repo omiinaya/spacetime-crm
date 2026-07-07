@@ -4,10 +4,10 @@ import pytest
 from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
-def _customer_id(test_admin_headers: dict, suffix: str = "") -> str:
+def _customer_id(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a customer and return ID."""
     suf = suffix or unique_suffix()
-    c = create_customer(test_admin_headers, email=f"rec-{suf}@example.com")
+    c = create_customer(test_admin_headers, session_suffix=session_suffix, email=f"rec-{session_suffix}-{suf}@example.com")
     return c.get("id", "")
 
 
@@ -39,9 +39,9 @@ def _create_rule(test_admin_headers: dict, session_suffix: str = "", suffix: str
 class TestRecurringInvoiceCRUD:
     """Recurring invoice rule create, list, update, delete."""
 
-    def test_create(self, test_admin_headers: dict):
-        cid = _customer_id(test_admin_headers, "cr-create")
-        name = f"Weekly Cleaning {unique_suffix()}"
+    def test_create(self, test_admin_headers: dict, session_suffix: str):
+        cid = _customer_id(test_admin_headers, session_suffix, "cr-create")
+        name = f"Weekly Cleaning {session_suffix}-{unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/recurring-invoices", json={
             "customer_id": cid,
             "name": name,
@@ -53,8 +53,8 @@ class TestRecurringInvoiceCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_create_invalid_frequency(self, test_admin_headers: dict):
-        cid = _customer_id(test_admin_headers, "cr-badfreq")
+    def test_create_invalid_frequency(self, test_admin_headers: dict, session_suffix: str):
+        cid = _customer_id(test_admin_headers, session_suffix, "cr-badfreq")
         resp = httpx.post(f"{SERVER_URL}/api/recurring-invoices", json={
             "customer_id": cid, "name": "Bad", "frequency": "never",
             "interval_count": 1, "due_date_days": 30,
@@ -68,8 +68,8 @@ class TestRecurringInvoiceCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_list(self, test_admin_headers: dict):
-        _create_rule(test_admin_headers, "lst")
+    def test_list(self, test_admin_headers: dict, session_suffix: str):
+        _create_rule(test_admin_headers, session_suffix, "lst")
         resp = httpx.get(f"{SERVER_URL}/api/recurring-invoices", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "rules" in data
@@ -77,8 +77,8 @@ class TestRecurringInvoiceCRUD:
         if data["rules"]:
             assert "customer_name" in data["rules"][0]
 
-    def test_update(self, test_admin_headers: dict):
-        rule_id = _create_rule(test_admin_headers, "upd")
+    def test_update(self, test_admin_headers: dict, session_suffix: str):
+        rule_id = _create_rule(test_admin_headers, session_suffix, "upd")
         resp = httpx.put(f"{SERVER_URL}/api/recurring-invoices/{rule_id}", json={
             "name": "Updated Rule",
             "frequency": "monthly",
@@ -97,8 +97,8 @@ class TestRecurringInvoiceCRUD:
         }, headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_delete(self, test_admin_headers: dict):
-        rule_id = _create_rule(test_admin_headers, "del")
+    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+        rule_id = _create_rule(test_admin_headers, session_suffix, "del")
         resp = httpx.delete(f"{SERVER_URL}/api/recurring-invoices/{rule_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
@@ -111,10 +111,10 @@ class TestRecurringInvoiceCRUD:
         resp = httpx.post(f"{SERVER_URL}/api/recurring-invoices/generate", headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_generate_with_data(self, test_admin_headers: dict):
+    def test_generate_with_data(self, test_admin_headers: dict, session_suffix: str):
         """Create a rule, then generate — should create invoices."""
-        cid = _customer_id(test_admin_headers, "gen-data")
-        name = f"Generate Test {unique_suffix()}"
+        cid = _customer_id(test_admin_headers, session_suffix, "gen-data")
+        name = f"Generate Test {session_suffix}-{unique_suffix()}"
         # Set next gen to now
         now = int(__import__("time").time() * 1000)
         httpx.post(f"{SERVER_URL}/api/recurring-invoices", json={
