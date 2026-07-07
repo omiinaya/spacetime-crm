@@ -16,6 +16,7 @@ import uuid
 import time
 import pytest
 import httpx
+import bcrypt
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
@@ -23,7 +24,7 @@ ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "admin123")
 
 # Test STDB container settings (used by test helpers for direct SQL lookups)
 STDB_HOST = os.environ.get("STDB_HOST", "localhost")
-STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3002")))
+STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3001")))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
 STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
 STDB_CALL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/call"
@@ -169,7 +170,7 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
         "estimate",
         "purchase_order",
         "counter_sale",
-        "adjustment",
+        "inventory_adjustment",
         "product",
         "customer",
         "tax_rate",
@@ -333,7 +334,7 @@ def isolated_tenant(
     resp = httpx.post(
         f"{SERVER_URL}/api/users",
         json={"name": f"test-admin-{test_tenant_slug}", "email": test_admin_email, "role": "admin"},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Failed to create admin user: {resp.text}"
@@ -347,14 +348,14 @@ def isolated_tenant(
     resp = httpx.post(
         f"{SERVER_URL}/api/tenants/{tenant_id}/members",
         json={"username": f"test-admin-{test_tenant_slug}", "role": "admin"},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Failed to add tenant member: {resp.text}"
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
+        httpx.post(f"{STDB_CALL_URL}/set_user_password", json=[admin_user_id, hashed], timeout=10)
 
     # Log in as the test admin to get a token
     resp = httpx.post(
@@ -383,7 +384,7 @@ def isolated_tenant(
     try:
         httpx.delete(
             f"{SERVER_URL}/api/tenants/{tenant_id}",
-            headers=auth_headers,
+            headers=auth_headers_session,
             timeout=10,
         )
     except Exception:
@@ -465,7 +466,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     resp = httpx.post(
         f"{SERVER_URL}/api/customers",
         json=data,
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert resp.status_code == 200, f"Customer create failed: {resp.text[:200]}"
@@ -473,7 +474,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     r2 = httpx.get(
         f"{SERVER_URL}/api/customers",
         params={"search": data["email"]},
-        headers=auth_headers,
+        headers=auth_headers_session,
         timeout=10,
     )
     assert r2.status_code == 200
