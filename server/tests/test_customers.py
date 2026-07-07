@@ -126,6 +126,73 @@ class TestCustomerErrors:
         assert resp.status_code < 500
 
 
+class TestSensitiveFieldExclusion:
+    """Verify sensitive fields are stripped from customer API responses."""
+
+    SENSITIVE_FIELDS = {"portal_password_hash"}
+
+    def test_list_customers_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str):
+        """Customer list endpoint does not return sensitive fields."""
+        from .conftest import unique_suffix
+        suf = unique_suffix()
+        email = f"exclude-test-{session_suffix}-{suf}@example.com"
+        customer = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
+        assert customer.get("id"), f"Customer creation failed: {customer}"
+
+        resp = httpx.get(
+            f"{SERVER_URL}/api/customers",
+            params={"search": email},
+            headers=test_admin_headers, timeout=10,
+        )
+        data = assert_ok(resp)
+        for c in data.get("customers", []):
+            for field in self.SENSITIVE_FIELDS:
+                assert field not in c, (
+                    f"Sensitive field '{field}' leaked in customer list response: {c}"
+                )
+
+    def test_customer_geolocations_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str):
+        """Customer geolocations endpoint does not return sensitive fields."""
+        from .conftest import unique_suffix
+        suf = unique_suffix()
+        email = f"geo-exclude-{session_suffix}-{suf}@example.com"
+        customer = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
+        assert customer.get("id"), f"Customer creation failed: {customer}"
+
+        resp = httpx.get(
+            f"{SERVER_URL}/api/customers/geolocations",
+            headers=test_admin_headers, timeout=10,
+        )
+        data = assert_ok(resp)
+        for loc in data.get("locations", []):
+            for field in self.SENSITIVE_FIELDS:
+                assert field not in loc, (
+                    f"Sensitive field '{field}' leaked in geolocations response"
+                )
+
+    def test_find_duplicates_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str):
+        """Customer duplicates endpoint does not return sensitive fields."""
+        from .conftest import unique_suffix
+        suf = unique_suffix()
+        email = f"dup-exclude-{session_suffix}-{suf}@example.com"
+        # Create two customers with the same email to trigger duplicate detection
+        c1 = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
+        c2 = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
+        assert c1.get("id") and c2.get("id")
+
+        resp = httpx.get(
+            f"{SERVER_URL}/api/customers/duplicates",
+            headers=test_admin_headers, timeout=10,
+        )
+        data = assert_ok(resp)
+        for dup in data.get("duplicates", []):
+            for c in dup.get("customers", []):
+                for field in self.SENSITIVE_FIELDS:
+                    assert field not in c, (
+                        f"Sensitive field '{field}' leaked in duplicates response"
+                    )
+
+
 class TestTenantIsolation:
     """Verify tenant_id is correctly set on created entities."""
 
