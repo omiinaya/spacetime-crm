@@ -306,7 +306,7 @@ def isolated_tenant(
     test_tenant_name: str,
     test_admin_email: str,
     test_admin_password: str,
-    auth_headers: dict,
+    auth_headers_session: dict,
 ) -> dict:
     """
     Create an isolated tenant with an admin user for this test session.

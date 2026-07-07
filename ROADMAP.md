@@ -406,7 +406,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Area | Status | Details |
 |------|--------|---------|
 | Rust unit tests | ❌ 18 tests (compile-only) | 70 reducers, 27 tables — no runtime execution |
-| Python backend tests | ✅ 273 tests (25 files) | All 23 route modules covered |
+| Python backend tests | ✅ 362 tests (27 files) | All 25 route + spec modules covered |
 | TypeScript frontend tests | ✅ 94 tests (13 suites) | UI components + 5 page tests |
 | E2E tests | ✅ 33 tests (5 suites) | Playwright: Nav, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test, lint |
