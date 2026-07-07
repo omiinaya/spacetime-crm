@@ -8,7 +8,7 @@ import pyotp
 import httpx
 import time
 import pytest
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, _track_entity
 
 
 @pytest.fixture(scope="module")
@@ -42,6 +42,7 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     users = list_resp.json().get("users", [])
     uid = next((u["id"] for u in users if u.get("email") == email), None)
     assert uid, f"Could not find user ID for {email}"
+    _track_entity("user", uid)
 
     yield email, pw, uid
 
