@@ -357,8 +357,7 @@ def isolated_tenant(
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"DELETE FROM user WHERE id = '{admin_user_id}'")
-    _stdb_write(f"SET user_password_{admin_user_id} = '{hashed}'")
+    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
 
     # Log in as the test admin to get a token
     resp = httpx.post(
