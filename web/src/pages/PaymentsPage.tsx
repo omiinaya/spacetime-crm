@@ -58,7 +58,11 @@ export default function PaymentsPage() {
     onError: () => toast.error("Failed to delete"),
   });
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalsByCurrency = payments.reduce((acc, p) => {
+  const ccy = p.currency || "USD";
+  acc[ccy] = (acc[ccy] || 0) + p.amount;
+  return acc;
+}, {} as Record<string, number>);
 
   return (
     <>
@@ -75,7 +79,7 @@ export default function PaymentsPage() {
           <CreditCard className="h-8 w-8 text-green-400" />
           <div>
             <p className="text-xs text-muted-foreground">Total Collected</p>
-            <p className="text-2xl font-bold text-green-400">{form.currency || "USD"} {totalAmount.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-400">{Object.entries(totalsByCurrency).map(([ccy, amt]) => `${ccy} ${amt.toFixed(2)}`).join(", ")}</p>
           </div>
         </CardContent>
       </Card>
