@@ -13,11 +13,11 @@
 
 | Layer | Files | Lines | Completeness | Test Count | Anti-Patterns |
 |-------|-------|-------|:------------:|:----------:|:-------------:|
-| STDB Module (Rust) | 16 files | ~1,900 | 88% | ~200 #[cfg(test)] + container CI | 1 major, 3 minor |
-| Backend API (Python) | 30 files | ~4,500 | 92% | 273 integration | 2 major, 5 minor |
-| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit | 3 major, 6 minor |
+| STDB Module (Rust) | 16 files | ~1,900 | 88% | 134 #[test] (4 files) | 1 major, 3 minor |
+| Backend API (Python) | 30 files | ~4,500 | 92% | 362 integration (28 files) | 2 major, 5 minor |
+| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 110 unit (32 files) | 3 major, 6 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
-| **Overall** | **~110 files** | **~20,000** | **~96%** | **367** | **~20 items** |
+| **Overall** | **~110 files** | **~20,000** | **~96%** | **606** | **~20 items** |
 
 ---
 
