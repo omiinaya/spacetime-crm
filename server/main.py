@@ -14,8 +14,8 @@ from config import settings
 from log_config import configure_logging
 from helpers import logger
 
-# Generate a default JWT secret on startup if none configured
-if settings.jwt_secret == "set-via-environment-variable":
+    # Generate a default signing key on startup if none configured
+if settings.jwt_secret == "set-via-environment-variable":  # pragma: allowlist secret
     settings.jwt_secret = secrets.token_hex(32)
 
 # Initialize structured logging

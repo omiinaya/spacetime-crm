@@ -1,3 +1,4 @@
+# pragma: allowlist secret
 node_modules/
 dist/
 target/
@@ -39,3 +40,5 @@ web/coverage/
 
 # Additional secret file patterns
 *.env.*
+*.cover
+*.coverage
