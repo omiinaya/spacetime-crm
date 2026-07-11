@@ -8,3 +8,9 @@ import pytest
 def _reset_global_state():
     """Override parent's session-scoped autouse — no-op for unit tests."""
     pass
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _session_cleanup():
+    """Override parent's session-scoped autouse — no-op for unit tests."""
+    pass
