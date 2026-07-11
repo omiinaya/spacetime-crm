@@ -1,0 +1,39 @@
+[tasks.build-stdb]
+description = "Build SpacetimeDB Rust module (wasm)"
+command = "cargo"
+args = ["build", "--release", "--target", "wasm32-unknown-unknown"]
+cwd = "server/spacetimedb"
+
+[tasks.build-server]
+description = "Install Python server dependencies from lock file"
+command = "pip"
+args = ["install", "-r", "server/requirements.lock"]
+
+[tasks.build]
+description = "Build all server components"
+dependencies = ["build-stdb", "build-server"]
+
+[tasks.test-stdb]
+description = "Run Rust tests"
+command = "cargo"
+args = ["test"]
+cwd = "server/spacetimedb"
+
+[tasks.test-server]
+description = "Run Python tests"
+command = "pytest"
+args = ["server/tests"]
+
+[tasks.test]
+description = "Run all tests"
+dependencies = ["test-stdb", "test-server"]
+
+[tasks.lint]
+description = "Lint Python with ruff"
+command = "ruff"
+args = ["check", "server/"]
+
+[tasks.clean]
+description = "Clean build artifacts"
+command = "rm"
+args = ["-rf", "server/spacetimedb/target"]
