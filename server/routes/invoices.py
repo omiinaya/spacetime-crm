@@ -40,6 +40,7 @@ async def list_invoices(status: str = "", customer_id: str = "", offset: int = 0
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices")
+@limiter.limit("100/minute")
 async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_invoice", [
         user["tenant_id"],
@@ -111,6 +112,7 @@ async def get_invoice_summary(user: dict = Depends(require_role("admin", "tech",
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices/bulk-status-update")
+@limiter.limit("100/minute")
 async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict = Depends(require_role("admin"))):
     """Update status of multiple invoices at once."""
     updated = 0
@@ -133,6 +135,7 @@ async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict =
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices/bulk-edit")
+@limiter.limit("100/minute")
 async def bulk_edit_invoices(body: BulkInvoiceEdit, user: dict = Depends(require_role("admin"))):
     """Update terms and/or notes on multiple invoices at once."""
     updated = 0
@@ -171,6 +174,7 @@ async def get_overdue_count(user: dict = Depends(require_role("admin", "tech", "
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices/trigger-overdue-check")
+@limiter.limit("100/minute")
 async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
     """Mark overdue invoices — checks each sent/partial invoice past its due date
     and updates status to 'overdue' via the STDB reducer, or reports it would mark them."""
@@ -189,6 +193,7 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices/send-overdue-reminders")
+@limiter.limit("100/minute")
 async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
     """Find overdue invoices and send email/SMS reminders to each customer."""
     now = int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -221,6 +226,7 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
 
 @limiter.limit("100/minute")
 @router.put("/api/invoices/{invoice_id}/status")
+@limiter.limit("100/minute")
 async def update_invoice_status(invoice_id: str, body: InvoiceStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_invoice_status", [invoice_id, body.status])
     new_status = body.status
@@ -241,6 +247,7 @@ async def get_invoice_line_items(invoice_id: str, user: dict = Depends(require_r
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices/{invoice_id}/line-items")
+@limiter.limit("100/minute")
 async def add_invoice_line_item(invoice_id: str, body: InvoiceLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_invoice_line_item", [
         invoice_id,
@@ -255,6 +262,7 @@ async def add_invoice_line_item(invoice_id: str, body: InvoiceLineItemCreate, us
 
 @limiter.limit("100/minute")
 @router.delete("/api/invoices/{invoice_id}/line-items/{item_id}")
+@limiter.limit("100/minute")
 async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice_line_item", [item_id])
     await _log_audit(user, "delete", "line_item", invoice_id)
@@ -263,6 +271,7 @@ async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = D
 
 @limiter.limit("100/minute")
 @router.delete("/api/invoices/{invoice_id}")
+@limiter.limit("100/minute")
 async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice", [invoice_id])
     await _log_audit(user, "delete", "invoice", invoice_id)
@@ -271,6 +280,7 @@ async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("adm
 
 @limiter.limit("100/minute")
 @router.put("/api/invoices/{invoice_id}/tax-rate")
+@limiter.limit("100/minute")
 async def set_invoice_tax_rate(invoice_id: str, body: InvoiceTaxRateUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("set_invoice_tax_rate", [invoice_id, body.tax_rate])
     await _log_audit(user, "update", "invoice_tax", invoice_id, f"rate={body.tax_rate}")
@@ -354,6 +364,7 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices/send-email")
+@limiter.limit("100/minute")
 async def send_invoice_email(
     body: dict,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
@@ -391,6 +402,7 @@ async def send_invoice_email(
 
 @limiter.limit("100/minute")
 @router.post("/api/invoices/send-batch-email")
+@limiter.limit("100/minute")
 async def send_batch_invoice_email(
     body: dict,
     user: dict = Depends(require_role("admin")),

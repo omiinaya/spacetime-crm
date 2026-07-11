@@ -26,6 +26,7 @@ async def list_tax_rates(offset: int = 0, limit: int = 50, user: dict = Depends(
 
 @limiter.limit("100/minute")
 @router.post("/api/tax-rates")
+@limiter.limit("100/minute")
 async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role("admin"))):
     await _call("create_tax_rate", [
         user["tenant_id"],
@@ -39,6 +40,7 @@ async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role
 
 @limiter.limit("100/minute")
 @router.put("/api/tax-rates/{tax_id}")
+@limiter.limit("100/minute")
 async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: dict = Depends(require_role("admin"))):
     await _call("update_tax_rate", [
         tax_id,
@@ -52,6 +54,7 @@ async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: dict = Depends
 
 @limiter.limit("100/minute")
 @router.delete("/api/tax-rates/{tax_id}")
+@limiter.limit("100/minute")
 async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_tax_rate", [tax_id])
     await _log_audit(user, "delete", "tax_rate", tax_id)

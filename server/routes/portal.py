@@ -171,6 +171,7 @@ async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_curr
 
 
 @router.post("/api/portal/tickets/{ticket_id}/notes")
+@limiter.limit("30/minute")
 async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: dict = Depends(get_current_customer)):
     """Customer adds a note to their ticket."""
     rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}' AND customer_id = '{customer['id']}'")
@@ -216,6 +217,7 @@ async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_cu
 
 
 @router.post("/api/portal/payments")
+@limiter.limit("30/minute")
 async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depends(get_current_customer)):
     """Customer makes a payment on an invoice."""
     invoice_id = body.invoice_id
@@ -269,6 +271,7 @@ async def portal_appointments(customer: dict = Depends(get_current_customer)):
 
 
 @router.post("/api/portal/customer/set-password")
+@limiter.limit("20/minute")
 async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(get_current_customer)):
     """Customer sets/changes their portal password."""
     pw = body.password
@@ -283,6 +286,7 @@ async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(
 
 
 @router.post("/api/portal/payments/create-checkout-session")
+@limiter.limit("30/minute")
 async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, customer: dict = Depends(get_current_customer)):
     """Create a Stripe Checkout Session for an invoice payment."""
     if not stripe_configured():
@@ -342,6 +346,7 @@ async def portal_payment_methods(customer: dict = Depends(get_current_customer))
 
 
 @router.post("/api/portal/payments/pay-with-saved-card")
+@limiter.limit("30/minute")
 async def portal_pay_with_saved_card(
     body: PortalPayWithSavedCard,
     customer: dict = Depends(get_current_customer),

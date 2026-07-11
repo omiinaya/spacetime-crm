@@ -226,6 +226,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
 
 
 @router.post("/api/auth/setup-2fa")
+@limiter.limit("20/minute")
 async def setup_2fa(user: dict = Depends(get_current_user)):
     """Generate TOTP secret and return provisioning URI for QR code."""
     # Check if already enabled
@@ -251,6 +252,7 @@ async def setup_2fa(user: dict = Depends(get_current_user)):
 
 
 @router.post("/api/auth/verify-2fa")
+@limiter.limit("20/minute")
 async def verify_2fa(body: Setup2FARequest, user: dict = Depends(get_current_user)):
     """Verify a TOTP code and enable 2FA."""
     rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user['id'])}'")
@@ -270,6 +272,7 @@ async def verify_2fa(body: Setup2FARequest, user: dict = Depends(get_current_use
 
 
 @router.post("/api/auth/disable-2fa")
+@limiter.limit("20/minute")
 async def disable_2fa(body: Disable2FARequest, user: dict = Depends(get_current_user)):
     """Verify current TOTP code and disable 2FA."""
     rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user['id'])}'")
@@ -289,6 +292,7 @@ async def disable_2fa(body: Disable2FARequest, user: dict = Depends(get_current_
 
 
 @router.post("/api/auth/refresh-tenant")
+@limiter.limit("100/minute")
 async def refresh_token_tenant(user: dict = Depends(get_current_user)):
     """Refresh the JWT token with latest tenant_id from DB."""
     tid = ""
@@ -304,6 +308,7 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
 
 
 @router.post("/api/auth/set-password")
+@limiter.limit("20/minute")
 async def set_password(body: SetPasswordRequest, user: dict = Depends(get_current_user)):
     """Set/change password for current user."""
     pw = body.password
@@ -315,6 +320,7 @@ async def set_password(body: SetPasswordRequest, user: dict = Depends(get_curren
 
 
 @router.post("/api/auth/set-pin")
+@limiter.limit("20/minute")
 async def set_pin(body: SetPinRequest, user: dict = Depends(get_current_user)):
     """Set, change, or remove the POS PIN for the current user. PIN is stored as bcrypt hash.
     Pass an empty string to remove the PIN."""

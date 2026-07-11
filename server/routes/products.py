@@ -45,6 +45,7 @@ async def list_products(search: str = "", category: str = "", offset: int = 0, l
 
 @limiter.limit("100/minute")
 @router.post("/api/products")
+@limiter.limit("100/minute")
 async def create_product(body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_product", [
         user["tenant_id"],
@@ -65,6 +66,7 @@ async def create_product(body: ProductCreate, user: dict = Depends(require_role(
 
 @limiter.limit("100/minute")
 @router.put("/api/products/{product_id}/quantity")
+@limiter.limit("100/minute")
 async def update_product_quantity(product_id: str, body: ProductQuantityUpdate, user: dict = Depends(require_role("admin", "tech"))):
     await _call("update_product_quantity", [product_id, body.quantity_on_hand])
     await _log_audit(user, "update", "product_qty", product_id, f"qty={body.quantity_on_hand}")
@@ -73,6 +75,7 @@ async def update_product_quantity(product_id: str, body: ProductQuantityUpdate, 
 
 @limiter.limit("100/minute")
 @router.delete("/api/products/{product_id}")
+@limiter.limit("100/minute")
 async def delete_product(product_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_product", [product_id])
     await _log_audit(user, "delete", "product", product_id)
@@ -81,6 +84,7 @@ async def delete_product(product_id: str, user: dict = Depends(require_role("adm
 
 @limiter.limit("100/minute")
 @router.put("/api/products/{product_id}")
+@limiter.limit("100/minute")
 async def update_product(product_id: str, body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))):
     """Update product fields including min_stock."""
     await _call("update_product", [
@@ -109,6 +113,7 @@ async def get_product_adjustments(product_id: str, user: dict = Depends(require_
 
 @limiter.limit("100/minute")
 @router.post("/api/products/{product_id}/adjustments")
+@limiter.limit("100/minute")
 async def create_adjustment(product_id: str, body: InventoryAdjustmentCreate, user: dict = Depends(require_role("admin", "tech"))):
     await _call("create_inventory_adjustment", [
         user["tenant_id"],
@@ -145,6 +150,7 @@ async def lookup_product_by_barcode(barcode: str, user: dict = Depends(require_r
 
 @limiter.limit("100/minute")
 @router.post("/api/products/low-stock/notify")
+@limiter.limit("100/minute")
 async def notify_low_stock(user: dict = Depends(require_role("admin"))):
     """Check low stock and send email alert to admin."""
     rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
@@ -164,6 +170,7 @@ async def notify_low_stock(user: dict = Depends(require_role("admin"))):
 
 @limiter.limit("100/minute")
 @router.post("/api/products/transfer")
+@limiter.limit("100/minute")
 async def transfer_stock(body: StockTransferRequest, user: dict = Depends(require_role("admin", "tech"))):
     """Transfer stock between two products. Creates inventory adjustments on both."""
     tid = user["tenant_id"]

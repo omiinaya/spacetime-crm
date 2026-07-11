@@ -18,6 +18,7 @@ router = APIRouter()
 
 @limiter.limit("100/minute")
 @router.post("/api/webhooks/stripe")
+@limiter.limit("50/minute")
 async def stripe_webhook(request: Request):
     """Handle Stripe webhook events (checkout.session.completed)."""
     payload = await request.body()
@@ -81,6 +82,7 @@ async def list_webhook_subscriptions(offset: int = 0, limit: int = 50, user: dic
 
 @limiter.limit("100/minute")
 @router.post("/api/webhook-subscriptions")
+@limiter.limit("100/minute")
 async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dict = Depends(require_role("admin"))):
     """Create a new webhook subscription."""
     url = body.url.strip()
@@ -105,6 +107,7 @@ async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dic
 
 @limiter.limit("100/minute")
 @router.put("/api/webhook-subscriptions/{sub_id}")
+@limiter.limit("100/minute")
 async def update_webhook_subscription(sub_id: str, body: WebhookSubscriptionUpdate, user: dict = Depends(require_role("admin"))):
     """Update a webhook subscription."""
     url = body.url.strip()
@@ -129,6 +132,7 @@ async def update_webhook_subscription(sub_id: str, body: WebhookSubscriptionUpda
 
 @limiter.limit("100/minute")
 @router.delete("/api/webhook-subscriptions/{sub_id}")
+@limiter.limit("100/minute")
 async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a webhook subscription."""
     await _call("delete_webhook_subscription", [sub_id])
@@ -138,6 +142,7 @@ async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_
 
 @limiter.limit("100/minute")
 @router.post("/api/webhook-subscriptions/{sub_id}/test")
+@limiter.limit("100/minute")
 async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
     """Send a test event to a specific subscription."""
     rows = await _sql(f"SELECT * FROM webhook_subscriptions WHERE id = '{_safe_id(sub_id)}'")

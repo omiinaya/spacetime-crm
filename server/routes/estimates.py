@@ -31,6 +31,7 @@ async def list_estimates(status: str = "", offset: int = 0, limit: int = 50, use
 
 @limiter.limit("100/minute")
 @router.post("/api/estimates")
+@limiter.limit("100/minute")
 async def create_estimate(body: EstimateCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_estimate", [
         user["tenant_id"],
@@ -51,6 +52,7 @@ async def create_estimate(body: EstimateCreate, user: dict = Depends(require_rol
 
 @limiter.limit("100/minute")
 @router.put("/api/estimates/{estimate_id}/status")
+@limiter.limit("100/minute")
 async def update_estimate_status(estimate_id: str, body: EstimateStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_estimate_status", [estimate_id, body.status])
     await _log_audit(user, "update_status", "estimate", estimate_id, f"status={body.status}")
@@ -65,6 +67,7 @@ async def get_estimate_line_items(estimate_id: str, user: dict = Depends(require
 
 @limiter.limit("100/minute")
 @router.post("/api/estimates/{estimate_id}/line-items")
+@limiter.limit("100/minute")
 async def add_estimate_line_item(estimate_id: str, body: EstimateLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_estimate_line_item", [
         estimate_id,
@@ -79,6 +82,7 @@ async def add_estimate_line_item(estimate_id: str, body: EstimateLineItemCreate,
 
 @limiter.limit("100/minute")
 @router.delete("/api/estimates/{estimate_id}")
+@limiter.limit("100/minute")
 async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_estimate", [estimate_id])
     await _log_audit(user, "delete", "estimate", estimate_id)
@@ -87,6 +91,7 @@ async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("a
 
 @limiter.limit("100/minute")
 @router.post("/api/estimates/{estimate_id}/convert")
+@limiter.limit("100/minute")
 async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Convert an approved estimate to an invoice (atomic reducer)."""
     est_rows = await _sql(f"SELECT * FROM estimates WHERE id = '{_safe_id(estimate_id)}'")

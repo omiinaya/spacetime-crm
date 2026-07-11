@@ -61,6 +61,7 @@ async def export_csv(entity: str, user: dict = Depends(require_role("admin", "te
 
 @limiter.limit("100/minute")
 @router.post("/api/import/customers")
+@limiter.limit("100/minute")
 async def import_customers_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
     """Import customers from CSV.
     Required: first_name, last_name. Optional: email, phone, etc.
@@ -115,6 +116,7 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
 
 @limiter.limit("100/minute")
 @router.post("/api/import/products")
+@limiter.limit("100/minute")
 async def import_products_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
     """Import products from CSV.
     Required: name. Optional: sku, barcode, description, category, price, cost,

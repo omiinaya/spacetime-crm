@@ -29,6 +29,7 @@ async def list_custom_field_definitions(offset: int = 0, limit: int = 50, user: 
 
 @limiter.limit("100/minute")
 @router.post("/api/custom-field-definitions")
+@limiter.limit("100/minute")
 async def create_custom_field_definition(body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
     """Create a custom field definition."""
     field_id = secrets.token_hex(12)
@@ -49,6 +50,7 @@ async def create_custom_field_definition(body: CustomFieldDefinitionCreate, user
 
 @limiter.limit("100/minute")
 @router.put("/api/custom-field-definitions/{field_id}")
+@limiter.limit("100/minute")
 async def update_custom_field_definition(field_id: str, body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
     """Update a custom field definition."""
     await _call("update_custom_field_definition", [
@@ -66,6 +68,7 @@ async def update_custom_field_definition(field_id: str, body: CustomFieldDefinit
 
 @limiter.limit("100/minute")
 @router.delete("/api/custom-field-definitions/{field_id}")
+@limiter.limit("100/minute")
 async def delete_custom_field_definition(field_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a custom field definition."""
     await _call("delete_custom_field_definition", [field_id])
@@ -82,6 +85,7 @@ async def get_custom_field_values(entity_id: str, user: dict = Depends(require_r
 
 @limiter.limit("100/minute")
 @router.put("/api/custom-field-values/{entity_id}")
+@limiter.limit("100/minute")
 async def set_custom_field_values(entity_id: str, body: CustomFieldValuesUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Set custom field values for an entity. Body: { values: { field_id: value, ... } }"""
     values = body.values

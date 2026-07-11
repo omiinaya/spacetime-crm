@@ -54,6 +54,7 @@ async def list_recurring_series(user: dict = Depends(require_role("admin", "tech
 
 @limiter.limit("100/minute")
 @router.post("/api/appointments")
+@limiter.limit("100/minute")
 async def create_appointment(body: AppointmentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_appointment", [
         user["tenant_id"],
@@ -92,6 +93,7 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
 
 @limiter.limit("100/minute")
 @router.put("/api/appointments/{appt_id}/recurrence")
+@limiter.limit("100/minute")
 async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Set or update the recurrence rule on an appointment (makes it a series parent)."""
     await _call("set_recurrence", [appt_id, body.recurrence_rule])
@@ -101,6 +103,7 @@ async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, 
 
 @limiter.limit("100/minute")
 @router.post("/api/appointments/generate-next")
+@limiter.limit("100/minute")
 async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Generate the next occurrence of a recurring appointment series."""
     # Find the parent series
@@ -159,6 +162,7 @@ async def get_appointments_due_soon(user: dict = Depends(require_role("admin", "
 
 @limiter.limit("100/minute")
 @router.post("/api/appointments/send-reminders")
+@limiter.limit("100/minute")
 async def send_appointment_reminders(user: dict = Depends(require_role("admin"))):
     """Send reminder notifications for appointments starting in the next 24 hours."""
     now_ms = int(__import__("time").time() * 1000)
@@ -201,6 +205,7 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
 
 @limiter.limit("100/minute")
 @router.put("/api/appointments/{appt_id}/status")
+@limiter.limit("100/minute")
 async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_appointment_status", [appt_id, body.status])
     await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.status}")
@@ -209,6 +214,7 @@ async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate,
 
 @limiter.limit("100/minute")
 @router.delete("/api/appointments/{appt_id}")
+@limiter.limit("100/minute")
 async def delete_appointment(appt_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_appointment", [appt_id])
     await _log_audit(user, "delete", "appointment", appt_id)

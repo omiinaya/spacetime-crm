@@ -33,6 +33,7 @@ async def list_payment_methods(
 
 @limiter.limit("100/minute")
 @router.post("/api/payment-methods/setup-intent")
+@limiter.limit("100/minute")
 async def create_payment_setup_intent(
     body: SetDefaultPaymentMethodRequest,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
@@ -48,6 +49,7 @@ async def create_payment_setup_intent(
 
 @limiter.limit("100/minute")
 @router.post("/api/payment-methods")
+@limiter.limit("100/minute")
 async def save_payment_method(
     body: SavePaymentMethodRequest,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
@@ -68,6 +70,7 @@ async def save_payment_method(
 
 @limiter.limit("100/minute")
 @router.put("/api/payment-methods/{method_id}/default")
+@limiter.limit("100/minute")
 async def set_default_payment_method(
     method_id: str,
     body: SetDefaultPaymentMethodRequest,
@@ -81,6 +84,7 @@ async def set_default_payment_method(
 
 @limiter.limit("100/minute")
 @router.delete("/api/payment-methods/{method_id}")
+@limiter.limit("100/minute")
 async def delete_payment_method(
     method_id: str,
     user: dict = Depends(require_role("admin")),

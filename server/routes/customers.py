@@ -44,6 +44,7 @@ async def list_customers(search: str = "", offset: int = 0, limit: int = 50, use
 
 @limiter.limit("100/minute")
 @router.post("/api/customers")
+@limiter.limit("100/minute")
 async def create_customer(body: CustomerCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_customer", [
         user["tenant_id"],
@@ -64,6 +65,7 @@ async def create_customer(body: CustomerCreate, user: dict = Depends(require_rol
 
 @limiter.limit("100/minute")
 @router.put("/api/customers/{customer_id}")
+@limiter.limit("100/minute")
 async def update_customer(customer_id: str, body: CustomerUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_customer", [
         customer_id,
@@ -91,6 +93,7 @@ async def update_customer(customer_id: str, body: CustomerUpdate, user: dict = D
 
 @limiter.limit("100/minute")
 @router.delete("/api/customers/{customer_id}")
+@limiter.limit("100/minute")
 async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_customer", [customer_id])
     await _log_audit(user, "delete", "customer", customer_id)
@@ -103,6 +106,7 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
 
 @limiter.limit("100/minute")
 @router.post("/api/customers/{customer_id}/portal-password")
+@limiter.limit("100/minute")
 async def set_customer_portal_password(customer_id: str, body: SetPasswordRequest, user: dict = Depends(require_role("admin"))):
     """Admin sets/resets a customer's portal password."""
     pw = body.password
@@ -149,6 +153,7 @@ async def list_customer_geolocations(user: dict = Depends(require_role("admin", 
 
 @limiter.limit("100/minute")
 @router.post("/api/customers/{customer_id}/geocode")
+@limiter.limit("100/minute")
 async def geocode_customer(customer_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Geocode a single customer's address and store the location."""
     customers = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(customer_id)}'")
@@ -181,6 +186,7 @@ async def geocode_customer(customer_id: str, user: dict = Depends(require_role("
 
 @limiter.limit("100/minute")
 @router.post("/api/customers/geocode-all")
+@limiter.limit("100/minute")
 async def geocode_all_customers(user: dict = Depends(require_role("admin", "tech"))):
     """Geocode all customers that don't have coordinates yet."""
     customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
