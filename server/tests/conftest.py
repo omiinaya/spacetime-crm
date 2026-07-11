@@ -20,7 +20,7 @@ import bcrypt
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
-ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "PLACEHOLDER_ADMIN_PW")
+ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "change-me-in-production")
 
 # Test STDB container settings (used by test helpers for direct SQL lookups)
 STDB_HOST = os.environ.get("STDB_HOST", "localhost")
@@ -299,7 +299,7 @@ def test_admin_email(session_suffix: str) -> str:
 @pytest.fixture(scope="session")
 def test_admin_password() -> str:
     """Password for test admin users."""
-    return "testPLACEHOLDER_ADMIN_PW"
+    return "change-me-in-production"
 
 
 @pytest.fixture(scope="session")
