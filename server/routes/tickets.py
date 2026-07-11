@@ -100,7 +100,7 @@ async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: d
         rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}'")
         if rows:
             t = rows[0]
-            cust = await _sql(f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'")
+            cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(t.get('customer_id', ''))}'")
             email = _mail_customer_email(cust[0]) if cust else None
             if email:
                 link = f"{settings.app_url}/portal/"

@@ -107,7 +107,7 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
     }))
 
     async def _sms_notify():
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{est.get('customer_id', '')}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(est.get('customer_id', ''))}'")
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
             _sms_estimate_approved(phone, est.get("estimate_number", 0), float(est.get("total", 0)))

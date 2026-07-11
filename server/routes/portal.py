@@ -64,7 +64,7 @@ async def portal_login(request: Request, body: PortalLoginRequest):
     if not email or not password:
         raise HTTPException(400, "Email and password required")
 
-    rows = await _sql(f"SELECT * FROM customer WHERE email = '{email}'")
+    rows = await _sql(f"SELECT * FROM customer WHERE email = '{_sanitize_sql(email)}'")
     if not rows:
         raise HTTPException(401, "Invalid email or password")
 
@@ -121,9 +121,9 @@ async def portal_me(customer: dict = Depends(get_current_customer)):
 async def portal_stats(customer: dict = Depends(get_current_customer)):
     """Dashboard stats for the customer."""
     cid = customer["id"]
-    tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{cid}'")
-    invoices = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{cid}'")
-    appointments = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{cid}'")
+    tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{_safe_id(cid)}'")
+    invoices = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{_safe_id(cid)}'")
+    appointments = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{_safe_id(cid)}'")
     open_tickets = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
     total_billed = sum(float(i.get("total", 0)) for i in invoices if i.get("status") not in ("cancelled", "draft"))
     total_paid = sum(float(i.get("total", 0)) for i in invoices if i.get("status") == "paid")

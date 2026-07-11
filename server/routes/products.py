@@ -118,7 +118,7 @@ async def create_adjustment(product_id: str, body: InventoryAdjustmentCreate, us
 @router.get("/api/products/low-stock")
 async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """List products below minimum stock threshold for the current tenant."""
-    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}'")
     low_stock = [
         r for r in rows
         if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
@@ -129,7 +129,7 @@ async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "fro
 @router.get("/api/products/by-barcode/{barcode}")
 async def lookup_product_by_barcode(barcode: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Find a product by barcode (exact match, tenant-scoped)."""
-    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}' AND barcode = '{barcode}'")
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}' AND barcode = '{_sanitize_sql(barcode)}'")
     if not rows:
         raise HTTPException(404, "Product not found for this barcode")
     return {"product": rows[0]}
