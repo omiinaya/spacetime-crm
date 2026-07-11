@@ -1,0 +1,73 @@
+"""Unit tests for server/config.py - configuration models."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+_server_dir = str(Path(__file__).resolve().parent.parent.parent)
+if _server_dir not in sys.path:
+    sys.path.insert(0, _server_dir)
+
+import os
+from unittest.mock import patch
+
+
+class TestSettings:
+    def test_default_values(self):
+        with patch.dict(os.environ, {}, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.stdb_host == "localhost"
+            assert s.stdb_port == 3001
+            assert s.stdb_db == "spacetime-crm"
+            assert s.server_port == 8723
+            assert s.jwt_algorithm == "HS256"
+            assert s.jwt_expire_hours == 8
+            assert s.cors_origin == "http://localhost:5185"
+            assert s.stripe_secret_key == ""
+            assert s.stripe_webhook_secret == ""
+
+    def test_stdb_urls(self):
+        with patch.dict(os.environ, {}, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.stdb_sql_url == "http://localhost:3001/v1/database/spacetime-crm/sql"
+            assert s.stdb_call_url == "http://localhost:3001/v1/database/spacetime-crm/call"
+
+    def test_stdb_urls_custom(self):
+        with patch.dict(os.environ, {
+            "STDB_HOST": "stdb.example.com",
+            "STDB_PORT": "5432",
+            "STDB_DB": "testdb",
+        }, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.stdb_sql_url == "http://stdb.example.com:5432/v1/database/testdb/sql"
+
+    def test_jwt_secret_env(self):
+        with patch.dict(os.environ, {"JWT_SECRET": "my-test-secret"  # pragma: allowlist secret}, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.jwt_secret == "my-test-secret"  # pragma: allowlist secret
+
+    def test_server_port_env(self):
+        with patch.dict(os.environ, {"SERVER_PORT": "9999"}, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.server_port == 9999
+
+    def test_cors_origin_env(self):
+        with patch.dict(os.environ, {"CORS_ORIGIN": "http://example.com"}, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.cors_origin == "http://example.com"
+
+    def test_stripe_secret_env(self):
+        with patch.dict(os.environ, {
+            "STRIPE_SECRET_KEY": "sk_test_123"  # pragma: allowlist secret,
+            "STRIPE_WEBHOOK_SECRET": "whsec_456"  # pragma: allowlist secret,
+        }, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.stripe_secret_key == "sk_test_123"  # pragma: allowlist secret
+            assert s.stripe_webhook_secret == "whsec_456"  # pragma: allowlist secret

@@ -1,23 +1,8 @@
-// Barrel: re-export all types and constants from api-types
 export * from './api-types';
 
-// ── API client helpers ──
+import type { DashboardStats, Customer, CustomerGeoLocation, Ticket, TicketNote, TicketTimer, TicketSlaBreach, Invoice, InvoiceLineItem, InvoiceSummary, Payment, Appointment, Product, InventoryAdjustment, Estimate, EstimateLineItem, PurchaseOrder, PurchaseOrderLineItem, User, MailSettings, TaxRate, SmsSettings, BusinessHours, DayHours, ReportsData, ScheduledReport, ChecklistItem, ChecklistTemplate, TicketChecklistItem, WebhookSubscription, POSCounterSale, POSCounterSaleDetail, POSCounterSaleLineItem, POSAddItemPayload, Tenant, TenantMember, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition, CustomFieldValue, UserSettings, AuditLogEntry } from './api-types';
 
 const API_BASE = "/api";
-
-// ── Pagination types ──
-
-export interface PaginationParams {
-  offset?: number;
-  limit?: number;
-}
-
-export interface PaginatedResponse<T> {
-  total: number;
-  offset: number;
-  limit: number;
-  [key: string]: T[] | number;
-}
 
 function buildPaginationParams(offset?: number, limit?: number): string {
   if (offset === undefined && limit === undefined) return "";
