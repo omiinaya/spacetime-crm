@@ -206,13 +206,26 @@ if [ "$RUN_RUST_TESTS" = true ]; then
   export STDB_CONTAINER_URL="${STDB_URL}"
   export STDB_CONTAINER_DB="${STDB_DB}"
 
-  log_info "Building Rust container test binary..."
-  if docker compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" exec -T backend-test \
-    sh -c "cargo build --manifest-path /app/server/container-tests/Cargo.toml 2>&1"; then
-    log_pass "Rust container test binary built$(elapsed)"
+  log_info "Building Rust container test binary (on host)..."
+  if command -v cargo >/dev/null 2>&1; then
+    if cargo build --manifest-path "${REPO_DIR}/server/container-tests/Cargo.toml" 2>&1; then
+      log_pass "Rust container test binary built$(elapsed)"
+      # Copy binary into the container
+      BINARY="${REPO_DIR}/server/container-tests/target/debug/container-tests"
+      if docker compose -f "$COMPOSE_FILE" -p "$PROJECT_NAME" cp "$BINARY" backend-test:/app/server/container-tests/target/debug/container-tests 2>&1; then
+        log_info "Binary copied to container"
+      else
+        log_fail "Failed to copy binary to container"
+        RUST_EXIT=1
+      fi
+    else
+      log_fail "Rust container test build failed (build on host failed)"
+      RUST_EXIT=1
+    fi
   else
-    log_fail "Rust container test build failed"
-    RUST_EXIT=1
+    log_warn "cargo not found on host. Install Rust from https://rustup.rs/ or use: make test-rust-container"
+    log_info "Skipping Rust container tests"
+    RUST_EXIT=0
   fi
 
   if [ "$RUST_EXIT" -eq 0 ]; then
