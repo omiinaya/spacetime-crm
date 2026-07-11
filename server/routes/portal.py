@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from config import settings
 from helpers import (
+    _sanitize_sql,
     _safe_id,
     _sql, _call, _sort, _log_audit, _fire_webhook,
     _safe_customer, logger, security,

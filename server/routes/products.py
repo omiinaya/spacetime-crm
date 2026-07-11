@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
+    _sanitize_sql,
     _safe_id,
     _sql, _paginated, _call, _sort, _log_audit,
     require_role, logger,

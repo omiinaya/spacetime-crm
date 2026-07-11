@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from config import settings
 from helpers import (
+    _sanitize_sql,
     _safe_id,
     _sql, _call, require_role, get_current_user, logger,
 )
