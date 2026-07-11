@@ -355,7 +355,12 @@ def isolated_tenant(
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
+    # Call reducer via HTTP API directly (SELECT CALL syntax doesn't work reliably with STDB 2.6)
+    httpx.post(
+        STDB_CALL_URL,
+        json=[admin_user_id, hashed],
+        timeout=10,
+    )
 
     # Log in as the test admin to get a token
     resp = httpx.post(
