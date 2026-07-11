@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pdf import html_to_pdf
 
 from config import settings
-from helpers import _safe_id, (
+from helpers import (
+    _safe_id,
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
     require_role, logger, STATUS_LABELS, STATUS_CSS, jinja_env,
 )

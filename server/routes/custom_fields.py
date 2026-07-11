@@ -5,7 +5,8 @@ import json
 import secrets
 from fastapi import APIRouter, Depends
 
-from helpers import _safe_id, (
+from helpers import (
+    _safe_id,
     _sql, _paginated, _call, _log_audit,
     require_role, logger,
 )

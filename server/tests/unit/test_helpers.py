@@ -20,7 +20,7 @@ with patch("httpx.AsyncClient", return_value=AsyncMock()):
     import pytest
     from fastapi import HTTPException
     from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-    from server.helpers import (
+    from helpers import (
         _sanitize_sql,
         _safe_id,
         _safe_customer,

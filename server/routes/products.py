@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from helpers import _safe_id, (
+from helpers import (
+    _safe_id,
     _sql, _paginated, _call, _sort, _log_audit,
     require_role, logger,
 )
