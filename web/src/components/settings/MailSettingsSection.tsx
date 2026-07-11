@@ -1,3 +1,4 @@
+import { CheckCircle, Loader2, Mail, Settings, User as UserIcon, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../../lib/query-client";

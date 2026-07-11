@@ -1,3 +1,4 @@
+import { Percent, Plus, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../../lib/query-client";

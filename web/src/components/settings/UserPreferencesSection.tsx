@@ -1,3 +1,4 @@
+import { Loader2, Moon, Palette, Settings, Sun, User as UserIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../../lib/query-client";
