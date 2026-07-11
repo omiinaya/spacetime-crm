@@ -1,0 +1,18 @@
+[run]
+source = server
+omit = 
+    server/.venv/*
+    server/tests/*
+    server/container-tests/*
+    server/spacetimedb/*
+    */site-packages/*
+    */__pycache__/*
+
+[report]
+show_missing = True
+skip_covered = False
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == "__main__":
+    if TYPE_CHECKING:
