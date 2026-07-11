@@ -11,11 +11,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from config import settings
+from log_config import configure_logging
 from helpers import logger
 
 # Generate a default JWT secret on startup if none configured
 if settings.jwt_secret == "change-me-to-a-random-secret":
     settings.jwt_secret = secrets.token_hex(32)
+
+# Initialize structured logging
+configure_logging()
 
 app = FastAPI(title="SpacetimeCRM")
 
@@ -62,4 +66,10 @@ async def spa_fallback(full_path: str):
 # ── ENTRY ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=settings.server_port, reload=True)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=settings.server_port,
+        reload=True,
+        log_config=None,  # Use our own logging config from log_config.py
+    )

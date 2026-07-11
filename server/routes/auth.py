@@ -1,5 +1,5 @@
 """Auth routes — login, me, set-password, refresh-tenant, 2FA/TOTP."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -101,7 +101,7 @@ async def login(request: Request, login_data: LoginRequest):
     if not user.get("active", False):
         raise HTTPException(403, "Account is disabled")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Check if 2FA is enabled
     if user.get("totp_enabled", False):
@@ -164,7 +164,7 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
     if not totp.verify(body.code, valid_window=1):
         raise HTTPException(401, "Invalid verification code")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     tenant_id = ""
     try:
         tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
@@ -296,7 +296,7 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
             tid = tm_rows[0]["tenant_id"]
     except Exception:
         pass
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     token = _make_full_token(user, tid, now)
     return {"token": token, "tenant_id": tid}
 
@@ -350,7 +350,7 @@ async def pos_login(request: Request, body: PosLoginRequest):
     if not stored_pin or not bcrypt.checkpw(pin.encode(), stored_pin.encode()):
         raise HTTPException(401, "Invalid user ID or PIN")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     tenant_id = ""
     try:
         tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
@@ -402,7 +402,7 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
         logger.info("Password reset requested for unknown email: %s", email)
         return {"ok": True, "message": "If that email exists, a reset link has been sent."}
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     token = jwt.encode(
         {
             "sub": user["id"],

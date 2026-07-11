@@ -18,7 +18,6 @@ from client import get_http_client
 from config import settings
 from webhooks import fire_event as _fire_webhook_event, ALL_EVENTS as WEBHOOK_EVENTS
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer(auto_error=False)

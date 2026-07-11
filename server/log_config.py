@@ -8,7 +8,6 @@ import json
 import logging
 import sys
 from datetime import datetime, timezone
-from typing import Optional
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info").upper()
 # Enable JSON logging for production (structured logs)
@@ -35,13 +34,14 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log_entry, default=str)
 
 
-def configure_logging(logger_name: Optional[str] = None) -> logging.Logger:
-    """Configure structured logging for the app.
+def configure_logging() -> None:
+    """Configure structured logging for the app. Sets up root logger once.
 
     In production (STRUCTURED_LOGGING=true), outputs JSON to stderr.
     In dev, outputs colored text to stderr.
+    Call once at application startup (in main.py).
     """
-    logger = logging.getLogger(logger_name) if logger_name else logging.getLogger()
+    logger = logging.getLogger()
     logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
 
     # Remove existing handlers to avoid duplicates
@@ -59,8 +59,5 @@ def configure_logging(logger_name: Optional[str] = None) -> logging.Logger:
         ))
 
     logger.addHandler(handler)
-    return logger
 
 
-# Configure root logger on import
-configure_logging()

@@ -15,7 +15,7 @@ import json
 import gzip
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -100,7 +100,7 @@ def main():
         "meta": {
             "db": DB_NAME,
             "timestamp": time.time(),
-            "date": datetime.utcnow().isoformat(),
+            "date": datetime.now(timezone.utc).isoformat(),
             "tables_count": len(TABLES),
         }
     }
@@ -116,7 +116,7 @@ def main():
     snapshot["meta"]["total_rows"] = total_rows
 
     # Write compressed JSON
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     filename = f"spacetime-crm-backup-{timestamp}.json.gz"
     filepath = backup_dir / filename
 
