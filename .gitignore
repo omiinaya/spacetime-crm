@@ -36,3 +36,6 @@ backups/
 
 # coverage reports
 web/coverage/
+
+# Additional secret file patterns
+*.env.*

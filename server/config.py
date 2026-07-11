@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     stdb_db: str = "spacetime-crm"
     server_port: int = 8723
     cors_origin: str = "http://localhost:5185"
-    jwt_secret: str = "change-me-to-a-random-secret"
+    jwt_secret: str = "set-via-environment-variable"
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 24
     stripe_secret_key: str = ""
