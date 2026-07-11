@@ -460,6 +460,7 @@ class RecurringInvoiceLineItem(BaseModel):
 
 
 class RecurringInvoiceRuleCreate(BaseModel):
+    currency: str = Field(default="USD", max_length=3)
     customer_id: str = Field(..., min_length=1, max_length=100)
     name: str = Field(..., min_length=1, max_length=200)
     frequency: str = Field(..., pattern=r"^(daily|weekly|biweekly|monthly|quarterly|yearly)$")
@@ -477,6 +478,7 @@ class RecurringInvoiceRuleUpdate(BaseModel):
     line_items: list[RecurringInvoiceLineItem] = Field(default_factory=list)
     next_generation_date: int = Field(default=0, ge=0)
     status: str = Field(default="active", pattern=r"^(active|paused|cancelled)$")
+    currency: str = Field(default="USD", max_length=3)
 
 
 # ─── Payment Methods ────────────────────────────────────────────

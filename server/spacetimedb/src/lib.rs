@@ -64,6 +64,7 @@ pub struct RecurringInvoiceRule {
     pub due_date_days: u32,
     pub line_items_json: String,
     pub status: String,
+    pub currency: String,
     pub created_at: u64,
     pub updated_at: u64,
 }
@@ -206,6 +207,7 @@ pub fn create_recurring_invoice_rule(
     interval_count: u32,
     due_date_days: u32,
     line_items_json: String,
+    currency: String,
     next_generation_date: u64,
 ) {
     let id = make_id("rir", ctx);
@@ -221,6 +223,7 @@ pub fn create_recurring_invoice_rule(
         last_generated_date: 0,
         due_date_days,
         line_items_json,
+        currency,
         status: "active".to_string(),
         created_at: now,
         updated_at: now,
@@ -236,6 +239,7 @@ pub fn update_recurring_invoice_rule(
     interval_count: u32,
     due_date_days: u32,
     line_items_json: String,
+    currency: String,
     next_generation_date: u64,
     status: String,
 ) {

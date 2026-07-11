@@ -532,6 +532,7 @@ export interface RecurringInvoiceRule {
   due_date_days: number;
   line_items_json: string;
   status: string;
+  currency: string;
   created_at: number;
   updated_at: number;
 }
