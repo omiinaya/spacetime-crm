@@ -35,6 +35,15 @@ export default defineConfig({
     alias: { "@": new URL("./src", import.meta.url).pathname },
   },
   test: {
+    coverage: {
+      provider: "v8",
+      thresholds: {
+        statements: 20,
+        branches: 15,
+        functions: 20,
+        lines: 20,
+      },
+    },
     globals: true,
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",

@@ -30,3 +30,9 @@ server/.venv/
 credentials*
 *.secret
 secrets.yml
+
+# Backup files
+backups/
+
+# coverage reports
+web/coverage/
