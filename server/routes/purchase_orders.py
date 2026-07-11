@@ -25,7 +25,6 @@ async def list_purchase_orders(offset: int = 0, limit: int = 50, user: dict = De
     return {"purchase_orders": rows, "total": total, "offset": offset, "limit": limit}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/purchase-orders")
 @limiter.limit("100/minute")
 async def create_purchase_order(body: PurchaseOrderCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -39,7 +38,6 @@ async def create_purchase_order(body: PurchaseOrderCreate, user: dict = Depends(
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/purchase-orders/{po_id}")
 @limiter.limit("100/minute")
 async def delete_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
@@ -62,7 +60,6 @@ async def get_purchase_order(po_id: str, user: dict = Depends(require_role("admi
     return {"purchase_order": po}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/purchase-orders/{po_id}/line-items")
 @limiter.limit("100/minute")
 async def add_po_line_item(po_id: str, body: POLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -77,7 +74,6 @@ async def add_po_line_item(po_id: str, body: POLineItemCreate, user: dict = Depe
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/purchase-orders/{po_id}/line-items/{item_id}")
 @limiter.limit("100/minute")
 async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
@@ -86,7 +82,6 @@ async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(req
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/purchase-orders/{po_id}/status")
 @limiter.limit("100/minute")
 async def update_po_status(po_id: str, body: PurchaseOrderStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -95,7 +90,6 @@ async def update_po_status(po_id: str, body: PurchaseOrderStatusUpdate, user: di
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/purchase-orders/{po_id}/receive")
 @limiter.limit("100/minute")
 async def receive_po_items(po_id: str, body: POReceiveItem, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -109,7 +103,6 @@ async def receive_po_items(po_id: str, body: POReceiveItem, user: dict = Depends
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/purchase-orders/{po_id}/submit-for-approval")
 @limiter.limit("100/minute")
 async def submit_po_for_approval(po_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -119,7 +112,6 @@ async def submit_po_for_approval(po_id: str, user: dict = Depends(require_role("
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/purchase-orders/{po_id}/approve")
 @limiter.limit("100/minute")
 async def approve_purchase_order(po_id: str, body: POApprovalAction, user: dict = Depends(require_role("admin"))):
@@ -129,7 +121,6 @@ async def approve_purchase_order(po_id: str, body: POApprovalAction, user: dict 
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/purchase-orders/{po_id}/reject")
 @limiter.limit("100/minute")
 async def reject_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):

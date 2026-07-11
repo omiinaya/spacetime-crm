@@ -94,7 +94,6 @@ async def get_pos_receipt_pdf(sale_id: str, user: dict = Depends(require_role("a
     )
 
 
-@limiter.limit("100/minute")
 @router.post("/api/pos/create")
 @limiter.limit("100/minute")
 async def create_pos_sale(body: POSCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -113,7 +112,6 @@ async def create_pos_sale(body: POSCreate, user: dict = Depends(require_role("ad
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/pos/items")
 @limiter.limit("100/minute")
 async def add_pos_item(body: POSAddItem, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -130,7 +128,6 @@ async def add_pos_item(body: POSAddItem, user: dict = Depends(require_role("admi
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/pos/refund/{sale_id}")
 @limiter.limit("100/minute")
 async def refund_pos_sale(sale_id: str, user: dict = Depends(require_role("admin"))):
@@ -140,7 +137,6 @@ async def refund_pos_sale(sale_id: str, user: dict = Depends(require_role("admin
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/pos/sales/{sale_id}")
 @limiter.limit("100/minute")
 async def delete_pos_sale(sale_id: str, user: dict = Depends(require_role("admin"))):

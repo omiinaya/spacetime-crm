@@ -27,7 +27,6 @@ async def list_custom_field_definitions(offset: int = 0, limit: int = 50, user: 
     return {"custom_fields": rows, "total": total, "offset": offset, "limit": limit}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/custom-field-definitions")
 @limiter.limit("100/minute")
 async def create_custom_field_definition(body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
@@ -48,7 +47,6 @@ async def create_custom_field_definition(body: CustomFieldDefinitionCreate, user
     return {"ok": True, "id": field_id}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/custom-field-definitions/{field_id}")
 @limiter.limit("100/minute")
 async def update_custom_field_definition(field_id: str, body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
@@ -66,7 +64,6 @@ async def update_custom_field_definition(field_id: str, body: CustomFieldDefinit
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/custom-field-definitions/{field_id}")
 @limiter.limit("100/minute")
 async def delete_custom_field_definition(field_id: str, user: dict = Depends(require_role("admin"))):
@@ -83,7 +80,6 @@ async def get_custom_field_values(entity_id: str, user: dict = Depends(require_r
     return {"values": rows}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/custom-field-values/{entity_id}")
 @limiter.limit("100/minute")
 async def set_custom_field_values(entity_id: str, body: CustomFieldValuesUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):

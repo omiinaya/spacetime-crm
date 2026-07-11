@@ -24,7 +24,6 @@ async def list_tenants(offset: int = 0, limit: int = 50, user: dict = Depends(re
         return {"tenants": []}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/tenants")
 @limiter.limit("100/minute")
 async def create_tenant(body: TenantCreate, user: dict = Depends(require_role("admin"))):
@@ -53,7 +52,6 @@ async def get_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))
     return {"tenant": tenant}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/tenants/{tenant_id}")
 @limiter.limit("100/minute")
 async def update_tenant(tenant_id: str, body: TenantUpdate, user: dict = Depends(require_role("admin"))):
@@ -69,7 +67,6 @@ async def update_tenant(tenant_id: str, body: TenantUpdate, user: dict = Depends
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/tenants/{tenant_id}")
 @limiter.limit("100/minute")
 async def delete_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))):
@@ -79,7 +76,6 @@ async def delete_tenant(tenant_id: str, user: dict = Depends(require_role("admin
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/tenants/{tenant_id}/members")
 @limiter.limit("100/minute")
 async def add_tenant_member(tenant_id: str, body: TenantMemberAdd, user: dict = Depends(require_role("admin"))):
@@ -93,7 +89,6 @@ async def add_tenant_member(tenant_id: str, body: TenantMemberAdd, user: dict = 
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/tenants/{tenant_id}/members/{member_id}")
 @limiter.limit("100/minute")
 async def remove_tenant_member(tenant_id: str, member_id: str, user: dict = Depends(require_role("admin"))):
@@ -103,7 +98,6 @@ async def remove_tenant_member(tenant_id: str, member_id: str, user: dict = Depe
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/tenants/{tenant_id}/members/{member_id}")
 @limiter.limit("100/minute")
 async def update_tenant_member_role(tenant_id: str, member_id: str, body: TenantMemberRoleUpdate, user: dict = Depends(require_role("admin"))):
@@ -114,7 +108,6 @@ async def update_tenant_member_role(tenant_id: str, member_id: str, body: Tenant
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/tenants/migrate")
 @limiter.limit("20/minute")
 async def migrate_to_tenant(body: TenantMigrate, user: dict = Depends(require_role("admin"))):

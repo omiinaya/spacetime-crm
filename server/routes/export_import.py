@@ -59,7 +59,6 @@ async def export_csv(entity: str, user: dict = Depends(require_role("admin", "te
 # ── CSV IMPORT ──
 
 
-@limiter.limit("100/minute")
 @router.post("/api/import/customers")
 @limiter.limit("100/minute")
 async def import_customers_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
@@ -114,7 +113,6 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
     return {"imported": count, "errors": errors, "file": file.filename}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/import/products")
 @limiter.limit("100/minute")
 async def import_products_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):

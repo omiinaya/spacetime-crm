@@ -29,7 +29,6 @@ async def list_estimates(status: str = "", offset: int = 0, limit: int = 50, use
     return {"estimates": rows, "total": total, "offset": offset, "limit": limit}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/estimates")
 @limiter.limit("100/minute")
 async def create_estimate(body: EstimateCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -50,7 +49,6 @@ async def create_estimate(body: EstimateCreate, user: dict = Depends(require_rol
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/estimates/{estimate_id}/status")
 @limiter.limit("100/minute")
 async def update_estimate_status(estimate_id: str, body: EstimateStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -65,7 +63,6 @@ async def get_estimate_line_items(estimate_id: str, user: dict = Depends(require
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/estimates/{estimate_id}/line-items")
 @limiter.limit("100/minute")
 async def add_estimate_line_item(estimate_id: str, body: EstimateLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -80,7 +77,6 @@ async def add_estimate_line_item(estimate_id: str, body: EstimateLineItemCreate,
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/estimates/{estimate_id}")
 @limiter.limit("100/minute")
 async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("admin"))):
@@ -89,7 +85,6 @@ async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/estimates/{estimate_id}/convert")
 @limiter.limit("100/minute")
 async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):

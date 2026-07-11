@@ -52,7 +52,6 @@ async def list_recurring_series(user: dict = Depends(require_role("admin", "tech
     return {"series": series}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/appointments")
 @limiter.limit("100/minute")
 async def create_appointment(body: AppointmentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -91,7 +90,6 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/appointments/{appt_id}/recurrence")
 @limiter.limit("100/minute")
 async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -101,7 +99,6 @@ async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, 
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/appointments/generate-next")
 @limiter.limit("100/minute")
 async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -160,7 +157,6 @@ async def get_appointments_due_soon(user: dict = Depends(require_role("admin", "
     return {"appointments": result, "count": len(result)}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/appointments/send-reminders")
 @limiter.limit("100/minute")
 async def send_appointment_reminders(user: dict = Depends(require_role("admin"))):
@@ -203,7 +199,6 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
     return {"ok": True, "sent": sent}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/appointments/{appt_id}/status")
 @limiter.limit("100/minute")
 async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -212,7 +207,6 @@ async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate,
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/appointments/{appt_id}")
 @limiter.limit("100/minute")
 async def delete_appointment(appt_id: str, user: dict = Depends(require_role("admin"))):

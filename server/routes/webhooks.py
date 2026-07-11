@@ -16,7 +16,6 @@ from rate_limit import limiter
 router = APIRouter()
 
 
-@limiter.limit("100/minute")
 @router.post("/api/webhooks/stripe")
 @limiter.limit("50/minute")
 async def stripe_webhook(request: Request):
@@ -80,7 +79,6 @@ async def list_webhook_subscriptions(offset: int = 0, limit: int = 50, user: dic
     return {"subscriptions": rows, "total": total, "offset": offset, "limit": limit}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/webhook-subscriptions")
 @limiter.limit("100/minute")
 async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dict = Depends(require_role("admin"))):
@@ -105,7 +103,6 @@ async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dic
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/webhook-subscriptions/{sub_id}")
 @limiter.limit("100/minute")
 async def update_webhook_subscription(sub_id: str, body: WebhookSubscriptionUpdate, user: dict = Depends(require_role("admin"))):
@@ -130,7 +127,6 @@ async def update_webhook_subscription(sub_id: str, body: WebhookSubscriptionUpda
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/webhook-subscriptions/{sub_id}")
 @limiter.limit("100/minute")
 async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
@@ -140,7 +136,6 @@ async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/webhook-subscriptions/{sub_id}/test")
 @limiter.limit("100/minute")
 async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):

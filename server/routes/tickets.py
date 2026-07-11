@@ -40,7 +40,6 @@ async def list_tickets(status: str = "", customer_id: str = "", offset: int = 0,
     return {"tickets": rows, "total": total, "offset": offset, "limit": limit}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/tickets")
 @limiter.limit("100/minute")
 async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -95,7 +94,6 @@ async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/tickets/{ticket_id}/status")
 @limiter.limit("100/minute")
 async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -124,7 +122,6 @@ async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: d
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/tickets/{ticket_id}/assign")
 @limiter.limit("100/minute")
 async def assign_ticket(ticket_id: str, body: TicketAssign, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -139,7 +136,6 @@ async def get_ticket_notes(ticket_id: str, user: dict = Depends(require_role("ad
     return {"notes": _sort(rows, "created_at", desc=False)}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/tickets/{ticket_id}/notes")
 @limiter.limit("100/minute")
 async def add_ticket_note(ticket_id: str, body: TicketNoteCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -153,7 +149,6 @@ async def add_ticket_note(ticket_id: str, body: TicketNoteCreate, user: dict = D
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/tickets/{ticket_id}")
 @limiter.limit("100/minute")
 async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin"))):
@@ -164,7 +159,6 @@ async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin
 
 # ── TICKET TIMERS ──
 
-@limiter.limit("100/minute")
 @router.post("/api/tickets/{ticket_id}/timers/start")
 @limiter.limit("100/minute")
 async def start_ticket_timer(ticket_id: str, body: TicketTimerStart, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -187,7 +181,6 @@ async def list_all_timers(user_id: str = "", running: str = "", user: dict = Dep
     return {"timers": _sort(rows, "start_time")}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/timers/{timer_id}/stop")
 @limiter.limit("100/minute")
 async def stop_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -195,7 +188,6 @@ async def stop_ticket_timer(timer_id: str, user: dict = Depends(require_role("ad
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/timers/{timer_id}")
 @limiter.limit("100/minute")
 async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin"))):
@@ -213,7 +205,6 @@ async def get_ticket_checklist(ticket_id: str, user: dict = Depends(require_role
     return {"items": _sort(rows, "sort_order")}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/tickets/{ticket_id}/checklist/apply")
 @limiter.limit("100/minute")
 async def apply_checklist_to_ticket(ticket_id: str, body: ChecklistApply, user: dict = Depends(require_role("admin", "tech"))):
@@ -223,7 +214,6 @@ async def apply_checklist_to_ticket(ticket_id: str, body: ChecklistApply, user: 
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/tickets/{ticket_id}/checklist/{item_id}")
 @limiter.limit("100/minute")
 async def update_checklist_item(ticket_id: str, item_id: str, body: ChecklistToggle, user: dict = Depends(require_role("admin", "tech"))):
@@ -232,7 +222,6 @@ async def update_checklist_item(ticket_id: str, item_id: str, body: ChecklistTog
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/tickets/{ticket_id}/checklist")
 @limiter.limit("100/minute")
 async def delete_ticket_checklist(ticket_id: str, user: dict = Depends(require_role("admin", "tech"))):
@@ -320,7 +309,6 @@ async def get_sla_settings(user: dict = Depends(require_role("admin"))):
     return {"targets": DEFAULT_SLA_TARGETS, "updated_at": 0}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/tickets/sla-settings")
 @limiter.limit("100/minute")
 async def save_sla_settings(

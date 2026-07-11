@@ -33,7 +33,6 @@ async def list_schedules(
     return {"schedules": rows[offset:offset + limit], "total": total, "offset": offset, "limit": limit}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/report-schedules")
 @limiter.limit("100/minute")
 async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))):
@@ -56,7 +55,6 @@ async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(requ
     return {"ok": True, "id": result.get("id", "") if isinstance(result, dict) else "", "next_run_at": next_run_at}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/report-schedules/{schedule_id}")
 @limiter.limit("100/minute")
 async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: dict = Depends(require_role("admin"))):
@@ -88,7 +86,6 @@ async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: d
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/report-schedules/{schedule_id}")
 @limiter.limit("100/minute")
 async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("admin"))):
@@ -102,7 +99,6 @@ async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("a
 # ── Run Now / Check Due ──
 
 
-@limiter.limit("100/minute")
 @router.post("/api/report-schedules/{schedule_id}/run-now")
 @limiter.limit("100/minute")
 async def run_schedule_now(schedule_id: str, user: dict = Depends(require_role("admin", "tech"))):

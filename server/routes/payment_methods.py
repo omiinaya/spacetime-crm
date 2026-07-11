@@ -31,7 +31,6 @@ async def list_payment_methods(
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/payment-methods/setup-intent")
 @limiter.limit("100/minute")
 async def create_payment_setup_intent(
@@ -47,7 +46,6 @@ async def create_payment_setup_intent(
     return result
 
 
-@limiter.limit("100/minute")
 @router.post("/api/payment-methods")
 @limiter.limit("100/minute")
 async def save_payment_method(
@@ -68,7 +66,6 @@ async def save_payment_method(
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/payment-methods/{method_id}/default")
 @limiter.limit("100/minute")
 async def set_default_payment_method(
@@ -82,7 +79,6 @@ async def set_default_payment_method(
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/payment-methods/{method_id}")
 @limiter.limit("100/minute")
 async def delete_payment_method(

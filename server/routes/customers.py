@@ -42,7 +42,6 @@ async def list_customers(search: str = "", offset: int = 0, limit: int = 50, use
     return {"customers": rows, "total": total, "offset": offset, "limit": limit}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/customers")
 @limiter.limit("100/minute")
 async def create_customer(body: CustomerCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -63,7 +62,6 @@ async def create_customer(body: CustomerCreate, user: dict = Depends(require_rol
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.put("/api/customers/{customer_id}")
 @limiter.limit("100/minute")
 async def update_customer(customer_id: str, body: CustomerUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
@@ -91,7 +89,6 @@ async def update_customer(customer_id: str, body: CustomerUpdate, user: dict = D
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.delete("/api/customers/{customer_id}")
 @limiter.limit("100/minute")
 async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
@@ -104,7 +101,6 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/customers/{customer_id}/portal-password")
 @limiter.limit("100/minute")
 async def set_customer_portal_password(customer_id: str, body: SetPasswordRequest, user: dict = Depends(require_role("admin"))):
@@ -151,7 +147,6 @@ async def list_customer_geolocations(user: dict = Depends(require_role("admin", 
     return {"locations": result}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/customers/{customer_id}/geocode")
 @limiter.limit("100/minute")
 async def geocode_customer(customer_id: str, user: dict = Depends(require_role("admin", "tech"))):
@@ -184,7 +179,6 @@ async def geocode_customer(customer_id: str, user: dict = Depends(require_role("
     return {"ok": True, "latitude": lat, "longitude": lng, "display_name": data[0].get("display_name", "")}
 
 
-@limiter.limit("100/minute")
 @router.post("/api/customers/geocode-all")
 @limiter.limit("100/minute")
 async def geocode_all_customers(user: dict = Depends(require_role("admin", "tech"))):
