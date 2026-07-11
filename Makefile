@@ -205,10 +205,8 @@ test-container: ## Spin up test STDB container and run full integration suite (b
 	fi
 
 test-rust-container: ## Build & run standalone Rust container tests (requires running STDB)
-	@echo "🚀 Building container test binary..."
-	@cargo build --manifest-path server/container-tests/Cargo.toml
 	@echo "🚀 Running container tests..."
-	@cd server/container-tests && ./target/debug/container-tests
+	@cargo run --manifest-path server/container-tests/Cargo.toml
 
 test-integration:  ## Tests needing running services (STDB + backend + frontend)
 	@echo "⚠️  Integration tests require STDB on :3001 and backend on :8723"
