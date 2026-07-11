@@ -523,7 +523,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 ### This sprint
 5. **Add ErrorBoundary** to each page
 6. ~~**Add device_imei/device_password** to TicketCreate + Ticket TS interface~~ ✅ Done (`320d2aa`)
-7. **Fix PaymentsPage currency display bug**
+7. ~~**Fix PaymentsPage currency display bug**~~ ✅ Done (`29c0544`)
 8. ~~**Add missing Pydantic models** for ScheduledReport, Invoice discount fields~~ ✅ Done (`320d2aa`)
 9. ~~**Add structured logging**~~ ✅ Done
 
