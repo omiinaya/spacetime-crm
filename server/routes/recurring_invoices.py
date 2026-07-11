@@ -10,6 +10,7 @@ from helpers import (
     require_role, logger,
 )
 from models import RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -34,6 +35,7 @@ async def list_recurring_rules(user: dict = Depends(require_role("admin", "tech"
     return {"rules": result}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/recurring-invoices")
 async def create_recurring_rule(
     body: RecurringInvoiceRuleCreate,
@@ -64,6 +66,7 @@ async def create_recurring_rule(
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/recurring-invoices/{rule_id}")
 async def update_recurring_rule(
     rule_id: str,
@@ -89,6 +92,7 @@ async def update_recurring_rule(
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/recurring-invoices/{rule_id}")
 async def delete_recurring_rule(
     rule_id: str,
@@ -100,6 +104,7 @@ async def delete_recurring_rule(
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/recurring-invoices/generate")
 async def generate_recurring_invoices(
     user: dict = Depends(require_role("admin", "tech")),

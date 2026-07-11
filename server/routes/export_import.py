@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 
 from helpers import (
+from rate_limit import limiter
     _safe_id,
     _sql, _call, _log_audit,
     require_role, logger,
@@ -58,6 +59,7 @@ async def export_csv(entity: str, user: dict = Depends(require_role("admin", "te
 # ── CSV IMPORT ──
 
 
+@limiter.limit("100/minute")
 @router.post("/api/import/customers")
 async def import_customers_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
     """Import customers from CSV.
@@ -111,6 +113,7 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
     return {"imported": count, "errors": errors, "file": file.filename}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/import/products")
 async def import_products_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
     """Import products from CSV.

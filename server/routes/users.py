@@ -8,6 +8,7 @@ from helpers import (
     require_role, logger,
 )
 from models import UserCreate, UserUpdate, UserSettingsUpdate
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ async def list_users(offset: int = 0, limit: int = 50, user: dict = Depends(requ
     return {"users": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/users")
 async def create_user(body: UserCreate, user: dict = Depends(require_role("admin"))):
     await _call("create_user", [
@@ -43,6 +45,7 @@ async def get_user_settings(user: dict = Depends(require_role("admin", "tech", "
     return {"settings": rows[0]}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/users/settings")
 async def update_user_settings(body: UserSettingsUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Upsert the current user's settings."""

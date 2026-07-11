@@ -13,6 +13,7 @@ from helpers import (
 from models import AppointmentCreate, AppointmentStatusUpdate, AppointmentRecurrence, GenerateNextOccurrence
 from mail import _customer_email as _mail_customer_email, _notify_appointment_created, _notify_appointment_reminder as _mail
 from sms import _customer_phone as _sms_customer_phone, _notify_appointment_created as _sms_appointment_created, _notify_appointment_reminder as _sms
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -51,6 +52,7 @@ async def list_recurring_series(user: dict = Depends(require_role("admin", "tech
     return {"series": series}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/appointments")
 async def create_appointment(body: AppointmentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_appointment", [
@@ -88,6 +90,7 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/appointments/{appt_id}/recurrence")
 async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Set or update the recurrence rule on an appointment (makes it a series parent)."""
@@ -96,6 +99,7 @@ async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, 
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/appointments/generate-next")
 async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Generate the next occurrence of a recurring appointment series."""
@@ -153,6 +157,7 @@ async def get_appointments_due_soon(user: dict = Depends(require_role("admin", "
     return {"appointments": result, "count": len(result)}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/appointments/send-reminders")
 async def send_appointment_reminders(user: dict = Depends(require_role("admin"))):
     """Send reminder notifications for appointments starting in the next 24 hours."""
@@ -194,6 +199,7 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
     return {"ok": True, "sent": sent}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/appointments/{appt_id}/status")
 async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_appointment_status", [appt_id, body.status])
@@ -201,6 +207,7 @@ async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate,
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/appointments/{appt_id}")
 async def delete_appointment(appt_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_appointment", [appt_id])

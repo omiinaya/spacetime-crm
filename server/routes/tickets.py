@@ -17,6 +17,7 @@ from models import (
 )
 from mail import _customer_email as _mail_customer_email, _notify_ticket_status_change
 from sms import _customer_phone as _sms_customer_phone, _notify_ticket_status_change as _sms_ticket_status
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -39,6 +40,7 @@ async def list_tickets(status: str = "", customer_id: str = "", offset: int = 0,
     return {"tickets": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/tickets")
 async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_ticket", [
@@ -92,6 +94,7 @@ async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/tickets/{ticket_id}/status")
 async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     status = body.status
@@ -119,6 +122,7 @@ async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: d
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/tickets/{ticket_id}/assign")
 async def assign_ticket(ticket_id: str, body: TicketAssign, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("assign_ticket", [ticket_id, body.assigned_user_id])
@@ -132,6 +136,7 @@ async def get_ticket_notes(ticket_id: str, user: dict = Depends(require_role("ad
     return {"notes": _sort(rows, "created_at", desc=False)}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/tickets/{ticket_id}/notes")
 async def add_ticket_note(ticket_id: str, body: TicketNoteCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_ticket_note", [
@@ -144,6 +149,7 @@ async def add_ticket_note(ticket_id: str, body: TicketNoteCreate, user: dict = D
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/tickets/{ticket_id}")
 async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_ticket", [ticket_id])
@@ -153,6 +159,7 @@ async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin
 
 # ── TICKET TIMERS ──
 
+@limiter.limit("100/minute")
 @router.post("/api/tickets/{ticket_id}/timers/start")
 async def start_ticket_timer(ticket_id: str, body: TicketTimerStart, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("start_ticket_timer", [ticket_id, body.user_id])
@@ -174,12 +181,14 @@ async def list_all_timers(user_id: str = "", running: str = "", user: dict = Dep
     return {"timers": _sort(rows, "start_time")}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/timers/{timer_id}/stop")
 async def stop_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("stop_ticket_timer", [timer_id])
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/timers/{timer_id}")
 async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_ticket_timer", [timer_id])
@@ -196,6 +205,7 @@ async def get_ticket_checklist(ticket_id: str, user: dict = Depends(require_role
     return {"items": _sort(rows, "sort_order")}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/tickets/{ticket_id}/checklist/apply")
 async def apply_checklist_to_ticket(ticket_id: str, body: ChecklistApply, user: dict = Depends(require_role("admin", "tech"))):
     """Apply a checklist template to a ticket."""
@@ -204,6 +214,7 @@ async def apply_checklist_to_ticket(ticket_id: str, body: ChecklistApply, user: 
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/tickets/{ticket_id}/checklist/{item_id}")
 async def update_checklist_item(ticket_id: str, item_id: str, body: ChecklistToggle, user: dict = Depends(require_role("admin", "tech"))):
     """Toggle a checklist item completed/uncompleted."""
@@ -211,6 +222,7 @@ async def update_checklist_item(ticket_id: str, item_id: str, body: ChecklistTog
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/tickets/{ticket_id}/checklist")
 async def delete_ticket_checklist(ticket_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Remove all checklist items from a ticket."""
@@ -297,6 +309,7 @@ async def get_sla_settings(user: dict = Depends(require_role("admin"))):
     return {"targets": DEFAULT_SLA_TARGETS, "updated_at": 0}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/tickets/sla-settings")
 async def save_sla_settings(
     body: dict,

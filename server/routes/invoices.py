@@ -15,6 +15,7 @@ from helpers import (
 from models import InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate, BulkInvoiceStatusUpdate, BulkInvoiceEdit
 from mail import _customer_email as _mail_customer_email, _notify_invoice_created, _notify_overdue_reminder as _mail_reminder
 from sms import _customer_phone as _sms_customer_phone, _notify_invoice_created as _sms_invoice_created, _notify_overdue_reminder as _sms_reminder
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -37,6 +38,7 @@ async def list_invoices(status: str = "", customer_id: str = "", offset: int = 0
     return {"invoices": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices")
 async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_invoice", [
@@ -107,6 +109,7 @@ async def get_invoice_summary(user: dict = Depends(require_role("admin", "tech",
     }
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices/bulk-status-update")
 async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict = Depends(require_role("admin"))):
     """Update status of multiple invoices at once."""
@@ -128,6 +131,7 @@ async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict =
     return {"ok": True, "updated": updated, "errors": errors}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices/bulk-edit")
 async def bulk_edit_invoices(body: BulkInvoiceEdit, user: dict = Depends(require_role("admin"))):
     """Update terms and/or notes on multiple invoices at once."""
@@ -165,6 +169,7 @@ async def get_overdue_count(user: dict = Depends(require_role("admin", "tech", "
     return {"count": len(rows), "total": round(total, 2)}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices/trigger-overdue-check")
 async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
     """Mark overdue invoices — checks each sent/partial invoice past its due date
@@ -182,6 +187,7 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
     return {"ok": True, "marked": marked}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices/send-overdue-reminders")
 async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
     """Find overdue invoices and send email/SMS reminders to each customer."""
@@ -213,6 +219,7 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
     return {"ok": True, **sent}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/invoices/{invoice_id}/status")
 async def update_invoice_status(invoice_id: str, body: InvoiceStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_invoice_status", [invoice_id, body.status])
@@ -232,6 +239,7 @@ async def get_invoice_line_items(invoice_id: str, user: dict = Depends(require_r
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices/{invoice_id}/line-items")
 async def add_invoice_line_item(invoice_id: str, body: InvoiceLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_invoice_line_item", [
@@ -245,6 +253,7 @@ async def add_invoice_line_item(invoice_id: str, body: InvoiceLineItemCreate, us
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/invoices/{invoice_id}/line-items/{item_id}")
 async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice_line_item", [item_id])
@@ -252,6 +261,7 @@ async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = D
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_invoice", [invoice_id])
@@ -259,6 +269,7 @@ async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("adm
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/invoices/{invoice_id}/tax-rate")
 async def set_invoice_tax_rate(invoice_id: str, body: InvoiceTaxRateUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("set_invoice_tax_rate", [invoice_id, body.tax_rate])
@@ -341,6 +352,7 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
 # ── Invoice Email Delivery Queue ──
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices/send-email")
 async def send_invoice_email(
     body: dict,
@@ -377,6 +389,7 @@ async def send_invoice_email(
     return {"ok": True, "sent_to": customer_email, "invoice_number": inv_num}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/invoices/send-batch-email")
 async def send_batch_invoice_email(
     body: dict,

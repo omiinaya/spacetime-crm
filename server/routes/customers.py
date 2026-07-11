@@ -13,6 +13,7 @@ from helpers import (
 )
 from client import get_http_client
 from models import CustomerCreate, CustomerUpdate, SetPasswordRequest
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -41,6 +42,7 @@ async def list_customers(search: str = "", offset: int = 0, limit: int = 50, use
     return {"customers": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/customers")
 async def create_customer(body: CustomerCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_customer", [
@@ -60,6 +62,7 @@ async def create_customer(body: CustomerCreate, user: dict = Depends(require_rol
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/customers/{customer_id}")
 async def update_customer(customer_id: str, body: CustomerUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_customer", [
@@ -86,6 +89,7 @@ async def update_customer(customer_id: str, body: CustomerUpdate, user: dict = D
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/customers/{customer_id}")
 async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_customer", [customer_id])
@@ -97,6 +101,7 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/customers/{customer_id}/portal-password")
 async def set_customer_portal_password(customer_id: str, body: SetPasswordRequest, user: dict = Depends(require_role("admin"))):
     """Admin sets/resets a customer's portal password."""
@@ -142,6 +147,7 @@ async def list_customer_geolocations(user: dict = Depends(require_role("admin", 
     return {"locations": result}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/customers/{customer_id}/geocode")
 async def geocode_customer(customer_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Geocode a single customer's address and store the location."""
@@ -173,6 +179,7 @@ async def geocode_customer(customer_id: str, user: dict = Depends(require_role("
     return {"ok": True, "latitude": lat, "longitude": lng, "display_name": data[0].get("display_name", "")}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/customers/geocode-all")
 async def geocode_all_customers(user: dict = Depends(require_role("admin", "tech"))):
     """Geocode all customers that don't have coordinates yet."""

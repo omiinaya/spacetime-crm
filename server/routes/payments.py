@@ -13,6 +13,7 @@ from helpers import (
 from models import PaymentCreate
 from mail import _customer_email as _mail_customer_email, _notify_payment_received
 from sms import _customer_phone as _sms_customer_phone, _notify_payment_received as _sms_payment_received
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -30,6 +31,7 @@ async def list_payments(invoice_id: str = "", offset: int = 0, limit: int = 50, 
     return {"payments": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/payments")
 async def record_payment(body: PaymentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     invoice_id = body.invoice_id
@@ -75,6 +77,7 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/payments/{payment_id}")
 async def delete_payment(payment_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_payment", [payment_id])

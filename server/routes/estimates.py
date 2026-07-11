@@ -11,6 +11,7 @@ from helpers import (
 )
 from models import EstimateCreate, EstimateStatusUpdate, EstimateLineItemCreate
 from sms import _customer_phone as _sms_customer_phone, _notify_estimate_approved as _sms_estimate_approved
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -28,6 +29,7 @@ async def list_estimates(status: str = "", offset: int = 0, limit: int = 50, use
     return {"estimates": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/estimates")
 async def create_estimate(body: EstimateCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("create_estimate", [
@@ -47,6 +49,7 @@ async def create_estimate(body: EstimateCreate, user: dict = Depends(require_rol
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/estimates/{estimate_id}/status")
 async def update_estimate_status(estimate_id: str, body: EstimateStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("update_estimate_status", [estimate_id, body.status])
@@ -60,6 +63,7 @@ async def get_estimate_line_items(estimate_id: str, user: dict = Depends(require
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/estimates/{estimate_id}/line-items")
 async def add_estimate_line_item(estimate_id: str, body: EstimateLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("add_estimate_line_item", [
@@ -73,6 +77,7 @@ async def add_estimate_line_item(estimate_id: str, body: EstimateLineItemCreate,
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/estimates/{estimate_id}")
 async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_estimate", [estimate_id])
@@ -80,6 +85,7 @@ async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("a
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/estimates/{estimate_id}/convert")
 async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Convert an approved estimate to an invoice (atomic reducer)."""

@@ -8,6 +8,7 @@ from helpers import (
     require_role, logger,
 )
 from models import TaxRateCreate, TaxRateUpdate
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ async def list_tax_rates(offset: int = 0, limit: int = 50, user: dict = Depends(
     return {"tax_rates": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/tax-rates")
 async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role("admin"))):
     await _call("create_tax_rate", [
@@ -35,6 +37,7 @@ async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/tax-rates/{tax_id}")
 async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: dict = Depends(require_role("admin"))):
     await _call("update_tax_rate", [
@@ -47,6 +50,7 @@ async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: dict = Depends
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/tax-rates/{tax_id}")
 async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_tax_rate", [tax_id])

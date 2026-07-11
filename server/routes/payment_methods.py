@@ -9,6 +9,7 @@ from helpers import (
 )
 from models import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
 from stripe_payments import create_setup_intent, is_configured
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -30,6 +31,7 @@ async def list_payment_methods(
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 
+@limiter.limit("100/minute")
 @router.post("/api/payment-methods/setup-intent")
 async def create_payment_setup_intent(
     body: SetDefaultPaymentMethodRequest,
@@ -44,6 +46,7 @@ async def create_payment_setup_intent(
     return result
 
 
+@limiter.limit("100/minute")
 @router.post("/api/payment-methods")
 async def save_payment_method(
     body: SavePaymentMethodRequest,
@@ -63,6 +66,7 @@ async def save_payment_method(
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.put("/api/payment-methods/{method_id}/default")
 async def set_default_payment_method(
     method_id: str,
@@ -75,6 +79,7 @@ async def set_default_payment_method(
     return {"ok": True}
 
 
+@limiter.limit("100/minute")
 @router.delete("/api/payment-methods/{method_id}")
 async def delete_payment_method(
     method_id: str,
