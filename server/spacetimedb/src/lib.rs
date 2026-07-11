@@ -247,6 +247,7 @@ pub fn update_recurring_invoice_rule(
             due_date_days,
             line_items_json,
             next_generation_date,
+            currency,
             status,
             updated_at: now_ms(ctx),
             ..rule
@@ -313,7 +314,7 @@ pub fn generate_recurring_invoices(ctx: &ReducerContext) {
             notes: format!("Auto-generated from recurring rule: {}", rule.name),
             terms: String::new(),
             due_date,
-            currency: "USD".to_string(),
+            currency: rule.currency.clone().to_string(),
             created_at: now,
             updated_at: now,
         });
@@ -681,7 +682,7 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
             notes: est.notes.clone(),
             terms: String::new(),
             due_date: 0,
-            currency: "USD".to_string(),
+            currency: est.currency.clone().to_string(),
             created_at: now,
             updated_at: now,
         });

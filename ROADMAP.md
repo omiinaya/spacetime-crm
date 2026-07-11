@@ -13,7 +13,7 @@
 
 | Layer | Files | Lines | Completeness | Test Count | Anti-Patterns |
 |-------|-------|-------|:------------:|:----------:|:-------------:|
-| STDB Module (Rust) | 16 files | ~1,900 | 88% | 134 #[test] (4 files) | 1 major, 3 minor |
+| STDB Module (Rust) | 16 files | ~1,950 | 90% | 134 #[test] (4 files) | 0 major, 1 minor |
 | Backend API (Python) | 30 files | ~4,500 | 92% | 369 integration (28 files) | 2 major, 5 minor |
 | Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit (13 files) | 3 major, 6 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
@@ -482,7 +482,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Multi-tenant | ✅ Complete | 27 tables scoped |
 | POS / counter sale | ✅ Complete | Kiosk with cart, payment, receipt, refund |
 | Invoice email delivery | ✅ Complete | Single + batch + queue status |
-| Multi-currency | ✅ Foundation | On entities + API, not in STDB reducers |
+| Multi-currency | ✅ Foundation | STDB reducers now use rule/entity currency |
 | 2FA / TOTP | ✅ Complete | QR setup, challenge login, disable |
 | SLA tracking | ✅ Complete | Priority thresholds, configurable |
 | Purchase order approvals | ✅ Complete | Submit/approve/reject flow |
