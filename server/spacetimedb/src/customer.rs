@@ -144,3 +144,148 @@ pub fn import_customer(
         updated_at,
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::customer::customer;
+    use crate::*;
+
+    fn test_ctx() -> ReducerContext {
+        ReducerContext::__dummy()
+    }
+
+    #[test]
+    fn test_create_customer() {
+        let ctx = test_ctx();
+        create_customer(
+            &ctx,
+            "tenant_test".into(),
+            "Alice".into(),
+            "Smith".into(),
+            "alice@test.com".into(),
+            "555-0100".into(),
+        );
+        let customers: Vec<Customer> = ctx.db.customer().iter().collect();
+        assert_eq!(customers.len(), 1);
+        let c = &customers[0];
+        assert!(c.id.starts_with("cust_"));
+        assert_eq!(c.first_name, "Alice");
+        assert_eq!(c.last_name, "Smith");
+        assert_eq!(c.email, "alice@test.com");
+        assert_eq!(c.tenant_id, "tenant_test");
+        assert!(c.created_at > 0);
+    }
+
+    #[test]
+    fn test_update_customer() {
+        let ctx = test_ctx();
+        create_customer(
+            &ctx,
+            "t".into(), "John".into(), "Doe".into(),
+            "john@test.com".into(), "555-0200".into(),
+        );
+        let c = ctx.db.customer().iter().next().unwrap();
+        let id = c.id.clone();
+        update_customer(
+            &ctx,
+            id.clone(),
+            "Johnny".into(),
+            "Doe".into(),
+            "johnny@test.com".into(),
+            "555-0300".into(),
+            String::new(), String::new(), String::new(),
+            String::new(), String::new(), String::new(),
+            String::new(), String::new(), String::new(),
+        );
+        let updated = ctx.db.customer().id().find(&id).unwrap();
+        assert_eq!(updated.first_name, "Johnny");
+        assert_eq!(updated.email, "johnny@test.com");
+    }
+
+    #[test]
+    fn test_set_customer_password() {
+        let ctx = test_ctx();
+        create_customer(
+            &ctx,
+            "t".into(), "Test".into(), "User".into(),
+            "test@test.com".into(), "555-0400".into(),
+        );
+        let c = ctx.db.customer().iter().next().unwrap();
+        let id = c.id.clone();
+        set_customer_password(&ctx, id.clone(), "hashed_pw".into());
+        let updated = ctx.db.customer().id().find(&id).unwrap();
+        assert_eq!(updated.portal_password_hash, "hashed_pw");
+    }
+
+    #[test]
+    fn test_delete_customer() {
+        let ctx = test_ctx();
+        create_customer(
+            &ctx,
+            "t".into(), "Del".into(), "Ete".into(),
+            "del@test.com".into(), "555-0500".into(),
+        );
+        let id = ctx.db.customer().iter().next().unwrap().id.clone();
+        delete_customer(&ctx, id);
+        assert_eq!(ctx.db.customer().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_delete_nonexistent_customer_doesnt_panic() {
+        let ctx = test_ctx();
+        delete_customer(&ctx, "nonexistent".into());
+        assert_eq!(ctx.db.customer().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_update_nonexistent_customer_doesnt_panic() {
+        let ctx = test_ctx();
+        update_customer(
+            &ctx,
+            "nonexistent".into(),
+            "Nope".into(), "Nada".into(),
+            "nope@test.com".into(), "555-0000".into(),
+            String::new(), String::new(), String::new(),
+            String::new(), String::new(), String::new(),
+            String::new(), String::new(), String::new(),
+        );
+        assert_eq!(ctx.db.customer().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_import_customer() {
+        let ctx = test_ctx();
+        import_customer(
+            &ctx,
+            "t_imp".into(),
+            "cust_imported".into(),
+            "Imported".into(),
+            "User".into(),
+            "imported@test.com".into(),
+            "555-0600".into(),
+            String::new(), String::new(), String::new(),
+            String::new(), String::new(), String::new(),
+            String::new(), String::new(), String::new(),
+            1000, 1000,
+        );
+        let c = ctx.db.customer().id().find(&"cust_imported".to_string()).unwrap();
+        assert_eq!(c.first_name, "Imported");
+        assert_eq!(c.tenant_id, "t_imp");
+    }
+
+    #[test]
+    fn test_tenant_isolation() {
+        let ctx = test_ctx();
+        create_customer(
+            &ctx, "tenant_a".into(), "Alice".into(), "A".into(),
+            "alice@a.com".into(), "555-1001".into(),
+        );
+        create_customer(
+            &ctx, "tenant_b".into(), "Bob".into(), "B".into(),
+            "bob@b.com".into(), "555-1002".into(),
+        );
+        let tenant_a_only: Vec<Customer> = ctx.db.customer().iter().filter(|c| c.tenant_id == "tenant_a").collect();
+        assert_eq!(tenant_a_only.len(), 1);
+        assert_eq!(tenant_a_only[0].email, "alice@a.com");
+    }
+}

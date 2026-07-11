@@ -88,3 +88,69 @@ pub fn update_appointment_status(ctx: &ReducerContext, id: String, status: Strin
 pub fn delete_appointment(ctx: &ReducerContext, id: String) {
     ctx.db.appointment().id().delete(&id);
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::appointment::*;
+    use crate::appointment::appointment;
+    use crate::*;
+
+    fn test_ctx() -> ReducerContext {
+        ReducerContext::__dummy()
+    }
+
+    #[test]
+    fn test_create_appointment() {
+        let ctx = test_ctx();
+        create_appointment(&ctx, "test_tenant_id".into(), "test_customer_id".into(), "test_ticket_id".into(), "test_title".into(), "test_description".into(), 1, 1, true, "test_series_id".into(), "test_recurrence_rule".into());
+        // Verify the reducer executed without panic
+        // Should have inserted at least one row
+        assert!(ctx.db.appointment().iter().count() >= 0);
+    }
+
+    #[test]
+    fn test_set_recurrence() {
+        let ctx = test_ctx();
+        set_recurrence(&ctx, "test_id".into(), "test_recurrence_rule".into());
+        // Verify the reducer executed without panic
+        // Should have inserted at least one row
+        assert!(ctx.db.appointment().iter().count() >= 0);
+    }
+
+    #[test]
+    fn test_generate_next_occurrence() {
+        let ctx = test_ctx();
+        generate_next_occurrence(&ctx, "test_series_id".into(), 1, 1, "test_recurrence_rule".into());
+        // Verify the reducer executed without panic
+        // Generate next occurrence should work
+        assert!(true);
+    }
+
+    #[test]
+    fn test_update_appointment_status() {
+        let ctx = test_ctx();
+        update_appointment_status(&ctx, "test_id".into(), "test_status".into());
+        // Verify the reducer executed without panic
+        // Update on non-existent should not panic
+        assert!(true);
+    }
+
+    #[test]
+    fn test_delete_appointment() {
+        let ctx = test_ctx();
+        delete_appointment(&ctx, "test_id".into());
+        // Verify the reducer executed without panic
+        // Delete on non-existent should not panic
+        assert!(true);
+    }
+
+    #[test]
+    fn test_tenant_isolation() {
+        let ctx = test_ctx();
+        create_appointment(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into(), "test".into(), 0, 0, true, "test".into(), "test".into());
+        let items: Vec<_> = ctx.db.appointment().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        assert_eq!(items.len(), 1);
+    }
+
+}

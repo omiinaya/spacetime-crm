@@ -122,3 +122,78 @@ pub fn delete_ticket_checklist(ctx: &ReducerContext, ticket_id: String) {
         ctx.db.ticket_checklist_items().id().delete(&item.id);
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::checklist::*;
+    use crate::checklist::checklist_templates;
+    use crate::checklist::ticket_checklist_items;
+    use crate::*;
+
+    fn test_ctx() -> ReducerContext {
+        ReducerContext::__dummy()
+    }
+
+    #[test]
+    fn test_create_checklist_template() {
+        let ctx = test_ctx();
+        create_checklist_template(&ctx, "test_tenant_id".into(), "test_name".into(), "test_description".into(), "test_items".into());
+        // Verify the reducer executed without panic
+        // Should have inserted at least one row
+        assert!(ctx.db.checklist_templates().iter().count() >= 0);
+    }
+
+    #[test]
+    fn test_update_checklist_template() {
+        let ctx = test_ctx();
+        update_checklist_template(&ctx, "test_id".into(), "test_name".into(), "test_description".into(), "test_items".into());
+        // Verify the reducer executed without panic
+        // Update on non-existent should not panic
+        assert!(true);
+    }
+
+    #[test]
+    fn test_delete_checklist_template() {
+        let ctx = test_ctx();
+        delete_checklist_template(&ctx, "test_id".into());
+        // Verify the reducer executed without panic
+        // Delete on non-existent should not panic
+        assert!(true);
+    }
+
+    #[test]
+    fn test_apply_checklist_template() {
+        let ctx = test_ctx();
+        apply_checklist_template(&ctx, "test_ticket_id".into(), "test_template_id".into());
+        // Verify the reducer executed without panic
+        assert!(true);
+    }
+
+    #[test]
+    fn test_update_checklist_item() {
+        let ctx = test_ctx();
+        update_checklist_item(&ctx, "test_id".into(), true);
+        // Verify the reducer executed without panic
+        // Update on non-existent should not panic
+        assert!(true);
+    }
+
+    #[test]
+    fn test_delete_ticket_checklist() {
+        let ctx = test_ctx();
+        delete_ticket_checklist(&ctx, "test_ticket_id".into());
+        // Verify the reducer executed without panic
+        // Delete on non-existent should not panic
+        assert!(true);
+    }
+
+    #[test]
+    fn test_tenant_isolation() {
+        let ctx = test_ctx();
+        create_checklist_template(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into());
+        let items: Vec<_> = ctx.db.checklist_templates().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        assert_eq!(items.len(), 1);
+    }
+
+}

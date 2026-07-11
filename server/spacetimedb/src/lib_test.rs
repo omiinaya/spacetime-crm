@@ -260,4 +260,325 @@ mod tests {
         let note = ctx.db.ticket_note().iter().next().unwrap();
         assert_eq!(note.tenant_id, "t_derived");
     }
+
+    // ──────────────────────────────────────────────
+    //  RECURRING INVOICE RULES
+    // ──────────────────────────────────────────────
+
+    #[test]
+    fn test_create_recurring_invoice_rule() {
+        let ctx = test_ctx();
+        create_recurring_invoice_rule(
+            &ctx,
+            "t_rinv".into(), "Monthly".into(), "monthly".into(), 1, 30,
+            r#"[{"item_type":"labor","description":"Support","quantity":1,"unit_price":100}]"#.into(),
+            1000000,
+        );
+        use crate::recurring_invoice_rules;
+        let rules: Vec<RecurringInvoiceRule> = ctx.db.recurring_invoice_rules().iter().collect();
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].name, "Monthly");
+        assert_eq!(rules[0].frequency, "monthly");
+    }
+
+    #[test]
+    fn test_update_recurring_invoice_rule() {
+        let ctx = test_ctx();
+        create_recurring_invoice_rule(
+            &ctx, "t".into(), "Original".into(), "weekly".into(), 1, 14,
+            "[]".into(), 0,
+        );
+        use crate::recurring_invoice_rules;
+        let rule = ctx.db.recurring_invoice_rules().iter().next().unwrap();
+        let id = rule.id.clone();
+        update_recurring_invoice_rule(
+            &ctx, id.clone(), "Updated".into(), "monthly".into(), 2, 30,
+            "[]".into(), 2000000, "active".into(),
+        );
+        let updated = ctx.db.recurring_invoice_rules().id().find(&id).unwrap();
+        assert_eq!(updated.name, "Updated");
+        assert_eq!(updated.frequency, "monthly");
+    }
+
+    #[test]
+    fn test_delete_nonexistent_recurring_invoice_rule_doesnt_panic() {
+        let ctx = test_ctx();
+        delete_recurring_invoice_rule(&ctx, "nonexistent".into());
+        use crate::recurring_invoice_rules;
+        assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────
+    //  SAVED PAYMENT METHODS
+    // ──────────────────────────────────────────────
+
+    #[test]
+    fn test_save_payment_method() {
+        let ctx = test_ctx();
+        save_payment_method(
+            &ctx,
+            "t_pm".into(), "cust_1".into(),
+            "pm_stripe123".into(), "Visa".into(), "4242".into(), 12, 2026,
+        );
+        use crate::saved_payment_methods;
+        let methods: Vec<SavedPaymentMethod> = ctx.db.saved_payment_methods().iter().collect();
+        assert_eq!(methods.len(), 1);
+        assert_eq!(methods[0].brand, "Visa");
+        assert!(methods[0].is_default); // first method is default
+    }
+
+    #[test]
+    fn test_set_default_payment_method() {
+        let ctx = test_ctx();
+        save_payment_method(&ctx, "t".into(), "cust_1".into(), "pm1".into(), "Visa".into(), "4242".into(), 12, 2026);
+        save_payment_method(&ctx, "t".into(), "cust_1".into(), "pm2".into(), "MC".into(), "5555".into(), 6, 2025);
+        use crate::saved_payment_methods;
+        let first = ctx.db.saved_payment_methods().iter().next().unwrap();
+        let id = first.id.clone();
+        set_default_payment_method(&ctx, id.clone(), "cust_1".into());
+        let updated = ctx.db.saved_payment_methods().id().find(&id).unwrap();
+        assert!(updated.is_default);
+    }
+
+    #[test]
+    fn test_delete_nonexistent_payment_method_doesnt_panic() {
+        let ctx = test_ctx();
+        delete_payment_method(&ctx, "nonexistent".into());
+        use crate::saved_payment_methods;
+        assert_eq!(ctx.db.saved_payment_methods().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────
+    //  SCHEDULED REPORTS
+    // ──────────────────────────────────────────────
+
+    #[test]
+    fn test_create_scheduled_report() {
+        let ctx = test_ctx();
+        create_scheduled_report(
+            &ctx,
+            "t_rep".into(), "Weekly Report".into(), "tickets".into(),
+            "weekly".into(), "{}".into(), "[]".into(), "{}".into(), 1000000,
+        );
+        use crate::scheduled_reports;
+        let reports: Vec<ScheduledReport> = ctx.db.scheduled_reports().iter().collect();
+        assert_eq!(reports.len(), 1);
+        assert_eq!(reports[0].name, "Weekly Report");
+    }
+
+    #[test]
+    fn test_update_scheduled_report() {
+        let ctx = test_ctx();
+        create_scheduled_report(&ctx, "t".into(), "Old".into(), "tickets".into(), "daily".into(), "{}".into(), "[]".into(), "{}".into(), 0);
+        use crate::scheduled_reports;
+        let report = ctx.db.scheduled_reports().iter().next().unwrap();
+        let id = report.id.clone();
+        update_scheduled_report(&ctx, id.clone(), "New".into(), "invoices".into(), "weekly".into(), "{}".into(), "[]".into(), "{}".into(), 2000000, true);
+        let updated = ctx.db.scheduled_reports().id().find(&id).unwrap();
+        assert_eq!(updated.name, "New");
+        assert_eq!(updated.report_type, "invoices");
+    }
+
+    #[test]
+    fn test_mark_report_run() {
+        let ctx = test_ctx();
+        create_scheduled_report(&ctx, "t".into(), "R".into(), "tickets".into(), "daily".into(), "{}".into(), "[]".into(), "{}".into(), 0);
+        use crate::scheduled_reports;
+        let report = ctx.db.scheduled_reports().iter().next().unwrap();
+        let id = report.id.clone();
+        mark_report_run(&ctx, id.clone(), 5000000);
+        let updated = ctx.db.scheduled_reports().id().find(&id).unwrap();
+        assert_eq!(updated.next_run_at, 5000000);
+        assert_eq!(updated.last_run_at, 5000000);
+    }
+
+    #[test]
+    fn test_mark_report_error() {
+        let ctx = test_ctx();
+        create_scheduled_report(&ctx, "t".into(), "R".into(), "tickets".into(), "daily".into(), "{}".into(), "[]".into(), "{}".into(), 0);
+        use crate::scheduled_reports;
+        let report = ctx.db.scheduled_reports().iter().next().unwrap();
+        let id = report.id.clone();
+        mark_report_error(&ctx, id.clone(), "Connection failed".into());
+        let updated = ctx.db.scheduled_reports().id().find(&id).unwrap();
+        assert_eq!(updated.last_error, "Connection failed");
+    }
+
+    #[test]
+    fn test_delete_nonexistent_scheduled_report_doesnt_panic() {
+        let ctx = test_ctx();
+        delete_scheduled_report(&ctx, "nonexistent".into());
+        use crate::scheduled_reports;
+        assert_eq!(ctx.db.scheduled_reports().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────
+    //  INVOICES
+    // ──────────────────────────────────────────────
+
+    #[test]
+    fn test_create_invoice() {
+        let ctx = test_ctx();
+        create_invoice(
+            &ctx,
+            "t_inv".into(), "cust_1".into(), "tkt_1".into(),
+            "Test invoice".into(), "Net 30".into(), 2000000, "USD".into(),
+        );
+        use crate::invoices;
+        let invoices: Vec<Invoice> = ctx.db.invoices().iter().collect();
+        assert_eq!(invoices.len(), 1);
+        assert_eq!(invoices[0].status, "draft");
+        assert_eq!(invoices[0].currency, "USD");
+    }
+
+    #[test]
+    fn test_add_invoice_line_item() {
+        let ctx = test_ctx();
+        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        use crate::invoices;
+        let inv = ctx.db.invoices().iter().next().unwrap();
+        let inv_id = inv.id.clone();
+        add_invoice_line_item(&ctx, inv_id.clone(), "part".into(), "Screen repair".into(), 1.0, 50.0);
+        let items: Vec<InvoiceLineItem> = ctx.db.invoice_line_items().iter().filter(|i| i.invoice_id == inv_id).collect();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].description, "Screen repair");
+    }
+
+    #[test]
+    fn test_delete_invoice_line_item() {
+        let ctx = test_ctx();
+        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        use crate::invoices;
+        let inv = ctx.db.invoices().iter().next().unwrap();
+        let inv_id = inv.id.clone();
+        add_invoice_line_item(&ctx, inv_id.clone(), "part".into(), "Item".into(), 1.0, 10.0);
+        use crate::invoice_line_items;
+        let item = ctx.db.invoice_line_items().iter().next().unwrap();
+        let item_id = item.id.clone();
+        delete_invoice_line_item(&ctx, item_id);
+        assert_eq!(ctx.db.invoice_line_items().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_update_invoice_status() {
+        let ctx = test_ctx();
+        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        use crate::invoices;
+        let inv = ctx.db.invoices().iter().next().unwrap();
+        let id = inv.id.clone();
+        update_invoice_status(&ctx, id.clone(), "sent".into());
+        let updated = ctx.db.invoices().id().find(&id).unwrap();
+        assert_eq!(updated.status, "sent");
+    }
+
+    #[test]
+    fn test_set_invoice_tax_rate() {
+        let ctx = test_ctx();
+        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        use crate::invoices;
+        let inv = ctx.db.invoices().iter().next().unwrap();
+        let id = inv.id.clone();
+        set_invoice_tax_rate(&ctx, id.clone(), 8.5);
+        let updated = ctx.db.invoices().id().find(&id).unwrap();
+        assert_eq!(updated.tax_rate, 8.5);
+    }
+
+    #[test]
+    fn test_delete_invoice() {
+        let ctx = test_ctx();
+        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        use crate::invoices;
+        let inv = ctx.db.invoices().iter().next().unwrap();
+        let id = inv.id.clone();
+        delete_invoice(&ctx, id.clone());
+        assert_eq!(ctx.db.invoices().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_delete_nonexistent_invoice_doesnt_panic() {
+        let ctx = test_ctx();
+        delete_invoice(&ctx, "nonexistent".into());
+        use crate::invoices;
+        assert_eq!(ctx.db.invoices().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────
+    //  ESTIMATES
+    // ──────────────────────────────────────────────
+
+    #[test]
+    fn test_create_estimate() {
+        let ctx = test_ctx();
+        create_estimate(
+            &ctx,
+            "t_est".into(), "cust_1".into(), "tkt_1".into(),
+            "Test estimate".into(), 3000000, "USD".into(),
+        );
+        use crate::estimates;
+        let estimates: Vec<Estimate> = ctx.db.estimates().iter().collect();
+        assert_eq!(estimates.len(), 1);
+        assert_eq!(estimates[0].status, "draft");
+    }
+
+    #[test]
+    fn test_update_estimate_status() {
+        let ctx = test_ctx();
+        create_estimate(&ctx, "t".into(), "c".into(), "t".into(), "".into(), 0, "USD".into());
+        use crate::estimates;
+        let est = ctx.db.estimates().iter().next().unwrap();
+        let id = est.id.clone();
+        update_estimate_status(&ctx, id.clone(), "approved".into());
+        let updated = ctx.db.estimates().id().find(&id).unwrap();
+        assert_eq!(updated.status, "approved");
+    }
+
+    #[test]
+    fn test_add_estimate_line_item() {
+        let ctx = test_ctx();
+        create_estimate(&ctx, "t".into(), "c".into(), "t".into(), "".into(), 0, "USD".into());
+        use crate::estimates;
+        let est = ctx.db.estimates().iter().next().unwrap();
+        let est_id = est.id.clone();
+        add_estimate_line_item(&ctx, est_id.clone(), "labor".into(), "Diagnostic".into(), 1.0, 75.0);
+        let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == est_id).collect();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].description, "Diagnostic");
+    }
+
+    #[test]
+    fn test_delete_estimate() {
+        let ctx = test_ctx();
+        create_estimate(&ctx, "t".into(), "c".into(), "t".into(), "".into(), 0, "USD".into());
+        use crate::estimates;
+        let est = ctx.db.estimates().iter().next().unwrap();
+        let id = est.id.clone();
+        delete_estimate(&ctx, id.clone());
+        assert_eq!(ctx.db.estimates().iter().count(), 0);
+    }
+
+    // ──────────────────────────────────────────────
+    //  BOOKKEEPING SAFETY
+    // ──────────────────────────────────────────────
+
+    #[test]
+    fn test_mark_overdue_invoices_doesnt_panic() {
+        let ctx = test_ctx();
+        mark_overdue_invoices(&ctx);
+        assert!(true);
+    }
+
+    #[test]
+    fn test_generate_recurring_invoices_doesnt_panic() {
+        let ctx = test_ctx();
+        generate_recurring_invoices(&ctx);
+        assert!(true);
+    }
+
+    #[test]
+    fn test_convert_estimate_to_invoice_doesnt_panic_on_nonexistent() {
+        let ctx = test_ctx();
+        convert_estimate_to_invoice(&ctx, "nonexistent".into());
+        assert!(true);
+    }
+
 }

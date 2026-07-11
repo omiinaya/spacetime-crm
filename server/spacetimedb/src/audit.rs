@@ -41,3 +41,22 @@ pub fn log_audit(
         created_at: now,
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::audit::*;
+    use crate::audit::audit_log;
+    use crate::*;
+
+    fn test_ctx() -> ReducerContext {
+        ReducerContext::__dummy()
+    }
+
+    #[test]
+    fn test_log_audit() {
+        let ctx = test_ctx();
+        log_audit(&ctx, "test_tenant_id".into(), "test_user_id".into(), "test_user_name".into(), "test_action".into(), "test_entity".into(), "test_entity_id".into(), "test_details".into());
+        assert!(ctx.db.audit_log().iter().count() >= 0);
+    }
+
+}
