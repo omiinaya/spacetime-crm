@@ -67,7 +67,7 @@ export default function TenantsPage() {
   const loadMembers = async (tenantId: string) => {
     try {
       const data = await api.tenants.get(tenantId);
-      setMembers(data.tenant?.members || []);
+      setMembers((data.tenant as any)?.members || []);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -81,7 +81,7 @@ export default function TenantsPage() {
   const handleCreate = async () => {
     if (!newName.trim()) return;
     try {
-      await api.tenants.create({ name: newName.trim(), slug: newSlug.trim() || undefined });
+      await api.tenants.create({ name: newName.trim(), ...(newSlug.trim() ? { slug: newSlug.trim() } : {}) });
       toast.success("Tenant created");
       setShowCreate(false);
       setNewName("");
@@ -97,7 +97,7 @@ export default function TenantsPage() {
     try {
       await api.tenants.update(editTenant.id, {
         name: editName.trim(),
-        slug: editSlug.trim() || undefined,
+        ...(editSlug.trim() ? { slug: editSlug.trim() } : {}),
       });
       toast.success("Tenant updated");
       setEditTenant(null);

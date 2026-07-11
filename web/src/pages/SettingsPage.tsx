@@ -868,7 +868,7 @@ function PinSection() {
       setPin("");
       setConfirmPin("");
       setHasPin(true);
-    } catch (e: unknown) {
+    } catch (e: any) {
       toast.error(e.message || "Failed to set PIN");
     } finally {
       setBusy(false);
@@ -881,7 +881,7 @@ function PinSection() {
       await api.auth.setPin("");
       toast.success("POS PIN removed");
       setHasPin(false);
-    } catch (e: unknown) {
+    } catch (e: any) {
       toast.error(e.message || "Failed to remove PIN");
     } finally {
       setBusy(false);
@@ -994,7 +994,7 @@ function TwoFactorSection() {
       setSecret(data.secret);
       setProvisioningUri(data.provisioning_uri);
       setStep("verify");
-    } catch (e: unknown) {
+    } catch (e: any) {
       toast.error(e.message);
     } finally {
       setBusy(false);
@@ -1020,7 +1020,7 @@ function TwoFactorSection() {
       setStep("idle");
       setSecret("");
       setVerifyCode("");
-    } catch (e: unknown) {
+    } catch (e: any) {
       toast.error(e.message);
     } finally {
       setBusy(false);
@@ -1045,7 +1045,7 @@ function TwoFactorSection() {
       setIsEnrolled(false);
       setShowDisable(false);
       setDisableCode("");
-    } catch (e: unknown) {
+    } catch (e: any) {
       toast.error(e.message);
     } finally {
       setBusy(false);

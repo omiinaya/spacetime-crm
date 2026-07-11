@@ -94,7 +94,7 @@ export default function PosPage() {
   const { data: searchResults } = useQuery({
     queryKey: ["pos-products", searchQuery],
     queryFn: () =>
-      api.products.list(searchQuery, 0, 20).then((r) => r.products),
+      api.products.list(String(searchQuery), undefined, 0, 20).then((r) => r.products),
     enabled: searchQuery.length >= 1,
   });
 
@@ -250,7 +250,7 @@ export default function PosPage() {
           addToCart(res.product);
         }).catch(() => {
           // Not found by exact barcode — fall back to SKU search
-          api.products.list(barcode, 0, 5).then((res) => {
+          api.products.list(String(barcode), undefined, 0, 5).then((res) => {
             const found = res.products.find((p) => p.sku === barcode);
             if (found) {
               addToCart(found);

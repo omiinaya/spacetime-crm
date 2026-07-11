@@ -40,7 +40,7 @@ export default function EstimatesPage() {
     },
     select: (res) => {
       pag.setTotal(res.total);
-      return { estimates: res.estimates, customers: res.customers };
+      return { estimates: res.estimates, customers: res.customers, total: res.total };
     },
   });
 

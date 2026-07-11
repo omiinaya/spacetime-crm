@@ -38,7 +38,7 @@ function clearToken() {
 
 function decodeUser(token: string): AuthUser | null {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const payload = JSON.parse(atob(token.split(".")[1] ?? ""));
     return { id: payload.sub, name: payload.name, email: payload.email, role: payload.role, tenant_id: payload.tenant_id || "" };
   } catch {
     return null;

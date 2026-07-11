@@ -1,4 +1,5 @@
 import React from 'react';
+import type { PieLabelRenderProps } from "recharts";
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
@@ -215,10 +216,10 @@ export default function DashboardPage({
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={(entry: {status: string; count: number}) => `${entry.status}: ${entry.count}`}
+                    label={(props: PieLabelRenderProps) => `${props.name}: ${props.value}`}
                   >
                     {reports.ticket_by_status.map((_, i) => (
-                      <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />
+                      <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length] ?? "#8884d8"} />
                     ))}
                   </Pie>
                   <Tooltip

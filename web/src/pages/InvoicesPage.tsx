@@ -341,7 +341,7 @@ export default function InvoicesPage() {
             <option value="overdue">Overdue</option>
             <option value="cancelled">Cancelled</option>
           </Select>
-                {selectedInv.discount_percent > 0 && <p className="text-sm text-muted-foreground">Discount: {selectedInv.discount_percent}%</p>}
+                {selectedInv && selectedInv.discount_percent > 0 && <p className="text-sm text-muted-foreground">Discount: {selectedInv.discount_percent}%</p>}
           <Button
             size="sm"
             onClick={() => bulkMutation.mutate()}

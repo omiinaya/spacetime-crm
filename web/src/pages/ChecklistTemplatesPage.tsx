@@ -28,7 +28,7 @@ function TemplateEditor({ template, onSave, onCancel }: TemplateEditorProps) {
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
   const updateItem = (i: number, label: string) => {
     const next = [...items];
-    next[i] = { ...next[i], label };
+    next[i] = { ...next[i], label, sort_order: next[i]?.sort_order ?? i };
     setItems(next);
   };
 
@@ -177,7 +177,7 @@ export default function ChecklistTemplatesPage() {
           <CardHeader><CardTitle className="text-sm">{editing ? "Edit Template" : "New Template"}</CardTitle></CardHeader>
           <CardContent>
             <TemplateEditor
-              template={editing || undefined}
+              {...(editing ? { template: editing } : {})}
               onSave={editing ? handleUpdate : handleCreate}
               onCancel={() => { setShowEditor(false); setEditing(null); }}
             />

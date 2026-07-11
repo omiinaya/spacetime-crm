@@ -59,11 +59,11 @@ type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 interface NavItem {
   id: PageId;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<any>;
   badge?: () => number;
 }
 
-const navItems: NavItem[] = [
+const navItems: { id: PageId; label: string; icon: React.ComponentType<any>; badge?: () => number; }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "customers", label: "Customers", icon: Users },
   { id: "map", label: "Map", icon: Map },
@@ -89,7 +89,7 @@ const navItems: NavItem[] = [
 
 // ── Portal App ──
 
-const portalTabs: { id: PortalPage; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const portalTabs: { id: PortalPage; label: string; icon: React.ComponentType<any> }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "tickets", label: "Tickets", icon: Ticket },
   { id: "invoices", label: "Invoices", icon: FileText },
