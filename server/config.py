@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     cors_origin: str = "http://localhost:5185"
     jwt_secret: str = "set-via-environment-variable"
     jwt_algorithm: str = "HS256"
-    jwt_expire_hours: int = 24
+    jwt_expire_hours: int = 8
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     app_url: str = "http://localhost:8723"
