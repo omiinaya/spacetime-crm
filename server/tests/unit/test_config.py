@@ -31,24 +31,25 @@ class TestSettings:
         with patch.dict(os.environ, {}, clear=True):
             from config import Settings
             s = Settings()
-            assert s.stdb_sql_url == "http://localhost:3001/v1/database/spacetime-crm/sql"
-            assert s.stdb_call_url == "http://localhost:3001/v1/database/spacetime-crm/call"
+            expected_sql = "http://localhost:3001/v1/database/spacetime-crm/sql"
+            expected_call = "http://localhost:3001/v1/database/spacetime-crm/call"
+            assert s.stdb_sql_url == expected_sql
+            assert s.stdb_call_url == expected_call
 
     def test_stdb_urls_custom(self):
-        with patch.dict(os.environ, {
-            "STDB_HOST": "stdb.example.com",
-            "STDB_PORT": "5432",
-            "STDB_DB": "testdb",
-        }, clear=True):
+        env = {"STDB_HOST": "stdb.example.com", "STDB_PORT": "5432", "STDB_DB": "testdb"}
+        with patch.dict(os.environ, env, clear=True):
             from config import Settings
             s = Settings()
-            assert s.stdb_sql_url == "http://stdb.example.com:5432/v1/database/testdb/sql"
+            expected = "http://stdb.example.com:5432/v1/database/testdb/sql"
+            assert s.stdb_sql_url == expected
 
     def test_jwt_secret_env(self):
-        with patch.dict(os.environ, {"JWT_SECRET": "my-test-secret"  # pragma: allowlist secret}, clear=True):
+        env = {"JWT_SECRET": "my-test-secret"}
+        with patch.dict(os.environ, env, clear=True):
             from config import Settings
             s = Settings()
-            assert s.jwt_secret == "my-test-secret"  # pragma: allowlist secret
+            assert s.jwt_secret == "my-test-secret"
 
     def test_server_port_env(self):
         with patch.dict(os.environ, {"SERVER_PORT": "9999"}, clear=True):
@@ -63,11 +64,15 @@ class TestSettings:
             assert s.cors_origin == "http://example.com"
 
     def test_stripe_secret_env(self):
-        with patch.dict(os.environ, {
-            "STRIPE_SECRET_KEY": "sk_test_123"  # pragma: allowlist secret,
-            "STRIPE_WEBHOOK_SECRET": "whsec_456"  # pragma: allowlist secret,
-        }, clear=True):
+        env = {"STRIPE_SECRET_KEY": "sk_test_123", "STRIPE_WEBHOOK_SECRET": "whsec_456"}
+        with patch.dict(os.environ, env, clear=True):
             from config import Settings
             s = Settings()
-            assert s.stripe_secret_key == "sk_test_123"  # pragma: allowlist secret
-            assert s.stripe_webhook_secret == "whsec_456"  # pragma: allowlist secret
+            assert s.stripe_secret_key == "sk_test_123"
+            assert s.stripe_webhook_secret == "whsec_456"
+
+    def test_app_url_env(self):
+        with patch.dict(os.environ, {"APP_URL": "https://myapp.example.com"}, clear=True):
+            from config import Settings
+            s = Settings()
+            assert s.app_url == "https://myapp.example.com"
