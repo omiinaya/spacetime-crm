@@ -1,5 +1,5 @@
 #!/bin/sh
-# Pre-commit hook — run lint checks before every commit
+# Pre-commit hook — run lint and secret checks before every commit
 # Installed via: make setup-git-hooks
 
 echo "🔍 Running pre-commit checks..."
@@ -22,8 +22,25 @@ if [ ! -f AGENTS.md ]; then
 fi
 
 # Check for debug artifacts
-if git diff --cached --name-only | grep -q '\.only\|console\.log\|dbg!'; then
+if git diff --cached --name-only | grep -q '\.only\|console\.log\|dbg!'; then
   echo "⚠️  WARNING: Found possible debug artifacts (.only, console.log, dbg!)"
+fi
+
+# ── Secret scanning ──────────────────────────────────────────
+if command -v ~/.local/bin/detect-secrets-hook > /dev/null 2>&1; then
+  echo "  Running secret scan..."
+  BASELINE_FLAG=""
+  if [ -f .secrets.baseline ]; then
+    BASELINE_FLAG="--baseline .secrets.baseline"
+  fi
+  FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
+  if [ -n "$FILES" ]; then
+    if ! ~/.local/bin/detect-secrets-hook --no-verify $BASELINE_FLAG --exclude-files '.*\.venv/.*' --exclude-files '.*node_modules/.*' --exclude-files '.*target/.*' --exclude-files '.*\.coverage' --exclude-files '.*\.secrets.baseline' --exclude-files '.*\.pytest_cache/.*' $FILES 2>/dev/null; then
+      echo "❌ Secret(s) detected in staged files. Run: detect-secrets-hook --baseline .secrets.baseline $FILES"
+      exit 1
+    fi
+  fi
+  echo "  Secret scan passed"
 fi
 
 echo "✅ Pre-commit checks complete"
