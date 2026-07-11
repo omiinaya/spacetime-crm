@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app/server
 
 # Install Python dependencies including test deps
-COPY server/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY server/pyproject.toml server/requirements.lock .//
+RUN pip install --no-cache-dir -r requirements.lock
 
 # Install test dependencies
 RUN pip install --no-cache-dir \

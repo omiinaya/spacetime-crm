@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/server
-COPY server/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY server/pyproject.toml server/requirements.lock ./
+RUN pip install --no-cache-dir -r requirements.lock
 # Install Chromium for PDF generation (replaces weasyprint — smaller, modern CSS)
 RUN python3 -m playwright install chromium --with-deps 2>&1 | tail -5
 COPY server/ .
