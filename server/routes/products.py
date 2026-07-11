@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from helpers import (
+from helpers import _safe_id, (
     _sql, _paginated, _call, _sort, _log_audit,
     require_role, logger,
 )
@@ -96,7 +96,7 @@ async def update_product(product_id: str, body: ProductCreate, user: dict = Depe
 
 @router.get("/api/products/{product_id}/adjustments")
 async def get_product_adjustments(product_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{product_id}'")
+    rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{_safe_id(product_id)}'")
     return {"adjustments": _sort(rows, "created_at")}
 
 
@@ -160,8 +160,8 @@ async def transfer_stock(body: StockTransferRequest, user: dict = Depends(requir
     uid = user["id"]
 
     # Verify both products exist and belong to this tenant
-    src_rows = await _sql(f"SELECT * FROM products WHERE id = '{body.source_product_id}' AND tenant_id = '{tid}'")
-    dst_rows = await _sql(f"SELECT * FROM products WHERE id = '{body.destination_product_id}' AND tenant_id = '{tid}'")
+    src_rows = await _sql(f"SELECT * FROM products WHERE id = '{_safe_id(body.source_product_id)}' AND tenant_id = '{tid}'")
+    dst_rows = await _sql(f"SELECT * FROM products WHERE id = '{_safe_id(body.destination_product_id)}' AND tenant_id = '{tid}'")
     if not src_rows:
         raise HTTPException(404, "Source product not found")
     if not dst_rows:

@@ -20,7 +20,7 @@ from webhooks import fire_event as _fire_webhook_event, ALL_EVENTS as WEBHOOK_EV
 
 logger = logging.getLogger(__name__)
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer(auto_error=True)
 
 # ── Jinja2 template loader ────────────────────────────────────
 
@@ -225,7 +225,7 @@ def require_role(*roles: str):
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(401, "Invalid token: no subject")
-        rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+        rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user_id)}'")
         if not rows:
             raise HTTPException(401, "User not found")
         user = rows[0]
@@ -268,7 +268,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if not user_id:
         raise HTTPException(401, "Invalid token: no subject")
 
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user_id)}'")
     if not rows:
         raise HTTPException(401, "User not found")
     user = rows[0]

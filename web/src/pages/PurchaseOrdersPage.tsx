@@ -357,6 +357,12 @@ export default function PurchaseOrdersPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{poDetail.currency || "USD"} {poDetail.subtotal.toFixed(2)}</span>
+                  {poDetail.shipping_cost > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Shipping</span>
+                      <span>{poDetail.currency || "USD"} {poDetail.shipping_cost.toFixed(2)}</span>
+                    </div>
+                  )}
                   </div>
                   <div className="flex justify-between font-bold text-base border-t pt-1 mt-1">
                     <span>Total</span>

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from helpers import (
+from helpers import _safe_id, (
     _sql, _call, _log_audit, _get_webhook_subscriptions,
     require_role, get_current_user, logger,
 )
@@ -38,7 +38,7 @@ async def stripe_webhook(request: Request):
         stripe_session_id = session.get("id", "")
 
         if invoice_id and amount_total > 0:
-            inv_rows = await _sql(f"SELECT tenant_id FROM invoices WHERE id = '{invoice_id}'")
+            inv_rows = await _sql(f"SELECT tenant_id FROM invoices WHERE id = '{_safe_id(invoice_id)}'")
             tid = inv_rows[0]["tenant_id"] if inv_rows else ""
             await _call("record_payment", [
                 tid,
@@ -52,8 +52,8 @@ async def stripe_webhook(request: Request):
             ])
 
             # Update invoice status
-            payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
-            invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
+            payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
+            invs = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}'")
             if invs:
                 inv = invs[0]
                 total_paid = sum(float(p.get("amount", 0)) for p in payments)
@@ -133,7 +133,7 @@ async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_
 @router.post("/api/webhook-subscriptions/{sub_id}/test")
 async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
     """Send a test event to a specific subscription."""
-    rows = await _sql(f"SELECT * FROM webhook_subscriptions WHERE id = '{sub_id}'")
+    rows = await _sql(f"SELECT * FROM webhook_subscriptions WHERE id = '{_safe_id(sub_id)}'")
     if not rows:
         raise HTTPException(404, "Subscription not found")
     sub = rows[0]

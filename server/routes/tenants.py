@@ -113,7 +113,7 @@ async def migrate_to_tenant(body: TenantMigrate, user: dict = Depends(require_ro
         slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
     _safe_id(slug)
     await _call("create_tenant", [name, slug])
-    rows = await _sql(f"SELECT * FROM tenants WHERE slug = '{slug}'")
+    rows = await _sql(f"SELECT * FROM tenants WHERE slug = '{_safe_id(slug)}'")
     if not rows:
         raise HTTPException(500, "Failed to find created tenant")
     tid = rows[0]["id"]

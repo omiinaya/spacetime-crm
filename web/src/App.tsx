@@ -118,10 +118,10 @@ function PortalShell() {
         <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
           {(() => {
           switch (page) {
-            case "dashboard": return <PortalDashboard />;
-            case "tickets": return <PortalTicketsPage />;
-            case "invoices": return <PortalInvoicesPage />;
-            case "appointments": return <PortalAppointmentsPage />;
+            case "dashboard": return <ErrorBoundary><PortalDashboard /></ErrorBoundary>;
+            case "tickets": return <ErrorBoundary><PortalTicketsPage /></ErrorBoundary>;
+            case "invoices": return <ErrorBoundary><PortalInvoicesPage /></ErrorBoundary>;
+            case "appointments": return <ErrorBoundary><PortalAppointmentsPage /></ErrorBoundary>;
           }
         })()}
       </Suspense>
@@ -223,47 +223,47 @@ function AppShell() {
           {(() => {
           switch (page) {
             case "dashboard":
-              return <DashboardPage stats={stats} onNavigate={setPage} />;
+              return <ErrorBoundary><DashboardPage stats={stats} onNavigate={setPage} /></ErrorBoundary>;
             case "customers":
-              return <CustomersPage />;
+              return <ErrorBoundary><CustomersPage /></ErrorBoundary>;
             case "tickets":
-              return <TicketsPage />;
+              return <ErrorBoundary><TicketsPage /></ErrorBoundary>;
             case "invoices":
-              return <InvoicesPage />;
+              return <ErrorBoundary><InvoicesPage /></ErrorBoundary>;
             case "recurring-invoices":
-              return <RecurringInvoicesPage />;
+              return <ErrorBoundary><RecurringInvoicesPage /></ErrorBoundary>;
             case "payments":
-              return <PaymentsPage />;
+              return <ErrorBoundary><PaymentsPage /></ErrorBoundary>;
             case "payment-methods":
-              return <PaymentMethodsPage />;
+              return <ErrorBoundary><PaymentMethodsPage /></ErrorBoundary>;
             case "pos":
-              return <PosPage />;
+              return <ErrorBoundary><PosPage /></ErrorBoundary>;
             case "appointments":
-              return <AppointmentsPage />;
+              return <ErrorBoundary><AppointmentsPage /></ErrorBoundary>;
             case "products":
-              return <ProductsPage />;
+              return <ErrorBoundary><ProductsPage /></ErrorBoundary>;
             case "estimates":
-              return <EstimatesPage />;
+              return <ErrorBoundary><EstimatesPage /></ErrorBoundary>;
             case "purchase-orders":
-              return <PurchaseOrdersPage />;
+              return <ErrorBoundary><PurchaseOrdersPage /></ErrorBoundary>;
             case "import-export":
-              return <ImportExportPage />;
+              return <ErrorBoundary><ImportExportPage /></ErrorBoundary>;
             case "audit-log":
-              return <AuditLogPage />;
+              return <ErrorBoundary><AuditLogPage /></ErrorBoundary>;
             case "health":
-              return <HealthPage />;
+              return <ErrorBoundary><HealthPage /></ErrorBoundary>;
             case "custom-fields":
-              return <CustomFieldsPage />;
+              return <ErrorBoundary><CustomFieldsPage /></ErrorBoundary>;
             case "map":
-              return <MapPage />;
+              return <ErrorBoundary><MapPage /></ErrorBoundary>;
             case "checklist":
-              return <ChecklistTemplatesPage />;
+              return <ErrorBoundary><ChecklistTemplatesPage /></ErrorBoundary>;
             case "reports":
-              return <ReportsPage />;
+              return <ErrorBoundary><ReportsPage /></ErrorBoundary>;
             case "settings":
-              return <SettingsPage />;
+              return <ErrorBoundary><SettingsPage /></ErrorBoundary>;
             case "tenants":
-              return <TenantsPage />;
+              return <ErrorBoundary><TenantsPage /></ErrorBoundary>;
           }
         })()}
       </Suspense>

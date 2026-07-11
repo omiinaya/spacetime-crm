@@ -15,7 +15,7 @@
 |-------|-------|-------|:------------:|:----------:|:-------------:|
 | STDB Module (Rust) | 16 files | ~1,950 | 90% | 134 #[test] (4 files) | 0 major, 1 minor |
 | Backend API (Python) | 30 files | ~4,500 | 92% | 369 integration (28 files) | 2 major, 5 minor |
-| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit (13 files) | 3 major, 6 minor |
+| Frontend (TypeScript) | 45+ files | ~8,000 | 88% | 94 unit (13 files) | 1 major, 5 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
 | **Overall** | **~110 files** | **~20,000** | **~96%** | **597** | **~20 items** |
 
@@ -30,7 +30,7 @@ All core infrastructure complete. No gaps.
 - [x] React 18 + Vite 6 + TailwindCSS v4 + shadcn-style frontend
 - [x] Dark theme with localStorage persistence
 - [x] JWT auth (HS256) with role-based permissions (admin/tech/front_desk/customer)
-- [x] React.lazy() code-splitting (all 30 pages)
+- [x] React.lazy() code-splitting (all 29 pages)
 - [x] Route splitting: main.py 2,390→55 lines
 - [x] Pydantic input validation on all POST/PUT endpoints
 - [x] Pagination (offset/limit + total) on all 15 list endpoints
@@ -211,7 +211,7 @@ These are gaps between STDB table fields, Python API models, and frontend TypeSc
 
 | # | Page | Issue | Fix |
 |---|------|-------|-----|
-| 1 | PortalDashboard | No spinner while stats fetch | Add `loading` spinner |
+| 1 | PortalDashboard | No spinner while stats fetch | Fixed - Added loading spinner |
 
 ### 6D — UI bugs
 
@@ -428,7 +428,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
 | 1 | **9 hardcoded `localhost` URLs** in route files — will break portal link emails in production | 🔴 HIGH | ✅ **Fixed** — `f"{settings.app_url}/portal/"` in all 8 portal link routes (`5d1ec57`) |
-| 2 | **No ErrorBoundary wrapping** on any page — unhandled render error = blank screen | 🔴 HIGH | Add per-page ErrorBoundary |
+| 2 | **~~No ErrorBoundary wrapping~~** on any page — unhandled render error = blank screen | 🔴 HIGH | Fixed - ErrorBoundary wrapped on all 24 admin + portal pages |
 | 3 | **`Customer.portal_password_hash` exposed** — returned by SELECT * in every customer API response | 🔴 HIGH | ✅ **Fixed** — `_safe_customer()` helper strips it from all list endpoints (`5d1ec57`) |
 | 4 | **Test isolation** — tests share STDB state, no cleanup per session | 🔴 HIGH | Fresh DB per test session |
 | 5 | **No TLS/reverse-proxy config** — ⚠️ WAS: production deployment would serve HTTP directly | 🔴 HIGH | ✅ **Fixed** — nginx config with TLS + deploy script at `deploy/nginx/` |
@@ -518,10 +518,10 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 1. ~~**Fix 9 hardcoded `localhost:8723/portal/` URLs** — will break all portal links in production~~ ✅ Done (`5d1ec57`)
 2. ~~**Hide `portal_password_hash`** from customer API responses~~ ✅ Done (`5d1ec57`)
 3. ~~**Add TS interfaces** for Tenant, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition~~ ✅ Done (`320d2aa`)
-4. **Add missing empty/error states** on PaymentsPage, ProductsPage, PortalDashboard
+4. ~~**Add missing empty/error states** on PaymentsPage, ProductsPage, PortalDashboard~~ Done
 
 ### This sprint
-5. **Add ErrorBoundary** to each page
+5. ~~**Add ErrorBoundary** to each page~~ Done
 6. ~~**Add device_imei/device_password** to TicketCreate + Ticket TS interface~~ ✅ Done (`320d2aa`)
 7. ~~**Fix PaymentsPage currency display bug**~~ ✅ Done (`29c0544`)
 8. ~~**Add missing Pydantic models** for ScheduledReport, Invoice discount fields~~ ✅ Done (`320d2aa`)

@@ -5,7 +5,7 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from config import settings
-from helpers import (
+from helpers import _safe_id, (
     _sql, _call, require_role, get_current_user, logger,
 )
 from models import (
@@ -148,7 +148,7 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
     payload = _decode_temp_token(body.temp_token)
     user_id = payload["sub"]
 
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user_id)}'")
     if not rows:
         raise HTTPException(401, "User not found")
 
@@ -338,7 +338,7 @@ async def pos_login(request: Request, body: PosLoginRequest):
     if not pin.isdigit() or len(pin) < 4 or len(pin) > 10:
         raise HTTPException(400, "PIN must be 4–10 digits")
 
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user_id)}'")
     if not rows:
         raise HTTPException(401, "Invalid user ID or PIN")
 

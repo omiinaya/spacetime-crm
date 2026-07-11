@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
 
 from config import settings
-from helpers import (
+from helpers import _safe_id, (
     _sql, _call, _sort, _log_audit, _fire_webhook,
     _safe_customer, logger, security,
 )
@@ -45,7 +45,7 @@ async def get_current_customer(credentials: HTTPAuthorizationCredentials = Depen
     if not customer_id:
         raise HTTPException(401, "Invalid token: no subject")
 
-    rows = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
+    rows = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(customer_id)}'")
     if not rows:
         raise HTTPException(401, "Customer not found")
     return _safe_customer(rows[0])
@@ -156,11 +156,11 @@ async def portal_tickets(customer: dict = Depends(get_current_customer)):
 @router.get("/api/portal/tickets/{ticket_id}")
 async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_current_customer)):
     """Single ticket detail with notes (customer-owned only)."""
-    rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
         raise HTTPException(404, "Ticket not found")
     ticket = rows[0]
-    notes = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}' AND internal = false")
+    notes = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{_safe_id(ticket_id)}' AND internal = false")
     ticket["notes"] = _sort(notes, "created_at", desc=False)
     users = await _sql("SELECT * FROM user")
     user_map = {u["id"]: u["name"] for u in users}
@@ -171,7 +171,7 @@ async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_curr
 @router.post("/api/portal/tickets/{ticket_id}/notes")
 async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: dict = Depends(get_current_customer)):
     """Customer adds a note to their ticket."""
-    rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
         raise HTTPException(404, "Ticket not found")
     await _call("add_ticket_note", [
@@ -196,13 +196,13 @@ async def portal_invoices(customer: dict = Depends(get_current_customer)):
 @router.get("/api/portal/invoices/{invoice_id}")
 async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_current_customer)):
     """Single invoice detail with line items (customer-owned only)."""
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
-    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_safe_id(invoice_id)}'")
     inv["line_items"] = _sort(items, "sort_order", desc=False)
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
     inv["payments"] = _sort(payments, "created_at")
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     inv["total_paid"] = total_paid
@@ -220,7 +220,7 @@ async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depend
     amount = body.amount
     method = body.method
 
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
         raise HTTPException(404, "Invoice not found")
 
@@ -235,7 +235,7 @@ async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depend
         "USD",
     ])
 
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
     inv = rows[0]
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     inv_total = float(inv.get("total", 0))
@@ -290,7 +290,7 @@ async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, cust
     if not invoice_id:
         raise HTTPException(400, "invoice_id is required")
 
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
@@ -299,14 +299,14 @@ async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, cust
         raise HTTPException(400, f"Invoice is already {inv['status']}")
 
     total = float(inv.get("total", 0))
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     amount_due = round(total - total_paid, 2)
 
     if amount_due <= 0:
         raise HTTPException(400, "Invoice is already fully paid")
 
-    line_items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    line_items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_safe_id(invoice_id)}'")
     items_desc = "; ".join(f"{li.get('description', '')} x{li.get('quantity', 1)}" for li in line_items)
 
     result = await create_checkout_session(
@@ -349,7 +349,7 @@ async def portal_pay_with_saved_card(
     payment_method_id = body.payment_method_id
 
     # Verify invoice belongs to customer
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
@@ -366,7 +366,7 @@ async def portal_pay_with_saved_card(
 
     # Calculate amount due
     total = float(inv.get("total", 0))
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     amount_due = round(total - total_paid, 2)
 

@@ -5,7 +5,7 @@ import asyncio
 from fastapi import APIRouter, Depends
 
 from config import settings
-from helpers import (
+from helpers import _safe_id, (
     _sql, _paginated, _call, _log_audit, _fire_webhook,
     require_role, logger,
 )
@@ -66,7 +66,7 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
     ])
 
     async def _notify():
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(body.customer_id)}'")
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
             link = f"{settings.app_url}/portal/"
@@ -99,7 +99,7 @@ async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, 
 async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Generate the next occurrence of a recurring appointment series."""
     # Find the parent series
-    rows = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND id = '{body.series_id}' AND recurrence_rule != ''")
+    rows = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND id = '{_safe_id(body.series_id)}' AND recurrence_rule != ''")
     if not rows:
         return {"ok": False, "error": "Series not found"}
     parent = rows[0]
@@ -110,7 +110,7 @@ async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = De
         return {"ok": False, "error": f"Unknown recurrence rule: {rule}"}
 
     # Find the latest occurrence without ORDER BY (STDB limitation)
-    children = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{body.series_id}'")
+    children = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{_safe_id(body.series_id)}'")
 
     if children:
         # Manual sort — find the largest start_time

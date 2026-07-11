@@ -345,6 +345,7 @@ export default function TicketsPage() {
                   <option value="waiting_on_customer">Waiting on Customer</option>
                   <option value="resolved">Resolved</option>
                   <option value="closed">Closed</option>
+                </Select>
               <div className="flex gap-2 mt-2">
                   {selectedTicket.estimate_id && (
                     <a href={`/estimates/${selectedTicket.estimate_id}`} className="text-xs text-primary underline">Estimate #{selectedTicket.estimate_id}</a>

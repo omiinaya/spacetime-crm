@@ -44,7 +44,7 @@ export default function MapPage() {
     try {
       const res = await api.customers.geolocations.list();
       setLocations(res.locations);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message);
     } finally {
       setLoading(false);
@@ -58,7 +58,7 @@ export default function MapPage() {
     try {
       await api.customers.geolocations.geocodeAll();
       await loadLocations();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message);
     } finally {
       setGeocoding(false);
@@ -70,7 +70,7 @@ export default function MapPage() {
     try {
       await api.customers.geolocations.geocode(customerId);
       await loadLocations();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message);
     } finally {
       setGeocodingSingle(null);
