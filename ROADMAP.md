@@ -1,23 +1,33 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** | 2026-07-07 |
-| **Overall completeness:** | ~96% |
-| **Total endpoints:** | 99 API routes (25 route files) |
-| **Total STDB artifacts:** | 27 tables + 73 reducers |
-| **Total frontend pages:** | 22 admin + 3 auth + 5 portal = 30 pages |
-| **Total tests:** | 367 (273 backend + 94 frontend) |
+| **Last assessed:** | 2026-07-10 |
+| **Overall completeness:** | ~85% (down from 96%) |
+| **Total endpoints:** | 187 route decorators (~99 unique paths, 25 route files) |
+| **Total STDB artifacts:** | 31 tables + ~73 reducers + 4,737 lines Rust |
+| **Total frontend pages:** | 29 pages (22 admin + 3 auth + 4 portal) + DashboardPage |
+| **Total tests:** | 360 collected (47 backend pass, 94 frontend pass, 313 blocked) |
+| **⚠️ VERIFIED REALITY** | Test infra had 2 bugs that blocked 87% of backend suite. STDB database gone (upgrade crash).
 
 ---
 
-## 📊 Summary by Layer
+## 📊 Summary by Layer (VERIFIED ASSESSMENT)
 
 | Layer | Files | Lines | Completeness | Test Count | Anti-Patterns |
 |-------|-------|-------|:------------:|:----------:|:-------------:|
-| STDB Module (Rust) | 16 files | ~1,900 | 88% | ~200 #[cfg(test)] + container CI | 1 major, 3 minor |
-| Backend API (Python) | 30 files | ~4,500 | 92% | 273 integration | 2 major, 5 minor |
-| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit | 3 major, 6 minor |
-| Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
-| **Overall** | **~110 files** | **~20,000** | **~96%** | **367** | **~20 items** |
+| STDB Module (Rust) | 22 files | ~4,737 | 88% | ~200 #[cfg(test)] + container CI | 1 major, 3 minor |
+| Backend API (Python) | 39 files | ~6,000 | 90% | 360 integration (47 pass, 313 blocked) | 3 major, 7 minor |
+| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit (all pass) + 3 ts errors | 4 major, 8 minor |
+| Infra (Docker/scripts) | 15 files | ~500 | 70% | N/A | 5 gaps |
+| **Overall** | **~120 files** | **~20,000** | **~85%** | **360 total (141 verified passing)** | **~25 items** |
+
+### ⚠️ CRITICAL FINDINGS (discovered 2026-07-10)
+
+| # | Issue | Severity | Status |
+|---|-------|:--------:|:------:|
+| 1 | **STDB database `spacetime-crm` is GONE** — STDB upgraded 2.4.x→2.6.1, database identity mismatch, control-db empty. 7.5GB of replica data orphaned. Server crashes on restart due to identity mismatch. | 🔴 BLOCKER | Not fixed |
+| 2 | **Test infra: `_stdb_write()` calls reducer via SQL** — `set_user_password` is a STDB reducer, not a SQL function. SQL SELECT silently fails, 313/360 tests blocked. | 🔴 CRITICAL | ✅ **Fixed** — added `_stdb_call()` helper, fixed `create_customer` using fixture func instead of param |
+| 3 | **TS compile errors** — 3 errors: PosPage.tsx x2 (wrong param type after `category` added), TenantsPage.tsx (`members` missing from Tenant interface) | 🟡 MEDIUM | ❌ Not fixed |
+| 4 | **STDB WASM build OOM** — `cargo build --release --target wasm32-unknown-unknown` killed by SIGKILL (OOM). Can't publish new module versions. | 🔴 BLOCKER | ❌ Not fixed |
 
 ---
 
@@ -25,12 +35,12 @@
 
 All core infrastructure complete. No gaps.
 
-- [x] SpacetimeDB 2.4.1 module: 27 tables, 73 reducers
-- [x] FastAPI server on port 8723: 99 endpoints across 25 route files
+- [x] SpacetimeDB 2.4.1 module: **31 tables, ~73 reducers** (not 27 — tables in: customer, ticket, invoice, estimate, payment, appointment, product, purchase_order, user, tenant, inventory adjustment, tax_rate, audit, custom_field, customer_geolocation, checklist, webhook, sla_config, pos, and supporting types)
+- [x] FastAPI server on port 8723: **187 route decorators (~99 unique API paths)** across 25 route files
 - [x] React 18 + Vite 6 + TailwindCSS v4 + shadcn-style frontend
 - [x] Dark theme with localStorage persistence
 - [x] JWT auth (HS256) with role-based permissions (admin/tech/front_desk/customer)
-- [x] React.lazy() code-splitting (all 30 pages)
+- [x] React.lazy() code-splitting (29 pages — lazy-loaded)
 - [x] Route splitting: main.py 2,390→55 lines
 - [x] Pydantic input validation on all POST/PUT endpoints
 - [x] Pagination (offset/limit + total) on all 15 list endpoints
@@ -127,8 +137,8 @@ All core infrastructure complete. No gaps.
 - [x] Rate limiting (slowapi: 100/min default, 10/min auth)
 - [x] Password recovery (forgot + reset endpoints, email delivery)
 - [x] Input sanitization (HTML strip on all Pydantic models)
-- [x] CI/CD pipeline (GitHub Actions: STDB build, seed, test, lint)
-- [x] E2E tests (Playwright: 33 tests across 5 suites)
+- [⚠️] **CI/CD pipeline** (GitHub Actions: build STDB, seed, test, lint) — WOULD FAIL: test infra bugs + STDB upgrade incompatibility
+- [⚠️] **E2E tests** (Playwright: 33 tests across 5 suites) — CANNOT VERIFY: STDB database is down, required for full stack
 - [x] Port 8723 → vite build → nginx/gateway update flow
 - [x] Reverse-proxy + TLS config (nginx, self-signed cert, deploy script)
 - [x] Production docker-compose overrides (deploy/docker-compose.prod.yml: resource limits, nginx service)
@@ -138,9 +148,11 @@ All core infrastructure complete. No gaps.
 
 ## 🔴 PHASE 5: Field & Type Gaps (HIGH PRIORITY)
 
-These are gaps between STDB table fields, Python API models, and frontend TypeScript interfaces. All fixes are plain Python/TS changes — no STDB publish needed.
+These are gaps between STDB table fields, Python API models, and frontend TypeScript interfaces. The roadmap claims these are **DONE**, but **could not verify** because the STDB database is down and `npx tsc --noEmit` still has 3 errors (PosPage x2, TenantsPage). Remaining TS compile errors suggest the field mapping may still be incomplete.
 
 ### 5A — STDB fields missing from Frontend TypeScript (11 items)
+
+⚠️ **ROADMAP SAYS DONE** — Verify by checking `web/src/lib/api.ts` for the fields below:
 
 | # | Table | Missing TS Field | Impact |
 |---|-------|-----------------|--------|
@@ -401,17 +413,17 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 ---
 
-## 🧪 TESTING REPORT
+## 🧪 TESTING REPORT (VERIFIED 2026-07-10)
 
 | Area | Status | Details |
 |------|--------|---------|
-| Rust unit tests | ❌ 18 tests (compile-only) | 70 reducers, 27 tables — no runtime execution |
-| Python backend tests | ✅ 362 tests (27 files) | All 25 route + spec modules covered |
-| TypeScript frontend tests | ✅ 94 tests (13 suites) | UI components + 5 page tests |
-| E2E tests | ✅ 33 tests (5 suites) | Playwright: Nav, Dashboard, Customers, Invoices, Tickets |
-| CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test, lint |
+| Rust unit tests | ❌ 18 tests (compile-only) | Cannot build — OOM during `cargo build --target wasm32` |
+| Python backend tests | ⚠️ 362 test functions, **47 pass** | 30 openapi_spec + 13 sanitize + 4 health pass. 313 blocked by fixture bugs (2 now fixed). STDB database must exist to run remaining tests. |
+| TypeScript frontend tests | ✅ **94/94 pass** (13 suites) | Pagination, LoginPage, ForgotPassword, ResetPassword, ImportExport all pass |
+| E2E tests | ❌ **Cannot verify** | Playwright requires STDB + backend running. Database is down. |
+| CI/CD pipeline | ⚠️ GitHub Actions | Would fail — test infra bugs and STDB upgrade incompatible |
 
-### Test quality gaps
+### Test quality gaps (unchanged)
 - ❌ No negative tests for business logic (e.g. creating invoice without customer)
 - ❌ No concurrent/multi-user tests for tenant isolation
 - ❌ No performance/load tests
@@ -421,38 +433,43 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 ---
 
-## 🚨 Anti-Patterns & Technical Debt
+## 🚨 Anti-Patterns & Technical Debt (VERIFIED 2026-07-10)
 
 ### 🔴 HIGH
 
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
-| 1 | **9 hardcoded `localhost` URLs** in route files — will break portal link emails in production | 🔴 HIGH | ✅ **Fixed** — `f"{settings.app_url}/portal/"` in all 8 portal link routes (`5d1ec57`) |
-| 2 | **No ErrorBoundary wrapping** on any page — unhandled render error = blank screen | 🔴 HIGH | Add per-page ErrorBoundary |
-| 3 | **`Customer.portal_password_hash` exposed** — returned by SELECT * in every customer API response | 🔴 HIGH | ✅ **Fixed** — `_safe_customer()` helper strips it from all list endpoints (`5d1ec57`) |
-| 4 | **Test isolation** — tests share STDB state, no cleanup per session | 🔴 HIGH | Fresh DB per test session |
-| 5 | **No TLS/reverse-proxy config** — ⚠️ WAS: production deployment would serve HTTP directly | 🔴 HIGH | ✅ **Fixed** — nginx config with TLS + deploy script at `deploy/nginx/` |
+| 1 | **STDB 2.4.x → 2.6.1 upgrade BROKE database** — identity mismatch, control-db empty, 7.5GB replicas orphaned | 🔴 BLOCKER | Restore from STDB backup OR reseed with `scripts/reseed.sh` after fresh publish OR rollback to STDB 2.4.1 |
+| 2 | **WASM build OOM** — `cargo build --release --target wasm32-unknown-unknown` always SIGKILL'd. Cannot publish module updates. | 🔴 BLOCKER | Reduce memory (less deps, optimize build) OR build on another machine. Current workaround: use pre-built `.opt.wasm` from Jul 6. |
+| 3 | **No ErrorBoundary wrapping** on any page — unhandled render error = blank screen | 🔴 HIGH | Add per-page ErrorBoundary |
+| 4 | **Test isolation** — tests share STDB state, no fresh DB per run. Partially fixed with session-level isolation but still fragile. | 🔴 HIGH | Container-based isolated DB per run (docker-compose.test.yml exists) |
+| 5 | **9 bare `except Exception: pass`** in route files — auth.py (6), customers.py (1), invoices.py (1), health.py (1). Silently swallow errors. | 🟡 MEDIUM | Log errors before swallowing |
 
 ### 🟡 MEDIUM
 
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
 | 6 | **Missing empty states** on PaymentsPage, ProductsPage, EstimatesPage | 🟡 MEDIUM | 15 min |
-| 7 | **Missing error states** on PortalDashboard, AuditLogPage | 🟡 MEDIUM | 20 min |
-| 8 | **11 TypeScript `any` files** in catch blocks and API response shapes | 🟡 MEDIUM | 30 min |
-|| 9 | **`UserSettings` table has no API or UI** — dead code | 🟡 MEDIUM | ✅ **Done** — API + UI + tests implemented (`cyber-elf/task_f7002a184d824426_`) |
-|| 10 | **`User.pin` field unused** — dead field in STDB | 🟡 MEDIUM | ✅ **Done** — POS PIN login with bcrypt-hashed PIN implemented (7E) |
+| 7 | **Missing error states** on PortalDashboard (empty catch), AuditLogPage (silent "No entries") | 🟡 MEDIUM | 20 min |
+| 8 | **~30+ `catch (e: any)`** in 18 TS files across the frontend | 🟡 MEDIUM | 30 min |
+| 9 | **5x `console.error()` on ReportsPage** — should use `toast.error()` | 🟢 LOW | 5 min |
+| 10 | **PaymentsPage `form.currency` bug** — displays form's currency instead of each payment's currency | 🟢 LOW | 5 min |
+| 11 | **`BarcodeDetector` API** may not exist on all browsers | 🟢 LOW | Wrap in feature check |
+| 12 | **TS compile errors** — PosPage.tsx x2 (wrong params), TenantsPage.tsx (missing `members`) | 🟡 MEDIUM | 5 min |
 
 ### 🟢 LOW
 
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
-| 11 | **Inline lazy imports** in 3 route files (from mail/sms inside function body) | 🟢 LOW | 10 min |
-| 12 | **No Dependabot config** | 🟢 LOW | 5 min |
-| 13 | **No linter config files** (ruff.toml, .prettierrc, .editorconfig, .nvmrc) | 🟢 LOW | 10 min |
-| 14 | **Docker images use latest tags** (spacetimedb:latest, node:22-alpine) | 🟢 LOW | 5 min |
-| 15 | **`.dockerignore` is thin** — excludes too little from build context | 🟢 LOW | 5 min |
-| 16 | **No structured logging** — stdout is plain text | 🟢 LOW | 15 min |
+| 13 | **No Dependabot config** | 🟢 LOW | 5 min |
+| 14 | **No linter config files** (ruff.toml, .prettierrc, .editorconfig, .nvmrc) | 🟢 LOW | 10 min |
+| 15 | **Docker images use latest tags** (spacetimedb:latest, node:22-alpine) | 🟢 LOW | 5 min |
+| 16 | **`.dockerignore` is thin** — excludes too little from build context | 🟢 LOW | 5 min |
+| 17 | **No structured logging** — stdout is plain text | 🟢 LOW | 15 min |
+| 18 | **`_sql()` uses f-strings** — SQL injection risk mitigated by `_sql_t()` tenant_id format check but f-strings with user data are still risky | 🟢 LOW | Parameterized queries or ORM |
+| 19 | **`SELECT * FROM` in every query** — pulls unnecessary columns. `portal_password_hash` was exposed this way (now fixed). | 🟢 LOW | Explicit column lists |
+| 20 | **No `ORDER BY` support** in `_paginated()` (STDB limitation) — results sorted in Python memory | 🟢 LOW | Acceptable STDB workaround |
+| 21 | **`@ts-expect-error` on MapPage** — Leaflet default icon fix, fragile | 🟢 LOW | Proper type declaration |
 
 ---
 
@@ -479,7 +496,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Repair checklists | ✅ Complete | Templates + apply to ticket |
 | Barcode scanning | ✅ Complete | Camera + manual lookup + labels |
 | Data import/export | ✅ CSV | CSV only — no XLSX/JSON |
-| Multi-tenant | ✅ Complete | 27 tables scoped |
+|| Multi-tenant | ✅ Complete | 31 tables scoped with `tenant_id` |
 | POS / counter sale | ✅ Complete | Kiosk with cart, payment, receipt, refund |
 | Invoice email delivery | ✅ Complete | Single + batch + queue status |
 | Multi-currency | ✅ Foundation | On entities + API, not in STDB reducers |
@@ -502,33 +519,33 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | Phase | Items | Hours | Priority |
 |-------|-------|:-----:|:--------:|
-| **5: Field & Type Gaps** | 11 TS fields, 7 whole-table types, 10 API models | **✅ DONE** | ✅ DONE |
+| **🔴 Fix STDB database** | Restore STDB 2.4.x or reseed. Identity mismatch recovery. | **~2h** | 🔴 BLOCKER |
+| **🔴 Fix WASM build OOM** | Reduce deps, swap space, or build externally | **~1h** | 🔴 BLOCKER |
+|| **5: Field & Type Gaps** | 11 TS fields, 7 whole-table types, 10 API models | **⚠️ CLAIMED DONE (not verified)** | 🟡 MEDIUM |
 | **6: UX Gaps** | 4 error states, 3 empty states, 1 loading state, 2 bugs, TS `any` cleanup | **~2h** | 🟡 MEDIUM |
-| **7: Code Quality** | 9 hardcoded URLs, inline imports, password hash leak, dead code, test isolation | **~3h** | 🔴 HIGH |
+| **7: Code Quality** | ErrorBoundary, except blocks, TS errors, structured logging | **~3h** | 🔴 HIGH |
 | **8: Feature Additions** | ~15 small features + ~9 larger features | **~15h** | 🟢 LOW |
-|| **9: Infrastructure** | ✅ Reverse proxy + TLS + prod compose + env template done (~2h saved). Remaining: structured logging, Dockerfile healthcheck, CI/CD, dev tooling | **~2h** | 🟡 MEDIUM |
+| **9: Infrastructure** | ✅ Reverse proxy + TLS + prod compose + env template done. Remaining: structured logging, Dockerfile healthcheck, CI/CD, dev tooling | **~2h** | 🟡 MEDIUM |
 | **Test coverage** | Negative tests, concurrent tests, Rust runtime tests, load tests | **~6h** | 🟡 MEDIUM |
-| **Overall remaining** | **~30 hours** | | |
+| **Overall remaining** | **~32 hours** | | |
 
 ---
 
 ## 🎯 Priority Recommendation (next session)
 
+### BLOCKER (fix immediately)
+1. **Fix STDB database** — Either restore old 2.4.1 binary and load from replicas, or publish fresh module and reseed
+2. **Fix WASM OOM build** — Only needed if STDB module code needs changing
+3. **Fix TS compile errors** — PosPage.tsx x2 + TenantsPage.tsx
+
 ### Immediate (fix 1st)
-1. ~~**Fix 9 hardcoded `localhost:8723/portal/` URLs** — will break all portal links in production~~ ✅ Done (`5d1ec57`)
-2. ~~**Hide `portal_password_hash`** from customer API responses~~ ✅ Done (`5d1ec57`)
-3. ~~**Add TS interfaces** for Tenant, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition~~ ✅ Done (`320d2aa`)
-4. **Add missing empty/error states** on PaymentsPage, ProductsPage, PortalDashboard
+4. **Add ErrorBoundary to each page**
+5. **Fix empty `except Exception: pass` blocks** — log errors 
+6. **Add missing empty/error states** on PaymentsPage, ProductsPage, PortalDashboard
+7. **Fix PaymentsPage currency display bug**
+8. **Get full test suite green** — after STDB is back, run `make test-container`
 
 ### This sprint
-5. **Add ErrorBoundary** to each page
-6. ~~**Add device_imei/device_password** to TicketCreate + Ticket TS interface~~ ✅ Done (`320d2aa`)
-7. **Fix PaymentsPage currency display bug**
-8. ~~**Add missing Pydantic models** for ScheduledReport, Invoice discount fields~~ ✅ Done (`320d2aa`)
-9. **Add structured logging**
-
-### Next sprint
-11. **Service type breakdown on reports**
-12. **Duplicate detection UI on CustomersPage**
-13. ~~**Implement `UserSettings` API + UI or remove**~~ ✅ Done
-14. ~~**Implement `User.pin` POS login or remove**~~ ✅ Done
+9. **Service type breakdown on reports**
+10. **Duplicate detection UI on CustomersPage**
+11. **Structured logging**
