@@ -10,6 +10,27 @@ import { Select } from "../ui/select";
 import { Badge } from "../ui/badge";
 import { toast } from "sonner";
 
+
+const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const DAY_LABELS: Record<string, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
+const defaultHours: BusinessHours = {
+  monday: { open: "09:00", close: "17:00", closed: false },
+  tuesday: { open: "09:00", close: "17:00", closed: false },
+  wednesday: { open: "09:00", close: "17:00", closed: false },
+  thursday: { open: "09:00", close: "17:00", closed: false },
+  friday: { open: "09:00", close: "17:00", closed: false },
+  saturday: { open: "09:00", close: "17:00", closed: true },
+  sunday: { open: "09:00", close: "17:00", closed: true },
+};
+
 export default function BusinessHoursSection() {
   const [hours, setHours] = useState<BusinessHours>(defaultHours);
 

@@ -11,6 +11,7 @@ import { Badge } from "../ui/badge";
 import { toast } from "sonner";
 import { useTheme } from "../../lib/theme";
 
+const TICKET_STATUSES = ["new", "open", "in_progress", "resolved", "closed"];
 export default function UserPreferencesSection() {
   const { theme, toggleTheme } = useTheme();
   const [form, setForm] = useState({ theme: "dark", default_ticket_status: "new" });
