@@ -43,7 +43,7 @@ export default function TicketsPage() {
   const pag = usePagination(PAGE_SIZE);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ customer_id: "", title: "", description: "", device_type: "", device_model: "", device_serial: "", priority: "medium" });
+  const [form, setForm] = useState({ customer_id: "", title: "", description: "", device_type: "", device_model: "", device_serial: "", device_imei: "", device_password: "", priority: "medium" });
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [newNote, setNewNote] = useState("");
   const [timers, setTimers] = useState<TicketTimer[]>([]);
@@ -156,7 +156,7 @@ export default function TicketsPage() {
     onSuccess: () => {
       toast.success("Ticket created");
       setShowForm(false);
-      setForm({ customer_id: "", title: "", description: "", device_type: "", device_model: "", device_serial: "", priority: "medium" });
+      setForm({ customer_id: "", title: "", description: "", device_type: "", device_model: "", device_serial: "", device_imei: "", device_password: "", priority: "medium" });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
     onError: () => toast.error("Failed to create ticket"),
@@ -242,11 +242,11 @@ export default function TicketsPage() {
               {breachCount} SLA breach{breachCount !== 1 ? "es" : ""}
             </Badge>
           )}
-        </div>
+                      </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-1.5" /> New Ticket
         </Button>
-      </div>
+                    </div>
       <p className="text-sm text-muted-foreground -mt-2">Manage repair tickets</p>
 
       <div className="flex gap-2 flex-wrap">
@@ -255,7 +255,7 @@ export default function TicketsPage() {
             {s || "All"}
           </Button>
         ))}
-      </div>
+                    </div>
 
       {showForm && (
         <Card className="border-primary/30">
@@ -269,10 +269,12 @@ export default function TicketsPage() {
             </Select>
             <Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             <Input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               <Input placeholder="Device type" value={form.device_type} onChange={(e) => setForm({ ...form, device_type: e.target.value })} />
               <Input placeholder="Device model" value={form.device_model} onChange={(e) => setForm({ ...form, device_model: e.target.value })} />
               <Input placeholder="Serial" value={form.device_serial} onChange={(e) => setForm({ ...form, device_serial: e.target.value })} />
+              <Input placeholder="IMEI" value={form.device_imei} onChange={(e) => setForm({ ...form, device_imei: e.target.value })} />
+              <Input placeholder="Password" value={form.device_password} onChange={(e) => setForm({ ...form, device_password: e.target.value })} />
             </div>
             <Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
               <option value="low">Low</option>
@@ -284,7 +286,7 @@ export default function TicketsPage() {
               <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Create</Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
             </div>
-          </CardContent>
+              </CardContent>
         </Card>
       )}
 
@@ -306,16 +308,16 @@ export default function TicketsPage() {
                           <span className={`inline-block h-2 w-2 rounded-full ${slaUrgency(t.created_at).color}`} />
                           <span className="text-[10px] text-muted-foreground">{slaUrgency(t.created_at).label}</span>
                         </span>
-                      </div>
+                                    </div>
                       <p className="font-medium mt-1 truncate">{t.title}</p>
                       {cust && <p className="text-xs text-muted-foreground">{cust.first_name} {cust.last_name}</p>}
-                    </div>
-                  </div>
+                                  </div>
+                                </div>
                 </CardContent>
               </Card>
             );
           })}
-        </div>
+                      </div>
 
         {/* Detail panel */}
         {selectedTicket && (
@@ -334,7 +336,7 @@ export default function TicketsPage() {
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">{selectedTicket.description || "No description"}</p>
                 {selectedTicket.device_type && (
-                  <p className="text-xs text-muted-foreground">Device: {selectedTicket.device_type} {selectedTicket.device_model} ({selectedTicket.device_serial})</p>
+                  <p className="text-xs text-muted-foreground">Device: {selectedTicket.device_type} {selectedTicket.device_model} ({selectedTicket.device_serial}){selectedTicket.device_imei && <span> IMEI: {selectedTicket.device_imei}</span>}{selectedTicket.device_password && <span> PWD: {selectedTicket.device_password}</span>}</p>
                 )}
                 <Select value={selectedTicket.status} onChange={(e) => statusMutation.mutate({ id: selectedTicket.id, status: e.target.value })}>
                   <option value="new">New</option>
@@ -343,7 +345,14 @@ export default function TicketsPage() {
                   <option value="waiting_on_customer">Waiting on Customer</option>
                   <option value="resolved">Resolved</option>
                   <option value="closed">Closed</option>
-                </Select>
+              <div className="flex gap-2 mt-2">
+                  {selectedTicket.estimate_id && (
+                    <a href={`/estimates/${selectedTicket.estimate_id}`} className="text-xs text-primary underline">Estimate #{selectedTicket.estimate_id}</a>
+                  )}
+                  {selectedTicket.invoice_id && (
+                    <a href={`/invoices/${selectedTicket.invoice_id}`} className="text-xs text-primary underline">Invoice #{selectedTicket.invoice_id}</a>
+                  )}
+              </div>
               </CardContent>
             </Card>
 
@@ -357,7 +366,7 @@ export default function TicketsPage() {
                   <div>
                     <span className="text-2xl font-mono font-bold">{fmtTime(totalTrackedTime())}</span>
                     <p className="text-xs text-muted-foreground mt-1">Total time logged</p>
-                  </div>
+                                </div>
                   <div className="flex gap-2">
                     {timers.some((t) => t.running) ? (
                       <Button size="sm" variant="destructive" onClick={handleStopTimer}>
@@ -368,8 +377,8 @@ export default function TicketsPage() {
                         <Play className="h-4 w-4 mr-1" /> Start Timer
                       </Button>
                     )}
-                  </div>
-                </div>
+                                </div>
+                              </div>
                 {timers.length > 0 && (
                   <div className="space-y-1 max-h-32 overflow-y-auto">
                     {timers.slice().reverse().map((tmr) => (
@@ -380,9 +389,9 @@ export default function TicketsPage() {
                         <span className="font-mono">
                           {tmr.running ? fmtTime(timerSeconds) : fmtTime(tmr.total_seconds)}
                         </span>
-                      </div>
+                                    </div>
                     ))}
-                  </div>
+                                </div>
                 )}
               </CardContent>
             </Card>
@@ -401,8 +410,8 @@ export default function TicketsPage() {
                     <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowApplyTemplate(!showApplyTemplate)}>
                       Apply Template
                     </Button>
-                  </div>
-                </div>
+                                </div>
+                              </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 {showApplyTemplate && (
@@ -418,7 +427,7 @@ export default function TicketsPage() {
                         </Button>
                       ))
                     )}
-                  </div>
+                                </div>
                 )}
                 {checklist.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">No checklist items</p>
@@ -432,14 +441,14 @@ export default function TicketsPage() {
                       >
                         <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${item.completed ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
                           {item.completed && <div className="w-2 h-2 rounded-sm bg-white" />}
-                        </div>
+                                      </div>
                         <span className="flex-1">{item.label}</span>
                         {item.template_name && (
                           <span className="text-[10px] text-muted-foreground shrink-0">{item.template_name}</span>
                         )}
-                      </div>
+                                    </div>
                     ))}
-                  </div>
+                                </div>
                 )}
                 <p className="text-xs text-muted-foreground">
                   {checklist.filter(i => i.completed).length}/{checklist.length} completed
@@ -456,18 +465,18 @@ export default function TicketsPage() {
                     <div key={n.id} className="text-sm p-2 rounded bg-muted/50">
                       <p className="text-xs text-muted-foreground">{n.author} — {new Date(n.created_at).toLocaleString()}</p>
                       <p className="mt-1">{n.content}</p>
-                    </div>
+                                  </div>
                   ))}
-                </div>
+                              </div>
                 <div className="flex gap-2">
                   <Input placeholder="Add note..." value={newNote} onChange={(e) => setNewNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addNote()} />
                   <Button size="sm" onClick={addNote}>Send</Button>
-                </div>
+                              </div>
               </CardContent>
             </Card>
-          </div>
+                        </div>
         )}
-      </div>
+                    </div>
 
       <Pagination
         page={pag.page}

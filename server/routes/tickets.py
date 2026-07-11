@@ -48,6 +48,8 @@ async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("a
         body.device_type,
         body.device_model,
         body.device_serial,
+        body.device_imei,
+        body.device_password,
         body.priority,
     ])
     await _log_audit(user, "create", "ticket", body.title, f"customer={body.customer_id}")

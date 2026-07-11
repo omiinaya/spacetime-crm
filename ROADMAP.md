@@ -4,7 +4,7 @@
 | **Overall completeness:** | ~96% |
 | **Total endpoints:** | 99 API routes (25 route files) |
 | **Total STDB artifacts:** | 27 tables + 73 reducers |
-| **Total frontend pages:** | 22 admin + 3 auth + 5 portal = 30 pages |
+| **Total frontend pages:** | 21 admin + 3 auth + 5 portal = 29 pages |
 | **Total tests:** | 597 (503 backend + 94 frontend) |
 
 ---
