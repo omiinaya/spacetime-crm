@@ -5,7 +5,7 @@
 | **Total endpoints:** | 99 API routes (25 route files) |
 | **Total STDB artifacts:** | 27 tables + 73 reducers |
 | **Total frontend pages:** | 22 admin + 3 auth + 5 portal = 30 pages |
-| **Total tests:** | 367 (273 backend + 94 frontend) |
+| **Total tests:** | 597 (503 backend + 94 frontend) |
 
 ---
 
@@ -14,10 +14,10 @@
 | Layer | Files | Lines | Completeness | Test Count | Anti-Patterns |
 |-------|-------|-------|:------------:|:----------:|:-------------:|
 | STDB Module (Rust) | 16 files | ~1,900 | 88% | 134 #[test] (4 files) | 1 major, 3 minor |
-| Backend API (Python) | 30 files | ~4,500 | 92% | 362 integration (28 files) | 2 major, 5 minor |
-| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 110 unit (32 files) | 3 major, 6 minor |
+| Backend API (Python) | 30 files | ~4,500 | 92% | 369 integration (28 files) | 2 major, 5 minor |
+| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit (13 files) | 3 major, 6 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
-| **Overall** | **~110 files** | **~20,000** | **~96%** | **606** | **~20 items** |
+| **Overall** | **~110 files** | **~20,000** | **~96%** | **597** | **~20 items** |
 
 ---
 
