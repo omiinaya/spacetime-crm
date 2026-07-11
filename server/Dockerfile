@@ -38,5 +38,9 @@ RUN curl -L -o /tmp/spacetime.tar.gz \
 COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
+# Health check — used by orchestrators and docker-compose
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -sf http://localhost:8723/api/health/ready || exit 1
+
 EXPOSE 8723
 ENTRYPOINT ["/docker-entrypoint.sh"]

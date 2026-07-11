@@ -53,6 +53,10 @@ COPY --from=frontend-builder /app/web/dist /app/web/dist
 COPY scripts/test-entrypoint.sh /test-entrypoint.sh
 RUN chmod +x /test-entrypoint.sh
 
+# Health check — used by orchestrators and docker-compose
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -sf http://localhost:8723/api/health/ready || exit 1
+
 EXPOSE 8723
 
 # Test entrypoint: waits for STDB, publishes module, starts backend
