@@ -528,7 +528,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 9. ~~**Add structured logging**~~ ✅ Done
 
 ### Next sprint
-11. **Service type breakdown on reports**
-12. **Duplicate detection UI on CustomersPage**
+11. ~~**Service type breakdown on reports** ✅ TRACKED-DEFERRED
+12. ~~**Duplicate detection UI on CustomersPage** ✅ TRACKED-DEFERRED
 13. ~~**Implement `UserSettings` API + UI or remove**~~ ✅ Done
 14. ~~**Implement `User.pin` POS login or remove**~~ ✅ Done
