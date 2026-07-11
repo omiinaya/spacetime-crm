@@ -175,6 +175,25 @@ clean-all: clean ## Thorough clean including lockfiles
 
 # ── Agent-Friendly Targets ─────────────────────────────────────────────
 
+
+
+# ── Container Build/Deploy ─────────────────────────────────────────────
+
+container-build: ## Build Docker image for the backend
+	docker compose build
+
+container-up: ## Start all services with Docker Compose
+	docker compose up -d
+
+container-down: ## Stop and remove containers
+	docker compose down
+
+container-logs: ## Tail logs from all containers
+	docker compose logs -f
+
+container-rebuild: container-build container-up ## Rebuild and restart containers
+
+.PHONY: container-build container-up container-down container-logs container-rebuild
 .PHONY: test-unit test-integration test-container test-rust-container test-quick coverage check-ports deps-check health setup-git-hooks
 
 test-unit:  ## Run fast offline-safe unit tests
