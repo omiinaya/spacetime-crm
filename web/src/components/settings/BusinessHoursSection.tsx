@@ -22,13 +22,13 @@ const DAY_LABELS: Record<string, string> = {
   sunday: "Sunday",
 };
 const defaultHours: BusinessHours = {
-  monday: { open: "09:00", close: "17:00", closed: false },
-  tuesday: { open: "09:00", close: "17:00", closed: false },
-  wednesday: { open: "09:00", close: "17:00", closed: false },
-  thursday: { open: "09:00", close: "17:00", closed: false },
-  friday: { open: "09:00", close: "17:00", closed: false },
-  saturday: { open: "09:00", close: "17:00", closed: true },
-  sunday: { open: "09:00", close: "17:00", closed: true },
+  monday: { open: "09:00", close: "17:00", enabled: true },
+  tuesday: { open: "09:00", close: "17:00", enabled: true },
+  wednesday: { open: "09:00", close: "17:00", enabled: true },
+  thursday: { open: "09:00", close: "17:00", enabled: true },
+  friday: { open: "09:00", close: "17:00", enabled: true },
+  saturday: { open: "09:00", close: "17:00", enabled: false },
+  sunday: { open: "09:00", close: "17:00", enabled: false },
 };
 
 export default function BusinessHoursSection() {
