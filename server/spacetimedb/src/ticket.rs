@@ -98,22 +98,41 @@ pub fn create_ticket(
 #[spacetimedb::reducer]
 pub fn update_ticket_status(ctx: &ReducerContext, id: String, status: String) {
     if let Some(t) = ctx.db.ticket().id().find(&id) {
-        ctx.db.ticket().id().update(Ticket { status, updated_at: super::now_ms(ctx), ..t });
+        ctx.db.ticket().id().update(Ticket {
+            status,
+            updated_at: super::now_ms(ctx),
+            ..t
+        });
     }
 }
 
 #[spacetimedb::reducer]
 pub fn assign_ticket(ctx: &ReducerContext, id: String, assigned_user_id: String) {
     if let Some(t) = ctx.db.ticket().id().find(&id) {
-        ctx.db.ticket().id().update(Ticket { assigned_user_id, updated_at: super::now_ms(ctx), ..t });
+        ctx.db.ticket().id().update(Ticket {
+            assigned_user_id,
+            updated_at: super::now_ms(ctx),
+            ..t
+        });
     }
 }
 
 #[spacetimedb::reducer]
-pub fn add_ticket_note(ctx: &ReducerContext, ticket_id: String, author: String, content: String, internal: bool) {
+pub fn add_ticket_note(
+    ctx: &ReducerContext,
+    ticket_id: String,
+    author: String,
+    content: String,
+    internal: bool,
+) {
     let id = super::make_id("tnote", ctx);
     // Derive tenant_id from the parent ticket
-    let tenant_id = ctx.db.ticket().id().find(&ticket_id).map_or(String::new(), |t| t.tenant_id.clone());
+    let tenant_id = ctx
+        .db
+        .ticket()
+        .id()
+        .find(&ticket_id)
+        .map_or(String::new(), |t| t.tenant_id.clone());
     ctx.db.ticket_note().insert(TicketNote {
         id,
         tenant_id,
@@ -134,7 +153,12 @@ pub fn delete_ticket(ctx: &ReducerContext, id: String) {
 pub fn start_ticket_timer(ctx: &ReducerContext, ticket_id: String, user_id: String) {
     let now = super::now_ms(ctx);
     // Stop any existing running timer for this user
-    for t in ctx.db.ticket_timer().iter().filter(|t| t.user_id == user_id && t.running) {
+    for t in ctx
+        .db
+        .ticket_timer()
+        .iter()
+        .filter(|t| t.user_id == user_id && t.running)
+    {
         let elapsed = now.saturating_sub(t.start_time) / 1000;
         ctx.db.ticket_timer().id().update(TicketTimer {
             running: false,
@@ -146,7 +170,12 @@ pub fn start_ticket_timer(ctx: &ReducerContext, ticket_id: String, user_id: Stri
     // Start new timer
     let id = super::make_id("tmr", ctx);
     // Derive tenant_id from the parent ticket
-    let tenant_id = ctx.db.ticket().id().find(&ticket_id).map_or(String::new(), |t| t.tenant_id.clone());
+    let tenant_id = ctx
+        .db
+        .ticket()
+        .id()
+        .find(&ticket_id)
+        .map_or(String::new(), |t| t.tenant_id.clone());
     ctx.db.ticket_timer().insert(TicketTimer {
         id,
         tenant_id,
@@ -178,13 +207,12 @@ pub fn delete_ticket_timer(ctx: &ReducerContext, id: String) {
     ctx.db.ticket_timer().id().delete(&id);
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::ticket::*;
     use crate::ticket::ticket;
     use crate::ticket::ticket_note;
     use crate::ticket::ticket_timer;
+    use crate::ticket::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -194,7 +222,19 @@ mod tests {
     #[test]
     fn test_create_ticket() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "test_tenant_id".into(), "test_customer_id".into(), "test_title".into(), "test_description".into(), "test_device_type".into(), "test_device_model".into(), "test_device_serial".into(), "test_device_imei".into(), "test_device_password".into(), "test_priority".into());
+        create_ticket(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_customer_id".into(),
+            "test_title".into(),
+            "test_description".into(),
+            "test_device_type".into(),
+            "test_device_model".into(),
+            "test_device_serial".into(),
+            "test_device_imei".into(),
+            "test_device_password".into(),
+            "test_priority".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.ticket().iter().count() >= 0);
@@ -220,7 +260,13 @@ mod tests {
     #[test]
     fn test_add_ticket_note() {
         let ctx = test_ctx();
-        add_ticket_note(&ctx, "test_ticket_id".into(), "test_author".into(), "test_content".into(), true);
+        add_ticket_note(
+            &ctx,
+            "test_ticket_id".into(),
+            "test_author".into(),
+            "test_content".into(),
+            true,
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.ticket().iter().count() >= 0);
@@ -265,9 +311,25 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into(), "test".into(), "test".into(), "test".into(), "test".into(), "test".into(), "test".into());
-        let items: Vec<_> = ctx.db.ticket().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_ticket(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .ticket()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

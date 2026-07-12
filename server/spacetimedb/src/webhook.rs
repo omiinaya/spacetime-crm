@@ -68,14 +68,17 @@ pub fn update_webhook_subscription(
     active: bool,
 ) {
     if let Some(sub) = ctx.db.webhook_subscriptions().id().find(&id) {
-        ctx.db.webhook_subscriptions().id().update(WebhookSubscription {
-            url,
-            events,
-            secret,
-            active,
-            updated_at: now_ms(ctx),
-            ..sub
-        });
+        ctx.db
+            .webhook_subscriptions()
+            .id()
+            .update(WebhookSubscription {
+                url,
+                events,
+                secret,
+                active,
+                updated_at: now_ms(ctx),
+                ..sub
+            });
     }
 }
 
@@ -91,15 +94,18 @@ fn now_ms(ctx: &ReducerContext) -> u64 {
 fn make_webhook_id(ctx: &ReducerContext) -> String {
     let ts = now_ms(ctx);
     let discrim = ctx.sender().to_hex();
-    let short = if discrim.len() > 8 { &discrim[..8] } else { &discrim };
+    let short = if discrim.len() > 8 {
+        &discrim[..8]
+    } else {
+        &discrim
+    };
     format!("whk_{}_{}", ts, short)
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::webhook::*;
     use crate::webhook::webhook_subscriptions;
+    use crate::webhook::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -109,7 +115,13 @@ mod tests {
     #[test]
     fn test_create_webhook_subscription() {
         let ctx = test_ctx();
-        create_webhook_subscription(&ctx, "test_tenant_id".into(), "test_url".into(), "test_events".into(), "test_secret".into());
+        create_webhook_subscription(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_url".into(),
+            "test_events".into(),
+            "test_secret".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.webhook_subscriptions().iter().count() >= 0);
@@ -118,7 +130,14 @@ mod tests {
     #[test]
     fn test_update_webhook_subscription() {
         let ctx = test_ctx();
-        update_webhook_subscription(&ctx, "test_id".into(), "test_url".into(), "test_events".into(), "test_secret".into(), true);
+        update_webhook_subscription(
+            &ctx,
+            "test_id".into(),
+            "test_url".into(),
+            "test_events".into(),
+            "test_secret".into(),
+            true,
+        );
         // Verify the reducer executed without panic
         // Update on non-existent should not panic
         assert!(true);
@@ -136,9 +155,19 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_webhook_subscription(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into());
-        let items: Vec<_> = ctx.db.webhook_subscriptions().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_webhook_subscription(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .webhook_subscriptions()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

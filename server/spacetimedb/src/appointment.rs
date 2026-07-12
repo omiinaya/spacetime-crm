@@ -23,7 +23,19 @@ pub struct Appointment {
 }
 
 #[spacetimedb::reducer]
-pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, title: String, description: String, start_time: u64, end_time: u64, all_day: bool, series_id: String, recurrence_rule: String) {
+pub fn create_appointment(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    customer_id: String,
+    ticket_id: String,
+    title: String,
+    description: String,
+    start_time: u64,
+    end_time: u64,
+    all_day: bool,
+    series_id: String,
+    recurrence_rule: String,
+) {
     let id = super::make_id("appt", ctx);
     let now = super::now_ms(ctx);
     ctx.db.appointment().insert(Appointment {
@@ -48,12 +60,22 @@ pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: 
 #[spacetimedb::reducer]
 pub fn set_recurrence(ctx: &ReducerContext, id: String, recurrence_rule: String) {
     if let Some(a) = ctx.db.appointment().id().find(&id) {
-        ctx.db.appointment().id().update(Appointment { recurrence_rule, updated_at: super::now_ms(ctx), ..a });
+        ctx.db.appointment().id().update(Appointment {
+            recurrence_rule,
+            updated_at: super::now_ms(ctx),
+            ..a
+        });
     }
 }
 
 #[spacetimedb::reducer]
-pub fn generate_next_occurrence(ctx: &ReducerContext, series_id: String, start_time: u64, end_time: u64, recurrence_rule: String) {
+pub fn generate_next_occurrence(
+    ctx: &ReducerContext,
+    series_id: String,
+    start_time: u64,
+    end_time: u64,
+    recurrence_rule: String,
+) {
     let id = super::make_id("appt", ctx);
     let now = super::now_ms(ctx);
     if let Some(parent) = ctx.db.appointment().id().find(&series_id) {
@@ -80,7 +102,11 @@ pub fn generate_next_occurrence(ctx: &ReducerContext, series_id: String, start_t
 #[spacetimedb::reducer]
 pub fn update_appointment_status(ctx: &ReducerContext, id: String, status: String) {
     if let Some(a) = ctx.db.appointment().id().find(&id) {
-        ctx.db.appointment().id().update(Appointment { status, updated_at: super::now_ms(ctx), ..a });
+        ctx.db.appointment().id().update(Appointment {
+            status,
+            updated_at: super::now_ms(ctx),
+            ..a
+        });
     }
 }
 
@@ -89,11 +115,10 @@ pub fn delete_appointment(ctx: &ReducerContext, id: String) {
     ctx.db.appointment().id().delete(&id);
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::appointment::*;
     use crate::appointment::appointment;
+    use crate::appointment::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -103,7 +128,19 @@ mod tests {
     #[test]
     fn test_create_appointment() {
         let ctx = test_ctx();
-        create_appointment(&ctx, "test_tenant_id".into(), "test_customer_id".into(), "test_ticket_id".into(), "test_title".into(), "test_description".into(), 1, 1, true, "test_series_id".into(), "test_recurrence_rule".into());
+        create_appointment(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_customer_id".into(),
+            "test_ticket_id".into(),
+            "test_title".into(),
+            "test_description".into(),
+            1,
+            1,
+            true,
+            "test_series_id".into(),
+            "test_recurrence_rule".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.appointment().iter().count() >= 0);
@@ -121,7 +158,13 @@ mod tests {
     #[test]
     fn test_generate_next_occurrence() {
         let ctx = test_ctx();
-        generate_next_occurrence(&ctx, "test_series_id".into(), 1, 1, "test_recurrence_rule".into());
+        generate_next_occurrence(
+            &ctx,
+            "test_series_id".into(),
+            1,
+            1,
+            "test_recurrence_rule".into(),
+        );
         // Verify the reducer executed without panic
         // Generate next occurrence should work
         assert!(true);
@@ -148,9 +191,25 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_appointment(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into(), "test".into(), 0, 0, true, "test".into(), "test".into());
-        let items: Vec<_> = ctx.db.appointment().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_appointment(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            0,
+            0,
+            true,
+            "test".into(),
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .appointment()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

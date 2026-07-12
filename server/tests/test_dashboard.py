@@ -1,4 +1,5 @@
 """Dashboard stats, reports, and audit log tests."""
+
 import httpx
 import pytest
 from .conftest import SERVER_URL, assert_ok, test_admin_headers
@@ -39,14 +40,18 @@ class TestDashboard:
         assert "limit" in data
 
     def test_audit_log_filtered_by_entity(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/audit-log", params={"entity": "customer"}, headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/audit-log", params={"entity": "customer"}, headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         for entry in data["entries"]:
             if entry.get("entity"):
                 assert entry["entity"] == "customer"
 
     def test_audit_log_filtered_by_action(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/audit-log", params={"action": "create"}, headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/audit-log", params={"action": "create"}, headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         for entry in data["entries"]:
             if entry.get("action"):

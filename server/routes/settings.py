@@ -1,8 +1,10 @@
 """Settings routes — Mail + SMS."""
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from helpers import (
-    require_role, logger,
+    require_role,
+    logger,
 )
 from models import MailSettingsUpdate, SMSSettingsUpdate, BusinessHoursUpdate
 from rate_limit import limiter

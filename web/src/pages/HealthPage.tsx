@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { api } from "../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { HeartPulse, RefreshCcw, Server, Database, Package } from "lucide-react";
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { HeartPulse, RefreshCcw, Server, Database, Package } from 'lucide-react';
 
 interface HealthCheck {
   server: string;
@@ -16,15 +16,15 @@ interface ReadyCheck {
 }
 
 const statusColor = (s: string) => {
-  if (s === "ok") return "bg-green-500/10 text-green-500 border-green-500/20";
-  if (s === "unavailable") return "bg-red-500/10 text-red-500 border-red-500/20";
-  return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+  if (s === 'ok') return 'bg-green-500/10 text-green-500 border-green-500/20';
+  if (s === 'unavailable') return 'bg-red-500/10 text-red-500 border-red-500/20';
+  return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
 };
 
 const statusDot = (s: string) => {
-  if (s === "ok") return "bg-green-500";
-  if (s === "unavailable") return "bg-red-500";
-  return "bg-amber-500";
+  if (s === 'ok') return 'bg-green-500';
+  if (s === 'unavailable') return 'bg-red-500';
+  return 'bg-amber-500';
 };
 
 export default function HealthPage() {
@@ -41,13 +41,15 @@ export default function HealthPage() {
       setHealth(h);
       setReady(r);
     } catch (e: any) {
-      setError(e?.message || "Health check failed");
+      setError(e?.message || 'Health check failed');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { check(); }, [check]);
+  useEffect(() => {
+    check();
+  }, [check]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -65,7 +67,7 @@ export default function HealthPage() {
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={check} disabled={loading}>
-          <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCcw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
@@ -93,9 +95,11 @@ export default function HealthPage() {
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${statusDot(health?.server || "unknown")}`} />
-                  <Badge variant="outline" className={statusColor(health?.server || "unknown")}>
-                    {health?.server || "unknown"}
+                  <span
+                    className={`w-2 h-2 rounded-full ${statusDot(health?.server || 'unknown')}`}
+                  />
+                  <Badge variant="outline" className={statusColor(health?.server || 'unknown')}>
+                    {health?.server || 'unknown'}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -120,9 +124,11 @@ export default function HealthPage() {
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${statusDot(health?.stdb || "unknown")}`} />
-                  <Badge variant="outline" className={statusColor(health?.stdb || "unknown")}>
-                    {health?.stdb || "unknown"}
+                  <span
+                    className={`w-2 h-2 rounded-full ${statusDot(health?.stdb || 'unknown')}`}
+                  />
+                  <Badge variant="outline" className={statusColor(health?.stdb || 'unknown')}>
+                    {health?.stdb || 'unknown'}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -147,14 +153,14 @@ export default function HealthPage() {
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${statusDot(health?.module || "unknown")}`} />
-                  <Badge variant="outline" className={statusColor(health?.module || "unknown")}>
-                    {health?.module || "unknown"}
+                  <span
+                    className={`w-2 h-2 rounded-full ${statusDot(health?.module || 'unknown')}`}
+                  />
+                  <Badge variant="outline" className={statusColor(health?.module || 'unknown')}>
+                    {health?.module || 'unknown'}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  CRM module with 18 tables
-                </p>
+                <p className="text-xs text-muted-foreground">CRM module with 18 tables</p>
               </div>
             )}
           </CardContent>
@@ -168,15 +174,17 @@ export default function HealthPage() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-3">
-            <HeartPulse className={`h-6 w-6 ${ready?.status === "ok" ? "text-green-500" : "text-red-500"}`} />
+            <HeartPulse
+              className={`h-6 w-6 ${ready?.status === 'ok' ? 'text-green-500' : 'text-red-500'}`}
+            />
             <div>
-              <Badge variant="outline" className={statusColor(ready?.status || "unknown")}>
-                {ready?.status || "unknown"}
+              <Badge variant="outline" className={statusColor(ready?.status || 'unknown')}>
+                {ready?.status || 'unknown'}
               </Badge>
               <p className="text-xs text-muted-foreground mt-1">
-                {ready?.status === "ok"
-                  ? "All systems operational"
-                  : "STDB is not reachable — some features may be unavailable"}
+                {ready?.status === 'ok'
+                  ? 'All systems operational'
+                  : 'STDB is not reachable — some features may be unavailable'}
               </p>
             </div>
           </div>

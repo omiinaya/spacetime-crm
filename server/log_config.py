@@ -3,6 +3,7 @@
 Provides a standardized JSON log format for production use.
 In dev mode, logs remain human-readable via the console handler.
 """
+
 import os
 import json
 import logging
@@ -53,11 +54,11 @@ def configure_logging() -> None:
     if STRUCTURED:
         handler.setFormatter(JsonFormatter())
     else:
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        ))
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
 
     logger.addHandler(handler)
-
-

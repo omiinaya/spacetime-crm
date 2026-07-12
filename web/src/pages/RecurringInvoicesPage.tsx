@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, Customer } from "../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Select } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
-import { Repeat, Plus, Play, Pause, Trash2, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, Customer } from '../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
+import { Repeat, Plus, Play, Pause, Trash2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface RecurringLineItem {
   description: string;
@@ -34,25 +34,27 @@ interface RecurringRule {
 }
 
 const frequencies = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "biweekly", label: "Biweekly" },
-  { value: "monthly", label: "Monthly" },
-  { value: "quarterly", label: "Quarterly" },
-  { value: "yearly", label: "Yearly" },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Biweekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'yearly', label: 'Yearly' },
 ];
 
-const statusColors: Record<string, "success" | "outline" | "destructive"> = {
-  active: "success",
-  paused: "outline",
-  cancelled: "destructive",
+const statusColors: Record<string, 'success' | 'outline' | 'destructive'> = {
+  active: 'success',
+  paused: 'outline',
+  cancelled: 'destructive',
 };
 
 function tsDate(ts: number): string {
-  if (!ts) return "—";
+  if (!ts) return '—';
   const d = new Date(ts);
-  return d.toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 
@@ -69,24 +71,21 @@ export default function RecurringInvoicesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editRule, setEditRule] = useState<RecurringRule | null>(null);
   const [form, setForm] = useState({
-    customer_id: "",
-    name: "",
-    frequency: "monthly",
+    customer_id: '',
+    name: '',
+    frequency: 'monthly',
     interval_count: 1,
     due_date_days: 30,
-    next_generation_date: "",
+    next_generation_date: '',
   });
   const [lineItems, setLineItems] = useState<RecurringLineItem[]>([
-    { description: "", quantity: 1, unit_price: 0, item_type: "service" },
+    { description: '', quantity: 1, unit_price: 0, item_type: 'service' },
   ]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["recurring-invoices"],
+    queryKey: ['recurring-invoices'],
     queryFn: async () => {
-      const [rRes, cRes] = await Promise.all([
-        api.recurringInvoices.list(),
-        api.customers.list(),
-      ]);
+      const [rRes, cRes] = await Promise.all([api.recurringInvoices.list(), api.customers.list()]);
       return { rules: rRes.rules, customers: cRes.customers };
     },
   });
@@ -95,8 +94,15 @@ export default function RecurringInvoicesPage() {
   const customers = data?.customers ?? [];
 
   const resetForm = () => {
-    setForm({ customer_id: "", name: "", frequency: "monthly", interval_count: 1, due_date_days: 30, next_generation_date: "" });
-    setLineItems([{ description: "", quantity: 1, unit_price: 0, item_type: "service" }]);
+    setForm({
+      customer_id: '',
+      name: '',
+      frequency: 'monthly',
+      interval_count: 1,
+      due_date_days: 30,
+      next_generation_date: '',
+    });
+    setLineItems([{ description: '', quantity: 1, unit_price: 0, item_type: 'service' }]);
     setShowForm(false);
     setEditRule(null);
   };
@@ -115,40 +121,43 @@ export default function RecurringInvoicesPage() {
         line_items: lineItems.filter((li) => li.description.trim()),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["recurring-invoices"] });
-      toast.success("Recurring rule created");
+      qc.invalidateQueries({ queryKey: ['recurring-invoices'] });
+      toast.success('Recurring rule created');
       resetForm();
     },
-    onError: () => toast.error("Failed to create rule"),
+    onError: () => toast.error('Failed to create rule'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & Parameters<typeof api.recurringInvoices.update>[1]) =>
+    mutationFn: ({
+      id,
+      ...data
+    }: { id: string } & Parameters<typeof api.recurringInvoices.update>[1]) =>
       api.recurringInvoices.update(id, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["recurring-invoices"] });
-      toast.success("Rule updated");
+      qc.invalidateQueries({ queryKey: ['recurring-invoices'] });
+      toast.success('Rule updated');
       resetForm();
     },
-    onError: () => toast.error("Failed to update rule"),
+    onError: () => toast.error('Failed to update rule'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.recurringInvoices.delete(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["recurring-invoices"] });
-      toast.success("Rule deleted");
+      qc.invalidateQueries({ queryKey: ['recurring-invoices'] });
+      toast.success('Rule deleted');
     },
-    onError: () => toast.error("Failed to delete rule"),
+    onError: () => toast.error('Failed to delete rule'),
   });
 
   const generateMutation = useMutation({
     mutationFn: () => api.recurringInvoices.generate(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["recurring-invoices"] });
-      toast.success("Invoices generated!");
+      qc.invalidateQueries({ queryKey: ['recurring-invoices'] });
+      toast.success('Invoices generated!');
     },
-    onError: () => toast.error("Generation failed"),
+    onError: () => toast.error('Generation failed'),
   });
 
   const handleEdit = (rule: RecurringRule) => {
@@ -161,11 +170,11 @@ export default function RecurringInvoicesPage() {
       due_date_days: rule.due_date_days,
       next_generation_date: rule.next_generation_date
         ? new Date(rule.next_generation_date).toISOString().slice(0, 10)
-        : "",
+        : '',
     });
     setLineItems(parseLineItems(rule.line_items_json));
     if (parseLineItems(rule.line_items_json).length === 0) {
-      setLineItems([{ description: "", quantity: 1, unit_price: 0, item_type: "service" }]);
+      setLineItems([{ description: '', quantity: 1, unit_price: 0, item_type: 'service' }]);
     }
     setShowForm(true);
   };
@@ -180,7 +189,7 @@ export default function RecurringInvoicesPage() {
         ? new Date(form.next_generation_date).getTime()
         : 0,
       line_items: lineItems.filter((li) => li.description.trim()),
-      status: editRule?.status ?? "active",
+      status: editRule?.status ?? 'active',
     };
     if (editRule) {
       updateMutation.mutate({ id: editRule.id, ...data });
@@ -190,7 +199,7 @@ export default function RecurringInvoicesPage() {
   };
 
   const toggleStatus = (rule: RecurringRule) => {
-    const newStatus = rule.status === "active" ? "paused" : "active";
+    const newStatus = rule.status === 'active' ? 'paused' : 'active';
     const li = parseLineItems(rule.line_items_json);
     updateMutation.mutate({
       id: rule.id,
@@ -205,7 +214,10 @@ export default function RecurringInvoicesPage() {
   };
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { description: "", quantity: 1, unit_price: 0, item_type: "service" }]);
+    setLineItems([
+      ...lineItems,
+      { description: '', quantity: 1, unit_price: 0, item_type: 'service' },
+    ]);
   };
 
   const updateLineItem = (idx: number, field: keyof RecurringLineItem, value: string | number) => {
@@ -236,10 +248,17 @@ export default function RecurringInvoicesPage() {
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${generateMutation.isPending ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${generateMutation.isPending ? 'animate-spin' : ''}`}
+            />
             Generate Now
           </Button>
-          <Button onClick={() => { resetForm(); setShowForm(!showForm); }}>
+          <Button
+            onClick={() => {
+              resetForm();
+              setShowForm(!showForm);
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Rule
           </Button>
@@ -250,7 +269,9 @@ export default function RecurringInvoicesPage() {
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{editRule ? "Edit Rule" : "Create Recurring Invoice Rule"}</CardTitle>
+            <CardTitle className="text-base">
+              {editRule ? 'Edit Rule' : 'Create Recurring Invoice Rule'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -283,7 +304,9 @@ export default function RecurringInvoicesPage() {
                   onChange={(e) => setForm({ ...form, frequency: e.target.value })}
                 >
                   {frequencies.map((f) => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
                   ))}
                 </Select>
               </div>
@@ -293,7 +316,12 @@ export default function RecurringInvoicesPage() {
                   type="number"
                   min={1}
                   value={form.interval_count}
-                  onChange={(e) => setForm({ ...form, interval_count: parseInt(e.target.value) || 1 })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      interval_count: parseInt(e.target.value) || 1,
+                    })
+                  }
                 />
               </div>
               <div>
@@ -302,7 +330,12 @@ export default function RecurringInvoicesPage() {
                   type="number"
                   min={0}
                   value={form.due_date_days}
-                  onChange={(e) => setForm({ ...form, due_date_days: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      due_date_days: parseInt(e.target.value) || 0,
+                    })
+                  }
                 />
               </div>
               <div>
@@ -329,14 +362,16 @@ export default function RecurringInvoicesPage() {
                     <Input
                       placeholder="Description"
                       value={li.description}
-                      onChange={(e) => updateLineItem(idx, "description", e.target.value)}
+                      onChange={(e) => updateLineItem(idx, 'description', e.target.value)}
                       className="flex-1"
                     />
                     <Input
                       type="number"
                       placeholder="Qty"
                       value={li.quantity}
-                      onChange={(e) => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateLineItem(idx, 'quantity', parseFloat(e.target.value) || 0)
+                      }
                       className="w-20"
                     />
                     <Input
@@ -344,7 +379,9 @@ export default function RecurringInvoicesPage() {
                       step="0.01"
                       placeholder="Price"
                       value={li.unit_price}
-                      onChange={(e) => updateLineItem(idx, "unit_price", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        updateLineItem(idx, 'unit_price', parseFloat(e.target.value) || 0)
+                      }
                       className="w-24"
                     />
                     {lineItems.length > 1 && (
@@ -358,10 +395,10 @@ export default function RecurringInvoicesPage() {
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={resetForm}>Cancel</Button>
-              <Button onClick={handleSave}>
-                {editRule ? "Update Rule" : "Create Rule"}
+              <Button variant="outline" onClick={resetForm}>
+                Cancel
               </Button>
+              <Button onClick={handleSave}>{editRule ? 'Update Rule' : 'Create Rule'}</Button>
             </div>
           </CardContent>
         </Card>
@@ -393,31 +430,44 @@ export default function RecurringInvoicesPage() {
                       <div className="flex items-center gap-2">
                         <Repeat className="h-4 w-4 text-primary" />
                         <span className="font-medium">{rule.name}</span>
-                        <Badge variant={statusColors[rule.status] || "outline"}>
+                        <Badge variant={statusColors[rule.status] || 'outline'}>
                           {rule.status}
                         </Badge>
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground space-y-0.5">
                         <p>
-                          Customer: <span className="text-foreground">{rule.customer_name || "—"}</span>
-                          {" · "}
-                          Frequency: <span className="text-foreground capitalize">{rule.frequency}</span>
+                          Customer:{' '}
+                          <span className="text-foreground">{rule.customer_name || '—'}</span>
+                          {' · '}
+                          Frequency:{' '}
+                          <span className="text-foreground capitalize">{rule.frequency}</span>
                           {rule.interval_count > 1 && ` (×${rule.interval_count})`}
                         </p>
                         <p>
-                          Next: <span className="text-foreground">{tsDate(rule.next_generation_date)}</span>
-                          {" · "}
-                          Last: <span className="text-foreground">{tsDate(rule.last_generated_date)}</span>
-                          {" · "}
-                          Due: {rule.due_date_days > 0 ? `${rule.due_date_days}d after` : "upon creation"}
+                          Next:{' '}
+                          <span className="text-foreground">
+                            {tsDate(rule.next_generation_date)}
+                          </span>
+                          {' · '}
+                          Last:{' '}
+                          <span className="text-foreground">
+                            {tsDate(rule.last_generated_date)}
+                          </span>
+                          {' · '}
+                          Due:{' '}
+                          {rule.due_date_days > 0
+                            ? `${rule.due_date_days}d after`
+                            : 'upon creation'}
                         </p>
                         {items.length > 0 && (
                           <p className="text-xs mt-1">
-                            {items.length} line item{items.length !== 1 ? "s" : ""}
+                            {items.length} line item
+                            {items.length !== 1 ? 's' : ''}
                             {total > 0 && ` (≈ $${total.toFixed(2)})`}
                             {items.map((i, idx) => (
                               <span key={idx} className="block ml-4 text-muted-foreground/70">
-                                · {i.description || "(no description)"} — {i.quantity} × ${i.unit_price.toFixed(2)}
+                                · {i.description || '(no description)'} — {i.quantity} × $
+                                {i.unit_price.toFixed(2)}
                               </span>
                             ))}
                           </p>
@@ -429,9 +479,13 @@ export default function RecurringInvoicesPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleStatus(rule)}
-                        title={rule.status === "active" ? "Pause" : "Resume"}
+                        title={rule.status === 'active' ? 'Pause' : 'Resume'}
                       >
-                        {rule.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        {rule.status === 'active' ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         variant="ghost"
@@ -439,15 +493,25 @@ export default function RecurringInvoicesPage() {
                         onClick={() => handleEdit(rule)}
                         title="Edit"
                       >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
                         </svg>
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => {
-                          if (confirm("Delete this recurring rule?")) {
+                          if (confirm('Delete this recurring rule?')) {
                             deleteMutation.mutate(rule.id);
                           }
                         }}

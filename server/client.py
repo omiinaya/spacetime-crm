@@ -3,6 +3,7 @@
 Minimal module with zero internal dependencies — safe to import from anywhere
 without creating circular imports.
 """
+
 from __future__ import annotations
 
 import httpx

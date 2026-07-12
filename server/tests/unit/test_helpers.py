@@ -3,6 +3,7 @@
 These tests mock httpx.AsyncClient to prevent network calls during import.
 They test only the sync helper functions and constants.
 """
+
 from __future__ import annotations
 
 import sys
@@ -63,6 +64,7 @@ class TestModuleLevel:
     def test_jinja_env_loaded(self):
         """Verify jinja_env is an Environment instance."""
         from jinja2 import Environment
+
         assert isinstance(jinja_env, Environment)
 
     def test_jinja_env_uses_correct_dir(self):
@@ -80,8 +82,14 @@ class TestStatusConstants:
             assert key in STATUS_LABELS
 
     def test_status_labels_contains_all_labels(self):
-        labels = {"draft": "Draft", "sent": "Sent", "paid": "Paid",
-                  "partial": "Partial", "overdue": "Overdue", "cancelled": "Cancelled"}
+        labels = {
+            "draft": "Draft",
+            "sent": "Sent",
+            "paid": "Paid",
+            "partial": "Partial",
+            "overdue": "Overdue",
+            "cancelled": "Cancelled",
+        }
         assert STATUS_LABELS == labels
 
     def test_status_css_contains_all_keys(self):
@@ -89,8 +97,14 @@ class TestStatusConstants:
             assert key in STATUS_CSS
 
     def test_status_css_maps_correctly(self):
-        expected = {"draft": "draft", "sent": "sent", "paid": "paid",
-                    "partial": "partial", "overdue": "overdue", "cancelled": "cancelled"}
+        expected = {
+            "draft": "draft",
+            "sent": "sent",
+            "paid": "paid",
+            "partial": "partial",
+            "overdue": "overdue",
+            "cancelled": "cancelled",
+        }
         assert STATUS_CSS == expected
 
     def test_customer_sensitive_fields(self):
@@ -202,6 +216,7 @@ class TestSafeId:
         with pytest.raises(HTTPException, match="Invalid ID format"):
             _safe_id("abc;123")
 
+
 # ── _sort (synchronous) ──────────────────────────────────────────
 
 
@@ -229,6 +244,7 @@ class TestSort:
 @pytest.mark.asyncio
 async def test_sql_returns_rows():
     from client import get_http_client
+
     client = get_http_client()
     mock_response = MagicMock(status_code=200)
     mock_response.json.return_value = [
@@ -245,6 +261,7 @@ async def test_sql_returns_rows():
 @pytest.mark.asyncio
 async def test_sql_error_raises_502():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(return_value=MagicMock(status_code=400, text="Bad query"))
     with pytest.raises(HTTPException) as exc:
@@ -255,6 +272,7 @@ async def test_sql_error_raises_502():
 @pytest.mark.asyncio
 async def test_sql_empty_response():
     from client import get_http_client
+
     client = get_http_client()
     mock_response = MagicMock(status_code=200)
     mock_response.json.return_value = {}
@@ -266,6 +284,7 @@ async def test_sql_empty_response():
 @pytest.mark.asyncio
 async def test_sql_ignores_bad_schema():
     from client import get_http_client
+
     client = get_http_client()
     mock_response = MagicMock(status_code=200)
     mock_response.json.return_value = [
@@ -285,6 +304,7 @@ async def test_sql_ignores_bad_schema():
 @pytest.mark.asyncio
 async def test_sql_t_appends_tenant_filter():
     from client import get_http_client
+
     client = get_http_client()
     mock_response = MagicMock(status_code=200)
     mock_response.json.return_value = [
@@ -303,6 +323,7 @@ async def test_sql_t_appends_tenant_filter():
 @pytest.mark.asyncio
 async def test_sql_t_no_tenant_passes_through():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: []))
     result = await _sql_t("SELECT * FROM items", tenant_id="")
@@ -322,6 +343,7 @@ async def test_sql_t_invalid_tenant_raises_400():
 @pytest.mark.asyncio
 async def test_call_success():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: {"result": "ok"}))
     result = await _call("my_reducer", [1, 2, 3])
@@ -334,6 +356,7 @@ async def test_call_success():
 @pytest.mark.asyncio
 async def test_call_no_args():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: {"result": None}))
     result = await _call("no_arg_reducer")
@@ -343,6 +366,7 @@ async def test_call_no_args():
 @pytest.mark.asyncio
 async def test_call_error_raises_502():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(return_value=MagicMock(status_code=500, text="Server Error"))
     with pytest.raises(HTTPException) as exc:
@@ -356,11 +380,10 @@ async def test_call_error_raises_502():
 @pytest.mark.asyncio
 async def test_paginated_basic():
     from client import get_http_client
+
     client = get_http_client()
     mock_count = MagicMock(status_code=200)
-    mock_count.json.return_value = [
-        {"rows": [[5]], "schema": {"elements": [{"name": {"some": "cnt"}}]}}
-    ]
+    mock_count.json.return_value = [{"rows": [[5]], "schema": {"elements": [{"name": {"some": "cnt"}}]}}]
     mock_data = MagicMock(status_code=200)
     mock_data.json.return_value = [
         {
@@ -379,11 +402,10 @@ async def test_paginated_basic():
 @pytest.mark.asyncio
 async def test_paginated_with_sensitive_fields():
     from client import get_http_client
+
     client = get_http_client()
     mock_count = MagicMock(status_code=200)
-    mock_count.json.return_value = [
-        {"rows": [[1]], "schema": {"elements": [{"name": {"some": "cnt"}}]}}
-    ]
+    mock_count.json.return_value = [{"rows": [[1]], "schema": {"elements": [{"name": {"some": "cnt"}}]}}]
     mock_data = MagicMock(status_code=200)
     mock_data.json.return_value = [
         {
@@ -404,11 +426,11 @@ async def test_paginated_with_sensitive_fields():
 @pytest.mark.asyncio
 async def test_log_audit_success():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: {}))
     await _log_audit(
-        {"tenant_id": "t1", "id": "u1", "name": "Alice"},
-        "create", "invoice", "inv-123", "Created invoice"
+        {"tenant_id": "t1", "id": "u1", "name": "Alice"}, "create", "invoice", "inv-123", "Created invoice"
     )
     client.post.assert_called_once()
 
@@ -416,12 +438,10 @@ async def test_log_audit_success():
 @pytest.mark.asyncio
 async def test_log_audit_failure_does_not_raise():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(side_effect=Exception("Network error"))
-    await _log_audit(
-        {"tenant_id": "t1", "id": "u1", "name": "Alice"},
-        "read", "user", "u1", ""
-    )
+    await _log_audit({"tenant_id": "t1", "id": "u1", "name": "Alice"}, "read", "user", "u1", "")
 
 
 # ── _get_webhook_subscriptions (async) ────────────────────────────
@@ -430,6 +450,7 @@ async def test_log_audit_failure_does_not_raise():
 @pytest.mark.asyncio
 async def test_get_webhook_subs_success():
     from client import get_http_client
+
     client = get_http_client()
     mock_response = MagicMock(status_code=200)
     mock_response.json.return_value = [
@@ -447,6 +468,7 @@ async def test_get_webhook_subs_success():
 @pytest.mark.asyncio
 async def test_get_webhook_subs_error_returns_empty():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(side_effect=Exception("DB error"))
     result = await _get_webhook_subscriptions()
@@ -459,6 +481,7 @@ async def test_get_webhook_subs_error_returns_empty():
 @pytest.mark.asyncio
 async def test_fire_webhook_success():
     from client import get_http_client
+
     client = get_http_client()
     mock_sub_response = MagicMock(status_code=200)
     mock_sub_response.json.return_value = [
@@ -474,11 +497,10 @@ async def test_fire_webhook_success():
 @pytest.mark.asyncio
 async def test_fire_webhook_no_subs():
     from client import get_http_client
+
     client = get_http_client()
     mock_empty = MagicMock(status_code=200)
-    mock_empty.json.return_value = [
-        {"rows": [], "schema": {"elements": []}}
-    ]
+    mock_empty.json.return_value = [{"rows": [], "schema": {"elements": []}}]
     client.post = AsyncMock(return_value=mock_empty)
     await _fire_webhook("invoice.created", {"id": "inv-1"})
 
@@ -486,6 +508,7 @@ async def test_fire_webhook_no_subs():
 @pytest.mark.asyncio
 async def test_fire_webhook_error_caught():
     from client import get_http_client
+
     client = get_http_client()
     client.post = AsyncMock(side_effect=Exception("DB error"))
     await _fire_webhook("invoice.created", {"id": "inv-1"})
@@ -502,10 +525,12 @@ class TestRequireRole:
     def test_require_role_no_credentials_raises_401(self):
         dep = require_role("admin")
         import asyncio
+
         async def run_test():
             with pytest.raises(HTTPException) as exc:
                 await dep(None)
             assert exc.value.status_code == 401
+
         asyncio.run(run_test())
 
 
@@ -532,6 +557,7 @@ async def test_get_current_user_expired_token():
     import jwt
     import time
     from config import settings
+
     expired_token = jwt.encode(
         {"sub": "u1", "exp": int(time.time()) - 3600},
         settings.jwt_secret,
@@ -547,6 +573,7 @@ async def test_get_current_user_expired_token():
 async def test_get_current_user_no_subject():
     import jwt
     from config import settings
+
     token = jwt.encode(
         {"tenant_id": "t1"},
         settings.jwt_secret,
@@ -563,6 +590,7 @@ async def test_get_current_user_not_found():
     import jwt
     from config import settings
     from client import get_http_client
+
     token = jwt.encode(
         {"sub": "unknown-user", "tenant_id": "t1"},
         settings.jwt_secret,
@@ -571,9 +599,7 @@ async def test_get_current_user_not_found():
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
     client = get_http_client()
     mock_response = MagicMock(status_code=200)
-    mock_response.json.return_value = [
-        {"rows": [], "schema": {"elements": []}}
-    ]
+    mock_response.json.return_value = [{"rows": [], "schema": {"elements": []}}]
     client.post = AsyncMock(return_value=mock_response)
     with pytest.raises(HTTPException) as exc:
         await get_current_user(creds)
@@ -585,6 +611,7 @@ async def test_get_current_user_disabled():
     import jwt
     from config import settings
     from client import get_http_client
+
     token = jwt.encode(
         {"sub": "user-1", "tenant_id": "t1"},
         settings.jwt_secret,
@@ -617,6 +644,7 @@ async def test_get_current_user_success():
     import jwt
     from config import settings
     from client import get_http_client
+
     token = jwt.encode(
         {"sub": "user-1", "tenant_id": "t1"},
         settings.jwt_secret,

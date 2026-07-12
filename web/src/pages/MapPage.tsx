@@ -1,18 +1,16 @@
-import { useState, useEffect } from "react";
-import {
-  MapContainer, TileLayer, Marker, Popup, useMap,
-} from "react-leaflet";
-import L from "leaflet";
-import { api, CustomerGeoLocation } from "../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { MapPin, Navigation, Loader2, AlertCircle } from "lucide-react";
-import "leaflet/dist/leaflet.css";
+import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import { api, CustomerGeoLocation } from '../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { MapPin, Navigation, Loader2, AlertCircle } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet default icon paths (broken in bundlers)
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 // @ts-expect-error Leaflet default icon fix
 delete L.Icon.Default.prototype._getIconUrl;
@@ -21,10 +19,10 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 function AutoFitBounds({ locations }: { locations: CustomerGeoLocation[] }) {
   const map = useMap();
   useEffect(() => {
-    const withCoords = locations.filter(l => l.latitude && l.longitude);
+    const withCoords = locations.filter((l) => l.latitude && l.longitude);
     if (withCoords.length === 0) return;
     const bounds = L.latLngBounds(
-      withCoords.map(l => [l.latitude!, l.longitude!] as [number, number])
+      withCoords.map((l) => [l.latitude!, l.longitude!] as [number, number]),
     );
     map.fitBounds(bounds, { padding: [50, 50] });
   }, [locations, map]);
@@ -36,11 +34,11 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodingSingle, setGeocodingSingle] = useState<string | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const loadLocations = async () => {
     setLoading(true);
-    setError("");
+    setError('');
     try {
       const res = await api.customers.geolocations.list();
       setLocations(res.locations);
@@ -51,7 +49,9 @@ export default function MapPage() {
     }
   };
 
-  useEffect(() => { loadLocations(); }, []);
+  useEffect(() => {
+    loadLocations();
+  }, []);
 
   const handleGeocodeAll = async () => {
     setGeocoding(true);
@@ -77,8 +77,8 @@ export default function MapPage() {
     }
   };
 
-  const withCoords = locations.filter(l => l.latitude && l.longitude);
-  const withoutCoords = locations.filter(l => !l.has_location && (l.address_line1 || l.city));
+  const withCoords = locations.filter((l) => l.latitude && l.longitude);
+  const withoutCoords = locations.filter((l) => !l.has_location && (l.address_line1 || l.city));
 
   return (
     <div className="space-y-6 p-6">
@@ -93,13 +93,8 @@ export default function MapPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadLocations}
-            disabled={loading}
-          >
-            <Loader2 className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={loadLocations} disabled={loading}>
+            <Loader2 className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button
@@ -163,7 +158,9 @@ export default function MapPage() {
                 <div className="text-center">
                   <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No customer locations yet</p>
-                  <p className="text-xs mt-1">Geocode customers with addresses to see them on the map</p>
+                  <p className="text-xs mt-1">
+                    Geocode customers with addresses to see them on the map
+                  </p>
                 </div>
               </div>
             )}

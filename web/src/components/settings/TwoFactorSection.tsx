@@ -1,23 +1,23 @@
-import { Loader2, Shield, ShieldAlert, Smartphone } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../../lib/query-client";
-import { api } from "../../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Select } from "../ui/select";
-import { Badge } from "../ui/badge";
-import { toast } from "sonner";
-import { useAuth } from "../../lib/auth";
+import { Loader2, Shield, ShieldAlert, Smartphone } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../../lib/query-client';
+import { api } from '../../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select } from '../ui/select';
+import { Badge } from '../ui/badge';
+import { toast } from 'sonner';
+import { useAuth } from '../../lib/auth';
 
 export default function TwoFactorSection() {
   const { user, token } = useAuth();
-  const [step, setStep] = useState<"idle" | "setup" | "verify">("idle");
-  const [secret, setSecret] = useState("");
-  const [provisioningUri, setProvisioningUri] = useState("");
-  const [verifyCode, setVerifyCode] = useState("");
-  const [disableCode, setDisableCode] = useState("");
+  const [step, setStep] = useState<'idle' | 'setup' | 'verify'>('idle');
+  const [secret, setSecret] = useState('');
+  const [provisioningUri, setProvisioningUri] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [disableCode, setDisableCode] = useState('');
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showDisable, setShowDisable] = useState(false);
@@ -25,7 +25,7 @@ export default function TwoFactorSection() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch("/api/auth/me", {
+        const res = await fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -40,19 +40,19 @@ export default function TwoFactorSection() {
   const handleSetup = async () => {
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/setup-2fa", {
-        method: "POST",
+      const res = await fetch('/api/auth/setup-2fa', {
+        method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.detail || "Setup failed");
+        toast.error(err.detail || 'Setup failed');
         return;
       }
       const data = await res.json();
       setSecret(data.secret);
       setProvisioningUri(data.provisioning_uri);
-      setStep("verify");
+      setStep('verify');
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -64,21 +64,24 @@ export default function TwoFactorSection() {
     if (verifyCode.length !== 6) return;
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/verify-2fa", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ code: verifyCode }),
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.detail || "Verification failed");
+        toast.error(err.detail || 'Verification failed');
         return;
       }
-      toast.success("2FA enabled successfully");
+      toast.success('2FA enabled successfully');
       setIsEnrolled(true);
-      setStep("idle");
-      setSecret("");
-      setVerifyCode("");
+      setStep('idle');
+      setSecret('');
+      setVerifyCode('');
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -90,20 +93,23 @@ export default function TwoFactorSection() {
     if (disableCode.length !== 6) return;
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/disable-2fa", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/disable-2fa', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ code: disableCode }),
       });
       if (!res.ok) {
         const err = await res.json();
-        toast.error(err.detail || "Disable failed");
+        toast.error(err.detail || 'Disable failed');
         return;
       }
-      toast.success("2FA disabled");
+      toast.success('2FA disabled');
       setIsEnrolled(false);
       setShowDisable(false);
-      setDisableCode("");
+      setDisableCode('');
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -138,28 +144,43 @@ export default function TwoFactorSection() {
                   <Input
                     placeholder="000000"
                     value={disableCode}
-                    onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     className="w-32 font-mono text-center"
                     maxLength={6}
                   />
-                  <Button size="sm" onClick={handleDisable} disabled={busy || disableCode.length !== 6}>
+                  <Button
+                    size="sm"
+                    onClick={handleDisable}
+                    disabled={busy || disableCode.length !== 6}
+                  >
                     {busy ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
                     Disable
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setShowDisable(false); setDisableCode(""); }}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setShowDisable(false);
+                      setDisableCode('');
+                    }}
+                  >
                     Cancel
                   </Button>
                 </div>
               </div>
             )}
           </div>
-        ) : step === "idle" ? (
+        ) : step === 'idle' ? (
           <div>
             <p className="text-sm text-muted-foreground mb-3">
               Add an extra layer of security to your account by enabling two-factor authentication.
             </p>
             <Button size="sm" onClick={handleSetup} disabled={busy}>
-              {busy ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Smartphone className="w-3 h-3 mr-1" />}
+              {busy ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+              ) : (
+                <Smartphone className="w-3 h-3 mr-1" />
+              )}
               Set up 2FA
             </Button>
           </div>
@@ -167,14 +188,15 @@ export default function TwoFactorSection() {
           <div className="space-y-4">
             <p className="text-sm font-medium">Step 1: Scan this QR code</p>
             <p className="text-xs text-muted-foreground">
-              Use your authenticator app (Google Authenticator, Authy, etc.) to scan the QR code below.
+              Use your authenticator app (Google Authenticator, Authy, etc.) to scan the QR code
+              below.
             </p>
             <div className="flex justify-center">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(provisioningUri)}`}
                 alt="2FA QR Code"
                 className="border rounded-lg"
-                style={{ imageRendering: "pixelated" }}
+                style={{ imageRendering: 'pixelated' }}
               />
             </div>
             <div className="text-center">
@@ -187,7 +209,7 @@ export default function TwoFactorSection() {
                 <Input
                   placeholder="000000"
                   value={verifyCode}
-                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="w-32 font-mono text-center"
                   maxLength={6}
                   autoFocus
@@ -196,7 +218,7 @@ export default function TwoFactorSection() {
                   {busy ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
                   Verify & Enable
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setStep("idle")}>
+                <Button size="sm" variant="ghost" onClick={() => setStep('idle')}>
                   Cancel
                 </Button>
               </div>
@@ -207,4 +229,3 @@ export default function TwoFactorSection() {
     </Card>
   );
 }
-

@@ -1,11 +1,17 @@
 """Tenant routes."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sql, _paginated, _call, _log_audit, _safe_id,
-    require_role, logger,
+    _sql,
+    _paginated,
+    _call,
+    _log_audit,
+    _safe_id,
+    require_role,
+    logger,
 )
 from models import TenantCreate, TenantUpdate, TenantMemberAdd, TenantMemberRoleUpdate, TenantMigrate
 from rate_limit import limiter
@@ -100,7 +106,9 @@ async def remove_tenant_member(tenant_id: str, member_id: str, user: dict = Depe
 
 @router.put("/api/tenants/{tenant_id}/members/{member_id}")
 @limiter.limit("100/minute")
-async def update_tenant_member_role(tenant_id: str, member_id: str, body: TenantMemberRoleUpdate, user: dict = Depends(require_role("admin"))):
+async def update_tenant_member_role(
+    tenant_id: str, member_id: str, body: TenantMemberRoleUpdate, user: dict = Depends(require_role("admin"))
+):
     """Update member role within a tenant."""
     role = body.role.strip()
     await _call("update_tenant_member_role", [member_id, role])
@@ -131,12 +139,27 @@ async def migrate_to_tenant(body: TenantMigrate, user: dict = Depends(require_ro
         await _call("add_tenant_member", [tid, u["name"], "admin" if u.get("role") == "admin" else "user"])
         count += 1
     tables = [
-        "customer", "ticket", "ticket_note", "ticket_timer",
-        "invoices", "invoice_line_items", "estimates", "estimate_line_items",
-        "payment", "appointment", "products", "purchase_order",
-        "purchase_order_line_item", "inventory_adjustment", "tax_rates",
-        "audit_log", "custom_field_definitions", "customer_geolocations",
-        "checklist_templates", "ticket_checklist_items", "webhook_subscriptions"
+        "customer",
+        "ticket",
+        "ticket_note",
+        "ticket_timer",
+        "invoices",
+        "invoice_line_items",
+        "estimates",
+        "estimate_line_items",
+        "payment",
+        "appointment",
+        "products",
+        "purchase_order",
+        "purchase_order_line_item",
+        "inventory_adjustment",
+        "tax_rates",
+        "audit_log",
+        "custom_field_definitions",
+        "customer_geolocations",
+        "checklist_templates",
+        "ticket_checklist_items",
+        "webhook_subscriptions",
     ]
     updated = {}
     for tbl in tables:

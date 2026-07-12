@@ -4,6 +4,7 @@ Uses the isolated tenant admin for user creation so a failed 2FA test
 never affects the global admin. All test users are created within the
 isolated tenant scope and cleaned up at module end.
 """
+
 import pyotp
 import httpx
 import time
@@ -29,7 +30,8 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     resp = httpx.post(
         f"{SERVER_URL}/api/users",
         json={"name": name, "email": email, "role": "admin"},
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     assert resp.status_code == 200, f"Create 2FA test user failed: {resp.text[:200]}"
 
@@ -37,7 +39,8 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     list_resp = httpx.get(
         f"{SERVER_URL}/api/users",
         params={"limit": 500},
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     users = list_resp.json().get("users", [])
     uid = next((u["id"] for u in users if u.get("email") == email), None)

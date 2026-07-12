@@ -7,8 +7,8 @@
 mod tests {
     use crate::*;
     // Import accessor traits for STDB table access
-    use crate::purchase_order::purchase_order;
     use crate::product::products;
+    use crate::purchase_order::purchase_order;
 
     fn test_ctx() -> ReducerContext {
         ReducerContext::__dummy()
@@ -23,9 +23,14 @@ mod tests {
         let ctx = test_ctx();
         create_ticket(
             &ctx,
-            "tenant_t".into(), "cust_1".into(), "Broken screen".into(),
-            "Cracked glass".into(), "iPhone".into(), "15".into(),
-            "SN001".into(), "high".into(),
+            "tenant_t".into(),
+            "cust_1".into(),
+            "Broken screen".into(),
+            "Cracked glass".into(),
+            "iPhone".into(),
+            "15".into(),
+            "SN001".into(),
+            "high".into(),
         );
         use crate::ticket::ticket;
         let tickets: Vec<Ticket> = ctx.db.ticket().iter().collect();
@@ -43,7 +48,17 @@ mod tests {
     #[test]
     fn test_update_ticket_status() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Fix".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Fix".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let id = t.id.clone();
@@ -56,7 +71,17 @@ mod tests {
     #[test]
     fn test_assign_ticket() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Assign test".into(), "".into(), "".into(), "".into(), "".into(), "medium".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Assign test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "medium".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let id = t.id.clone();
@@ -69,11 +94,27 @@ mod tests {
     #[test]
     fn test_add_ticket_note() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Note test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Note test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let tid = t.id.clone();
-        add_ticket_note(&ctx, tid.clone(), "Bob".into(), "Checked device".into(), false);
+        add_ticket_note(
+            &ctx,
+            tid.clone(),
+            "Bob".into(),
+            "Checked device".into(),
+            false,
+        );
         use crate::ticket::ticket_note;
         let notes: Vec<TicketNote> = ctx.db.ticket_note().iter().collect();
         assert_eq!(notes.len(), 1);
@@ -87,7 +128,17 @@ mod tests {
     #[test]
     fn test_delete_ticket() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Delete me".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Delete me".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         assert_eq!(ctx.db.ticket().iter().count(), 1);
         let id = ctx.db.ticket().iter().next().unwrap().id.clone();
@@ -98,7 +149,17 @@ mod tests {
     #[test]
     fn test_ticket_timer_lifecycle() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Timer test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Timer test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let tid = t.id.clone();
@@ -128,7 +189,17 @@ mod tests {
     #[test]
     fn test_record_payment() {
         let ctx = test_ctx();
-        record_payment(&ctx, "tenant_p".into(), "inv_1".into(), "cust_1".into(), 150.00, "cash".into(), "REF-001".into(), "Walk-in payment".into(), "USD".into());
+        record_payment(
+            &ctx,
+            "tenant_p".into(),
+            "inv_1".into(),
+            "cust_1".into(),
+            150.00,
+            "cash".into(),
+            "REF-001".into(),
+            "Walk-in payment".into(),
+            "USD".into(),
+        );
         use crate::payment::payment;
         let payments: Vec<Payment> = ctx.db.payment().iter().collect();
         assert_eq!(payments.len(), 1);
@@ -141,7 +212,17 @@ mod tests {
     #[test]
     fn test_delete_payment() {
         let ctx = test_ctx();
-        record_payment(&ctx, "t".into(), "i".into(), "c".into(), 50.0, "cash".into(), "".into(), "".into(), "USD".into());
+        record_payment(
+            &ctx,
+            "t".into(),
+            "i".into(),
+            "c".into(),
+            50.0,
+            "cash".into(),
+            "".into(),
+            "".into(),
+            "USD".into(),
+        );
         use crate::payment::payment;
         assert_eq!(ctx.db.payment().iter().count(), 1);
         let id = ctx.db.payment().iter().next().unwrap().id.clone();
@@ -156,7 +237,20 @@ mod tests {
     #[test]
     fn test_create_product() {
         let ctx = test_ctx();
-        create_product(&ctx, "tenant_pr".into(), "Screen".into(), "SCR-001".into(), "".into(), "".into(), "Parts".into(), 29.99, 12.50, 50.0, 5.0, "Aisle-3".into());
+        create_product(
+            &ctx,
+            "tenant_pr".into(),
+            "Screen".into(),
+            "SCR-001".into(),
+            "".into(),
+            "".into(),
+            "Parts".into(),
+            29.99,
+            12.50,
+            50.0,
+            5.0,
+            "Aisle-3".into(),
+        );
         let products_list: Vec<Product> = ctx.db.products().iter().collect();
         assert_eq!(products_list.len(), 1);
         let p = &products_list[0];
@@ -168,10 +262,35 @@ mod tests {
     #[test]
     fn test_update_product() {
         let ctx = test_ctx();
-        create_product(&ctx, "t".into(), "Old".into(), "OLD-001".into(), "".into(), "".into(), "".into(), 10.0, 5.0, 10.0, 0.0, "".into());
+        create_product(
+            &ctx,
+            "t".into(),
+            "Old".into(),
+            "OLD-001".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            10.0,
+            5.0,
+            10.0,
+            0.0,
+            "".into(),
+        );
         let p = ctx.db.products().iter().next().unwrap();
         let pid = p.id.clone();
-        update_product(&ctx, pid.clone(), "New Name".into(), "NEW-001".into(), "".into(), "desc".into(), "cat".into(), 25.0, 8.0, 5.0, "B-12".into());
+        update_product(
+            &ctx,
+            pid.clone(),
+            "New Name".into(),
+            "NEW-001".into(),
+            "".into(),
+            "desc".into(),
+            "cat".into(),
+            25.0,
+            8.0,
+            5.0,
+            "B-12".into(),
+        );
         let updated = ctx.db.products().id().find(&pid).unwrap();
         assert_eq!(updated.name, "New Name");
     }
@@ -179,7 +298,20 @@ mod tests {
     #[test]
     fn test_delete_product() {
         let ctx = test_ctx();
-        create_product(&ctx, "t".into(), "Del".into(), "DEL".into(), "".into(), "".into(), "".into(), 1.0, 0.5, 5.0, 0.0, "".into());
+        create_product(
+            &ctx,
+            "t".into(),
+            "Del".into(),
+            "DEL".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            1.0,
+            0.5,
+            5.0,
+            0.0,
+            "".into(),
+        );
         assert_eq!(ctx.db.products().iter().count(), 1);
         let id = ctx.db.products().iter().next().unwrap().id.clone();
         delete_product(&ctx, id);
@@ -193,7 +325,13 @@ mod tests {
     #[test]
     fn test_create_purchase_order() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "tenant_po".into(), "vendor_1".into(), "notes".into(), "USD".into());
+        create_purchase_order(
+            &ctx,
+            "tenant_po".into(),
+            "vendor_1".into(),
+            "notes".into(),
+            "USD".into(),
+        );
         let pos: Vec<PurchaseOrder> = ctx.db.purchase_order().iter().collect();
         assert_eq!(pos.len(), 1);
         let po = &pos[0];
@@ -220,10 +358,35 @@ mod tests {
     #[test]
     fn test_ticket_tenant_isolation() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t_a".into(), "c1".into(), "Tkt A".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
-        create_ticket(&ctx, "t_b".into(), "c2".into(), "Tkt B".into(), "".into(), "".into(), "".into(), "".into(), "high".into());
+        create_ticket(
+            &ctx,
+            "t_a".into(),
+            "c1".into(),
+            "Tkt A".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
+        create_ticket(
+            &ctx,
+            "t_b".into(),
+            "c2".into(),
+            "Tkt B".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "high".into(),
+        );
         use crate::ticket::ticket;
-        let tickets: Vec<Ticket> = ctx.db.ticket().iter().filter(|t| t.tenant_id == "t_a").collect();
+        let tickets: Vec<Ticket> = ctx
+            .db
+            .ticket()
+            .iter()
+            .filter(|t| t.tenant_id == "t_a")
+            .collect();
         assert_eq!(tickets.len(), 1);
         assert_eq!(tickets[0].title, "Tkt A");
     }
@@ -251,7 +414,17 @@ mod tests {
     #[test]
     fn test_timer_note_derives_tenant_from_ticket() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t_derived".into(), "c1".into(), "Derive test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t_derived".into(),
+            "c1".into(),
+            "Derive test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let tid = t.id.clone();
@@ -270,8 +443,13 @@ mod tests {
         let ctx = test_ctx();
         create_recurring_invoice_rule(
             &ctx,
-            "t_rinv".into(), "Monthly".into(), "monthly".into(), 1, 30,
-            r#"[{"item_type":"labor","description":"Support","quantity":1,"unit_price":100}]"#.into(),
+            "t_rinv".into(),
+            "Monthly".into(),
+            "monthly".into(),
+            1,
+            30,
+            r#"[{"item_type":"labor","description":"Support","quantity":1,"unit_price":100}]"#
+                .into(),
             1000000,
         );
         use crate::recurring_invoice_rules;
@@ -285,15 +463,28 @@ mod tests {
     fn test_update_recurring_invoice_rule() {
         let ctx = test_ctx();
         create_recurring_invoice_rule(
-            &ctx, "t".into(), "Original".into(), "weekly".into(), 1, 14,
-            "[]".into(), 0,
+            &ctx,
+            "t".into(),
+            "Original".into(),
+            "weekly".into(),
+            1,
+            14,
+            "[]".into(),
+            0,
         );
         use crate::recurring_invoice_rules;
         let rule = ctx.db.recurring_invoice_rules().iter().next().unwrap();
         let id = rule.id.clone();
         update_recurring_invoice_rule(
-            &ctx, id.clone(), "Updated".into(), "monthly".into(), 2, 30,
-            "[]".into(), 2000000, "active".into(),
+            &ctx,
+            id.clone(),
+            "Updated".into(),
+            "monthly".into(),
+            2,
+            30,
+            "[]".into(),
+            2000000,
+            "active".into(),
         );
         let updated = ctx.db.recurring_invoice_rules().id().find(&id).unwrap();
         assert_eq!(updated.name, "Updated");
@@ -317,8 +508,13 @@ mod tests {
         let ctx = test_ctx();
         save_payment_method(
             &ctx,
-            "t_pm".into(), "cust_1".into(),
-            "pm_stripe123".into(), "Visa".into(), "4242".into(), 12, 2026,
+            "t_pm".into(),
+            "cust_1".into(),
+            "pm_stripe123".into(),
+            "Visa".into(),
+            "4242".into(),
+            12,
+            2026,
         );
         use crate::saved_payment_methods;
         let methods: Vec<SavedPaymentMethod> = ctx.db.saved_payment_methods().iter().collect();
@@ -330,8 +526,26 @@ mod tests {
     #[test]
     fn test_set_default_payment_method() {
         let ctx = test_ctx();
-        save_payment_method(&ctx, "t".into(), "cust_1".into(), "pm1".into(), "Visa".into(), "4242".into(), 12, 2026);
-        save_payment_method(&ctx, "t".into(), "cust_1".into(), "pm2".into(), "MC".into(), "5555".into(), 6, 2025);
+        save_payment_method(
+            &ctx,
+            "t".into(),
+            "cust_1".into(),
+            "pm1".into(),
+            "Visa".into(),
+            "4242".into(),
+            12,
+            2026,
+        );
+        save_payment_method(
+            &ctx,
+            "t".into(),
+            "cust_1".into(),
+            "pm2".into(),
+            "MC".into(),
+            "5555".into(),
+            6,
+            2025,
+        );
         use crate::saved_payment_methods;
         let first = ctx.db.saved_payment_methods().iter().next().unwrap();
         let id = first.id.clone();
@@ -357,8 +571,14 @@ mod tests {
         let ctx = test_ctx();
         create_scheduled_report(
             &ctx,
-            "t_rep".into(), "Weekly Report".into(), "tickets".into(),
-            "weekly".into(), "{}".into(), "[]".into(), "{}".into(), 1000000,
+            "t_rep".into(),
+            "Weekly Report".into(),
+            "tickets".into(),
+            "weekly".into(),
+            "{}".into(),
+            "[]".into(),
+            "{}".into(),
+            1000000,
         );
         use crate::scheduled_reports;
         let reports: Vec<ScheduledReport> = ctx.db.scheduled_reports().iter().collect();
@@ -369,11 +589,32 @@ mod tests {
     #[test]
     fn test_update_scheduled_report() {
         let ctx = test_ctx();
-        create_scheduled_report(&ctx, "t".into(), "Old".into(), "tickets".into(), "daily".into(), "{}".into(), "[]".into(), "{}".into(), 0);
+        create_scheduled_report(
+            &ctx,
+            "t".into(),
+            "Old".into(),
+            "tickets".into(),
+            "daily".into(),
+            "{}".into(),
+            "[]".into(),
+            "{}".into(),
+            0,
+        );
         use crate::scheduled_reports;
         let report = ctx.db.scheduled_reports().iter().next().unwrap();
         let id = report.id.clone();
-        update_scheduled_report(&ctx, id.clone(), "New".into(), "invoices".into(), "weekly".into(), "{}".into(), "[]".into(), "{}".into(), 2000000, true);
+        update_scheduled_report(
+            &ctx,
+            id.clone(),
+            "New".into(),
+            "invoices".into(),
+            "weekly".into(),
+            "{}".into(),
+            "[]".into(),
+            "{}".into(),
+            2000000,
+            true,
+        );
         let updated = ctx.db.scheduled_reports().id().find(&id).unwrap();
         assert_eq!(updated.name, "New");
         assert_eq!(updated.report_type, "invoices");
@@ -382,7 +623,17 @@ mod tests {
     #[test]
     fn test_mark_report_run() {
         let ctx = test_ctx();
-        create_scheduled_report(&ctx, "t".into(), "R".into(), "tickets".into(), "daily".into(), "{}".into(), "[]".into(), "{}".into(), 0);
+        create_scheduled_report(
+            &ctx,
+            "t".into(),
+            "R".into(),
+            "tickets".into(),
+            "daily".into(),
+            "{}".into(),
+            "[]".into(),
+            "{}".into(),
+            0,
+        );
         use crate::scheduled_reports;
         let report = ctx.db.scheduled_reports().iter().next().unwrap();
         let id = report.id.clone();
@@ -395,7 +646,17 @@ mod tests {
     #[test]
     fn test_mark_report_error() {
         let ctx = test_ctx();
-        create_scheduled_report(&ctx, "t".into(), "R".into(), "tickets".into(), "daily".into(), "{}".into(), "[]".into(), "{}".into(), 0);
+        create_scheduled_report(
+            &ctx,
+            "t".into(),
+            "R".into(),
+            "tickets".into(),
+            "daily".into(),
+            "{}".into(),
+            "[]".into(),
+            "{}".into(),
+            0,
+        );
         use crate::scheduled_reports;
         let report = ctx.db.scheduled_reports().iter().next().unwrap();
         let id = report.id.clone();
@@ -421,8 +682,13 @@ mod tests {
         let ctx = test_ctx();
         create_invoice(
             &ctx,
-            "t_inv".into(), "cust_1".into(), "tkt_1".into(),
-            "Test invoice".into(), "Net 30".into(), 2000000, "USD".into(),
+            "t_inv".into(),
+            "cust_1".into(),
+            "tkt_1".into(),
+            "Test invoice".into(),
+            "Net 30".into(),
+            2000000,
+            "USD".into(),
         );
         use crate::invoices;
         let invoices: Vec<Invoice> = ctx.db.invoices().iter().collect();
@@ -434,12 +700,33 @@ mod tests {
     #[test]
     fn test_add_invoice_line_item() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::invoices;
         let inv = ctx.db.invoices().iter().next().unwrap();
         let inv_id = inv.id.clone();
-        add_invoice_line_item(&ctx, inv_id.clone(), "part".into(), "Screen repair".into(), 1.0, 50.0);
-        let items: Vec<InvoiceLineItem> = ctx.db.invoice_line_items().iter().filter(|i| i.invoice_id == inv_id).collect();
+        add_invoice_line_item(
+            &ctx,
+            inv_id.clone(),
+            "part".into(),
+            "Screen repair".into(),
+            1.0,
+            50.0,
+        );
+        let items: Vec<InvoiceLineItem> = ctx
+            .db
+            .invoice_line_items()
+            .iter()
+            .filter(|i| i.invoice_id == inv_id)
+            .collect();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].description, "Screen repair");
     }
@@ -447,11 +734,27 @@ mod tests {
     #[test]
     fn test_delete_invoice_line_item() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::invoices;
         let inv = ctx.db.invoices().iter().next().unwrap();
         let inv_id = inv.id.clone();
-        add_invoice_line_item(&ctx, inv_id.clone(), "part".into(), "Item".into(), 1.0, 10.0);
+        add_invoice_line_item(
+            &ctx,
+            inv_id.clone(),
+            "part".into(),
+            "Item".into(),
+            1.0,
+            10.0,
+        );
         use crate::invoice_line_items;
         let item = ctx.db.invoice_line_items().iter().next().unwrap();
         let item_id = item.id.clone();
@@ -462,7 +765,16 @@ mod tests {
     #[test]
     fn test_update_invoice_status() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::invoices;
         let inv = ctx.db.invoices().iter().next().unwrap();
         let id = inv.id.clone();
@@ -474,7 +786,16 @@ mod tests {
     #[test]
     fn test_set_invoice_tax_rate() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::invoices;
         let inv = ctx.db.invoices().iter().next().unwrap();
         let id = inv.id.clone();
@@ -486,7 +807,16 @@ mod tests {
     #[test]
     fn test_delete_invoice() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c".into(), "t".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::invoices;
         let inv = ctx.db.invoices().iter().next().unwrap();
         let id = inv.id.clone();
@@ -511,8 +841,12 @@ mod tests {
         let ctx = test_ctx();
         create_estimate(
             &ctx,
-            "t_est".into(), "cust_1".into(), "tkt_1".into(),
-            "Test estimate".into(), 3000000, "USD".into(),
+            "t_est".into(),
+            "cust_1".into(),
+            "tkt_1".into(),
+            "Test estimate".into(),
+            3000000,
+            "USD".into(),
         );
         use crate::estimates;
         let estimates: Vec<Estimate> = ctx.db.estimates().iter().collect();
@@ -523,7 +857,15 @@ mod tests {
     #[test]
     fn test_update_estimate_status() {
         let ctx = test_ctx();
-        create_estimate(&ctx, "t".into(), "c".into(), "t".into(), "".into(), 0, "USD".into());
+        create_estimate(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::estimates;
         let est = ctx.db.estimates().iter().next().unwrap();
         let id = est.id.clone();
@@ -535,12 +877,32 @@ mod tests {
     #[test]
     fn test_add_estimate_line_item() {
         let ctx = test_ctx();
-        create_estimate(&ctx, "t".into(), "c".into(), "t".into(), "".into(), 0, "USD".into());
+        create_estimate(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::estimates;
         let est = ctx.db.estimates().iter().next().unwrap();
         let est_id = est.id.clone();
-        add_estimate_line_item(&ctx, est_id.clone(), "labor".into(), "Diagnostic".into(), 1.0, 75.0);
-        let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().filter(|i| i.estimate_id == est_id).collect();
+        add_estimate_line_item(
+            &ctx,
+            est_id.clone(),
+            "labor".into(),
+            "Diagnostic".into(),
+            1.0,
+            75.0,
+        );
+        let items: Vec<EstimateLineItem> = ctx
+            .db
+            .estimate_line_items()
+            .iter()
+            .filter(|i| i.estimate_id == est_id)
+            .collect();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].description, "Diagnostic");
     }
@@ -548,7 +910,15 @@ mod tests {
     #[test]
     fn test_delete_estimate() {
         let ctx = test_ctx();
-        create_estimate(&ctx, "t".into(), "c".into(), "t".into(), "".into(), 0, "USD".into());
+        create_estimate(
+            &ctx,
+            "t".into(),
+            "c".into(),
+            "t".into(),
+            "".into(),
+            0,
+            "USD".into(),
+        );
         use crate::estimates;
         let est = ctx.db.estimates().iter().next().unwrap();
         let id = est.id.clone();
@@ -580,5 +950,4 @@ mod tests {
         convert_estimate_to_invoice(&ctx, "nonexistent".into());
         assert!(true);
     }
-
 }

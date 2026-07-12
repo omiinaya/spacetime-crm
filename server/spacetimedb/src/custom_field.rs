@@ -41,19 +41,21 @@ pub fn create_custom_field_definition(
     active: bool,
 ) {
     let now = now_ms(ctx);
-    ctx.db.custom_field_definitions().insert(CustomFieldDefinition {
-        id,
-        tenant_id,
-        entity_type,
-        label,
-        field_type,
-        options,
-        sort_order,
-        required,
-        active,
-        created_at: now,
-        updated_at: now,
-    });
+    ctx.db
+        .custom_field_definitions()
+        .insert(CustomFieldDefinition {
+            id,
+            tenant_id,
+            entity_type,
+            label,
+            field_type,
+            options,
+            sort_order,
+            required,
+            active,
+            created_at: now,
+            updated_at: now,
+        });
 }
 
 #[spacetimedb::reducer]
@@ -68,16 +70,19 @@ pub fn update_custom_field_definition(
     active: bool,
 ) {
     if let Some(f) = ctx.db.custom_field_definitions().id().find(&id) {
-        ctx.db.custom_field_definitions().id().update(CustomFieldDefinition {
-            label,
-            field_type,
-            options,
-            sort_order,
-            required,
-            active,
-            updated_at: now_ms(ctx),
-            ..f
-        });
+        ctx.db
+            .custom_field_definitions()
+            .id()
+            .update(CustomFieldDefinition {
+                label,
+                field_type,
+                options,
+                sort_order,
+                required,
+                active,
+                updated_at: now_ms(ctx),
+                ..f
+            });
     }
 }
 
@@ -128,7 +133,11 @@ pub fn set_custom_field_value(
             ..existing_val
         });
     } else {
-        let id = format!("cfv_{}_{}", now, ctx.sender().to_hex().chars().take(8).collect::<String>());
+        let id = format!(
+            "cfv_{}_{}",
+            now,
+            ctx.sender().to_hex().chars().take(8).collect::<String>()
+        );
         ctx.db.custom_field_values().insert(CustomFieldValue {
             id,
             tenant_id,
@@ -160,12 +169,11 @@ fn now_ms(ctx: &ReducerContext) -> u64 {
     ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::custom_field::*;
     use crate::custom_field::custom_field_definitions;
     use crate::custom_field::custom_field_values;
+    use crate::custom_field::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -175,7 +183,18 @@ mod tests {
     #[test]
     fn test_create_custom_field_definition() {
         let ctx = test_ctx();
-        create_custom_field_definition(&ctx, "test_tenant_id".into(), "test_id".into(), "test_entity_type".into(), "test_label".into(), "test_field_type".into(), "test_options".into(), 1, true, true);
+        create_custom_field_definition(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_id".into(),
+            "test_entity_type".into(),
+            "test_label".into(),
+            "test_field_type".into(),
+            "test_options".into(),
+            1,
+            true,
+            true,
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.custom_field_definitions().iter().count() >= 0);
@@ -184,7 +203,16 @@ mod tests {
     #[test]
     fn test_update_custom_field_definition() {
         let ctx = test_ctx();
-        update_custom_field_definition(&ctx, "test_id".into(), "test_label".into(), "test_field_type".into(), "test_options".into(), 1, true, true);
+        update_custom_field_definition(
+            &ctx,
+            "test_id".into(),
+            "test_label".into(),
+            "test_field_type".into(),
+            "test_options".into(),
+            1,
+            true,
+            true,
+        );
         // Verify the reducer executed without panic
         // Update on non-existent should not panic
         assert!(true);
@@ -202,7 +230,13 @@ mod tests {
     #[test]
     fn test_set_custom_field_value() {
         let ctx = test_ctx();
-        set_custom_field_value(&ctx, "test_entity_id".into(), "test_field_id".into(), "test_value".into(), "test_tenant_id".into());
+        set_custom_field_value(
+            &ctx,
+            "test_entity_id".into(),
+            "test_field_id".into(),
+            "test_value".into(),
+            "test_tenant_id".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.custom_field_definitions().iter().count() >= 0);
@@ -220,9 +254,24 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_custom_field_definition(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into(), "test".into(), "test".into(), String::new(), true, true);
-        let items: Vec<_> = ctx.db.custom_field_definitions().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_custom_field_definition(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            String::new(),
+            true,
+            true,
+        );
+        let items: Vec<_> = ctx
+            .db
+            .custom_field_definitions()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

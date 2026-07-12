@@ -1,4 +1,5 @@
 """CSV Export/Import routes."""
+
 from __future__ import annotations
 
 import csv
@@ -8,10 +9,14 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Respons
 
 from helpers import (
     _safe_id,
-    _sql, _call, _log_audit,
-    require_role, logger,
+    _sql,
+    _call,
+    _log_audit,
+    require_role,
+    logger,
 )
 from rate_limit import limiter
+
 router = APIRouter()
 
 ENTITY_TABLE_MAP = {
@@ -97,12 +102,28 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
                 cid = row["id"].strip()
                 created_at = int(row.get("created_at", now_ms) or now_ms)
                 updated_at = int(row.get("updated_at", now_ms) or now_ms)
-                await _call("import_customer", [
-                    user["tenant_id"],
-                    cid, fn, ln, email, phone, mobile, addr1, addr2,
-                    city, state, zipc, company, notes, tags,
-                    created_at, updated_at,
-                ])
+                await _call(
+                    "import_customer",
+                    [
+                        user["tenant_id"],
+                        cid,
+                        fn,
+                        ln,
+                        email,
+                        phone,
+                        mobile,
+                        addr1,
+                        addr2,
+                        city,
+                        state,
+                        zipc,
+                        company,
+                        notes,
+                        tags,
+                        created_at,
+                        updated_at,
+                    ],
+                )
             else:
                 await _call("create_customer", [user["tenant_id"], fn, ln, email, phone])
             count += 1
@@ -151,13 +172,32 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
                 pid = row["id"].strip()
                 created_at = int(row.get("created_at", now_ms) or now_ms)
                 updated_at = int(row.get("updated_at", now_ms) or now_ms)
-                await _call("import_product", [
-                    user["tenant_id"],
-                    pid, name, sku, barcode, desc, category, price, cost,
-                    qoh, qc, min_stock, location, active, created_at, updated_at,
-                ])
+                await _call(
+                    "import_product",
+                    [
+                        user["tenant_id"],
+                        pid,
+                        name,
+                        sku,
+                        barcode,
+                        desc,
+                        category,
+                        price,
+                        cost,
+                        qoh,
+                        qc,
+                        min_stock,
+                        location,
+                        active,
+                        created_at,
+                        updated_at,
+                    ],
+                )
             else:
-                await _call("create_product", [user["tenant_id"], name, sku, barcode, desc, category, price, cost, qoh, min_stock, location])
+                await _call(
+                    "create_product",
+                    [user["tenant_id"], name, sku, barcode, desc, category, price, cost, qoh, min_stock, location],
+                )
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")

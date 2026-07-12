@@ -1,12 +1,18 @@
 """Webhook routes — Stripe + webhook subscriptions."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from helpers import (
     _safe_id,
-    _sql, _call, _log_audit, _get_webhook_subscriptions,
-    require_role, get_current_user, logger,
+    _sql,
+    _call,
+    _log_audit,
+    _get_webhook_subscriptions,
+    require_role,
+    get_current_user,
+    logger,
 )
 from models import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
 from webhooks import ALL_EVENTS as WEBHOOK_EVENTS, _deliver
@@ -43,16 +49,19 @@ async def stripe_webhook(request: Request):
         if invoice_id and amount_total > 0:
             inv_rows = await _sql(f"SELECT tenant_id FROM invoices WHERE id = '{_safe_id(invoice_id)}'")
             tid = inv_rows[0]["tenant_id"] if inv_rows else ""
-            await _call("record_payment", [
-                tid,
-                invoice_id,
-                customer_id,
-                amount_total,
-                "stripe",
-                payment_intent,
-                f"Stripe payment via session {stripe_session_id}",
-                "USD",
-            ])
+            await _call(
+                "record_payment",
+                [
+                    tid,
+                    invoice_id,
+                    customer_id,
+                    amount_total,
+                    "stripe",
+                    payment_intent,
+                    f"Stripe payment via session {stripe_session_id}",
+                    "USD",
+                ],
+            )
 
             # Update invoice status
             payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
@@ -70,12 +79,13 @@ async def stripe_webhook(request: Request):
 
 # ── WEBHOOK SUBSCRIPTIONS ──
 
+
 @router.get("/api/webhook-subscriptions")
 async def list_webhook_subscriptions(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin"))):
     """List all webhook subscriptions with pagination."""
     rows = await _get_webhook_subscriptions()
     total = len(rows)
-    rows = rows[offset:offset + limit]
+    rows = rows[offset : offset + limit]
     return {"subscriptions": rows, "total": total, "offset": offset, "limit": limit}
 
 
@@ -105,7 +115,9 @@ async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dic
 
 @router.put("/api/webhook-subscriptions/{sub_id}")
 @limiter.limit("100/minute")
-async def update_webhook_subscription(sub_id: str, body: WebhookSubscriptionUpdate, user: dict = Depends(require_role("admin"))):
+async def update_webhook_subscription(
+    sub_id: str, body: WebhookSubscriptionUpdate, user: dict = Depends(require_role("admin"))
+):
     """Update a webhook subscription."""
     url = body.url.strip()
     events = body.events.strip()

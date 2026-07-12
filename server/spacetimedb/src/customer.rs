@@ -26,7 +26,14 @@ pub struct Customer {
 }
 
 #[spacetimedb::reducer]
-pub fn create_customer(ctx: &ReducerContext, tenant_id: String, first_name: String, last_name: String, email: String, phone: String) {
+pub fn create_customer(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    first_name: String,
+    last_name: String,
+    email: String,
+    phone: String,
+) {
     let id = super::make_id("cust", ctx);
     let now = super::now_ms(ctx);
     ctx.db.customer().insert(Customer {
@@ -93,7 +100,10 @@ pub fn update_customer(
 #[spacetimedb::reducer]
 pub fn set_customer_password(ctx: &ReducerContext, id: String, password_hash: String) {
     if let Some(c) = ctx.db.customer().id().find(&id) {
-        ctx.db.customer().id().update(Customer { portal_password_hash: password_hash, ..c });
+        ctx.db.customer().id().update(Customer {
+            portal_password_hash: password_hash,
+            ..c
+        });
     }
 }
 
@@ -181,8 +191,11 @@ mod tests {
         let ctx = test_ctx();
         create_customer(
             &ctx,
-            "t".into(), "John".into(), "Doe".into(),
-            "john@test.com".into(), "555-0200".into(),
+            "t".into(),
+            "John".into(),
+            "Doe".into(),
+            "john@test.com".into(),
+            "555-0200".into(),
         );
         let c = ctx.db.customer().iter().next().unwrap();
         let id = c.id.clone();
@@ -193,9 +206,15 @@ mod tests {
             "Doe".into(),
             "johnny@test.com".into(),
             "555-0300".into(),
-            String::new(), String::new(), String::new(),
-            String::new(), String::new(), String::new(),
-            String::new(), String::new(), String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
         );
         let updated = ctx.db.customer().id().find(&id).unwrap();
         assert_eq!(updated.first_name, "Johnny");
@@ -207,8 +226,11 @@ mod tests {
         let ctx = test_ctx();
         create_customer(
             &ctx,
-            "t".into(), "Test".into(), "User".into(),
-            "test@test.com".into(), "555-0400".into(),
+            "t".into(),
+            "Test".into(),
+            "User".into(),
+            "test@test.com".into(),
+            "555-0400".into(),
         );
         let c = ctx.db.customer().iter().next().unwrap();
         let id = c.id.clone();
@@ -222,8 +244,11 @@ mod tests {
         let ctx = test_ctx();
         create_customer(
             &ctx,
-            "t".into(), "Del".into(), "Ete".into(),
-            "del@test.com".into(), "555-0500".into(),
+            "t".into(),
+            "Del".into(),
+            "Ete".into(),
+            "del@test.com".into(),
+            "555-0500".into(),
         );
         let id = ctx.db.customer().iter().next().unwrap().id.clone();
         delete_customer(&ctx, id);
@@ -243,11 +268,19 @@ mod tests {
         update_customer(
             &ctx,
             "nonexistent".into(),
-            "Nope".into(), "Nada".into(),
-            "nope@test.com".into(), "555-0000".into(),
-            String::new(), String::new(), String::new(),
-            String::new(), String::new(), String::new(),
-            String::new(), String::new(), String::new(),
+            "Nope".into(),
+            "Nada".into(),
+            "nope@test.com".into(),
+            "555-0000".into(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
         );
         assert_eq!(ctx.db.customer().iter().count(), 0);
     }
@@ -263,12 +296,24 @@ mod tests {
             "User".into(),
             "imported@test.com".into(),
             "555-0600".into(),
-            String::new(), String::new(), String::new(),
-            String::new(), String::new(), String::new(),
-            String::new(), String::new(), String::new(),
-            1000, 1000,
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            1000,
+            1000,
         );
-        let c = ctx.db.customer().id().find(&"cust_imported".to_string()).unwrap();
+        let c = ctx
+            .db
+            .customer()
+            .id()
+            .find(&"cust_imported".to_string())
+            .unwrap();
         assert_eq!(c.first_name, "Imported");
         assert_eq!(c.tenant_id, "t_imp");
     }
@@ -277,14 +322,27 @@ mod tests {
     fn test_tenant_isolation() {
         let ctx = test_ctx();
         create_customer(
-            &ctx, "tenant_a".into(), "Alice".into(), "A".into(),
-            "alice@a.com".into(), "555-1001".into(),
+            &ctx,
+            "tenant_a".into(),
+            "Alice".into(),
+            "A".into(),
+            "alice@a.com".into(),
+            "555-1001".into(),
         );
         create_customer(
-            &ctx, "tenant_b".into(), "Bob".into(), "B".into(),
-            "bob@b.com".into(), "555-1002".into(),
+            &ctx,
+            "tenant_b".into(),
+            "Bob".into(),
+            "B".into(),
+            "bob@b.com".into(),
+            "555-1002".into(),
         );
-        let tenant_a_only: Vec<Customer> = ctx.db.customer().iter().filter(|c| c.tenant_id == "tenant_a").collect();
+        let tenant_a_only: Vec<Customer> = ctx
+            .db
+            .customer()
+            .iter()
+            .filter(|c| c.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(tenant_a_only.len(), 1);
         assert_eq!(tenant_a_only[0].email, "alice@a.com");
     }

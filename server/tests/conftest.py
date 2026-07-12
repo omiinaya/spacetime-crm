@@ -10,6 +10,7 @@ sessions (parallel/sequential) never collides. Created entities are
 tracked and cleaned up at session end via STDB SQL DELETE (not fragile
 HTTP endpoint calls).
 """
+
 import os
 import json
 import uuid
@@ -42,9 +43,7 @@ def _stdb_sql(query: str) -> list[dict]:
         headers={"Content-Type": "application/sql"},
         timeout=10,
     )
-    assert resp.status_code == 200, (
-        f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
-    )
+    assert resp.status_code == 200, f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
     return resp.json()
 
 
@@ -225,9 +224,14 @@ def session_suffix() -> str:
 @pytest.fixture(scope="session")
 def admin_token() -> str:
     """Log in as admin once per session and return the JWT."""
-    resp = httpx.post(f"{SERVER_URL}/api/auth/login", json={
-        "email": ADMIN_EMAIL, "password": ADMIN_PW,
-    }, timeout=10)
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/login",
+        json={
+            "email": ADMIN_EMAIL,
+            "password": ADMIN_PW,
+        },
+        timeout=10,
+    )
     assert resp.status_code == 200, f"Admin login failed: {resp.text}"
     data = resp.json()
     assert "token" in data
@@ -237,9 +241,14 @@ def admin_token() -> str:
 @pytest.fixture(scope="session")
 def admin_user() -> dict:
     """Log in and return user info."""
-    resp = httpx.post(f"{SERVER_URL}/api/auth/login", json={
-        "email": ADMIN_EMAIL, "password": ADMIN_PW,
-    }, timeout=10)
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/login",
+        json={
+            "email": ADMIN_EMAIL,
+            "password": ADMIN_PW,
+        },
+        timeout=10,
+    )
     assert resp.status_code == 200
     return resp.json()["user"]
 
@@ -277,6 +286,7 @@ def auth_headers(admin_token) -> dict:
 # Each test session gets its own tenant with an admin user for complete
 # STDB state isolation between parallel test runs. This avoids flaky tests
 # when multiple test sessions run against the same STDB instance.
+
 
 @pytest.fixture(scope="session")
 def test_tenant_slug(session_suffix: str) -> str:
@@ -438,17 +448,13 @@ def _session_cleanup(request, session_suffix: str, auth_headers_session: dict):
 
 def assert_ok(resp: httpx.Response, status: int = 200):
     """Assert a successful response and return parsed JSON."""
-    assert resp.status_code == status, (
-        f"Expected {status}, got {resp.status_code}: {resp.text[:300]}"
-    )
+    assert resp.status_code == status, f"Expected {status}, got {resp.status_code}: {resp.text[:300]}"
     return resp.json()
 
 
 def assert_unauthorized(resp: httpx.Response):
     """Assert a 401 or 403 response."""
-    assert resp.status_code in (401, 403), (
-        f"Expected 401/403, got {resp.status_code}: {resp.text[:300]}"
-    )
+    assert resp.status_code in (401, 403), f"Expected 401/403, got {resp.status_code}: {resp.text[:300]}"
 
 
 def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -> dict:
@@ -522,7 +528,8 @@ def restore_mail_settings(auth_headers: dict, settings: dict | None) -> None:
                 "smtp_from_name": settings.get("smtp_from_name", ""),
                 "smtp_tls": settings.get("smtp_tls", True),
             },
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -552,7 +559,8 @@ def restore_sms_settings(auth_headers: dict, settings: dict | None) -> None:
                 "twilio_auth_token": settings.get("twilio_auth_token", ""),
                 "twilio_from_number": settings.get("twilio_from_number", ""),
             },
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -581,7 +589,8 @@ def restore_user_settings(auth_headers: dict, settings: dict | None) -> None:
                 "theme": settings.get("theme", "system"),
                 "default_ticket_status": settings.get("default_ticket_status", "new"),
             },
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -597,7 +606,8 @@ def save_sla_targets(auth_headers: dict) -> dict:
     try:
         resp = httpx.get(
             f"{SERVER_URL}/api/tickets/sla-settings",
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
         data = resp.json()
         return data.get("targets", dict(DEFAULT_SLA_TARGETS))
@@ -613,7 +623,8 @@ def restore_sla_targets(auth_headers: dict, targets: dict) -> None:
         httpx.post(
             f"{SERVER_URL}/api/tickets/sla-settings",
             json={"targets": targets},
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -654,13 +665,15 @@ def restore_default_tax_rate(auth_headers: dict, saved: dict | None) -> None:
                     httpx.put(
                         f"{SERVER_URL}/api/tax-rates/{rate['id']}",
                         json={"name": rate["name"], "rate": rate["rate"], "is_default": False},
-                        headers=auth_headers, timeout=10,
+                        headers=auth_headers,
+                        timeout=10,
                     )
         # Restore the saved rate as default
         httpx.put(
             f"{SERVER_URL}/api/tax-rates/{saved['id']}",
             json={"name": saved["name"], "rate": saved["rate"], "is_default": True},
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -693,7 +706,8 @@ def _reset_global_state(auth_headers_session: dict, session_suffix: str):
                 "smtp_from_name": "",
                 "smtp_tls": True,
             },
-            headers=auth_headers_session, timeout=10,
+            headers=auth_headers_session,
+            timeout=10,
         )
     except Exception:
         pass
@@ -706,7 +720,8 @@ def _reset_global_state(auth_headers_session: dict, session_suffix: str):
                 "twilio_auth_token": "",
                 "twilio_from_number": "",
             },
-            headers=auth_headers_session, timeout=10,
+            headers=auth_headers_session,
+            timeout=10,
         )
     except Exception:
         pass

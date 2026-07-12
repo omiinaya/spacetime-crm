@@ -1,4 +1,5 @@
 """POS / Counter Sale endpoint tests."""
+
 import pytest
 import httpx
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
@@ -8,7 +9,12 @@ from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_en
 def test_product_id(test_admin_headers: dict, session_suffix: str) -> str:
     """Create a product for POS line items and return its ID."""
     sku = f"POS-WDG-{session_suffix}-{unique_suffix()}"
-    httpx.post(f"{SERVER_URL}/api/products", json={"name": "POS Widget", "sku": sku, "price": 19.99, "cost": 10, "quantity_on_hand": 50}, headers=test_admin_headers, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/products",
+        json={"name": "POS Widget", "sku": sku, "price": 19.99, "cost": 10, "quantity_on_hand": 50},
+        headers=test_admin_headers,
+        timeout=10,
+    )
     r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=test_admin_headers, timeout=10)
     prods = r.json().get("products", [])
     assert len(prods) > 0, "Product not created"
@@ -24,13 +30,18 @@ def _create_sale(test_admin_headers: dict, session_suffix: str = "", suffix: str
     """
     suf = suffix or unique_suffix()
     name = f"Walk-in-{session_suffix}-{suf}"
-    httpx.post(f"{SERVER_URL}/api/pos/create", json={
-        "customer_name": name,
-        "payment_method": "cash",
-        "amount_tendered": 100,
-        "tax_rate": 8.25,
-        "discount_amount": 0,
-    }, headers=test_admin_headers, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/pos/create",
+        json={
+            "customer_name": name,
+            "payment_method": "cash",
+            "amount_tendered": 100,
+            "tax_rate": 8.25,
+            "discount_amount": 0,
+        },
+        headers=test_admin_headers,
+        timeout=10,
+    )
     rows = _stdb_sql(f"SELECT id FROM counter_sale WHERE customer_name = '{name}'")
     assert len(rows) > 0, f"Sale not found for customer '{name}'"
     sale_id = rows[0]["id"]
@@ -43,14 +54,20 @@ class TestPOSCRUD:
 
     def test_create_sale(self, test_admin_headers: dict, session_suffix: str):
         from .conftest import unique_suffix, test_admin_headers
+
         name = f"Jane Customer {session_suffix}-{unique_suffix()}"
-        resp = httpx.post(f"{SERVER_URL}/api/pos/create", json={
-            "customer_name": name,
-            "payment_method": "card",
-            "amount_tendered": 75,
-            "tax_rate": 0,
-            "discount_amount": 5,
-        }, headers=test_admin_headers, timeout=10)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/pos/create",
+            json={
+                "customer_name": name,
+                "payment_method": "card",
+                "amount_tendered": 75,
+                "tax_rate": 0,
+                "discount_amount": 5,
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
         assert_ok(resp)
 
     def test_list_sales(self, test_admin_headers: dict):
@@ -88,14 +105,19 @@ class TestPOSItems:
 
     def test_add_item(self, test_admin_headers: dict, test_product_id: str, session_suffix: str):
         sale_id = _create_sale(test_admin_headers, session_suffix, "add")
-        resp = httpx.post(f"{SERVER_URL}/api/pos/items", json={
-            "sale_id": sale_id,
-            "product_id": test_product_id,
-            "product_name": "POS Widget",
-            "sku": "POS-WDG-001",
-            "quantity": 2,
-            "unit_price": 19.99,
-        }, headers=test_admin_headers, timeout=10)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/pos/items",
+            json={
+                "sale_id": sale_id,
+                "product_id": test_product_id,
+                "product_name": "POS Widget",
+                "sku": "POS-WDG-001",
+                "quantity": 2,
+                "unit_price": 19.99,
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
         assert_ok(resp)
 
         # Verify totals updated
@@ -107,17 +129,33 @@ class TestPOSItems:
     def test_multiple_items_update_totals(self, test_admin_headers: dict, test_product_id: str, session_suffix: str):
         sale_id = _create_sale(test_admin_headers, session_suffix, "multi")
         # Add first item
-        httpx.post(f"{SERVER_URL}/api/pos/items", json={
-            "sale_id": sale_id, "product_id": test_product_id,
-            "product_name": "Widget A", "sku": "A-001",
-            "quantity": 3, "unit_price": 10,
-        }, headers=test_admin_headers, timeout=10)
+        httpx.post(
+            f"{SERVER_URL}/api/pos/items",
+            json={
+                "sale_id": sale_id,
+                "product_id": test_product_id,
+                "product_name": "Widget A",
+                "sku": "A-001",
+                "quantity": 3,
+                "unit_price": 10,
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
         # Add second item
-        httpx.post(f"{SERVER_URL}/api/pos/items", json={
-            "sale_id": sale_id, "product_id": test_product_id,
-            "product_name": "Widget B", "sku": "B-001",
-            "quantity": 2, "unit_price": 5,
-        }, headers=test_admin_headers, timeout=10)
+        httpx.post(
+            f"{SERVER_URL}/api/pos/items",
+            json={
+                "sale_id": sale_id,
+                "product_id": test_product_id,
+                "product_name": "Widget B",
+                "sku": "B-001",
+                "quantity": 2,
+                "unit_price": 5,
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
 
         r = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}", headers=test_admin_headers, timeout=10)
         sale = r.json()["sale"]
@@ -130,11 +168,19 @@ class TestPOSItems:
     def test_item_line_item_ordering(self, test_admin_headers: dict, test_product_id: str, session_suffix: str):
         sale_id = _create_sale(test_admin_headers, session_suffix, "order")
         for i in range(3):
-            httpx.post(f"{SERVER_URL}/api/pos/items", json={
-                "sale_id": sale_id, "product_id": test_product_id,
-                "product_name": f"Item {i}", "sku": f"SKU-{i}",
-                "quantity": 1, "unit_price": 10 + i,
-            }, headers=test_admin_headers, timeout=10)
+            httpx.post(
+                f"{SERVER_URL}/api/pos/items",
+                json={
+                    "sale_id": sale_id,
+                    "product_id": test_product_id,
+                    "product_name": f"Item {i}",
+                    "sku": f"SKU-{i}",
+                    "quantity": 1,
+                    "unit_price": 10 + i,
+                },
+                headers=test_admin_headers,
+                timeout=10,
+            )
 
         r = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}", headers=test_admin_headers, timeout=10)
         items = r.json()["sale"]["line_items"]
@@ -171,7 +217,9 @@ class TestPOSReceiptPdf:
 
     def test_receipt_pdf_nonexistent(self, test_admin_headers: dict):
         """Getting receipt PDF for a nonexistent sale returns 404."""
-        resp = httpx.get(f"{SERVER_URL}/api/pos/sales/nonexistent-999/receipt-pdf", headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/pos/sales/nonexistent-999/receipt-pdf", headers=test_admin_headers, timeout=10
+        )
         assert resp.status_code == 404
 
     def test_receipt_pdf_requires_auth(self, client: httpx.Client):

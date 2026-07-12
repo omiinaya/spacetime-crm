@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import JsBarcode from "jsbarcode";
+import { useEffect, useRef } from 'react';
+import JsBarcode from 'jsbarcode';
 
 interface BarcodeLabelProps {
   barcode: string;
@@ -15,14 +15,14 @@ export default function BarcodeLabel({ barcode, productName, price, sku }: Barco
     if (svgRef.current) {
       try {
         JsBarcode(svgRef.current, barcode, {
-          format: barcode.length >= 12 ? "EAN13" : "CODE128",
+          format: barcode.length >= 12 ? 'EAN13' : 'CODE128',
           width: 2,
           height: 50,
           displayValue: true,
           fontSize: 14,
           margin: 5,
-          background: "#ffffff",
-          lineColor: "#000000",
+          background: '#ffffff',
+          lineColor: '#000000',
         });
       } catch {
         // fallback: just show text if barcode format fails
@@ -40,20 +40,25 @@ export default function BarcodeLabel({ barcode, productName, price, sku }: Barco
   );
 }
 
-export function printBarcodeLabel(barcode: string, productName: string, price: number, sku?: string) {
+export function printBarcodeLabel(
+  barcode: string,
+  productName: string,
+  price: number,
+  sku?: string,
+) {
   // Build a temp SVG via jsbarcode
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("style", "width: 200px; height: 80px;");
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('style', 'width: 200px; height: 80px;');
   try {
     JsBarcode(svg, barcode, {
-      format: barcode.length >= 12 ? "EAN13" : "CODE128",
+      format: barcode.length >= 12 ? 'EAN13' : 'CODE128',
       width: 2,
       height: 40,
       displayValue: true,
       fontSize: 12,
       margin: 5,
-      background: "#ffffff",
-      lineColor: "#000000",
+      background: '#ffffff',
+      lineColor: '#000000',
     });
   } catch {
     // fallback
@@ -61,9 +66,9 @@ export function printBarcodeLabel(barcode: string, productName: string, price: n
 
   const svgHtml = new XMLSerializer().serializeToString(svg);
 
-  const win = window.open("", "_blank");
+  const win = window.open('', '_blank');
   if (!win) {
-    alert("Pop-up blocked. Please allow pop-ups for this site.");
+    alert('Pop-up blocked. Please allow pop-ups for this site.');
     return;
   }
 
@@ -98,9 +103,9 @@ export function printBarcodeLabel(barcode: string, productName: string, price: n
     <body>
       <div class="label">
         ${svgHtml}
-        <div class="name">${productName.replace(/</g, "&lt;")}</div>
+        <div class="name">${productName.replace(/</g, '&lt;')}</div>
         <div class="price">$${price.toFixed(2)}</div>
-        ${sku ? `<div class="sku">${sku.replace(/</g, "&lt;")}</div>` : ""}
+        ${sku ? `<div class="sku">${sku.replace(/</g, '&lt;')}</div>` : ''}
       </div>
       <script>
         window.onload = function() { window.print(); window.close(); };

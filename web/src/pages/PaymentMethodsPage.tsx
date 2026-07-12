@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, Customer } from "../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { CreditCard, Plus, Trash2, Star } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, Customer } from '../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { CreditCard, Plus, Trash2, Star } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface PaymentMethod {
   id: string;
@@ -22,18 +22,18 @@ interface PaymentMethod {
 }
 
 const brandIcons: Record<string, string> = {
-  visa: "💳",
-  mastercard: "💳",
-  amex: "💳",
-  discover: "💳",
+  visa: '💳',
+  mastercard: '💳',
+  amex: '💳',
+  discover: '💳',
 };
 
 export default function PaymentMethodsPage() {
   const qc = useQueryClient();
-  const [customerFilter, setCustomerFilter] = useState("");
+  const [customerFilter, setCustomerFilter] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ["payment-methods", customerFilter],
+    queryKey: ['payment-methods', customerFilter],
     queryFn: async () => {
       const [pmRes, cRes] = await Promise.all([
         api.paymentMethods.list(customerFilter || undefined),
@@ -49,25 +49,25 @@ export default function PaymentMethodsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.paymentMethods.delete(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["payment-methods"] });
-      toast.success("Payment method removed");
+      qc.invalidateQueries({ queryKey: ['payment-methods'] });
+      toast.success('Payment method removed');
     },
-    onError: () => toast.error("Failed to remove payment method"),
+    onError: () => toast.error('Failed to remove payment method'),
   });
 
   const setDefaultMutation = useMutation({
     mutationFn: ({ id, customer_id }: { id: string; customer_id: string }) =>
       api.paymentMethods.setDefault(id, customer_id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["payment-methods"] });
-      toast.success("Default payment method updated");
+      qc.invalidateQueries({ queryKey: ['payment-methods'] });
+      toast.success('Default payment method updated');
     },
-    onError: () => toast.error("Failed to set default"),
+    onError: () => toast.error('Failed to set default'),
   });
 
   const getCustomerName = (customerId: string): string => {
     const c = customers.find((c: Customer) => c.id === customerId);
-    return c ? `${c.first_name} ${c.last_name}`.trim() || "—" : "—";
+    return c ? `${c.first_name} ${c.last_name}`.trim() || '—' : '—';
   };
 
   return (
@@ -125,7 +125,7 @@ export default function PaymentMethodsPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium capitalize">{pm.brand}</span>
-                        <span className="font-mono">**** {pm.last_4 || pm.last4 || ""}</span>
+                        <span className="font-mono">**** {pm.last_4 || pm.last4 || ''}</span>
                         {pm.is_default && (
                           <Badge variant="success" className="flex items-center gap-1">
                             <Star className="h-3 w-3" /> Default
@@ -134,7 +134,7 @@ export default function PaymentMethodsPage() {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Expires {pm.exp_month}/{pm.exp_year}
-                        {" · "}
+                        {' · '}
                         {getCustomerName(pm.customer_id)}
                       </p>
                     </div>
@@ -159,7 +159,7 @@ export default function PaymentMethodsPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        if (confirm("Remove this payment method?")) {
+                        if (confirm('Remove this payment method?')) {
                           deleteMutation.mutate(pm.id);
                         }
                       }}

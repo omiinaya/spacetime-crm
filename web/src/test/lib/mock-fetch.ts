@@ -22,35 +22,39 @@ export function mockFetch(): FetchMock {
   const queue: (() => Response)[] = [];
   const original = window.fetch;
 
-  const mock = vi.fn(
-    (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-      calls.push({ url: String(url), init });
-      const factory = queue.shift();
-      if (factory) return Promise.resolve(factory());
-      return Promise.resolve(
-        new Response("{}", {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
-      );
-    },
-  );
+  const mock = vi.fn((url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    calls.push({ url: String(url), init });
+    const factory = queue.shift();
+    if (factory) return Promise.resolve(factory());
+    return Promise.resolve(
+      new Response('{}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+  });
 
   window.fetch = mock as typeof window.fetch;
 
   return {
     push(body: unknown) {
-      queue.push(() => new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }));
+      queue.push(
+        () =>
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+      );
     },
     pushFail(status: number, body?: string) {
-      queue.push(() => new Response(body ?? "{}", {
-        status,
-        statusText: "Error",
-        headers: { "content-type": "application/json" },
-      }));
+      queue.push(
+        () =>
+          new Response(body ?? '{}', {
+            status,
+            statusText: 'Error',
+            headers: { 'content-type': 'application/json' },
+          }),
+      );
     },
     calls: () => [...calls],
     reset: () => {

@@ -2,6 +2,7 @@
 
 Extracted from main.py to enable route splitting and reduce code duplication.
 """
+
 from __future__ import annotations
 
 import json
@@ -28,13 +29,21 @@ TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
 
 STATUS_LABELS = {
-    "draft": "Draft", "sent": "Sent", "paid": "Paid",
-    "partial": "Partial", "overdue": "Overdue", "cancelled": "Cancelled",
+    "draft": "Draft",
+    "sent": "Sent",
+    "paid": "Paid",
+    "partial": "Partial",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled",
 }
 
 STATUS_CSS = {
-    "draft": "draft", "sent": "sent", "paid": "paid",
-    "partial": "partial", "overdue": "overdue", "cancelled": "cancelled",
+    "draft": "draft",
+    "sent": "sent",
+    "paid": "paid",
+    "partial": "partial",
+    "overdue": "overdue",
+    "cancelled": "cancelled",
 }
 
 # ── Safe response helpers ────────────────────────────────────
@@ -66,11 +75,7 @@ async def _sql(query: str) -> list[dict[str, Any]]:
         for table_result in data:
             rows = table_result.get("rows", [])
             schema = table_result.get("schema", {})
-            cols = [
-                e["name"]["some"]
-                for e in schema.get("elements", [])
-                if "some" in e.get("name", {})
-            ]
+            cols = [e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})]
             for row in rows:
                 result.append(dict(zip(cols, row)))
     return result
@@ -139,10 +144,10 @@ async def _paginated(
         query += f" LIMIT {fetch_n}"
     rows = await _sql(query)
 
-    rows.sort(key=lambda r: (r.get(order_by) or ""), reverse=order_desc)
+    rows.sort(key=lambda r: r.get(order_by) or "", reverse=order_desc)
     if sensitive_fields:
         rows = [{k: v for k, v in r.items() if k not in sensitive_fields} for r in rows]
-    return rows[offset:offset + limit], total
+    return rows[offset : offset + limit], total
 
 
 async def _call(reducer: str, args: list[Any] | None = None) -> Any:
@@ -162,26 +167,31 @@ async def _call(reducer: str, args: list[Any] | None = None) -> Any:
 
 def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
     """Sort rows by key, handling mixed types without crashing."""
+
     def sort_key(r):
         val = r.get(key)
         if val is None:
             return ("", 0) if desc else ("zzzz", 999999)
         return (str(val), val)
+
     return sorted(rows, key=sort_key, reverse=desc)
 
 
 async def _log_audit(user: dict, action: str, entity: str, entity_id: str, details: str = ""):
     """Record an audit log entry. Fire-and-forget — never raises."""
     try:
-        await _call("log_audit", [
-            user.get("tenant_id", ""),
-            user.get("id", ""),
-            user.get("name", ""),
-            action,
-            entity,
-            entity_id,
-            details,
-        ])
+        await _call(
+            "log_audit",
+            [
+                user.get("tenant_id", ""),
+                user.get("id", ""),
+                user.get("name", ""),
+                action,
+                entity,
+                entity_id,
+                details,
+            ],
+        )
     except Exception as e:
         logger.warning("Audit log failed: %s", e)
 
@@ -209,6 +219,7 @@ async def _fire_webhook(event_type: str, payload: dict[str, Any]) -> None:
 
 def require_role(*roles: str):
     """FastAPI dependency: validate JWT and check role membership."""
+
     async def _check(credentials: HTTPAuthorizationCredentials = Depends(security)):
         if credentials is None:
             raise HTTPException(401, "Not authenticated")
@@ -235,17 +246,16 @@ def require_role(*roles: str):
         if user.get("role") not in roles:
             raise HTTPException(
                 403,
-                f"Access denied. Requires one of roles: {', '.join(roles)}. "
-                f"Your role: {user.get('role', 'unknown')}",
+                f"Access denied. Requires one of roles: {', '.join(roles)}. Your role: {user.get('role', 'unknown')}",
             )
         return user
-    return _check
 
+    return _check
 
 
 def _sanitize_sql(val: str) -> str:
     """Escape a string value for safe SQL interpolation by doubling single quotes.
-    
+
     This prevents SQL injection while allowing special characters like @ and .
     Use for values that are not IDs (e.g., emails, names).
     """

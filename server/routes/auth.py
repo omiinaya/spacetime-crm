@@ -1,4 +1,5 @@
 """Auth routes — login, me, set-password, refresh-tenant, 2FA/TOTP."""
+
 from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
@@ -8,12 +9,22 @@ from config import settings
 from helpers import (
     _sanitize_sql,
     _safe_id,
-    _sql, _call, require_role, get_current_user, logger,
+    _sql,
+    _call,
+    require_role,
+    get_current_user,
+    logger,
 )
 from models import (
-    LoginRequest, SetPasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
-    Setup2FARequest, CompleteLoginRequest, Disable2FARequest,
-    SetPinRequest, PosLoginRequest,
+    LoginRequest,
+    SetPasswordRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    Setup2FARequest,
+    CompleteLoginRequest,
+    Disable2FARequest,
+    SetPinRequest,
+    PosLoginRequest,
 )
 from rate_limit import limiter
 

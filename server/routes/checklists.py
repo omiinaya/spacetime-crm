@@ -1,12 +1,17 @@
 """Checklist Template routes."""
+
 from __future__ import annotations
 
 import json
 from fastapi import APIRouter, Depends
 
 from helpers import (
-    _sql, _paginated, _call, _log_audit,
-    require_role, logger,
+    _sql,
+    _paginated,
+    _call,
+    _log_audit,
+    require_role,
+    logger,
 )
 from models import ChecklistTemplateCreate, ChecklistTemplateUpdate
 from rate_limit import limiter
@@ -15,12 +20,17 @@ router = APIRouter()
 
 
 @router.get("/api/checklist-templates")
-async def list_checklist_templates(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
+async def list_checklist_templates(
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))
+):
     """List all checklist templates with pagination."""
     rows, total = await _paginated(
-        user["tenant_id"], "checklist_templates",
-        offset=offset, limit=limit,
-        order_by="name", order_desc=False,
+        user["tenant_id"],
+        "checklist_templates",
+        offset=offset,
+        limit=limit,
+        order_by="name",
+        order_desc=False,
     )
     return {"templates": rows, "total": total, "offset": offset, "limit": limit}
 
@@ -29,26 +39,34 @@ async def list_checklist_templates(offset: int = 0, limit: int = 50, user: dict 
 @limiter.limit("100/minute")
 async def create_checklist_template(body: ChecklistTemplateCreate, user: dict = Depends(require_role("admin"))):
     """Create a checklist template. Items: [{\"label\":\"...\",\"order\":1}]"""
-    await _call("create_checklist_template", [
-        user["tenant_id"],
-        body.name,
-        body.description,
-        json.dumps(body.items),
-    ])
+    await _call(
+        "create_checklist_template",
+        [
+            user["tenant_id"],
+            body.name,
+            body.description,
+            json.dumps(body.items),
+        ],
+    )
     await _log_audit(user, "create", "checklist_template", body.name)
     return {"ok": True}
 
 
 @router.put("/api/checklist-templates/{template_id}")
 @limiter.limit("100/minute")
-async def update_checklist_template(template_id: str, body: ChecklistTemplateUpdate, user: dict = Depends(require_role("admin"))):
+async def update_checklist_template(
+    template_id: str, body: ChecklistTemplateUpdate, user: dict = Depends(require_role("admin"))
+):
     """Update a checklist template."""
-    await _call("update_checklist_template", [
-        template_id,
-        body.name,
-        body.description,
-        json.dumps(body.items),
-    ])
+    await _call(
+        "update_checklist_template",
+        [
+            template_id,
+            body.name,
+            body.description,
+            json.dumps(body.items),
+        ],
+    )
     await _log_audit(user, "update", "checklist_template", template_id)
     return {"ok": True}
 

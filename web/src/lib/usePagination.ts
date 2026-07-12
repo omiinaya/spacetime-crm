@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
 interface PaginationState {
   offset: number;
@@ -21,9 +21,7 @@ interface UsePaginationReturn {
   reset: () => void;
 }
 
-export function usePagination(
-  initialLimit: number = 25
-): UsePaginationReturn {
+export function usePagination(initialLimit: number = 25): UsePaginationReturn {
   const [state, setState] = useState<PaginationState>({
     offset: 0,
     limit: initialLimit,

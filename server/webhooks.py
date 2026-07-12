@@ -1,6 +1,7 @@
 """Webhook delivery engine for SpacetimeCRM.
 Dispatches events to all active, matching webhook subscriptions with HMAC-SHA256 signing.
 """
+
 import asyncio
 import hashlib
 import hmac
@@ -154,12 +155,16 @@ async def fire_event(
         if not result["ok"]:
             logger.warning(
                 "Webhook delivery failed: %s -> %s (%s)",
-                event_type, sub["url"], result.get("error"),
+                event_type,
+                sub["url"],
+                result.get("error"),
             )
         else:
             logger.info(
                 "Webhook delivered: %s -> %s (HTTP %s)",
-                event_type, sub["url"], result.get("status_code"),
+                event_type,
+                sub["url"],
+                result.get("status_code"),
             )
 
     return results

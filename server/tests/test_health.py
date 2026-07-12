@@ -1,4 +1,5 @@
 """Health check endpoint tests."""
+
 import httpx
 import pytest
 from .conftest import SERVER_URL, test_admin_headers

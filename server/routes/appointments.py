@@ -1,4 +1,5 @@
 """Appointment routes."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,31 +8,49 @@ from fastapi import APIRouter, Depends
 from config import settings
 from helpers import (
     _safe_id,
-    _sql, _paginated, _call, _log_audit, _fire_webhook,
-    require_role, logger,
+    _sql,
+    _paginated,
+    _call,
+    _log_audit,
+    _fire_webhook,
+    require_role,
+    logger,
 )
 from models import AppointmentCreate, AppointmentStatusUpdate, AppointmentRecurrence, GenerateNextOccurrence
-from mail import _customer_email as _mail_customer_email, _notify_appointment_created, _notify_appointment_reminder as _mail
-from sms import _customer_phone as _sms_customer_phone, _notify_appointment_created as _sms_appointment_created, _notify_appointment_reminder as _sms
+from mail import (
+    _customer_email as _mail_customer_email,
+    _notify_appointment_created,
+    _notify_appointment_reminder as _mail,
+)
+from sms import (
+    _customer_phone as _sms_customer_phone,
+    _notify_appointment_created as _sms_appointment_created,
+    _notify_appointment_reminder as _sms,
+)
 from rate_limit import limiter
 
 router = APIRouter()
 
 _RECURRENCE_INTERVALS: dict[str, int] = {
-    "daily": 86_400_000,      # 24h
-    "weekly": 604_800_000,     # 7d
-    "biweekly": 1_209_600_000, # 14d
+    "daily": 86_400_000,  # 24h
+    "weekly": 604_800_000,  # 7d
+    "biweekly": 1_209_600_000,  # 14d
     "monthly": 2_592_000_000,  # 30d (approx)
 }
 
 
 @router.get("/api/appointments")
-async def list_appointments(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def list_appointments(
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     """List appointments with pagination."""
     rows, total = await _paginated(
-        user["tenant_id"], "appointment",
-        offset=offset, limit=limit,
-        order_by="start_time", order_desc=False,
+        user["tenant_id"],
+        "appointment",
+        offset=offset,
+        limit=limit,
+        order_by="start_time",
+        order_desc=False,
     )
     return {"appointments": rows, "total": total, "offset": offset, "limit": limit}
 
@@ -39,34 +58,45 @@ async def list_appointments(offset: int = 0, limit: int = 50, user: dict = Depen
 @router.get("/api/appointments/recurring")
 async def list_recurring_series(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """List recurring appointment series (parent appointments with recurrence_rule set)."""
-    rows = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND recurrence_rule != '' AND series_id = ''")
+    rows = await _sql(
+        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND recurrence_rule != '' AND series_id = ''"
+    )
     series = []
     for s in rows:
-        children = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{s['id']}'")
+        children = await _sql(
+            f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{s['id']}'"
+        )
         next_time = max([c["start_time"] for c in children]) if children else s["start_time"]
-        series.append({
-            **s,
-            "occurrence_count": len(children),
-            "next_occurrence": next_time,
-        })
+        series.append(
+            {
+                **s,
+                "occurrence_count": len(children),
+                "next_occurrence": next_time,
+            }
+        )
     return {"series": series}
 
 
 @router.post("/api/appointments")
 @limiter.limit("100/minute")
-async def create_appointment(body: AppointmentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("create_appointment", [
-        user["tenant_id"],
-        body.customer_id,
-        body.ticket_id,
-        body.title,
-        body.description,
-        body.start_time,
-        body.end_time,
-        body.all_day,
-        body.series_id,
-        body.recurrence_rule,
-    ])
+async def create_appointment(
+    body: AppointmentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
+    await _call(
+        "create_appointment",
+        [
+            user["tenant_id"],
+            body.customer_id,
+            body.ticket_id,
+            body.title,
+            body.description,
+            body.start_time,
+            body.end_time,
+            body.all_day,
+            body.series_id,
+            body.recurrence_rule,
+        ],
+    )
 
     async def _notify():
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(body.customer_id)}'")
@@ -77,22 +107,30 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
             _sms_appointment_created(phone, body.title, body.start_time)
+
     asyncio.ensure_future(_notify())
 
     await _log_audit(user, "create", "appointment", body.title)
-    asyncio.ensure_future(_fire_webhook("appointment.created", {
-        "entity_type": "appointment",
-        "title": body.title,
-        "customer_id": body.customer_id,
-        "start_time": body.start_time,
-        "recurrence_rule": body.recurrence_rule,
-    }))
+    asyncio.ensure_future(
+        _fire_webhook(
+            "appointment.created",
+            {
+                "entity_type": "appointment",
+                "title": body.title,
+                "customer_id": body.customer_id,
+                "start_time": body.start_time,
+                "recurrence_rule": body.recurrence_rule,
+            },
+        )
+    )
     return {"ok": True}
 
 
 @router.put("/api/appointments/{appt_id}/recurrence")
 @limiter.limit("100/minute")
-async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def set_appointment_recurrence(
+    appt_id: str, body: AppointmentRecurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     """Set or update the recurrence rule on an appointment (makes it a series parent)."""
     await _call("set_recurrence", [appt_id, body.recurrence_rule])
     await _log_audit(user, "update_recurrence", "appointment", appt_id, f"rule={body.recurrence_rule}")
@@ -101,10 +139,14 @@ async def set_appointment_recurrence(appt_id: str, body: AppointmentRecurrence, 
 
 @router.post("/api/appointments/generate-next")
 @limiter.limit("100/minute")
-async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def generate_next_occurrence(
+    body: GenerateNextOccurrence, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     """Generate the next occurrence of a recurring appointment series."""
     # Find the parent series
-    rows = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND id = '{_safe_id(body.series_id)}' AND recurrence_rule != ''")
+    rows = await _sql(
+        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND id = '{_safe_id(body.series_id)}' AND recurrence_rule != ''"
+    )
     if not rows:
         return {"ok": False, "error": "Series not found"}
     parent = rows[0]
@@ -115,7 +157,9 @@ async def generate_next_occurrence(body: GenerateNextOccurrence, user: dict = De
         return {"ok": False, "error": f"Unknown recurrence rule: {rule}"}
 
     # Find the latest occurrence without ORDER BY (STDB limitation)
-    children = await _sql(f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{_safe_id(body.series_id)}'")
+    children = await _sql(
+        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{_safe_id(body.series_id)}'"
+    )
 
     if children:
         # Manual sort — find the largest start_time
@@ -195,13 +239,17 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
         if not email and not phone:
             sent["skipped"] += 1
 
-    await _log_audit(user, "send_reminders", "appointment", f"{sent['email']} email, {sent['sms']} SMS, {sent['skipped']} skipped")
+    await _log_audit(
+        user, "send_reminders", "appointment", f"{sent['email']} email, {sent['sms']} SMS, {sent['skipped']} skipped"
+    )
     return {"ok": True, "sent": sent}
 
 
 @router.put("/api/appointments/{appt_id}/status")
 @limiter.limit("100/minute")
-async def update_appointment_status(appt_id: str, body: AppointmentStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def update_appointment_status(
+    appt_id: str, body: AppointmentStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     await _call("update_appointment_status", [appt_id, body.status])
     await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.status}")
     return {"ok": True}

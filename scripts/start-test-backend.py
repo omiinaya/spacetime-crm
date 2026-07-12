@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Start the CRM test backend and wait for it to be ready."""
+
 import subprocess
 import sys
 import time
@@ -15,7 +16,16 @@ env["STDB_DB"] = "spacetime-crm-test"
 logfile = "/tmp/crm-test-backend.log"
 with open(logfile, "w") as f:
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8724"],
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "main:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8724",
+        ],
         env=env,
         stdout=f,
         stderr=subprocess.STDOUT,

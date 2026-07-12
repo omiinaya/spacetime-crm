@@ -35,17 +35,17 @@ TABLES = [
     "customer",
     "user",
     "user_settings",
-    "products",            # accessor = products
-    "tax_rates",           # accessor = tax_rates
+    "products",  # accessor = products
+    "tax_rates",  # accessor = tax_rates
     "ticket",
     "ticket_note",
     "ticket_timer",
-    "invoices",            # accessor = invoices
+    "invoices",  # accessor = invoices
     "invoice_line_items",  # accessor = invoice_line_items
     "payment",
     "appointment",
-    "estimates",           # accessor = estimates
-    "estimate_line_items", # accessor = estimate_line_items
+    "estimates",  # accessor = estimates
+    "estimate_line_items",  # accessor = estimate_line_items
     "purchase_order",
     "purchase_order_line_item",
     "inventory_adjustment",

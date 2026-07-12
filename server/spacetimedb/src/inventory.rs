@@ -1,6 +1,6 @@
-use spacetimedb::*;
 use super::Product as ProductRow;
 use crate::product::products;
+use spacetimedb::*;
 
 #[spacetimedb::table(accessor = inventory_adjustment, public)]
 #[derive(Debug, Clone)]
@@ -60,11 +60,10 @@ pub fn delete_inventory_adjustment(ctx: &ReducerContext, id: String) {
     ctx.db.inventory_adjustment().id().delete(&id);
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::inventory::*;
     use crate::inventory::inventory_adjustment;
+    use crate::inventory::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -74,7 +73,16 @@ mod tests {
     #[test]
     fn test_create_inventory_adjustment() {
         let ctx = test_ctx();
-        create_inventory_adjustment(&ctx, "test_tenant_id".into(), "test_product_id".into(), 10.0, "test_reason".into(), "test_reference_id".into(), "test_notes".into(), "test_user_id".into());
+        create_inventory_adjustment(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_product_id".into(),
+            10.0,
+            "test_reason".into(),
+            "test_reference_id".into(),
+            "test_notes".into(),
+            "test_user_id".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.inventory_adjustment().iter().count() >= 0);
@@ -92,9 +100,22 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_inventory_adjustment(&ctx, "tenant_a".into(), "test".into(), 10.0, "test".into(), "test".into(), "test".into(), "test".into());
-        let items: Vec<_> = ctx.db.inventory_adjustment().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_inventory_adjustment(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            10.0,
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .inventory_adjustment()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

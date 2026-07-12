@@ -1,11 +1,11 @@
 /**
  * Smoke test for SettingsPage - renders main sections
  */
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "../test-utils";
-import SettingsPage from "@/pages/SettingsPage";
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '../test-utils';
+import SettingsPage from '@/pages/SettingsPage';
 
-vi.mock("@tanstack/react-query", async (importOriginal) => {
+vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
@@ -14,23 +14,27 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   };
 });
 
-vi.mock("@/lib/api", () => ({
+vi.mock('@/lib/api', () => ({
   api: { users: { list: vi.fn().mockResolvedValue({ data: [], total: 0 }) } },
 }));
 
-vi.mock("@/lib/auth", () => ({
-  useAuth: () => ({ user: { id: "1", name: "Admin", role: "admin" }, token: "test", loading: false }),
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({
+    user: { id: '1', name: 'Admin', role: 'admin' },
+    token: 'test',
+    loading: false,
+  }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   hasRole: () => true,
 }));
 
-vi.mock("@/lib/theme", () => ({
-  useTheme: () => ({ theme: "dark", toggleTheme: vi.fn() }),
+vi.mock('@/lib/theme', () => ({
+  useTheme: () => ({ theme: 'dark', toggleTheme: vi.fn() }),
 }));
 
-describe("SettingsPage", () => {
-  it("renders the page", () => {
+describe('SettingsPage', () => {
+  it('renders the page', () => {
     render(<SettingsPage />);
-    expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 });

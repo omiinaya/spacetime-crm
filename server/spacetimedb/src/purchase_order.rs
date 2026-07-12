@@ -1,6 +1,6 @@
-use spacetimedb::*;
 use crate::inventory::inventory_adjustment;
 use crate::product::products;
+use spacetimedb::*;
 
 #[spacetimedb::table(accessor = purchase_order, public)]
 #[derive(Debug, Clone)]
@@ -42,7 +42,13 @@ pub struct PurchaseOrderLineItem {
 }
 
 #[spacetimedb::reducer]
-pub fn create_purchase_order(ctx: &ReducerContext, tenant_id: String, vendor_name: String, notes: String, currency: String) {
+pub fn create_purchase_order(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    vendor_name: String,
+    notes: String,
+    currency: String,
+) {
     let id = super::make_id("po", ctx);
     let now = super::now_ms(ctx);
     let po_number = ctx.db.purchase_order().iter().count() as u64 + 1001;
@@ -70,7 +76,12 @@ fn recalc_po(ctx: &ReducerContext, po_id: &str) {
     let mut subtotal = 0.0_f64;
     let mut total_received = 0.0_f64;
     let mut total_qty = 0.0_f64;
-    for item in ctx.db.purchase_order_line_item().iter().filter(|i| i.purchase_order_id == po_id) {
+    for item in ctx
+        .db
+        .purchase_order_line_item()
+        .iter()
+        .filter(|i| i.purchase_order_id == po_id)
+    {
         subtotal += item.total;
         total_received += item.received_quantity;
         total_qty += item.quantity;
@@ -90,22 +101,36 @@ fn recalc_po(ctx: &ReducerContext, po_id: &str) {
 }
 
 #[spacetimedb::reducer]
-pub fn add_po_line_item(ctx: &ReducerContext, purchase_order_id: String, product_id: String, description: String, quantity: f64, unit_price: f64) {
+pub fn add_po_line_item(
+    ctx: &ReducerContext,
+    purchase_order_id: String,
+    product_id: String,
+    description: String,
+    quantity: f64,
+    unit_price: f64,
+) {
     let id = super::make_id("poli", ctx);
     let total = quantity * unit_price;
     // Derive tenant_id from the parent PO
-    let tenant_id = ctx.db.purchase_order().id().find(&purchase_order_id).map_or(String::new(), |po| po.tenant_id.clone());
-    ctx.db.purchase_order_line_item().insert(PurchaseOrderLineItem {
-        id,
-        tenant_id,
-        purchase_order_id: purchase_order_id.clone(),
-        product_id,
-        description,
-        quantity,
-        unit_price,
-        total,
-        received_quantity: 0.0,
-    });
+    let tenant_id = ctx
+        .db
+        .purchase_order()
+        .id()
+        .find(&purchase_order_id)
+        .map_or(String::new(), |po| po.tenant_id.clone());
+    ctx.db
+        .purchase_order_line_item()
+        .insert(PurchaseOrderLineItem {
+            id,
+            tenant_id,
+            purchase_order_id: purchase_order_id.clone(),
+            product_id,
+            description,
+            quantity,
+            unit_price,
+            total,
+            received_quantity: 0.0,
+        });
     recalc_po(ctx, &purchase_order_id);
 }
 
@@ -165,7 +190,13 @@ pub fn reject_po(ctx: &ReducerContext, id: String) {
 #[spacetimedb::reducer]
 pub fn receive_po_item(ctx: &ReducerContext, id: String, received_quantity: f64) {
     if let Some(item) = ctx.db.purchase_order_line_item().id().find(&id) {
-        ctx.db.purchase_order_line_item().id().update(PurchaseOrderLineItem { received_quantity, ..item.clone() });
+        ctx.db
+            .purchase_order_line_item()
+            .id()
+            .update(PurchaseOrderLineItem {
+                received_quantity,
+                ..item.clone()
+            });
         recalc_po(ctx, &item.purchase_order_id);
 
         // Update product stock and create inventory adjustment
@@ -178,21 +209,28 @@ pub fn receive_po_item(ctx: &ReducerContext, id: String, received_quantity: f64)
                     p.updated_at = super::now_ms(ctx);
                     ctx.db.products().id().update(p);
                 }
-    let po_id = item.purchase_order_id.clone();
-    let po_tenant_id = ctx.db.purchase_order().id().find(&po_id).map_or(String::new(), |po| po.tenant_id.clone());
+                let po_id = item.purchase_order_id.clone();
+                let po_tenant_id = ctx
+                    .db
+                    .purchase_order()
+                    .id()
+                    .find(&po_id)
+                    .map_or(String::new(), |po| po.tenant_id.clone());
                 // Create inventory adjustment record using PO's tenant_id
                 let adj_id = super::make_id("adj", ctx);
-                ctx.db.inventory_adjustment().insert(super::InventoryAdjustment {
-                    id: adj_id,
-                    tenant_id: po_tenant_id,
-                    product_id: item.product_id.clone(),
-                    quantity_change: qty_change,
-                    reason: "received".to_string(),
-                    reference_id: id.clone(),
-                    notes: format!("PO receiving, line item: {}", item.description),
-                    user_id: String::new(),
-                    created_at: super::now_ms(ctx),
-                });
+                ctx.db
+                    .inventory_adjustment()
+                    .insert(super::InventoryAdjustment {
+                        id: adj_id,
+                        tenant_id: po_tenant_id,
+                        product_id: item.product_id.clone(),
+                        quantity_change: qty_change,
+                        reason: "received".to_string(),
+                        reference_id: id.clone(),
+                        notes: format!("PO receiving, line item: {}", item.description),
+                        user_id: String::new(),
+                        created_at: super::now_ms(ctx),
+                    });
             }
         }
     }
@@ -201,19 +239,23 @@ pub fn receive_po_item(ctx: &ReducerContext, id: String, received_quantity: f64)
 #[spacetimedb::reducer]
 pub fn delete_purchase_order(ctx: &ReducerContext, id: String) {
     // Remove all line items first
-    let items: Vec<PurchaseOrderLineItem> = ctx.db.purchase_order_line_item().iter().filter(|i| i.purchase_order_id == id).collect();
+    let items: Vec<PurchaseOrderLineItem> = ctx
+        .db
+        .purchase_order_line_item()
+        .iter()
+        .filter(|i| i.purchase_order_id == id)
+        .collect();
     for item in items {
         ctx.db.purchase_order_line_item().id().delete(&item.id);
     }
     ctx.db.purchase_order().id().delete(&id);
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::purchase_order::*;
     use crate::purchase_order::purchase_order;
     use crate::purchase_order::purchase_order_line_item;
+    use crate::purchase_order::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -223,7 +265,13 @@ mod tests {
     #[test]
     fn test_create_purchase_order() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "test_tenant_id".into(), "test_vendor_name".into(), "test_notes".into(), "test_currency".into());
+        create_purchase_order(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_vendor_name".into(),
+            "test_notes".into(),
+            "test_currency".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.purchase_order().iter().count() >= 0);
@@ -232,7 +280,14 @@ mod tests {
     #[test]
     fn test_add_po_line_item() {
         let ctx = test_ctx();
-        add_po_line_item(&ctx, "test_purchase_order_id".into(), "test_product_id".into(), "test_description".into(), 10.0, 10.0);
+        add_po_line_item(
+            &ctx,
+            "test_purchase_order_id".into(),
+            "test_product_id".into(),
+            "test_description".into(),
+            10.0,
+            10.0,
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.purchase_order().iter().count() >= 0);
@@ -304,9 +359,19 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into());
-        let items: Vec<_> = ctx.db.purchase_order().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_purchase_order(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

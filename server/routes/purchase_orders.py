@@ -1,12 +1,18 @@
 """Purchase Order routes."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
     _safe_id,
-    _sql, _paginated, _call, _sort, _log_audit,
-    require_role, logger,
+    _sql,
+    _paginated,
+    _call,
+    _sort,
+    _log_audit,
+    require_role,
+    logger,
 )
 from models import PurchaseOrderCreate, PurchaseOrderStatusUpdate, POLineItemCreate, POReceiveItem, POApprovalAction
 from rate_limit import limiter
@@ -18,22 +24,30 @@ router = APIRouter()
 async def list_purchase_orders(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))):
     """List purchase orders with pagination."""
     rows, total = await _paginated(
-        user["tenant_id"], "purchase_order",
-        offset=offset, limit=limit,
-        order_by="created_at", order_desc=True,
+        user["tenant_id"],
+        "purchase_order",
+        offset=offset,
+        limit=limit,
+        order_by="created_at",
+        order_desc=True,
     )
     return {"purchase_orders": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @router.post("/api/purchase-orders")
 @limiter.limit("100/minute")
-async def create_purchase_order(body: PurchaseOrderCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("create_purchase_order", [
-        user["tenant_id"],
-        body.vendor_name,
-        body.notes,
-        body.currency,
-    ])
+async def create_purchase_order(
+    body: PurchaseOrderCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
+    await _call(
+        "create_purchase_order",
+        [
+            user["tenant_id"],
+            body.vendor_name,
+            body.notes,
+            body.currency,
+        ],
+    )
     await _log_audit(user, "create", "purchase_order", body.vendor_name)
     return {"ok": True}
 
@@ -62,14 +76,19 @@ async def get_purchase_order(po_id: str, user: dict = Depends(require_role("admi
 
 @router.post("/api/purchase-orders/{po_id}/line-items")
 @limiter.limit("100/minute")
-async def add_po_line_item(po_id: str, body: POLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    await _call("add_po_line_item", [
-        po_id,
-        body.product_id,
-        body.description,
-        body.quantity,
-        body.unit_price,
-    ])
+async def add_po_line_item(
+    po_id: str, body: POLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
+    await _call(
+        "add_po_line_item",
+        [
+            po_id,
+            body.product_id,
+            body.description,
+            body.quantity,
+            body.unit_price,
+        ],
+    )
     await _log_audit(user, "create", "po_line_item", po_id, body.description)
     return {"ok": True}
 
@@ -84,7 +103,9 @@ async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(req
 
 @router.put("/api/purchase-orders/{po_id}/status")
 @limiter.limit("100/minute")
-async def update_po_status(po_id: str, body: PurchaseOrderStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def update_po_status(
+    po_id: str, body: PurchaseOrderStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     await _call("update_po_status", [po_id, body.status])
     await _log_audit(user, "update_status", "purchase_order", po_id, f"status={body.status}")
     return {"ok": True}
@@ -92,7 +113,9 @@ async def update_po_status(po_id: str, body: PurchaseOrderStatusUpdate, user: di
 
 @router.post("/api/purchase-orders/{po_id}/receive")
 @limiter.limit("100/minute")
-async def receive_po_items(po_id: str, body: POReceiveItem, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def receive_po_items(
+    po_id: str, body: POReceiveItem, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     """Receive multiple items on a PO at once.
     Body: { items: [{ id: string, received_quantity: number }] }
     """

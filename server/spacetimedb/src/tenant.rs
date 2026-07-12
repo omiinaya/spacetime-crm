@@ -71,7 +71,10 @@ pub fn update_tenant(
 #[spacetimedb::reducer]
 pub fn delete_tenant(ctx: &ReducerContext, id: String) {
     // Remove all members first
-    let members: Vec<TenantMember> = ctx.db.tenant_members().iter()
+    let members: Vec<TenantMember> = ctx
+        .db
+        .tenant_members()
+        .iter()
         .filter(|m| m.tenant_id == id)
         .collect();
     for m in members {
@@ -82,7 +85,11 @@ pub fn delete_tenant(ctx: &ReducerContext, id: String) {
 
 #[spacetimedb::reducer]
 pub fn add_tenant_member(ctx: &ReducerContext, tenant_id: String, username: String, role: String) {
-    let id = format!("tmem_{}_{}", super::now_ms(ctx), ctx.sender().to_hex().chars().take(8).collect::<String>());
+    let id = format!(
+        "tmem_{}_{}",
+        super::now_ms(ctx),
+        ctx.sender().to_hex().chars().take(8).collect::<String>()
+    );
     let now = super::now_ms(ctx);
     ctx.db.tenant_members().insert(TenantMember {
         id,
@@ -101,16 +108,18 @@ pub fn remove_tenant_member(ctx: &ReducerContext, id: String) {
 #[spacetimedb::reducer]
 pub fn update_tenant_member_role(ctx: &ReducerContext, id: String, role: String) {
     if let Some(m) = ctx.db.tenant_members().id().find(&id) {
-        ctx.db.tenant_members().id().update(TenantMember { role, ..m });
+        ctx.db
+            .tenant_members()
+            .id()
+            .update(TenantMember { role, ..m });
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::tenant::*;
-    use crate::tenant::tenants;
     use crate::tenant::tenant_members;
+    use crate::tenant::tenants;
+    use crate::tenant::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -129,7 +138,14 @@ mod tests {
     #[test]
     fn test_update_tenant() {
         let ctx = test_ctx();
-        update_tenant(&ctx, "test_id".into(), "test_name".into(), "test_slug".into(), "test_logo_url".into(), "test_settings".into());
+        update_tenant(
+            &ctx,
+            "test_id".into(),
+            "test_name".into(),
+            "test_slug".into(),
+            "test_logo_url".into(),
+            "test_settings".into(),
+        );
         // Verify the reducer executed without panic
         // Update on non-existent should not panic
         assert!(true);
@@ -147,7 +163,12 @@ mod tests {
     #[test]
     fn test_add_tenant_member() {
         let ctx = test_ctx();
-        add_tenant_member(&ctx, "test_tenant_id".into(), "test_username".into(), "test_role".into());
+        add_tenant_member(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_username".into(),
+            "test_role".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.tenants().iter().count() >= 0);
@@ -175,8 +196,12 @@ mod tests {
     fn test_tenant_isolation() {
         let ctx = test_ctx();
         create_tenant(&ctx, "test".into(), "test".into());
-        let items: Vec<_> = ctx.db.tenants().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        let items: Vec<_> = ctx
+            .db
+            .tenants()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

@@ -175,12 +175,22 @@ mod tests {
             "555-1002".into(),
         );
 
-        let tenants: Vec<String> = ctx.db.customer().iter().map(|c| c.tenant_id.clone()).collect();
+        let tenants: Vec<String> = ctx
+            .db
+            .customer()
+            .iter()
+            .map(|c| c.tenant_id.clone())
+            .collect();
         assert_eq!(tenants.len(), 2);
         assert!(tenants.contains(&"tenant_a".to_string()));
         assert!(tenants.contains(&"tenant_b".to_string()));
 
-        let tenant_a_only: Vec<Customer> = ctx.db.customer().iter().filter(|c| c.tenant_id == "tenant_a").collect();
+        let tenant_a_only: Vec<Customer> = ctx
+            .db
+            .customer()
+            .iter()
+            .filter(|c| c.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(tenant_a_only.len(), 1);
         assert_eq!(tenant_a_only[0].email, "alice@a.com");
     }

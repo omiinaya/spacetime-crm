@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode, createElement } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, createElement } from 'react';
 
-const API_BASE = "/api";
+const API_BASE = '/api';
 
 interface PortalCustomer {
   id: string;
@@ -22,8 +22,8 @@ interface PortalAuthState {
 
 const PortalAuthContext = createContext<PortalAuthState | null>(null);
 
-const TOKEN_KEY = "portal_token";
-const CUSTOMER_KEY = "portal_customer";
+const TOKEN_KEY = 'portal_token';
+const CUSTOMER_KEY = 'portal_customer';
 
 export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const [customer, setCustomer] = useState<PortalCustomer | null>(null);
@@ -54,8 +54,8 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/portal/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
@@ -69,11 +69,11 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const logout = () => setStored(null, null);
 
   const setPassword = async (password: string) => {
-    if (!token) throw new Error("Not authenticated");
+    if (!token) throw new Error('Not authenticated');
     const res = await fetch(`${API_BASE}/portal/customer/set-password`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ password }),
@@ -87,13 +87,13 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   return createElement(
     PortalAuthContext.Provider,
     { value: { customer, token, loading, login, logout, setPassword } },
-    children
+    children,
   );
 }
 
 export function usePortalAuth() {
   const ctx = useContext(PortalAuthContext);
-  if (!ctx) throw new Error("usePortalAuth must be inside PortalAuthProvider");
+  if (!ctx) throw new Error('usePortalAuth must be inside PortalAuthProvider');
   return ctx;
 }
 
@@ -101,7 +101,7 @@ export function portalApiFetch<T>(path: string, options?: RequestInit): Promise<
   const token = localStorage.getItem(TOKEN_KEY);
   return fetch(`${API_BASE}${path}`, {
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
@@ -191,52 +191,56 @@ export interface PortalStats {
 
 export const portalApi = {
   stats: {
-    get: () => portalApiFetch<PortalStats>("/portal/stats"),
+    get: () => portalApiFetch<PortalStats>('/portal/stats'),
   },
   tickets: {
-    list: () => portalApiFetch<{ tickets: PortalTicket[] }>("/portal/tickets"),
+    list: () => portalApiFetch<{ tickets: PortalTicket[] }>('/portal/tickets'),
     get: (id: string) => portalApiFetch<{ ticket: PortalTicket }>(`/portal/tickets/${id}`),
     addNote: (id: string, content: string) =>
       portalApiFetch<{ ok: boolean }>(`/portal/tickets/${id}/notes`, {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify({ content }),
       }),
   },
   invoices: {
-    list: () => portalApiFetch<{ invoices: PortalInvoice[] }>("/portal/invoices"),
+    list: () => portalApiFetch<{ invoices: PortalInvoice[] }>('/portal/invoices'),
     get: (id: string) => portalApiFetch<{ invoice: PortalInvoice }>(`/portal/invoices/${id}`),
   },
   payments: {
     create: (invoiceId: string, amount: number, method: string) =>
-      portalApiFetch<{ ok: boolean }>("/portal/payments", {
-        method: "POST",
+      portalApiFetch<{ ok: boolean }>('/portal/payments', {
+        method: 'POST',
         body: JSON.stringify({ invoice_id: invoiceId, amount, method }),
       }),
     createCheckoutSession: (invoiceId: string) =>
       portalApiFetch<{ session_id: string; url: string }>(
-        "/portal/payments/create-checkout-session",
+        '/portal/payments/create-checkout-session',
         {
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({ invoice_id: invoiceId }),
-        }
+        },
       ),
     payWithSavedCard: (invoiceId: string, paymentMethodId: string) =>
       portalApiFetch<{ ok: boolean; payment_intent_id?: string }>(
-        "/portal/payments/pay-with-saved-card",
+        '/portal/payments/pay-with-saved-card',
         {
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({
             invoice_id: invoiceId,
             payment_method_id: paymentMethodId,
           }),
-        }
+        },
       ),
   },
   appointments: {
-    list: () => portalApiFetch<{ appointments: PortalAppointment[]; upcoming: PortalAppointment[]; past: PortalAppointment[] }>("/portal/appointments"),
+    list: () =>
+      portalApiFetch<{
+        appointments: PortalAppointment[];
+        upcoming: PortalAppointment[];
+        past: PortalAppointment[];
+      }>('/portal/appointments'),
   },
   paymentMethods: {
-    list: () =>
-      portalApiFetch<{ payment_methods: any[] }>("/portal/payment-methods"),
+    list: () => portalApiFetch<{ payment_methods: any[] }>('/portal/payment-methods'),
   },
 };

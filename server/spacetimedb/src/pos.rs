@@ -94,7 +94,12 @@ pub fn add_counter_sale_item(
 ) {
     let id = super::make_id("psl", ctx);
     let total = quantity * unit_price;
-    let sort = ctx.db.counter_sale_line_item().iter().filter(|i| i.sale_id == sale_id).count() as u32;
+    let sort = ctx
+        .db
+        .counter_sale_line_item()
+        .iter()
+        .filter(|i| i.sale_id == sale_id)
+        .count() as u32;
     ctx.db.counter_sale_line_item().insert(CounterSaleLineItem {
         id,
         tenant_id,
@@ -163,12 +168,11 @@ pub fn delete_counter_sale(ctx: &ReducerContext, id: String) {
     ctx.db.counter_sale().id().delete(&id);
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::pos::*;
     use crate::pos::counter_sale;
     use crate::pos::counter_sale_line_item;
+    use crate::pos::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -178,7 +182,17 @@ mod tests {
     #[test]
     fn test_create_counter_sale() {
         let ctx = test_ctx();
-        create_counter_sale(&ctx, "test_tenant_id".into(), "test_customer_id".into(), "test_customer_name".into(), "test_payment_method".into(), 10.0, 10.0, 10.0, "test_currency".into());
+        create_counter_sale(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_customer_id".into(),
+            "test_customer_name".into(),
+            "test_payment_method".into(),
+            10.0,
+            10.0,
+            10.0,
+            "test_currency".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.counter_sale().iter().count() >= 0);
@@ -187,7 +201,16 @@ mod tests {
     #[test]
     fn test_add_counter_sale_item() {
         let ctx = test_ctx();
-        add_counter_sale_item(&ctx, "test_tenant_id".into(), "test_sale_id".into(), "test_product_id".into(), "test_product_name".into(), "test_sku".into(), 10.0, 10.0);
+        add_counter_sale_item(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_sale_id".into(),
+            "test_product_id".into(),
+            "test_product_name".into(),
+            "test_sku".into(),
+            10.0,
+            10.0,
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.counter_sale().iter().count() >= 0);
@@ -214,9 +237,23 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_counter_sale(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into(), 10.0, 10.0, 10.0, "test".into());
-        let items: Vec<_> = ctx.db.counter_sale().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_counter_sale(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            10.0,
+            10.0,
+            10.0,
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .counter_sale()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

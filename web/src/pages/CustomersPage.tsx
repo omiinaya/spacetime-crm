@@ -1,68 +1,83 @@
-import { useState, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, Customer } from "../lib/api";
-import type { Ticket as TicketType, Invoice } from "../lib/api";
-import { usePagination } from "../lib/usePagination";
-import { queryClient } from "../lib/query-client";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Badge } from "../components/ui/badge";
-import Pagination from "../components/Pagination";
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { api, Customer } from '../lib/api';
+import type { Ticket as TicketType, Invoice } from '../lib/api';
+import { usePagination } from '../lib/usePagination';
+import { queryClient } from '../lib/query-client';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import Pagination from '../components/Pagination';
 import {
-  Users, Plus, Search, Mail, Phone, MapPin, Edit2, Trash2, Key,
-  Ticket as TicketIcon, Receipt, ChevronDown, ChevronUp,
-} from "lucide-react";
-import { toast } from "sonner";
+  Users,
+  Plus,
+  Search,
+  Mail,
+  Phone,
+  MapPin,
+  Edit2,
+  Trash2,
+  Key,
+  Ticket as TicketIcon,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 const PAGE_SIZE = 25;
 
 const emptyForm: Partial<Customer> = {
-  first_name: "", last_name: "", email: "", phone: "", mobile: "",
-  address_line1: "", address_line2: "", city: "", state: "", zip: "",
-  company: "", notes: "", tags: "",
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  mobile: '',
+  address_line1: '',
+  address_line2: '',
+  city: '',
+  state: '',
+  zip: '',
+  company: '',
+  notes: '',
+  tags: '',
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-zinc-500",
-  sent: "bg-blue-500",
-  paid: "bg-green-500",
-  overdue: "bg-red-500",
-  partial: "bg-amber-500",
-  cancelled: "bg-zinc-300",
-  new: "bg-blue-500",
-  in_progress: "bg-amber-500",
-  waiting_parts: "bg-purple-500",
-  waiting_customer: "bg-orange-500",
-  resolved: "bg-green-500",
-  closed: "bg-zinc-400",
-  scheduled: "bg-blue-500",
-  completed: "bg-green-500",
-  no_show: "bg-red-500",
-  pending_approval: "bg-amber-500",
-  approved: "bg-green-500",
+  draft: 'bg-zinc-500',
+  sent: 'bg-blue-500',
+  paid: 'bg-green-500',
+  overdue: 'bg-red-500',
+  partial: 'bg-amber-500',
+  cancelled: 'bg-zinc-300',
+  new: 'bg-blue-500',
+  in_progress: 'bg-amber-500',
+  waiting_parts: 'bg-purple-500',
+  waiting_customer: 'bg-orange-500',
+  resolved: 'bg-green-500',
+  closed: 'bg-zinc-400',
+  scheduled: 'bg-blue-500',
+  completed: 'bg-green-500',
+  no_show: 'bg-red-500',
+  pending_approval: 'bg-amber-500',
+  approved: 'bg-green-500',
 };
 
-function CustomerDetailPanel({
-  customer,
-  onClose,
-}: {
-  customer: Customer;
-  onClose: () => void;
-}) {
+function CustomerDetailPanel({ customer, onClose }: { customer: Customer; onClose: () => void }) {
   const { data: ticketsData } = useQuery({
-    queryKey: ["customer-tickets", customer.id],
+    queryKey: ['customer-tickets', customer.id],
     queryFn: () =>
-      api.tickets.list("", customer.id, 0, 5) as Promise<{
+      api.tickets.list('', customer.id, 0, 5) as Promise<{
         tickets: TicketType[];
         total: number;
       }>,
   });
 
   const { data: invoicesData } = useQuery({
-    queryKey: ["customer-invoices", customer.id],
+    queryKey: ['customer-invoices', customer.id],
     queryFn: () =>
-      api.invoices.list("", customer.id, 0, 5) as Promise<{
+      api.invoices.list('', customer.id, 0, 5) as Promise<{
         invoices: Invoice[];
         total: number;
       }>,
@@ -72,15 +87,17 @@ function CustomerDetailPanel({
   const invoices = invoicesData?.invoices ?? [];
 
   const formatDate = (ts: number) => {
-    if (!ts) return "—";
+    if (!ts) return '—';
     const d = new Date(ts);
-    return d.toLocaleDateString("en-US", {
-      month: "short", day: "numeric", year: "numeric",
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
     });
   };
 
   const formatCurrency = (val: number, currency?: string) => {
-    const sym = currency === "EUR" ? "\u20ac" : currency === "GBP" ? "\u00a3" : "$";
+    const sym = currency === 'EUR' ? '\u20ac' : currency === 'GBP' ? '\u00a3' : '$';
     return `${sym}${val.toFixed(2)}`;
   };
 
@@ -88,7 +105,9 @@ function CustomerDetailPanel({
     <div className="col-span-full border border-primary/20 rounded-lg bg-muted/30 p-4 animate-in slide-in-from-top-2 duration-200">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="font-semibold text-lg">{customer.first_name} {customer.last_name}</h3>
+          <h3 className="font-semibold text-lg">
+            {customer.first_name} {customer.last_name}
+          </h3>
           <p className="text-sm text-muted-foreground">
             {customer.email && <>{customer.email} &middot; </>}
             {customer.phone || customer.mobile}
@@ -116,11 +135,15 @@ function CustomerDetailPanel({
                 {tickets.map((t) => (
                   <div key={t.id} className="flex items-center justify-between text-xs py-1">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[t.status] || "bg-zinc-400"}`} />
-                      <span className="truncate">#{t.ticket_number} {t.title}</span>
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[t.status] || 'bg-zinc-400'}`}
+                      />
+                      <span className="truncate">
+                        #{t.ticket_number} {t.title}
+                      </span>
                     </div>
                     <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 shrink-0">
-                      {t.status.replace(/_/g, " ")}
+                      {t.status.replace(/_/g, ' ')}
                     </Badge>
                   </div>
                 ))}
@@ -144,8 +167,12 @@ function CustomerDetailPanel({
                 {invoices.map((inv) => (
                   <div key={inv.id} className="flex items-center justify-between text-xs py-1">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[inv.status] || "bg-zinc-400"}`} />
-                      <span className="truncate">#{inv.invoice_number} — {formatDate(inv.created_at)}</span>
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[inv.status] || 'bg-zinc-400'}`}
+                      />
+                      <span className="truncate">
+                        #{inv.invoice_number} — {formatDate(inv.created_at)}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="font-medium">{formatCurrency(inv.total, inv.currency)}</span>
@@ -166,17 +193,17 @@ function CustomerDetailPanel({
 
 export default function CustomersPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Customer>>({ ...emptyForm });
   const [pwCustomer, setPwCustomer] = useState<Customer | null>(null);
-  const [pwPassword, setPwPassword] = useState("");
+  const [pwPassword, setPwPassword] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["customers", { search, offset: pag.offset }],
+    queryKey: ['customers', { search, offset: pag.offset }],
     queryFn: () => api.customers.list(search, pag.offset, PAGE_SIZE),
     select: (res) => {
       pag.setTotal(res.total);
@@ -198,19 +225,16 @@ export default function CustomersPage() {
   }, []);
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      editId
-        ? api.customers.update(editId, form)
-        : api.customers.create(form),
+    mutationFn: () => (editId ? api.customers.update(editId, form) : api.customers.create(form)),
     onSuccess: () => {
-      toast.success(editId ? "Customer updated" : "Customer created");
+      toast.success(editId ? 'Customer updated' : 'Customer created');
       setShowForm(false);
       setEditId(null);
       setForm({ ...emptyForm });
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
     onError: () => {
-      toast.error("Failed to save customer");
+      toast.error('Failed to save customer');
     },
   });
 
@@ -223,22 +247,22 @@ export default function CustomersPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.customers.delete(id),
     onSuccess: () => {
-      toast.success("Customer deleted");
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success('Customer deleted');
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
     onError: () => {
-      toast.error("Failed to delete");
+      toast.error('Failed to delete');
     },
   });
 
   const openPwDialog = (c: Customer) => {
     setPwCustomer(c);
-    setPwPassword("");
+    setPwPassword('');
   };
 
   const handleSetPortalPassword = async () => {
     if (!pwCustomer || pwPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error('Password must be at least 6 characters');
       return;
     }
     setPwLoading(true);
@@ -246,9 +270,9 @@ export default function CustomersPage() {
       await api.customers.setPortalPassword(pwCustomer.id, pwPassword);
       toast.success(`Portal password set for ${pwCustomer.first_name} ${pwCustomer.last_name}`);
       setPwCustomer(null);
-      setPwPassword("");
+      setPwPassword('');
     } catch {
-      toast.error("Failed to set portal password");
+      toast.error('Failed to set portal password');
     } finally {
       setPwLoading(false);
     }
@@ -261,11 +285,15 @@ export default function CustomersPage() {
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Customers</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your customer database
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Manage your customer database</p>
         </div>
-        <Button onClick={() => { setForm({ ...emptyForm }); setEditId(null); setShowForm(true); }}>
+        <Button
+          onClick={() => {
+            setForm({ ...emptyForm });
+            setEditId(null);
+            setShowForm(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-1.5" /> Add Customer
         </Button>
       </div>
@@ -285,28 +313,87 @@ export default function CustomersPage() {
       {showForm && (
         <Card className="border-primary/30">
           <CardHeader>
-            <CardTitle>{editId ? "Edit Customer" : "New Customer"}</CardTitle>
+            <CardTitle>{editId ? 'Edit Customer' : 'New Customer'}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input placeholder="First Name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
-              <Input placeholder="Last Name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
-              <Input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              <Input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              <Input placeholder="Mobile" value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} />
-              <Input placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
-              <Input placeholder="Address Line 1" value={form.address_line1} onChange={(e) => setForm({ ...form, address_line1: e.target.value })} className="md:col-span-2" />
+              <Input
+                placeholder="First Name"
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+              />
+              <Input
+                placeholder="Last Name"
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+              />
+              <Input
+                placeholder="Email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+              <Input
+                placeholder="Phone"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+              <Input
+                placeholder="Mobile"
+                value={form.mobile}
+                onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+              />
+              <Input
+                placeholder="Company"
+                value={form.company}
+                onChange={(e) => setForm({ ...form, company: e.target.value })}
+              />
+              <Input
+                placeholder="Address Line 1"
+                value={form.address_line1}
+                onChange={(e) => setForm({ ...form, address_line1: e.target.value })}
+                className="md:col-span-2"
+              />
               <div className="md:col-span-2 grid grid-cols-3 gap-2">
-                <Input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-                <Input placeholder="State" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
-                <Input placeholder="ZIP" value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} />
+                <Input
+                  placeholder="City"
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                />
+                <Input
+                  placeholder="State"
+                  value={form.state}
+                  onChange={(e) => setForm({ ...form, state: e.target.value })}
+                />
+                <Input
+                  placeholder="ZIP"
+                  value={form.zip}
+                  onChange={(e) => setForm({ ...form, zip: e.target.value })}
+                />
               </div>
-              <Input placeholder="Tags (comma separated)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="md:col-span-2" />
-              <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="md:col-span-2" />
+              <Input
+                placeholder="Tags (comma separated)"
+                value={form.tags}
+                onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                className="md:col-span-2"
+              />
+              <Input
+                placeholder="Notes"
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                className="md:col-span-2"
+              />
             </div>
             <div className="flex gap-2 mt-4">
-              <Button onClick={() => saveMutation.mutate()}>{editId ? "Update" : "Create"}</Button>
-              <Button variant="outline" onClick={() => { setShowForm(false); setEditId(null); }}>Cancel</Button>
+              <Button onClick={() => saveMutation.mutate()}>{editId ? 'Update' : 'Create'}</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditId(null);
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -318,7 +405,7 @@ export default function CustomersPage() {
           <div key={c.id} className="contents">
             <Card
               className={`hover:border-primary/30 transition-colors cursor-pointer ${
-                expandedCustomerId === c.id ? "border-primary/40" : ""
+                expandedCustomerId === c.id ? 'border-primary/40' : ''
               }`}
               onClick={() => handleToggleExpand(c.id)}
             >
@@ -336,7 +423,12 @@ export default function CustomersPage() {
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <Button size="icon" variant="ghost" onClick={() => openPwDialog(c)} title="Set Portal Password">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openPwDialog(c)}
+                      title="Set Portal Password"
+                    >
                       <Key className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="icon" variant="ghost" onClick={() => handleEdit(c)}>
@@ -360,14 +452,16 @@ export default function CustomersPage() {
                   )}
                   {(c.city || c.state) && (
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-3 w-3" /> {[c.city, c.state].filter(Boolean).join(", ")}
+                      <MapPin className="h-3 w-3" /> {[c.city, c.state].filter(Boolean).join(', ')}
                     </div>
                   )}
                   <div className="flex items-center gap-2 text-primary/60">
-                    <ChevronDown className={`h-3 w-3 transition-transform ${
-                      expandedCustomerId === c.id ? "rotate-180" : ""
-                    }`} />
-                    {expandedCustomerId === c.id ? "Hide details" : "Show details"}
+                    <ChevronDown
+                      className={`h-3 w-3 transition-transform ${
+                        expandedCustomerId === c.id ? 'rotate-180' : ''
+                      }`}
+                    />
+                    {expandedCustomerId === c.id ? 'Hide details' : 'Show details'}
                   </div>
                 </div>
               </CardContent>
@@ -382,7 +476,14 @@ export default function CustomersPage() {
           <div className="col-span-full text-center py-12 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p>No customers yet</p>
-            <Button variant="outline" className="mt-2" onClick={() => { setForm({ ...emptyForm }); setShowForm(true); }}>
+            <Button
+              variant="outline"
+              className="mt-2"
+              onClick={() => {
+                setForm({ ...emptyForm });
+                setShowForm(true);
+              }}
+            >
               <Plus className="h-4 w-4 mr-1" /> Add your first customer
             </Button>
           </div>
@@ -402,7 +503,10 @@ export default function CustomersPage() {
 
       {/* Portal Password Dialog */}
       {pwCustomer && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setPwCustomer(null)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setPwCustomer(null)}
+        >
           <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
               <CardTitle>Set Portal Password</CardTitle>
@@ -416,11 +520,11 @@ export default function CustomersPage() {
                 placeholder="Min. 6 characters"
                 value={pwPassword}
                 onChange={(e) => setPwPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSetPortalPassword()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSetPortalPassword()}
               />
               <div className="flex gap-2">
                 <Button onClick={handleSetPortalPassword} disabled={pwLoading}>
-                  {pwLoading ? "Setting..." : "Set Password"}
+                  {pwLoading ? 'Setting...' : 'Set Password'}
                 </Button>
                 <Button variant="outline" onClick={() => setPwCustomer(null)}>
                   Cancel

@@ -1,14 +1,22 @@
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
-  Building2, Plus, Trash2, Edit3, Users, UserPlus, X,
-  RefreshCw, Shield, User,
-} from "lucide-react";
-import { api } from "../lib/api";
-import { useAuth, hasRole } from "../lib/auth";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
+  Building2,
+  Plus,
+  Trash2,
+  Edit3,
+  Users,
+  UserPlus,
+  X,
+  RefreshCw,
+  Shield,
+  User,
+} from 'lucide-react';
+import { api } from '../lib/api';
+import { useAuth, hasRole } from '../lib/auth';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 
 interface Tenant {
   id: string;
@@ -40,16 +48,16 @@ export default function TenantsPage() {
   const [migrating, setMigrating] = useState(false);
 
   // Create form
-  const [newName, setNewName] = useState("");
-  const [newSlug, setNewSlug] = useState("");
+  const [newName, setNewName] = useState('');
+  const [newSlug, setNewSlug] = useState('');
 
   // Edit form
-  const [editName, setEditName] = useState("");
-  const [editSlug, setEditSlug] = useState("");
+  const [editName, setEditName] = useState('');
+  const [editSlug, setEditSlug] = useState('');
 
   // Member form
-  const [memberUsername, setMemberUsername] = useState("");
-  const [memberRole, setMemberRole] = useState("user");
+  const [memberUsername, setMemberUsername] = useState('');
+  const [memberRole, setMemberRole] = useState('user');
 
   const load = async () => {
     try {
@@ -62,7 +70,9 @@ export default function TenantsPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const loadMembers = async (tenantId: string) => {
     try {
@@ -81,11 +91,14 @@ export default function TenantsPage() {
   const handleCreate = async () => {
     if (!newName.trim()) return;
     try {
-      await api.tenants.create({ name: newName.trim(), ...(newSlug.trim() ? { slug: newSlug.trim() } : {}) });
-      toast.success("Tenant created");
+      await api.tenants.create({
+        name: newName.trim(),
+        ...(newSlug.trim() ? { slug: newSlug.trim() } : {}),
+      });
+      toast.success('Tenant created');
       setShowCreate(false);
-      setNewName("");
-      setNewSlug("");
+      setNewName('');
+      setNewSlug('');
       await load();
     } catch (e: any) {
       toast.error(e.message);
@@ -99,11 +112,15 @@ export default function TenantsPage() {
         name: editName.trim(),
         ...(editSlug.trim() ? { slug: editSlug.trim() } : {}),
       });
-      toast.success("Tenant updated");
+      toast.success('Tenant updated');
       setEditTenant(null);
       await load();
       if (selected?.id === editTenant.id) {
-        setSelected({ ...selected, name: editName.trim(), slug: editSlug.trim() });
+        setSelected({
+          ...selected,
+          name: editName.trim(),
+          slug: editSlug.trim(),
+        });
       }
     } catch (e: any) {
       toast.error(e.message);
@@ -111,10 +128,10 @@ export default function TenantsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this tenant and all its data?")) return;
+    if (!confirm('Delete this tenant and all its data?')) return;
     try {
       await api.tenants.delete(id);
-      toast.success("Tenant deleted");
+      toast.success('Tenant deleted');
       if (selected?.id === id) {
         setSelected(null);
         setMembers([]);
@@ -132,10 +149,10 @@ export default function TenantsPage() {
         username: memberUsername.trim(),
         role: memberRole,
       });
-      toast.success("Member added");
+      toast.success('Member added');
       setShowAddMember(false);
-      setMemberUsername("");
-      setMemberRole("user");
+      setMemberUsername('');
+      setMemberRole('user');
       await loadMembers(selected.id);
     } catch (e: any) {
       toast.error(e.message);
@@ -146,7 +163,7 @@ export default function TenantsPage() {
     if (!selected) return;
     try {
       await api.tenants.removeMember(selected.id, memberId);
-      toast.success("Member removed");
+      toast.success('Member removed');
       await loadMembers(selected.id);
     } catch (e: any) {
       toast.error(e.message);
@@ -156,7 +173,7 @@ export default function TenantsPage() {
   const handleMigrate = async () => {
     setMigrating(true);
     try {
-      const result = await api.tenants.migrate({ name: "Default" });
+      const result = await api.tenants.migrate({ name: 'Default' });
       toast.success(`Migrated: ${result.users_migrated} users assigned`);
       await load();
       await refreshTenant();
@@ -167,7 +184,7 @@ export default function TenantsPage() {
     }
   };
 
-  const isAdmin = hasRole(user, "admin");
+  const isAdmin = hasRole(user, 'admin');
 
   if (loading) {
     return (
@@ -182,14 +199,12 @@ export default function TenantsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Tenants</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage organizations and team access
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Manage organizations and team access</p>
         </div>
         <div className="flex gap-2">
           {tenants.length === 0 && isAdmin && (
             <Button variant="outline" onClick={handleMigrate} disabled={migrating}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${migrating ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 mr-2 ${migrating ? 'animate-spin' : ''}`} />
               Migrate from Single-Tenant
             </Button>
           )}
@@ -219,7 +234,7 @@ export default function TenantsPage() {
               <input
                 className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
                 value={newName}
-                onChange={e => setNewName(e.target.value)}
+                onChange={(e) => setNewName(e.target.value)}
                 placeholder="My Repair Shop"
               />
             </div>
@@ -228,7 +243,7 @@ export default function TenantsPage() {
               <input
                 className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
                 value={newSlug}
-                onChange={e => setNewSlug(e.target.value)}
+                onChange={(e) => setNewSlug(e.target.value)}
                 placeholder="my-repair-shop"
               />
             </div>
@@ -256,8 +271,8 @@ export default function TenantsPage() {
                 key={t.id}
                 className={`flex items-center justify-between p-3 rounded-md border cursor-pointer transition-colors ${
                   selected?.id === t.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-muted"
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:bg-muted'
                 }`}
                 onClick={() => selectTenant(t)}
               >
@@ -327,16 +342,20 @@ export default function TenantsPage() {
                   <span className="text-sm font-medium">{selected.name}</span>
                 </div>
                 {members.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No members yet
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No members yet</p>
                 )}
                 {members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50"
+                  >
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{m.username}</span>
-                      <Badge variant={m.role === "admin" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                      <Badge
+                        variant={m.role === 'admin' ? 'default' : 'secondary'}
+                        className="text-[10px] px-1.5 py-0"
+                      >
                         {m.role}
                       </Badge>
                     </div>
@@ -370,13 +389,13 @@ export default function TenantsPage() {
                 <input
                   className="w-full px-2 py-1.5 rounded-md border border-border bg-background text-sm"
                   value={memberUsername}
-                  onChange={e => setMemberUsername(e.target.value)}
+                  onChange={(e) => setMemberUsername(e.target.value)}
                   placeholder="Username (e.g. user.name)"
                 />
                 <select
                   className="w-full px-2 py-1.5 rounded-md border border-border bg-background text-sm"
                   value={memberRole}
-                  onChange={e => setMemberRole(e.target.value)}
+                  onChange={(e) => setMemberRole(e.target.value)}
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
@@ -414,7 +433,7 @@ export default function TenantsPage() {
                 <input
                   className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
                   value={editName}
-                  onChange={e => setEditName(e.target.value)}
+                  onChange={(e) => setEditName(e.target.value)}
                 />
               </div>
               <div>
@@ -422,7 +441,7 @@ export default function TenantsPage() {
                 <input
                   className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
                   value={editSlug}
-                  onChange={e => setEditSlug(e.target.value)}
+                  onChange={(e) => setEditSlug(e.target.value)}
                 />
               </div>
               <Button onClick={handleEdit} disabled={!editName.trim()}>

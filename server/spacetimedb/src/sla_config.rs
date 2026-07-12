@@ -32,11 +32,10 @@ pub fn upsert_sla_config(ctx: &ReducerContext, tenant_id: String, targets_json: 
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::sla_config::*;
     use crate::sla_config::sla_configs;
+    use crate::sla_config::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -58,5 +57,4 @@ mod tests {
         // Tenant isolation test - records are scoped by tenant
         assert!(true);
     }
-
 }

@@ -25,7 +25,20 @@ pub struct Product {
 }
 
 #[spacetimedb::reducer]
-pub fn create_product(ctx: &ReducerContext, tenant_id: String, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, quantity_on_hand: f64, min_stock: f64, location: String) {
+pub fn create_product(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    name: String,
+    sku: String,
+    barcode: String,
+    description: String,
+    category: String,
+    price: f64,
+    cost: f64,
+    quantity_on_hand: f64,
+    min_stock: f64,
+    location: String,
+) {
     let id = super::make_id("prod", ctx);
     let now = super::now_ms(ctx);
     ctx.db.products().insert(Product {
@@ -53,7 +66,12 @@ pub fn create_product(ctx: &ReducerContext, tenant_id: String, name: String, sku
 pub fn update_product_quantity(ctx: &ReducerContext, id: String, quantity_on_hand: f64) {
     if let Some(p) = ctx.db.products().id().find(&id) {
         let quantity_available = quantity_on_hand - p.quantity_committed;
-        ctx.db.products().id().update(Product { quantity_on_hand, quantity_available, updated_at: super::now_ms(ctx), ..p });
+        ctx.db.products().id().update(Product {
+            quantity_on_hand,
+            quantity_available,
+            updated_at: super::now_ms(ctx),
+            ..p
+        });
     }
 }
 
@@ -63,7 +81,19 @@ pub fn delete_product(ctx: &ReducerContext, id: String) {
 }
 
 #[spacetimedb::reducer]
-pub fn update_product(ctx: &ReducerContext, id: String, name: String, sku: String, barcode: String, description: String, category: String, price: f64, cost: f64, min_stock: f64, location: String) {
+pub fn update_product(
+    ctx: &ReducerContext,
+    id: String,
+    name: String,
+    sku: String,
+    barcode: String,
+    description: String,
+    category: String,
+    price: f64,
+    cost: f64,
+    min_stock: f64,
+    location: String,
+) {
     if let Some(p) = ctx.db.products().id().find(&id) {
         ctx.db.products().id().update(Product {
             name,
@@ -123,11 +153,10 @@ pub fn import_product(
     });
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::product::*;
     use crate::product::products;
+    use crate::product::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -137,7 +166,20 @@ mod tests {
     #[test]
     fn test_create_product() {
         let ctx = test_ctx();
-        create_product(&ctx, "test_tenant_id".into(), "test_name".into(), "test_sku".into(), "test_barcode".into(), "test_description".into(), "test_category".into(), 10.0, 10.0, 10.0, 10.0, "test_location".into());
+        create_product(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_name".into(),
+            "test_sku".into(),
+            "test_barcode".into(),
+            "test_description".into(),
+            "test_category".into(),
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            "test_location".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.products().iter().count() >= 0);
@@ -164,7 +206,19 @@ mod tests {
     #[test]
     fn test_update_product() {
         let ctx = test_ctx();
-        update_product(&ctx, "test_id".into(), "test_name".into(), "test_sku".into(), "test_barcode".into(), "test_description".into(), "test_category".into(), 10.0, 10.0, 10.0, "test_location".into());
+        update_product(
+            &ctx,
+            "test_id".into(),
+            "test_name".into(),
+            "test_sku".into(),
+            "test_barcode".into(),
+            "test_description".into(),
+            "test_category".into(),
+            10.0,
+            10.0,
+            10.0,
+            "test_location".into(),
+        );
         // Verify the reducer executed without panic
         // Update on non-existent should not panic
         assert!(true);
@@ -173,7 +227,25 @@ mod tests {
     #[test]
     fn test_import_product() {
         let ctx = test_ctx();
-        import_product(&ctx, "test_tenant_id".into(), "test_id".into(), "test_name".into(), "test_sku".into(), "test_barcode".into(), "test_description".into(), "test_category".into(), 10.0, 10.0, 10.0, 10.0, 10.0, "test_location".into(), true, 1, 1);
+        import_product(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_id".into(),
+            "test_name".into(),
+            "test_sku".into(),
+            "test_barcode".into(),
+            "test_description".into(),
+            "test_category".into(),
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            "test_location".into(),
+            true,
+            1,
+            1,
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.products().iter().count() >= 0);
@@ -182,9 +254,26 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_product(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into(), "test".into(), "test".into(), 10.0, 10.0, 10.0, 10.0, "test".into());
-        let items: Vec<_> = ctx.db.products().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_product(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+            10.0,
+            10.0,
+            10.0,
+            10.0,
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .products()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

@@ -38,7 +38,9 @@ DB_NAME = "spacetime-crm"
 STDB_SERVER = f"http://{STDB_HOST}:{STDB_PORT}"
 CALL_URL = f"{STDB_SERVER}/v1/database/{DB_NAME}/call"
 MODULE_DIR = Path(__file__).resolve().parent.parent / "server" / "spacetimedb"
-WASM_FILE = MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
+WASM_FILE = (
+    MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
+)
 
 
 def file_exists_valid(path: Path) -> tuple[bool, str]:
@@ -103,10 +105,15 @@ def main():
         description="Restore STDB tables from a backup JSON.gz file."
     )
     parser.add_argument("file", help="Path to backup .json.gz file")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Validate only — don't delete or restore")
-    parser.add_argument("--checksum-algo", choices=["sha256"], default=None,
-                        help="Compute checksum of the backup file")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Validate only — don't delete or restore"
+    )
+    parser.add_argument(
+        "--checksum-algo",
+        choices=["sha256"],
+        default=None,
+        help="Compute checksum of the backup file",
+    )
     args = parser.parse_args()
 
     backup_file = Path(args.file)
@@ -117,7 +124,9 @@ def main():
     if not ok:
         print(f"❌ {err}")
         sys.exit(1)
-    print(f"  ✅ Backup file valid: {backup_file.name} ({backup_file.stat().st_size} bytes)")
+    print(
+        f"  ✅ Backup file valid: {backup_file.name} ({backup_file.stat().st_size} bytes)"
+    )
 
     if args.checksum_algo:
         checksum = compute_checksum(backup_file)
@@ -133,7 +142,9 @@ def main():
     if not args.dry_run:
         if not WASM_FILE.exists():
             print(f"❌ STDB module wasm not found at: {WASM_FILE}")
-            print("   Build it first: cd server/spacetimedb && cargo build --release --target wasm32-unknown-unknown")
+            print(
+                "   Build it first: cd server/spacetimedb && cargo build --release --target wasm32-unknown-unknown"
+            )
             sys.exit(1)
         print(f"  ✅ WASM module exists: {WASM_FILE}")
     else:
@@ -165,8 +176,19 @@ def main():
     # Step 2: Re-publish module
     print(f"\n📦 Publishing STDB module '{DB_NAME}'...")
     result = subprocess.run(
-        ["spacetime", "publish", "--server", STDB_SERVER, "-y", DB_NAME, "-f", str(WASM_FILE)],
-        capture_output=True, text=True, timeout=120,
+        [
+            "spacetime",
+            "publish",
+            "--server",
+            STDB_SERVER,
+            "-y",
+            DB_NAME,
+            "-f",
+            str(WASM_FILE),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     if result.returncode != 0:
         print(f"❌ Publish failed: {result.stderr.strip()}")
@@ -176,7 +198,7 @@ def main():
     # Step 3: Restore tables (in order — parent first)
     restore_order = [
         ("customer", "import_customer"),
-        ("user", None),         # no import reducer; needs manual add
+        ("user", None),  # no import reducer; needs manual add
         ("product", "import_product"),
         ("tax_rate", None),
         ("ticket", None),
@@ -229,8 +251,14 @@ def main():
                 skipped += 1
 
         status = "✅" if table_ok else "⚠️"
-        print(f"  {status} {table_name}: {len(rows)} rows restored" +
-              (f" ({import_reducer})" if import_reducer else " [no import reducer — skipped]"))
+        print(
+            f"  {status} {table_name}: {len(rows)} rows restored"
+            + (
+                f" ({import_reducer})"
+                if import_reducer
+                else " [no import reducer — skipped]"
+            )
+        )
 
     if skipped:
         print(f"\n⚠️  {skipped} rows skipped (tables without import reducers).")

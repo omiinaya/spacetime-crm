@@ -1,35 +1,38 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
-import { queryClient } from "../lib/query-client";
-import { api, Appointment, Customer } from "../lib/api";
-import { usePagination } from "../lib/usePagination";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Select } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
-import Pagination from "../components/Pagination";
-import MonthCalendar from "../components/MonthCalendar";
-import { Plus, Trash2, Calendar, Clock, Repeat, Play } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
+import { queryClient } from '../lib/query-client';
+import { api, Appointment, Customer } from '../lib/api';
+import { usePagination } from '../lib/usePagination';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
+import Pagination from '../components/Pagination';
+import MonthCalendar from '../components/MonthCalendar';
+import { Plus, Trash2, Calendar, Clock, Repeat, Play } from 'lucide-react';
 
 const PAGE_SIZE = 25;
 
-import { toast } from "sonner";
+import { toast } from 'sonner';
 
-const statusColors: Record<string, "default" | "secondary" | "warning" | "success" | "destructive" | "outline"> = {
-  scheduled: "outline",
-  confirmed: "default",
-  checked_in: "warning",
-  started: "default",
-  completed: "success",
-  cancelled: "destructive",
+const statusColors: Record<
+  string,
+  'default' | 'secondary' | 'warning' | 'success' | 'destructive' | 'outline'
+> = {
+  scheduled: 'outline',
+  confirmed: 'default',
+  checked_in: 'warning',
+  started: 'default',
+  completed: 'success',
+  cancelled: 'destructive',
 };
 
 const RECURRENCE_LABELS: Record<string, string> = {
-  daily: "Daily",
-  weekly: "Weekly",
-  biweekly: "Biweekly",
-  monthly: "Monthly",
+  daily: 'Daily',
+  weekly: 'Weekly',
+  biweekly: 'Biweekly',
+  monthly: 'Monthly',
 };
 
 export default function AppointmentsPage() {
@@ -37,9 +40,15 @@ export default function AppointmentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [showRecurringPanel, setShowRecurringPanel] = useState(false);
   const [form, setForm] = useState({
-    customer_id: "", ticket_id: "", title: "", description: "",
-    start_time: "", end_time: "", all_day: false,
-    series_id: "", recurrence_rule: "",
+    customer_id: '',
+    ticket_id: '',
+    title: '',
+    description: '',
+    start_time: '',
+    end_time: '',
+    all_day: false,
+    series_id: '',
+    recurrence_rule: '',
   });
 
   // Calendar state
@@ -50,7 +59,7 @@ export default function AppointmentsPage() {
 
   // ── React Query: appointments list ──
   const { data: apptsData, isLoading } = useQuery({
-    queryKey: ["appointments", { offset: pag.offset }],
+    queryKey: ['appointments', { offset: pag.offset }],
     queryFn: () => api.appointments.list(pag.offset, PAGE_SIZE),
     placeholderData: keepPreviousData,
   });
@@ -64,14 +73,14 @@ export default function AppointmentsPage() {
 
   // ── React Query: customers for dropdown ──
   const { data: customersData } = useQuery({
-    queryKey: ["customers"],
+    queryKey: ['customers'],
     queryFn: () => api.customers.list(),
     staleTime: 60_000,
   });
 
   // ── React Query: recurring series ──
   const { data: recurringData } = useQuery({
-    queryKey: ["appointments", "recurring"],
+    queryKey: ['appointments', 'recurring'],
     queryFn: () => api.appointments.recurring.list(),
     staleTime: 30_000,
   });
@@ -89,14 +98,26 @@ export default function AppointmentsPage() {
         end_time: form.end_time ? new Date(form.end_time).getTime() : 0,
       }),
     onSuccess: () => {
-      toast.success("Appointment created");
+      toast.success('Appointment created');
       setShowForm(false);
-      setForm({ customer_id: "", ticket_id: "", title: "", description: "", start_time: "", end_time: "", all_day: false, series_id: "", recurrence_rule: "" });
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["appointments", "recurring"] });
+      setForm({
+        customer_id: '',
+        ticket_id: '',
+        title: '',
+        description: '',
+        start_time: '',
+        end_time: '',
+        all_day: false,
+        series_id: '',
+        recurrence_rule: '',
+      });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({
+        queryKey: ['appointments', 'recurring'],
+      });
     },
     onError: () => {
-      toast.error("Failed to create appointment");
+      toast.error('Failed to create appointment');
     },
   });
 
@@ -104,19 +125,21 @@ export default function AppointmentsPage() {
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       api.appointments.updateStatus(id, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.appointments.delete(id),
     onSuccess: () => {
-      toast.success("Appointment deleted");
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["appointments", "recurring"] });
+      toast.success('Appointment deleted');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({
+        queryKey: ['appointments', 'recurring'],
+      });
     },
     onError: () => {
-      toast.error("Failed to delete appointment");
+      toast.error('Failed to delete appointment');
     },
   });
 
@@ -124,14 +147,16 @@ export default function AppointmentsPage() {
     mutationFn: (seriesId: string) => api.appointments.generateNext(seriesId),
     onSuccess: (res) => {
       if (res.ok) {
-        toast.success("Next occurrence created");
-        queryClient.invalidateQueries({ queryKey: ["appointments"] });
-        queryClient.invalidateQueries({ queryKey: ["appointments", "recurring"] });
+        toast.success('Next occurrence created');
+        queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        queryClient.invalidateQueries({
+          queryKey: ['appointments', 'recurring'],
+        });
       } else {
-        toast.error(res.error || "Failed to generate next");
+        toast.error(res.error || 'Failed to generate next');
       }
     },
-    onError: () => toast.error("Failed to generate next occurrence"),
+    onError: () => toast.error('Failed to generate next occurrence'),
   });
 
   const handleCreate = () => createMutation.mutate();
@@ -151,15 +176,19 @@ export default function AppointmentsPage() {
   };
 
   // Appointments for selected day
-  const dayAppts = appts.filter((a) => {
-    if (!a.start_time || selectedDay === null) return false;
-    const d = new Date(a.start_time);
-    return d.getFullYear() === calYear && d.getMonth() === calMonth && d.getDate() === selectedDay;
-  }).sort((a, b) => a.start_time - b.start_time);
+  const dayAppts = appts
+    .filter((a) => {
+      if (!a.start_time || selectedDay === null) return false;
+      const d = new Date(a.start_time);
+      return (
+        d.getFullYear() === calYear && d.getMonth() === calMonth && d.getDate() === selectedDay
+      );
+    })
+    .sort((a, b) => a.start_time - b.start_time);
 
   const customerName = (id: string) => {
     const c = customers.find((c) => c.id === id);
-    return c ? `${c.first_name} ${c.last_name}` : "—";
+    return c ? `${c.first_name} ${c.last_name}` : '—';
   };
 
   return (
@@ -171,10 +200,22 @@ export default function AppointmentsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowRecurringPanel(!showRecurringPanel)}>
-            <Repeat className="h-4 w-4 mr-1.5" />Recurring
+            <Repeat className="h-4 w-4 mr-1.5" />
+            Recurring
           </Button>
-          <Button onClick={() => { setForm({ ...form, start_time: "", end_time: "", recurrence_rule: "" }); setShowForm(true); }}>
-            <Plus className="h-4 w-4 mr-1.5" />New Appointment
+          <Button
+            onClick={() => {
+              setForm({
+                ...form,
+                start_time: '',
+                end_time: '',
+                recurrence_rule: '',
+              });
+              setShowForm(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            New Appointment
           </Button>
         </div>
       </div>
@@ -182,11 +223,16 @@ export default function AppointmentsPage() {
       {/* Recurring series panel */}
       {showRecurringPanel && (
         <Card className="border-indigo-500/30">
-          <CardHeader><CardTitle className="flex items-center gap-2"><Repeat className="h-4 w-4" /> Recurring Series</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Repeat className="h-4 w-4" /> Recurring Series
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             {recurringSeries.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                No recurring appointment series yet. Set a recurrence rule when creating an appointment.
+                No recurring appointment series yet. Set a recurrence rule when creating an
+                appointment.
               </p>
             )}
             <div className="space-y-2">
@@ -196,12 +242,18 @@ export default function AppointmentsPage() {
                     <div className="flex items-center gap-2">
                       <Repeat className="h-4 w-4 text-indigo-400 shrink-0" />
                       <span className="font-medium">{s.title}</span>
-                      <Badge variant="outline" className="text-[10px]">{RECURRENCE_LABELS[s.recurrence_rule] || s.recurrence_rule}</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {RECURRENCE_LABELS[s.recurrence_rule] || s.recurrence_rule}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {customerName(s.customer_id)}
                       {(s as any).occurrence_count > 0 && (
-                        <span> &middot; {(s as any).occurrence_count} occurrence{(s as any).occurrence_count !== 1 ? "s" : ""}</span>
+                        <span>
+                          {' '}
+                          &middot; {(s as any).occurrence_count} occurrence
+                          {(s as any).occurrence_count !== 1 ? 's' : ''}
+                        </span>
                       )}
                     </p>
                   </div>
@@ -232,13 +284,21 @@ export default function AppointmentsPage() {
               selectedDay={selectedDay}
               onSelectDay={setSelectedDay}
               onPrevMonth={() => {
-                if (calMonth === 0) { setCalYear(calYear - 1); setCalMonth(11); }
-                else { setCalMonth(calMonth - 1); }
+                if (calMonth === 0) {
+                  setCalYear(calYear - 1);
+                  setCalMonth(11);
+                } else {
+                  setCalMonth(calMonth - 1);
+                }
                 setSelectedDay(null);
               }}
               onNextMonth={() => {
-                if (calMonth === 11) { setCalYear(calYear + 1); setCalMonth(0); }
-                else { setCalMonth(calMonth + 1); }
+                if (calMonth === 11) {
+                  setCalYear(calYear + 1);
+                  setCalMonth(0);
+                } else {
+                  setCalMonth(calMonth + 1);
+                }
                 setSelectedDay(null);
               }}
             />
@@ -251,14 +311,18 @@ export default function AppointmentsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm">
                 {selectedDay
-                  ? new Date(calYear, calMonth, selectedDay).toLocaleDateString("en-US", {
-                      weekday: "long", month: "long", day: "numeric", year: "numeric",
+                  ? new Date(calYear, calMonth, selectedDay).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
                     })
-                  : "Select a day"}
+                  : 'Select a day'}
               </CardTitle>
               {selectedDay && (
                 <Button size="sm" variant="outline" onClick={() => setFormDate(selectedDay)}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />Add
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Add
                 </Button>
               )}
             </CardHeader>
@@ -268,26 +332,36 @@ export default function AppointmentsPage() {
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30" />
               <p className="text-sm">No appointments this day</p>
-              <Button size="sm" variant="outline" className="mt-2" onClick={() => setFormDate(selectedDay!)}>
-                <Plus className="h-3.5 w-3.5 mr-1" />Add appointment
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => setFormDate(selectedDay!)}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add appointment
               </Button>
             </div>
           )}
 
           {dayAppts.map((a) => {
-            const startStr = new Date(a.start_time).toLocaleTimeString("en-US", {
-              hour: "numeric", minute: "2-digit",
+            const startStr = new Date(a.start_time).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
             });
-            const isRecurring = a.recurrence_rule !== "" && a.series_id === "";
+            const isRecurring = a.recurrence_rule !== '' && a.series_id === '';
             return (
               <Card key={a.id}>
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={statusColors[a.status] || "outline"}>{a.status}</Badge>
+                        <Badge variant={statusColors[a.status] || 'outline'}>{a.status}</Badge>
                         {isRecurring && (
-                          <Badge variant="outline" className="text-[10px] border-indigo-500/40 text-indigo-400">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] border-indigo-500/40 text-indigo-400"
+                          >
                             <Repeat className="h-3 w-3 mr-0.5 inline" />
                             {RECURRENCE_LABELS[a.recurrence_rule] || a.recurrence_rule}
                           </Badge>
@@ -301,7 +375,9 @@ export default function AppointmentsPage() {
                       {a.description && (
                         <p className="text-xs text-muted-foreground/70 mt-1">{a.description}</p>
                       )}
-                      <p className="text-xs text-muted-foreground/50">Updated: {new Date(a.updated_at).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground/50">
+                        Updated: {new Date(a.updated_at).toLocaleString()}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
                       <Select
@@ -334,21 +410,49 @@ export default function AppointmentsPage() {
             <CardTitle>New Appointment</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
+            <Select
+              value={form.customer_id}
+              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+            >
               <option value="">Select customer...</option>
               {customers.map((c) => (
-                <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.first_name} {c.last_name}
+                </option>
               ))}
             </Select>
-            <Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            <Input placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <Input
+              placeholder="Title"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+            <Input
+              placeholder="Description"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
             <div className="grid grid-cols-2 gap-2">
-              <Input type="datetime-local" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
-              <Input type="datetime-local" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+              <Input
+                type="datetime-local"
+                value={form.start_time}
+                onChange={(e) => setForm({ ...form, start_time: e.target.value })}
+              />
+              <Input
+                type="datetime-local"
+                value={form.end_time}
+                onChange={(e) => setForm({ ...form, end_time: e.target.value })}
+              />
             </div>
-            <Input placeholder="Ticket ID (optional)" value={form.ticket_id} onChange={(e) => setForm({ ...form, ticket_id: e.target.value })} />
+            <Input
+              placeholder="Ticket ID (optional)"
+              value={form.ticket_id}
+              onChange={(e) => setForm({ ...form, ticket_id: e.target.value })}
+            />
             <div className="grid grid-cols-2 gap-2">
-              <Select value={form.recurrence_rule} onChange={(e) => setForm({ ...form, recurrence_rule: e.target.value })}>
+              <Select
+                value={form.recurrence_rule}
+                onChange={(e) => setForm({ ...form, recurrence_rule: e.target.value })}
+              >
                 <option value="">No repeat</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
@@ -359,12 +463,15 @@ export default function AppointmentsPage() {
             {form.recurrence_rule && (
               <p className="text-xs text-indigo-400">
                 <Repeat className="h-3 w-3 inline mr-1" />
-                This will create a recurring series. Use "Generate Next" to create future occurrences.
+                This will create a recurring series. Use "Generate Next" to create future
+                occurrences.
               </p>
             )}
             <div className="flex gap-2">
               <Button onClick={handleCreate}>Create</Button>
-              <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
             </div>
           </CardContent>
         </Card>

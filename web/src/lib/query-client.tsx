@@ -1,16 +1,16 @@
-import React from "react";
-import { QueryClient, QueryClientProvider as Provider } from "@tanstack/react-query";
+import React from 'react';
+import { QueryClient, QueryClientProvider as Provider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 15_000,        // 15s — refetch after inactivity
-      retry: 2,                 // retry twice on failure
+      staleTime: 15_000, // 15s — refetch after inactivity
+      retry: 2, // retry twice on failure
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     },
     mutations: {
-      retry: 0,                 // don't retry mutations
+      retry: 0, // don't retry mutations
     },
   },
 });

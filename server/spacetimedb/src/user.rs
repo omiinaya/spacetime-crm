@@ -47,9 +47,22 @@ pub fn create_user(ctx: &ReducerContext, name: String, email: String, role: Stri
 }
 
 #[spacetimedb::reducer]
-pub fn update_user(ctx: &ReducerContext, id: String, name: String, email: String, role: String, active: bool) {
+pub fn update_user(
+    ctx: &ReducerContext,
+    id: String,
+    name: String,
+    email: String,
+    role: String,
+    active: bool,
+) {
     if let Some(u) = ctx.db.user().id().find(&id) {
-        ctx.db.user().id().update(User { name, email, role, active, ..u });
+        ctx.db.user().id().update(User {
+            name,
+            email,
+            role,
+            active,
+            ..u
+        });
     }
 }
 
@@ -63,21 +76,32 @@ pub fn set_user_password(ctx: &ReducerContext, id: String, password_hash: String
 #[spacetimedb::reducer]
 pub fn set_user_totp_secret(ctx: &ReducerContext, id: String, totp_secret: String) {
     if let Some(u) = ctx.db.user().id().find(&id) {
-        ctx.db.user().id().update(User { totp_secret, totp_enabled: false, ..u });
+        ctx.db.user().id().update(User {
+            totp_secret,
+            totp_enabled: false,
+            ..u
+        });
     }
 }
 
 #[spacetimedb::reducer]
 pub fn enable_user_totp(ctx: &ReducerContext, id: String) {
     if let Some(u) = ctx.db.user().id().find(&id) {
-        ctx.db.user().id().update(User { totp_enabled: true, ..u });
+        ctx.db.user().id().update(User {
+            totp_enabled: true,
+            ..u
+        });
     }
 }
 
 #[spacetimedb::reducer]
 pub fn disable_user_totp(ctx: &ReducerContext, id: String) {
     if let Some(u) = ctx.db.user().id().find(&id) {
-        ctx.db.user().id().update(User { totp_secret: String::new(), totp_enabled: false, ..u });
+        ctx.db.user().id().update(User {
+            totp_secret: String::new(),
+            totp_enabled: false,
+            ..u
+        });
     }
 }
 
@@ -96,7 +120,12 @@ pub fn delete_user(ctx: &ReducerContext, id: String) {
 // ── UserSettings reducers ──
 
 #[spacetimedb::reducer]
-pub fn upsert_user_settings(ctx: &ReducerContext, user_id: String, theme: String, default_ticket_status: String) {
+pub fn upsert_user_settings(
+    ctx: &ReducerContext,
+    user_id: String,
+    theme: String,
+    default_ticket_status: String,
+) {
     let now = super::now_ms(ctx);
     if let Some(existing) = ctx.db.user_settings().user_id().find(&user_id) {
         ctx.db.user_settings().user_id().update(UserSettings {
@@ -121,12 +150,11 @@ pub fn delete_user_settings(ctx: &ReducerContext, user_id: String) {
     ctx.db.user_settings().user_id().delete(&user_id);
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::user::*;
     use crate::user::user;
     use crate::user::user_settings;
+    use crate::user::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -136,7 +164,12 @@ mod tests {
     #[test]
     fn test_create_user() {
         let ctx = test_ctx();
-        create_user(&ctx, "test_name".into(), "test_email".into(), "test_role".into());
+        create_user(
+            &ctx,
+            "test_name".into(),
+            "test_email".into(),
+            "test_role".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.user().iter().count() >= 0);
@@ -145,7 +178,14 @@ mod tests {
     #[test]
     fn test_update_user() {
         let ctx = test_ctx();
-        update_user(&ctx, "test_id".into(), "test_name".into(), "test_email".into(), "test_role".into(), true);
+        update_user(
+            &ctx,
+            "test_id".into(),
+            "test_name".into(),
+            "test_email".into(),
+            "test_role".into(),
+            true,
+        );
         // Verify the reducer executed without panic
         // Update on non-existent should not panic
         assert!(true);
@@ -208,7 +248,12 @@ mod tests {
     #[test]
     fn test_upsert_user_settings() {
         let ctx = test_ctx();
-        upsert_user_settings(&ctx, "test_user_id".into(), "test_theme".into(), "test_default_ticket_status".into());
+        upsert_user_settings(
+            &ctx,
+            "test_user_id".into(),
+            "test_theme".into(),
+            "test_default_ticket_status".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.user().iter().count() >= 0);
@@ -222,5 +267,4 @@ mod tests {
         // Delete on non-existent should not panic
         assert!(true);
     }
-
 }

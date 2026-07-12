@@ -1,11 +1,17 @@
 """Payment methods routes — saved cards for portal customers."""
+
 from __future__ import annotations
 
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sql, _call, _sort, _log_audit, require_role, logger,
+    _sql,
+    _call,
+    _sort,
+    _log_audit,
+    require_role,
+    logger,
 )
 from models import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
 from stripe_payments import create_setup_intent, is_configured
@@ -25,9 +31,7 @@ async def list_payment_methods(
             f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}' AND customer_id = '{customer_id}'"
         )
     else:
-        rows = await _sql(
-            f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}'"
-        )
+        rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}'")
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 
@@ -53,15 +57,18 @@ async def save_payment_method(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Save a payment method collected via Stripe SetupIntent."""
-    await _call("save_payment_method", [
-        user["tenant_id"],
-        body.customer_id,
-        body.stripe_payment_method_id,
-        body.brand,
-        body.last4,
-        body.exp_month,
-        body.exp_year,
-    ])
+    await _call(
+        "save_payment_method",
+        [
+            user["tenant_id"],
+            body.customer_id,
+            body.stripe_payment_method_id,
+            body.brand,
+            body.last4,
+            body.exp_month,
+            body.exp_year,
+        ],
+    )
     await _log_audit(user, "create", "payment_method", f"cust={body.customer_id} {body.brand} ****{body.last4}")
     return {"ok": True}
 

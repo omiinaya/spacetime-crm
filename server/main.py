@@ -1,4 +1,5 @@
 """SpacetimeCRM — FastAPI application entry point."""
+
 from __future__ import annotations
 
 import secrets
@@ -15,7 +16,7 @@ from config import settings
 from log_config import configure_logging
 from helpers import logger
 
-    # Generate a default signing key on startup if none configured
+# Generate a default signing key on startup if none configured
 if settings.jwt_secret == "set-via-environment-variable":  # pragma: allowlist secret
     settings.jwt_secret = secrets.token_hex(32)
 
@@ -34,7 +35,13 @@ app.add_middleware(
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=[settings.cors_origin.replace("https://", "").replace("http://", "").split(":")[0], "localhost", "127.0.0.1", "*.onrender.com", "*.fly.dev"],
+    allowed_hosts=[
+        settings.cors_origin.replace("https://", "").replace("http://", "").split(":")[0],
+        "localhost",
+        "127.0.0.1",
+        "*.onrender.com",
+        "*.fly.dev",
+    ],
 )
 
 # ── Route registration ────────────────────────────────────────
@@ -46,9 +53,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 from handlers import register_exception_handlers
+
 register_exception_handlers(app)
 
 from routes import register_routers
+
 register_routers(app)
 
 # ── SPA static files ──────────────────────────────────────────

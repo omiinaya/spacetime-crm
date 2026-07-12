@@ -1,5 +1,5 @@
-use spacetimedb::*;
 use crate::ticket::ticket;
+use spacetimedb::*;
 
 #[spacetimedb::table(accessor = checklist_templates, public)]
 #[derive(Debug, Clone)]
@@ -35,20 +35,39 @@ pub struct TicketChecklistItem {
 }
 
 #[spacetimedb::reducer]
-pub fn create_checklist_template(ctx: &ReducerContext, tenant_id: String, name: String, description: String, items: String) {
+pub fn create_checklist_template(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    name: String,
+    description: String,
+    items: String,
+) {
     let id = super::make_id("clt", ctx);
     let now = super::now_ms(ctx);
     ctx.db.checklist_templates().insert(ChecklistTemplate {
-        id, tenant_id, name, description, items,
-        created_at: now, updated_at: now,
+        id,
+        tenant_id,
+        name,
+        description,
+        items,
+        created_at: now,
+        updated_at: now,
     });
 }
 
 #[spacetimedb::reducer]
-pub fn update_checklist_template(ctx: &ReducerContext, id: String, name: String, description: String, items: String) {
+pub fn update_checklist_template(
+    ctx: &ReducerContext,
+    id: String,
+    name: String,
+    description: String,
+    items: String,
+) {
     if let Some(t) = ctx.db.checklist_templates().id().find(&id) {
         ctx.db.checklist_templates().id().update(ChecklistTemplate {
-            name, description, items,
+            name,
+            description,
+            items,
             updated_at: super::now_ms(ctx),
             ..t
         });
@@ -62,12 +81,17 @@ pub fn delete_checklist_template(ctx: &ReducerContext, id: String) {
 
 #[spacetimedb::reducer]
 pub fn apply_checklist_template(ctx: &ReducerContext, ticket_id: String, template_id: String) {
-    let Some(tmpl) = ctx.db.checklist_templates().id().find(&template_id) else { return };
+    let Some(tmpl) = ctx.db.checklist_templates().id().find(&template_id) else {
+        return;
+    };
     let now = super::now_ms(ctx);
     let items: Vec<serde_json::Value> = serde_json::from_str(&tmpl.items).unwrap_or_default();
 
     // Delete any existing checklist from this template for the same ticket (re-apply)
-    let existing: Vec<TicketChecklistItem> = ctx.db.ticket_checklist_items().iter()
+    let existing: Vec<TicketChecklistItem> = ctx
+        .db
+        .ticket_checklist_items()
+        .iter()
         .filter(|i| i.ticket_id == ticket_id && i.template_id == template_id)
         .collect();
     for item in existing {
@@ -75,11 +99,28 @@ pub fn apply_checklist_template(ctx: &ReducerContext, ticket_id: String, templat
     }
 
     for (i, item) in items.iter().enumerate() {
-        let label = item.get("label").and_then(|v| v.as_str()).unwrap_or("Item").to_string();
-        let order = item.get("order").and_then(|v| v.as_u64()).unwrap_or(i as u64) as u32;
-        let ci_id = format!("tci_{}_{}_{}", now, i, ctx.sender().to_hex().chars().take(6).collect::<String>());
-    // Derive tenant_id from the parent ticket
-    let ticket_tenant_id = ctx.db.ticket().id().find(&ticket_id).map_or(String::new(), |t| t.tenant_id.clone());
+        let label = item
+            .get("label")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Item")
+            .to_string();
+        let order = item
+            .get("order")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(i as u64) as u32;
+        let ci_id = format!(
+            "tci_{}_{}_{}",
+            now,
+            i,
+            ctx.sender().to_hex().chars().take(6).collect::<String>()
+        );
+        // Derive tenant_id from the parent ticket
+        let ticket_tenant_id = ctx
+            .db
+            .ticket()
+            .id()
+            .find(&ticket_id)
+            .map_or(String::new(), |t| t.tenant_id.clone());
         ctx.db.ticket_checklist_items().insert(TicketChecklistItem {
             id: ci_id,
             tenant_id: ticket_tenant_id,
@@ -104,18 +145,24 @@ pub fn update_checklist_item(ctx: &ReducerContext, id: String, completed: bool) 
         } else {
             (String::new(), 0u64)
         };
-        ctx.db.ticket_checklist_items().id().update(TicketChecklistItem {
-            completed,
-            completed_by,
-            completed_at,
-            ..item
-        });
+        ctx.db
+            .ticket_checklist_items()
+            .id()
+            .update(TicketChecklistItem {
+                completed,
+                completed_by,
+                completed_at,
+                ..item
+            });
     }
 }
 
 #[spacetimedb::reducer]
 pub fn delete_ticket_checklist(ctx: &ReducerContext, ticket_id: String) {
-    let items: Vec<TicketChecklistItem> = ctx.db.ticket_checklist_items().iter()
+    let items: Vec<TicketChecklistItem> = ctx
+        .db
+        .ticket_checklist_items()
+        .iter()
         .filter(|i| i.ticket_id == ticket_id)
         .collect();
     for item in items {
@@ -123,12 +170,11 @@ pub fn delete_ticket_checklist(ctx: &ReducerContext, ticket_id: String) {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::checklist::*;
     use crate::checklist::checklist_templates;
     use crate::checklist::ticket_checklist_items;
+    use crate::checklist::*;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -138,7 +184,13 @@ mod tests {
     #[test]
     fn test_create_checklist_template() {
         let ctx = test_ctx();
-        create_checklist_template(&ctx, "test_tenant_id".into(), "test_name".into(), "test_description".into(), "test_items".into());
+        create_checklist_template(
+            &ctx,
+            "test_tenant_id".into(),
+            "test_name".into(),
+            "test_description".into(),
+            "test_items".into(),
+        );
         // Verify the reducer executed without panic
         // Should have inserted at least one row
         assert!(ctx.db.checklist_templates().iter().count() >= 0);
@@ -147,7 +199,13 @@ mod tests {
     #[test]
     fn test_update_checklist_template() {
         let ctx = test_ctx();
-        update_checklist_template(&ctx, "test_id".into(), "test_name".into(), "test_description".into(), "test_items".into());
+        update_checklist_template(
+            &ctx,
+            "test_id".into(),
+            "test_name".into(),
+            "test_description".into(),
+            "test_items".into(),
+        );
         // Verify the reducer executed without panic
         // Update on non-existent should not panic
         assert!(true);
@@ -191,9 +249,19 @@ mod tests {
     #[test]
     fn test_tenant_isolation() {
         let ctx = test_ctx();
-        create_checklist_template(&ctx, "tenant_a".into(), "test".into(), "test".into(), "test".into());
-        let items: Vec<_> = ctx.db.checklist_templates().iter().filter(|i| i.tenant_id == "tenant_a").collect();
+        create_checklist_template(
+            &ctx,
+            "tenant_a".into(),
+            "test".into(),
+            "test".into(),
+            "test".into(),
+        );
+        let items: Vec<_> = ctx
+            .db
+            .checklist_templates()
+            .iter()
+            .filter(|i| i.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(items.len(), 1);
     }
-
 }

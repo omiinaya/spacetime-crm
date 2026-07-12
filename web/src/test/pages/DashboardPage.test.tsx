@@ -1,13 +1,16 @@
 /**
  * Smoke test for DashboardPage - renders with stats and navigation
  */
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "../test-utils";
-import DashboardPage from "@/pages/DashboardPage";
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '../test-utils';
+import DashboardPage from '@/pages/DashboardPage';
 
-vi.mock("@tanstack/react-query", async (importOriginal) => {
+vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal();
-  return { ...actual, useMutation: vi.fn().mockReturnValue({ mutate: vi.fn(), isPending: false }) };
+  return {
+    ...actual,
+    useMutation: vi.fn().mockReturnValue({ mutate: vi.fn(), isPending: false }),
+  };
 });
 
 const defaultStats = {
@@ -28,11 +31,11 @@ const defaultStats = {
   overdue_invoices_total: 0,
 };
 
-describe("DashboardPage", () => {
-  it("renders basic stats in cards", () => {
+describe('DashboardPage', () => {
+  it('renders basic stats in cards', () => {
     render(<DashboardPage stats={defaultStats} onNavigate={vi.fn()} />);
-    expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("7")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 });

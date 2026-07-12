@@ -1,6 +1,7 @@
 """Unit tests for server/sanitize.py - HTML sanitization.
 No server dependencies - pure function tests.
 """
+
 from __future__ import annotations
 
 import sys
@@ -18,39 +19,47 @@ from pydantic import Field
 class TestStripHtml:
     def test_removes_simple_tags(self):
         from sanitize import strip_html
+
         assert strip_html("<b>hello</b>") == "hello"
 
     def test_removes_script_tags(self):
         from sanitize import strip_html
+
         result = strip_html('<script>alert("xss")</script>hello')
         assert "script" not in result
         assert result == 'alert("xss")hello'
 
     def test_preserves_non_html_text(self):
         from sanitize import strip_html
+
         assert strip_html("Hello, World!") == "Hello, World!"
 
     def test_handles_nested_tags(self):
         from sanitize import strip_html
+
         assert strip_html("<div><p>text</p></div>") == "text"
 
     def test_handles_attributes(self):
         from sanitize import strip_html
+
         result = strip_html('<a href="http://evil.com">click</a>')
         assert result == "click"
 
     def test_returns_non_string_as_is(self):
         from sanitize import strip_html
+
         assert strip_html(42) == 42
         assert strip_html(None) is None
         assert strip_html(3.14) == 3.14
 
     def test_handles_empty_string(self):
         from sanitize import strip_html
+
         assert strip_html("") == ""
 
     def test_handles_malformed_html(self):
         from sanitize import strip_html
+
         assert strip_html("<b>broken") == "broken"
         assert strip_html("some <text") == "some <text"
 
@@ -117,6 +126,7 @@ class TestSanitizedModel:
 
     def test_skip_sanitize_includes_common_secrets(self):
         from sanitize import _SKIP_SANITIZE
+
         assert "password" in _SKIP_SANITIZE
         assert "token" in _SKIP_SANITIZE
         assert "secret" in _SKIP_SANITIZE

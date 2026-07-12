@@ -1,50 +1,79 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../lib/query-client";
-import { api, Invoice, Customer, TaxRate, Payment, InvoiceSummary } from "../lib/api";
-import { usePagination } from "../lib/usePagination";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Select } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
-import Pagination from "../components/Pagination";
-import { FileText, Plus, Trash2, FileDown, DollarSign, CreditCard, CheckSquare, Square, Mail, Edit3, Save } from "lucide-react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../lib/query-client';
+import { api, Invoice, Customer, TaxRate, Payment, InvoiceSummary } from '../lib/api';
+import { usePagination } from '../lib/usePagination';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Select } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
+import Pagination from '../components/Pagination';
+import {
+  FileText,
+  Plus,
+  Trash2,
+  FileDown,
+  DollarSign,
+  CreditCard,
+  CheckSquare,
+  Square,
+  Mail,
+  Edit3,
+  Save,
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 const PAGE_SIZE = 25;
 
-const statusColors: Record<string, "default" | "warning" | "success" | "destructive" | "outline"> = {
-  draft: "outline",
-  sent: "default",
-  paid: "success",
-  partial: "warning",
-  overdue: "destructive",
-  cancelled: "outline",
-};
+const statusColors: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'outline'> =
+  {
+    draft: 'outline',
+    sent: 'default',
+    paid: 'success',
+    partial: 'warning',
+    overdue: 'destructive',
+    cancelled: 'outline',
+  };
 
 export default function InvoicesPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const DRAFT_KEY = "spacetime-crm-invoice-draft";
+  const DRAFT_KEY = 'spacetime-crm-invoice-draft';
   const [form, setForm] = useState(() => {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return { customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" };
+    return {
+      customer_id: '',
+      ticket_id: '',
+      notes: '',
+      terms: '',
+      due_date: '',
+      currency: 'USD',
+    };
   });
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({ amount: 0, method: "cash", reference: "" });
-  const [newItem, setNewItem] = useState({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
+  const [paymentForm, setPaymentForm] = useState({
+    amount: 0,
+    method: 'cash',
+    reference: '',
+  });
+  const [newItem, setNewItem] = useState({
+    description: '',
+    quantity: 1,
+    unit_price: 0,
+    item_type: 'service',
+  });
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkStatus, setBulkStatus] = useState("sent");
+  const [bulkStatus, setBulkStatus] = useState('sent');
   const [showBulkEdit, setShowBulkEdit] = useState(false);
-  const [bulkEditForm, setBulkEditForm] = useState({ terms: "", notes: "" });
+  const [bulkEditForm, setBulkEditForm] = useState({ terms: '', notes: '' });
 
   // Auto-save invoice draft to localStorage
   useEffect(() => {
@@ -54,7 +83,7 @@ export default function InvoicesPage() {
   }, [form, showForm, DRAFT_KEY]);
 
   const { data: summary } = useQuery({
-    queryKey: ["invoice-summary"],
+    queryKey: ['invoice-summary'],
     queryFn: () => api.invoices.summary(),
   });
 
@@ -62,9 +91,9 @@ export default function InvoicesPage() {
     mutationFn: () => api.invoices.sendOverdueReminders(),
     onSuccess: (data) => {
       toast.success(`Sent ${data.email} email(s) and ${data.sms} SMS reminder(s)`);
-      queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-summary'] });
     },
-    onError: () => toast.error("Failed to send reminders"),
+    onError: () => toast.error('Failed to send reminders'),
   });
 
   const bulkMutation = useMutation({
@@ -72,25 +101,27 @@ export default function InvoicesPage() {
     onSuccess: (data) => {
       toast.success(`Updated ${data.updated} invoice(s) to ${bulkStatus}`);
       setSelectedIds(new Set());
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-summary'] });
     },
-    onError: () => toast.error("Bulk update failed"),
+    onError: () => toast.error('Bulk update failed'),
   });
 
   const batchEmailMutation = useMutation({
     mutationFn: () => api.invoices.sendBatchEmail(Array.from(selectedIds)),
     onSuccess: (data) => {
-      toast.success(`Emailed ${data.sent} invoice(s), ${data.failed} failed, ${data.skipped} skipped`);
+      toast.success(
+        `Emailed ${data.sent} invoice(s), ${data.failed} failed, ${data.skipped} skipped`,
+      );
       if (data.failed > 0) {
         data.details
-          .filter(d => d.status === "error")
+          .filter((d) => d.status === 'error')
           .slice(0, 3)
-          .forEach(d => toast.error(`Failed: ${d.id.slice(0, 12)} — ${d.error}`));
+          .forEach((d) => toast.error(`Failed: ${d.id.slice(0, 12)} — ${d.error}`));
       }
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Batch email failed"),
+    onError: () => toast.error('Batch email failed'),
   });
 
   const bulkEditMutation = useMutation({
@@ -99,21 +130,26 @@ export default function InvoicesPage() {
       toast.success(`Updated terms/notes on ${data.updated} invoice(s)`);
       setSelectedIds(new Set());
       setShowBulkEdit(false);
-      setBulkEditForm({ terms: "", notes: "" });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setBulkEditForm({ terms: '', notes: '' });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Bulk edit failed"),
+    onError: () => toast.error('Bulk edit failed'),
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["invoices", { filter, offset: pag.offset }],
+    queryKey: ['invoices', { filter, offset: pag.offset }],
     queryFn: async () => {
       const [iRes, cRes, tRes] = await Promise.all([
         api.invoices.list(filter, undefined, pag.offset, PAGE_SIZE),
         api.customers.list(),
         api.taxRates.list(),
       ]);
-      return { invoices: iRes.invoices, customers: cRes.customers, tax_rates: tRes.tax_rates, total: iRes.total };
+      return {
+        invoices: iRes.invoices,
+        customers: cRes.customers,
+        tax_rates: tRes.tax_rates,
+        total: iRes.total,
+      };
     },
     select: (res) => {
       pag.setTotal(res.total);
@@ -126,79 +162,102 @@ export default function InvoicesPage() {
   const customers = data?.customers ?? [];
 
   const createMutation = useMutation({
-    mutationFn: () => api.invoices.create({
-      customer_id: form.customer_id,
-      ticket_id: form.ticket_id,
-      notes: form.notes,
-      terms: form.terms,
-      due_date: form.due_date ? new Date(form.due_date).getTime() : 0,
-      currency: form.currency,
-    }),
+    mutationFn: () =>
+      api.invoices.create({
+        customer_id: form.customer_id,
+        ticket_id: form.ticket_id,
+        notes: form.notes,
+        terms: form.terms,
+        due_date: form.due_date ? new Date(form.due_date).getTime() : 0,
+        currency: form.currency,
+      }),
     onSuccess: () => {
-      toast.success("Invoice created");
+      toast.success('Invoice created');
       setShowForm(false);
-      setForm({ customer_id: "", ticket_id: "", notes: "", terms: "", due_date: "", currency: "USD" });
+      setForm({
+        customer_id: '',
+        ticket_id: '',
+        notes: '',
+        terms: '',
+        due_date: '',
+        currency: 'USD',
+      });
       localStorage.removeItem(DRAFT_KEY);
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Failed to create invoice"),
+    onError: () => toast.error('Failed to create invoice'),
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => api.invoices.updateStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.invoices.updateStatus(id, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-line-items"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-line-items'] });
     },
   });
 
   const taxMutation = useMutation({
-    mutationFn: ({ id, rate }: { id: string; rate: number }) => api.taxRates.setInvoiceTaxRate(id, rate),
+    mutationFn: ({ id, rate }: { id: string; rate: number }) =>
+      api.taxRates.setInvoiceTaxRate(id, rate),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-line-items"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-line-items'] });
     },
   });
 
   const lineItemMutation = useMutation({
-    mutationFn: (item: { description: string; quantity: number; unit_price: number; item_type: string }) =>
-      api.invoices.lineItems.create(selectedInv!.id, item),
+    mutationFn: (item: {
+      description: string;
+      quantity: number;
+      unit_price: number;
+      item_type: string;
+    }) => api.invoices.lineItems.create(selectedInv!.id, item),
     onSuccess: () => {
-      setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
-      queryClient.invalidateQueries({ queryKey: ["invoice-line-items", selectedInv?.id] });
+      setNewItem({
+        description: '',
+        quantity: 1,
+        unit_price: 0,
+        item_type: 'service',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['invoice-line-items', selectedInv?.id],
+      });
     },
-    onError: () => toast.error("Failed to add item"),
+    onError: () => toast.error('Failed to add item'),
   });
 
   const removeLineItemMutation = useMutation({
     mutationFn: (itemId: string) => api.invoices.lineItems.delete(selectedInv!.id, itemId),
     onSuccess: (_, itemId) => {
-      queryClient.invalidateQueries({ queryKey: ["invoice-line-items", selectedInv?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['invoice-line-items', selectedInv?.id],
+      });
     },
-    onError: () => toast.error("Failed to remove item"),
+    onError: () => toast.error('Failed to remove item'),
   });
 
   const recordPaymentMutation = useMutation({
     mutationFn: () => {
-      if (!selectedInv) throw new Error("No invoice selected");
-      const cust = customers.find(c => c.id === selectedInv.customer_id);
+      if (!selectedInv) throw new Error('No invoice selected');
+      const cust = customers.find((c) => c.id === selectedInv.customer_id);
       return api.payments.record({
         invoice_id: selectedInv.id,
         customer_id: selectedInv.customer_id,
         amount: paymentForm.amount || selectedInv.total,
         method: paymentForm.method,
         reference: paymentForm.reference,
-        notes: "",
-        currency: selectedInv.currency || "USD",
+        notes: '',
+        currency: selectedInv.currency || 'USD',
       });
     },
     onSuccess: () => {
-      toast.success("Payment recorded");
+      toast.success('Payment recorded');
       setShowPaymentForm(false);
-      setPaymentForm({ amount: 0, method: "cash", reference: "" });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setPaymentForm({ amount: 0, method: 'cash', reference: '' });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Failed to record payment"),
+    onError: () => toast.error('Failed to record payment'),
   });
 
   const sendEmailMutation = useMutation({
@@ -206,7 +265,7 @@ export default function InvoicesPage() {
     onSuccess: (data) => {
       toast.success(`Invoice #${data.invoice_number} sent to ${data.sent_to}`);
     },
-    onError: () => toast.error("Failed to send email"),
+    onError: () => toast.error('Failed to send email'),
   });
 
   const handleSendEmail = () => {
@@ -215,7 +274,7 @@ export default function InvoicesPage() {
   };
 
   const { data: lineItemsData } = useQuery({
-    queryKey: ["invoice-line-items", selectedInv?.id],
+    queryKey: ['invoice-line-items', selectedInv?.id],
     queryFn: async () => {
       const res = await api.invoices.lineItems.list(selectedInv!.id);
       return res.line_items;
@@ -230,7 +289,12 @@ export default function InvoicesPage() {
 
   const selectInvoice = async (inv: Invoice) => {
     setSelectedInv(inv);
-    setNewItem({ description: "", quantity: 1, unit_price: 0, item_type: "service" });
+    setNewItem({
+      description: '',
+      quantity: 1,
+      unit_price: 0,
+      item_type: 'service',
+    });
   };
 
   const lineItems = lineItemsData ?? [];
@@ -246,7 +310,7 @@ export default function InvoicesPage() {
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -258,7 +322,7 @@ export default function InvoicesPage() {
     if (selectedIds.size === invoices.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(invoices.map(i => i.id)));
+      setSelectedIds(new Set(invoices.map((i) => i.id)));
     }
   };
 
@@ -269,11 +333,19 @@ export default function InvoicesPage() {
           <h1 className="text-2xl font-bold">Invoices</h1>
           <p className="text-sm text-muted-foreground mt-1">Billing and invoicing</p>
         </div>
-        <Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4 mr-1.5" />New Invoice</Button>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-1.5" />
+          New Invoice
+        </Button>
         {(() => {
           const draft = localStorage.getItem(DRAFT_KEY);
           if (!draft || showForm) return null;
-          try { const d = JSON.parse(draft); if (!d.customer_id && !d.notes && !d.terms) return null; } catch { return null; }
+          try {
+            const d = JSON.parse(draft);
+            if (!d.customer_id && !d.notes && !d.terms) return null;
+          } catch {
+            return null;
+          }
           return (
             <button
               onClick={() => setShowForm(true)}
@@ -287,8 +359,15 @@ export default function InvoicesPage() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {["", "draft", "sent", "paid", "overdue", "cancelled"].map((s) => (
-          <Button key={s} size="sm" variant={filter === s ? "default" : "outline"} onClick={() => handleFilter(s)}>{s || "All"}</Button>
+        {['', 'draft', 'sent', 'paid', 'overdue', 'cancelled'].map((s) => (
+          <Button
+            key={s}
+            size="sm"
+            variant={filter === s ? 'default' : 'outline'}
+            onClick={() => handleFilter(s)}
+          >
+            {s || 'All'}
+          </Button>
         ))}
       </div>
 
@@ -301,11 +380,15 @@ export default function InvoicesPage() {
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Outstanding</p>
-            <p className="text-lg font-bold text-amber-400">${summary.total_outstanding.toFixed(2)}</p>
+            <p className="text-lg font-bold text-amber-400">
+              ${summary.total_outstanding.toFixed(2)}
+            </p>
           </div>
           <div className="border rounded-lg p-3 relative">
             <p className="text-xs text-muted-foreground">Overdue</p>
-            <p className="text-lg font-bold text-red-400">{summary.overdue_count} / ${summary.overdue_total.toFixed(2)}</p>
+            <p className="text-lg font-bold text-red-400">
+              {summary.overdue_count} / ${summary.overdue_total.toFixed(2)}
+            </p>
             {summary.overdue_count > 0 && (
               <Button
                 size="sm"
@@ -317,7 +400,7 @@ export default function InvoicesPage() {
                 {sendReminderMutation.isPending ? (
                   <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
                 ) : (
-                  "Remind"
+                  'Remind'
                 )}
               </Button>
             )}
@@ -334,19 +417,23 @@ export default function InvoicesPage() {
         <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
           <div className="flex-1" />
-          <Select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="w-28">
+          <Select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value)}
+            className="w-28"
+          >
             <option value="draft">Draft</option>
             <option value="sent">Sent</option>
             <option value="paid">Paid</option>
             <option value="overdue">Overdue</option>
             <option value="cancelled">Cancelled</option>
           </Select>
-                {selectedInv && selectedInv.discount_percent > 0 && <p className="text-sm text-muted-foreground">Discount: {selectedInv.discount_percent}%</p>}
-          <Button
-            size="sm"
-            onClick={() => bulkMutation.mutate()}
-            disabled={bulkMutation.isPending}
-          >
+          {selectedInv && selectedInv.discount_percent > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Discount: {selectedInv.discount_percent}%
+            </p>
+          )}
+          <Button size="sm" onClick={() => bulkMutation.mutate()} disabled={bulkMutation.isPending}>
             {bulkMutation.isPending ? (
               <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
             ) : null}
@@ -368,7 +455,10 @@ export default function InvoicesPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => { setBulkEditForm({ terms: "", notes: "" }); setShowBulkEdit(true); }}
+            onClick={() => {
+              setBulkEditForm({ terms: '', notes: '' });
+              setShowBulkEdit(true);
+            }}
           >
             <Edit3 className="h-3.5 w-3.5 mr-1" />
             Edit
@@ -381,17 +471,45 @@ export default function InvoicesPage() {
 
       {showForm && (
         <Card className="border-primary/30">
-          <CardHeader><CardTitle>New Invoice</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>New Invoice</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-3">
-            <Select value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}>
+            <Select
+              value={form.customer_id}
+              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+            >
               <option value="">Select customer...</option>
-              {customers.map((c) => (<option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>))}
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.first_name} {c.last_name}
+                </option>
+              ))}
             </Select>
-            <Input placeholder="Ticket ID (optional)" value={form.ticket_id} onChange={(e) => setForm({ ...form, ticket_id: e.target.value })} />
-            <Input placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-            <Input placeholder="Terms" value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} />
-            <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
-            <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+            <Input
+              placeholder="Ticket ID (optional)"
+              value={form.ticket_id}
+              onChange={(e) => setForm({ ...form, ticket_id: e.target.value })}
+            />
+            <Input
+              placeholder="Notes"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
+            <Input
+              placeholder="Terms"
+              value={form.terms}
+              onChange={(e) => setForm({ ...form, terms: e.target.value })}
+            />
+            <Input
+              type="date"
+              value={form.due_date}
+              onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+            />
+            <Select
+              value={form.currency}
+              onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            >
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
               <option value="GBP">GBP (£)</option>
@@ -400,42 +518,84 @@ export default function InvoicesPage() {
               <option value="JPY">JPY (¥)</option>
             </Select>
             <div className="flex gap-2">
-              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Create</Button>
-              <Button variant="outline" onClick={() => { setShowForm(false); localStorage.removeItem(DRAFT_KEY); }}>Cancel</Button>
+              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+                Create
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowForm(false);
+                  localStorage.removeItem(DRAFT_KEY);
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={`space-y-3 ${selectedInv ? "hidden lg:block" : ""}`}>
+        <div className={`space-y-3 ${selectedInv ? 'hidden lg:block' : ''}`}>
           {/* Select all header */}
           {invoices.length > 0 && (
             <div className="flex items-center gap-2 px-1 pb-1 text-xs text-muted-foreground">
-              <button onClick={toggleSelectAll} className="flex items-center gap-1.5 hover:text-foreground">
-                {selectedIds.size === invoices.length ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
-                {selectedIds.size === invoices.length ? "Deselect all" : "Select all"}
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-1.5 hover:text-foreground"
+              >
+                {selectedIds.size === invoices.length ? (
+                  <CheckSquare className="h-3.5 w-3.5" />
+                ) : (
+                  <Square className="h-3.5 w-3.5" />
+                )}
+                {selectedIds.size === invoices.length ? 'Deselect all' : 'Select all'}
               </button>
-              {selectedIds.size > 0 && <span className="text-primary font-medium">{selectedIds.size} selected</span>}
+              {selectedIds.size > 0 && (
+                <span className="text-primary font-medium">{selectedIds.size} selected</span>
+              )}
             </div>
           )}
           {invoices.map((inv) => {
             const cust = customers.find((c) => c.id === inv.customer_id);
             return (
               <div key={inv.id} className="flex items-start gap-2">
-                <button onClick={(e) => { e.stopPropagation(); toggleSelect(inv.id); }} className="mt-4 shrink-0 hover:text-foreground text-muted-foreground">
-                  {selectedIds.has(inv.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSelect(inv.id);
+                  }}
+                  className="mt-4 shrink-0 hover:text-foreground text-muted-foreground"
+                >
+                  {selectedIds.has(inv.id) ? (
+                    <CheckSquare className="h-4 w-4" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
                 </button>
-                <Card className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? "border-primary" : "hover:border-primary/30"} ${inv.status === "overdue" ? "border-l-red-500 border-l-2" : ""}`} onClick={() => selectInvoice(inv)}>
+                <Card
+                  className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? 'border-primary' : 'hover:border-primary/30'} ${inv.status === 'overdue' ? 'border-l-red-500 border-l-2' : ''}`}
+                  onClick={() => selectInvoice(inv)}
+                >
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">#{inv.invoice_number}</span>
-                          <Badge variant={statusColors[inv.status] || "outline"}>{inv.status}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            #{inv.invoice_number}
+                          </span>
+                          <Badge variant={statusColors[inv.status] || 'outline'}>
+                            {inv.status}
+                          </Badge>
                         </div>
-                        <p className="font-medium mt-1">{inv.currency || "USD"} {inv.total.toFixed(2)}</p>
-                        {cust && <p className="text-xs text-muted-foreground">{cust.first_name} {cust.last_name}</p>}
+                        <p className="font-medium mt-1">
+                          {inv.currency || 'USD'} {inv.total.toFixed(2)}
+                        </p>
+                        {cust && (
+                          <p className="text-xs text-muted-foreground">
+                            {cust.first_name} {cust.last_name}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -454,12 +614,20 @@ export default function InvoicesPage() {
             >
               ← Back to list
             </button>
-            <Card className={selectedInv.status === "overdue" ? "border-l-red-500 border-l-2" : ""}>
+            <Card className={selectedInv.status === 'overdue' ? 'border-l-red-500 border-l-2' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>#{selectedInv.invoice_number} — {selectedInv.currency || "USD"} {selectedInv.total.toFixed(2)}</CardTitle>
+                  <CardTitle>
+                    #{selectedInv.invoice_number} — {selectedInv.currency || 'USD'}{' '}
+                    {selectedInv.total.toFixed(2)}
+                  </CardTitle>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={handleSendEmail} disabled={sendEmailMutation.isPending}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSendEmail}
+                      disabled={sendEmailMutation.isPending}
+                    >
                       {sendEmailMutation.isPending ? (
                         <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
                       ) : (
@@ -467,14 +635,26 @@ export default function InvoicesPage() {
                       )}
                       Email
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, "_blank")}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, '_blank')}
+                    >
                       <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Select value={selectedInv.status} onChange={(e) => statusMutation.mutate({ id: selectedInv.id, status: e.target.value })}>
+                <Select
+                  value={selectedInv.status}
+                  onChange={(e) =>
+                    statusMutation.mutate({
+                      id: selectedInv.id,
+                      status: e.target.value,
+                    })
+                  }
+                >
                   <option value="draft">Draft</option>
                   <option value="sent">Sent</option>
                   <option value="paid">Paid</option>
@@ -484,47 +664,88 @@ export default function InvoicesPage() {
 
                 {/* Tax rate selector */}
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-muted-foreground whitespace-nowrap">Tax Rate:</label>
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">
+                    Tax Rate:
+                  </label>
                   <Select
                     value={String(selectedInv.tax_rate)}
-                    onChange={(e) => taxMutation.mutate({ id: selectedInv.id, rate: parseFloat(e.target.value) })}
+                    onChange={(e) =>
+                      taxMutation.mutate({
+                        id: selectedInv.id,
+                        rate: parseFloat(e.target.value),
+                      })
+                    }
                     className="flex-1"
                   >
                     <option value="0">No tax</option>
                     {taxRates.map((tr) => (
-                      <option key={tr.id} value={tr.rate}>{tr.name} ({tr.rate}%)</option>
+                      <option key={tr.id} value={tr.rate}>
+                        {tr.name} ({tr.rate}%)
+                      </option>
                     ))}
                   </Select>
                   <span className="text-sm font-medium tabular-nums">
-                    {selectedInv.currency || "USD"} {((selectedInv.subtotal * (selectedInv.tax_rate || 0) / 100)).toFixed(2)}
+                    {selectedInv.currency || 'USD'}{' '}
+                    {((selectedInv.subtotal * (selectedInv.tax_rate || 0)) / 100).toFixed(2)}
                   </span>
                 </div>
 
                 {/* Line items */}
                 <div className="space-y-2">
                   {lineItems.map((li) => (
-                    <div key={li.id} className="flex items-center justify-between text-sm p-2 rounded bg-muted/50">
+                    <div
+                      key={li.id}
+                      className="flex items-center justify-between text-sm p-2 rounded bg-muted/50"
+                    >
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{li.description}</p>
-                        <p className="text-xs text-muted-foreground">{li.quantity} x {selectedInv.currency || "USD"} {li.unit_price.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {li.quantity} x {selectedInv.currency || 'USD'} {li.unit_price.toFixed(2)}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-medium">{selectedInv.currency || "USD"} {li.total.toFixed(2)}</span>
-                        <Button size="icon" variant="ghost" onClick={() => removeLineItem(li.id)}><Trash2 className="h-3 w-3" /></Button>
+                        <span className="font-medium">
+                          {selectedInv.currency || 'USD'} {li.total.toFixed(2)}
+                        </span>
+                        <Button size="icon" variant="ghost" onClick={() => removeLineItem(li.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex gap-2">
-                  <Select value={newItem.item_type} onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })} className="w-28">
+                  <Select
+                    value={newItem.item_type}
+                    onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })}
+                    className="w-28"
+                  >
                     <option value="service">Service</option>
                     <option value="part">Part</option>
                   </Select>
-                  <Input placeholder="Description" value={newItem.description} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} />
-                  <Input type="number" placeholder="Qty" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })} className="w-20" />
-                  <Input type="number" placeholder="Price" value={newItem.unit_price} onChange={(e) => setNewItem({ ...newItem, unit_price: +e.target.value })} className="w-24" />
-                  <Button size="sm" onClick={addLineItem}><Plus className="h-3 w-3" /></Button>
+                  <Input
+                    placeholder="Description"
+                    value={newItem.description}
+                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Qty"
+                    value={newItem.quantity}
+                    onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })}
+                    className="w-20"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Price"
+                    value={newItem.unit_price}
+                    onChange={(e) => setNewItem({ ...newItem, unit_price: +e.target.value })}
+                    className="w-24"
+                  />
+                  <Button size="sm" onClick={addLineItem}>
+                    <Plus className="h-3 w-3" />
+                  </Button>
                 </div>
 
                 {/* Record Payment */}
@@ -550,12 +771,22 @@ export default function InvoicesPage() {
                           type="number"
                           placeholder="Amount"
                           value={paymentForm.amount || selectedInv.total}
-                          onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
+                          onChange={(e) =>
+                            setPaymentForm({
+                              ...paymentForm,
+                              amount: parseFloat(e.target.value) || 0,
+                            })
+                          }
                           className="w-28"
                         />
                         <Select
                           value={paymentForm.method}
-                          onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
+                          onChange={(e) =>
+                            setPaymentForm({
+                              ...paymentForm,
+                              method: e.target.value,
+                            })
+                          }
                           className="flex-1"
                         >
                           <option value="cash">Cash</option>
@@ -569,7 +800,12 @@ export default function InvoicesPage() {
                         <Input
                           placeholder="Reference (optional)"
                           value={paymentForm.reference}
-                          onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                          onChange={(e) =>
+                            setPaymentForm({
+                              ...paymentForm,
+                              reference: e.target.value,
+                            })
+                          }
                           className="flex-1"
                         />
                         <Button
@@ -602,11 +838,16 @@ export default function InvoicesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-lg mx-4">
             <CardHeader>
-              <CardTitle>Edit {selectedIds.size} Invoice{selectedIds.size !== 1 ? "s" : ""}</CardTitle>
+              <CardTitle>
+                Edit {selectedIds.size} Invoice
+                {selectedIds.size !== 1 ? 's' : ''}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Terms (leaves empty fields unchanged)</label>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  Terms (leaves empty fields unchanged)
+                </label>
                 <Textarea
                   placeholder="Payment terms..."
                   value={bulkEditForm.terms}
@@ -614,7 +855,9 @@ export default function InvoicesPage() {
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Notes (leaves empty fields unchanged)</label>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  Notes (leaves empty fields unchanged)
+                </label>
                 <Textarea
                   placeholder="Invoice notes..."
                   value={bulkEditForm.notes}
@@ -622,15 +865,20 @@ export default function InvoicesPage() {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setShowBulkEdit(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setShowBulkEdit(false)}>
+                  Cancel
+                </Button>
                 <Button
                   onClick={() => bulkEditMutation.mutate()}
-                  disabled={bulkEditMutation.isPending || (!bulkEditForm.terms && !bulkEditForm.notes)}
+                  disabled={
+                    bulkEditMutation.isPending || (!bulkEditForm.terms && !bulkEditForm.notes)
+                  }
                 >
                   {bulkEditMutation.isPending ? (
                     <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
                   ) : null}
-                  Apply to {selectedIds.size} invoice{selectedIds.size !== 1 ? "s" : ""}
+                  Apply to {selectedIds.size} invoice
+                  {selectedIds.size !== 1 ? 's' : ''}
                 </Button>
               </div>
             </CardContent>

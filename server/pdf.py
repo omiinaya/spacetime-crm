@@ -3,6 +3,7 @@
 Replaced weasyprint to reduce Docker image size (~100MB+ savings from system deps).
 Uses actual Chrome engine — full CSS support, including flexbox, @page, modern layout.
 """
+
 from __future__ import annotations
 
 from playwright.async_api import async_playwright
