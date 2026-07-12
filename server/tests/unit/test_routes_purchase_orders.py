@@ -39,6 +39,6 @@ class TestPurchaseOrders:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.purchase_orders._call", mock_call)
         monkeypatch.setattr("routes.purchase_orders._log_audit", AsyncMock())
-        body = {"vendor": "AutoZone", "items": [{"sku": "123", "qty": 5, "unit_cost": 10.0}], "notes": ""}
+        body = {"vendor_name": "AutoZone", "notes": "", "currency": "USD"}
         resp = client.post("/api/purchase-orders", json=body, headers=admin_headers())
         assert resp.status_code == 200

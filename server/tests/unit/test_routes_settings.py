@@ -50,6 +50,6 @@ class TestSettings:
 
     def test_update_business_hours(self, client, monkeypatch) -> None:
         monkeypatch.setattr("routes.settings._bh_update", lambda d: {})
-        body = {"monday": [{"open": "09:00", "close": "17:00"}]}
+        body = {"monday": {"open": "09:00", "close": "17:00"}}
         resp = client.post("/api/settings/business-hours", json=body, headers=admin_headers())
         assert resp.status_code == 200
