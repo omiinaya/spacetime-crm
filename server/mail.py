@@ -159,6 +159,9 @@ def test_connection() -> dict:
 
         return {"ok": True, "message": f"Connected to {host}:{port}"}
     except Exception as e:
+    logger.exception("Connection test failed")
+
+        return {"ok": False, "error": str(e)}
         return {"ok": False, "error": str(e)}
 
 
