@@ -13,8 +13,6 @@ from pathlib import Path
 from client import get_http_client
 
 # FIXME: BLE001 - Blind except
-# FIXME: DTZ006 - datetime.fromtimestamp without tz
-# FIXME: TRY401 - Redundant exception in logging
 
 logger = logging.getLogger(__name__)
 
