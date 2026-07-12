@@ -22,6 +22,7 @@ from mail import send_email
 from rate_limit import limiter
 
 from models.scheduled_reports import ScheduledReportCreate, ScheduledReportUpdate
+from report_engine import calc_next_run, render_report_email
 
 router = APIRouter()
 
@@ -47,7 +48,7 @@ async def list_schedules(
 async def create_schedule(body: ScheduledReportCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Create a new scheduled report."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
-    next_run_at = _calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
+    next_run_at = calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
 
     result = await _call(
         "create_scheduled_report",
@@ -87,7 +88,7 @@ async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: A
 
     recipients = recipients_raw if isinstance(recipients_raw, list) else [recipients_raw]
     now_ms = int(datetime.utcnow().timestamp() * 1000)
-    next_run_at = _calc_next_run(schedule_frequency, schedule_config, now_ms)
+    next_run_at = calc_next_run(schedule_frequency, schedule_config, now_ms)
 
     await _call(
         "update_scheduled_report",
@@ -160,7 +161,7 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
         report_data = await _build_report_data(report_type, tenant_id, filters)
 
         # 2. Render HTML email
-        html = _render_report_email(report_type, schedule.get("name", "Report"), report_data)
+        html = render_report_email(report_type, schedule.get("name", "Report"), report_data)
 
         # 3. Send to each recipient
         sent_count = 0
@@ -179,7 +180,7 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
 
         # 4. Update schedule: mark as run, calculate next run
         now_ms = int(datetime.utcnow().timestamp() * 1000)
-        next_run = _calc_next_run(
+        next_run = calc_next_run(
             schedule.get("schedule_frequency", "daily"),
             json.loads(schedule.get("schedule_config_json", "{}") or "{}"),
             now_ms,
@@ -191,37 +192,6 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
         logger.error("Report generation failed for %s: %s", schedule.get("name"), e)
         await _call("mark_report_error", [schedule["id"], str(e)[:500]])
         return {"ok": False, "error": str(e)}
-
-
-def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
-    """Calculate the next run timestamp based on frequency and config."""
-    dt = datetime.fromtimestamp(from_ms / 1000)
-    hour = config.get("hour", 8)
-    minute = config.get("minute", 0)
-
-    if frequency == "daily":
-        next_dt = dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        if next_dt <= dt:
-            next_dt += timedelta(days=1)
-    elif frequency == "weekly":
-        day_of_week = config.get("day_of_week", 0)  # 0=Monday
-        next_dt = dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        days_ahead = (day_of_week - next_dt.weekday()) % 7
-        if days_ahead == 0 and next_dt <= dt:
-            days_ahead = 7
-        next_dt += timedelta(days=days_ahead)
-    elif frequency == "monthly":
-        day_of_month = min(config.get("day_of_month", 1), 28)
-        next_dt = dt.replace(day=day_of_month, hour=hour, minute=minute, second=0, microsecond=0)
-        if next_dt <= dt:
-            if next_dt.month == 12:
-                next_dt = next_dt.replace(year=next_dt.year + 1, month=1)
-            else:
-                next_dt = next_dt.replace(month=next_dt.month + 1)
-    else:
-        next_dt = dt + timedelta(days=1)
-
-    return int(next_dt.timestamp() * 1000)
 
 
 async def _build_report_data(report_type: str, tenant_id: str, filters: dict) -> dict[str, Any]:
@@ -251,308 +221,91 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
         total_sent = sum(1 for inv in invoices if inv.get("status") not in ("draft", "cancelled"))
         total_paid_count = sum(1 for inv in invoices if inv.get("status") == "paid")
         outstanding = sum(
-            float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue", "partial")
+            float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue")
         )
 
         return {
-            "title": "Revenue Report",
             "metrics": [
-                {"label": "Total Revenue", "value": f"${total_paid:,.2f}"},
+                {"label": "Total Paid", "value": f"${total_paid:,.2f}"},
+                {"label": "Invoices Sent", "value": total_sent},
+                {"label": "Paid", "value": total_paid_count},
                 {"label": "Outstanding", "value": f"${outstanding:,.2f}"},
-                {"label": "Invoices Sent", "value": str(total_sent)},
-                {"label": "Invoices Paid", "value": str(total_paid_count)},
             ],
+            "chart_label": "Revenue by Month (Last {period_start} Months)",
             "chart": revenue_by_month,
-            "chart_label": "Revenue by Month",
         }
 
-    if report_type == "tickets":
-        tickets = await _sql_t("SELECT * FROM ticket", tenant_id)
-        status_filter = filters.get("status", "")
-        if status_filter:
-            tickets = _filter_rows(tickets, "status", status_filter)
+    elif report_type == "customers":
+        customers = await _sql_t("SELECT * FROM customer", tenant_id)
+        invoices = await _sql_t("SELECT * FROM invoices", tenant_id)
+        tickets = await _sql_t("SELECT * FROM tickets", tenant_id)
 
-        status_counts: dict[str, int] = {}
+        total_customers = len(customers)
+        active = sum(1 for c in customers if c.get("active", True))
+        invoices_open = sum(1 for inv in invoices if inv.get("status") in ("sent", "overdue", "partial"))
+        tickets_open = sum(1 for t in tickets if t.get("status") == "open")
+
+        top_customers = sorted(
+            [
+                {
+                    "label": f"{c.get('first_name', '')} {c.get('last_name', '')}",
+                    "value": sum(
+                        float(inv.get("total", 0))
+                        for inv in invoices
+                        if inv.get("customer_id") == c.get("id") and inv.get("status") == "paid"
+                    ),
+                }
+                for c in customers
+            ],
+            key=lambda x: x["value"],
+            reverse=True,
+        )[:10]
+
+        return {
+            "metrics": [
+                {"label": "Total Customers", "value": total_customers},
+                {"label": "Active", "value": active},
+                {"label": "Open Invoices", "value": invoices_open},
+                {"label": "Open Tickets", "value": tickets_open},
+            ],
+            "chart_label": "Top Customers by Revenue",
+            "chart": top_customers,
+        }
+
+    elif report_type == "inventory":
+        products = await _sql_t("SELECT * FROM products", tenant_id)
+        low_stock = [p for p in products if p.get("quantity", 0) <= (p.get("low_stock_threshold", 5))]
+        return {
+            "metrics": [
+                {"label": "Total Products", "value": len(products)},
+                {"label": "Low Stock Items", "value": len(low_stock)},
+            ],
+            "chart_label": "Low Stock Items",
+            "chart": [
+                {"label": p.get("name", p.get("sku", "?")), "value": p.get("quantity", 0)}
+                for p in low_stock
+            ],
+        }
+
+    elif report_type == "tickets":
+        tickets = await _sql_t("SELECT * FROM tickets", tenant_id)
+        status_counts = {}
         for t in tickets:
             s = t.get("status", "unknown")
             status_counts[s] = status_counts.get(s, 0) + 1
-        ticket_by_status = [{"label": s.capitalize(), "value": c} for s, c in sorted(status_counts.items())]
-
-        open_count = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
-        resolved_count = sum(1 for t in tickets if t.get("status") in ("resolved", "closed"))
-        total_tickets = len(tickets)
-
-        resolution_times = []
-        for t in tickets:
-            created = t.get("created_at", 0)
-            updated = t.get("updated_at", 0)
-            if created and updated > created and t.get("status") in ("resolved", "closed"):
-                resolution_times.append((updated - created) / (1000 * 3600))
-        avg_resolution = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
-
-        # Tech productivity
-        tech_counts: dict[str, int] = {}
-        for t in tickets:
-            uid = t.get("assigned_user_id", "")
-            if uid and t.get("status") in ("resolved", "closed"):
-                tech_counts[uid] = tech_counts.get(uid, 0) + 1
-        all_users = await _sql("SELECT id, name FROM user")
-        user_name_map = {u["id"]: u.get("name", "Unknown") for u in all_users}
-        tech_closed = [
-            {"label": user_name_map.get(uid, "Unknown"), "value": c}
-            for uid, c in sorted(tech_counts.items(), key=lambda x: -x[1])
-        ]
-
-        # SLA breach rate
-        sla_targets = {"urgent": 4, "high": 24, "medium": 72, "low": 120}
-        now_ms = int(now.timestamp() * 1000)
-        breached = 0
-        for t in tickets:
-            status = t.get("status", "")
-            if status in ("resolved", "closed"):
-                continue
-            priority = t.get("priority", "low")
-            created_ts = t.get("created_at", 0)
-            if created_ts:
-                elapsed_hours = (now_ms - created_ts) / (1000 * 3600)
-                target = sla_targets.get(priority, 120)
-                if elapsed_hours > target:
-                    breached += 1
-        sla_rate = round((breached / open_count * 100), 1) if open_count > 0 else 0
-
         return {
-            "title": "Tickets Report",
             "metrics": [
-                {"label": "Total Tickets", "value": str(total_tickets)},
-                {"label": "Open", "value": str(open_count)},
-                {"label": "Resolved/Closed", "value": str(resolved_count)},
-                {"label": "Avg Resolution", "value": f"{avg_resolution}h"},
-                {"label": "SLA Breach Rate", "value": f"{sla_rate}%"},
+                {"label": "Total Tickets", "value": len(tickets)},
+                {"label": "Open", "value": status_counts.get("open", 0)},
+                {"label": "In Progress", "value": status_counts.get("in_progress", 0)},
+                {"label": "Resolved", "value": status_counts.get("resolved", 0)},
             ],
-            "chart": ticket_by_status,
             "chart_label": "Tickets by Status",
-            "chart2": tech_closed,
-            "chart2_label": "Tech Productivity (Closed)",
+            "chart": [{"label": s, "value": c} for s, c in sorted(status_counts.items())],
         }
 
-    if report_type == "invoices":
-        invoices = await _sql_t("SELECT * FROM invoices", tenant_id)
-        status_filter = filters.get("status", "")
-        if status_filter:
-            invoices = _filter_rows(invoices, "status", status_filter)
-
-        status_counts: dict[str, int] = {}
-        total_rev = 0.0
-        for inv in invoices:
-            s = inv.get("status", "draft")
-            status_counts[s] = status_counts.get(s, 0) + 1
-            if inv.get("status") == "paid":
-                total_rev += float(inv.get("total", 0))
-
-        inv_by_status = [{"label": s.capitalize(), "value": c} for s, c in sorted(status_counts.items())]
-        outstanding = sum(
-            float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue", "partial")
-        )
-
-        total_sent_inv = sum(1 for inv in invoices if inv.get("status") in ("sent", "overdue", "partial"))
-        overdue_count = status_counts.get("overdue", 0)
-        # On-the-fly detection for sent/partial past-due
-        now_ms_inv = int(now.timestamp() * 1000)
-        for inv in invoices:
-            if (
-                inv.get("status") in ("sent", "partial")
-                and inv.get("due_date", 0) > 0
-                and inv.get("due_date", 0) < now_ms_inv
-            ):
-                overdue_count += 1
-                total_sent_inv += 1
-        overdue_rate = round((overdue_count / total_sent_inv * 100), 1) if total_sent_inv > 0 else 0
-
+    else:
         return {
-            "title": "Invoice Report",
-            "metrics": [
-                {"label": "Total Invoices", "value": str(len(invoices))},
-                {"label": "Total Collected", "value": f"${total_rev:,.2f}"},
-                {"label": "Outstanding", "value": f"${outstanding:,.2f}"},
-                {"label": "Overdue Rate", "value": f"{overdue_rate}% ({overdue_count})"},
-            ],
-            "chart": inv_by_status,
-            "chart_label": "Invoices by Status",
+            "metrics": [{"label": "Report Type", "value": report_type}],
+            "chart": [],
         }
-
-    if report_type == "appointments":
-        appointments = await _sql_t("SELECT * FROM appointment", tenant_id)
-
-        appt_by_month = []
-        for i in range(11, -1, -1):
-            ms = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
-            ms_end = ms + timedelta(days=30)
-            ms_ts = int(ms.timestamp() * 1000)
-            ms_end_ts = int(ms_end.timestamp() * 1000)
-            appt_by_month.append(
-                {
-                    "label": ms.strftime("%b %y"),
-                    "value": sum(1 for a in appointments if ms_ts <= a.get("start_time", 0) < ms_end_ts),
-                },
-            )
-
-        status_counts: dict[str, int] = {}
-        for a in appointments:
-            s = a.get("status", "scheduled")
-            status_counts[s] = status_counts.get(s, 0) + 1
-
-        return {
-            "title": "Appointments Report",
-            "metrics": [
-                {"label": "Total Appointments", "value": str(len(appointments))},
-                {"label": "Completed", "value": str(status_counts.get("completed", 0))},
-                {"label": "Cancelled", "value": str(status_counts.get("cancelled", 0))},
-                {"label": "No-Show", "value": str(status_counts.get("no_show", 0))},
-            ],
-            "chart": appt_by_month,
-            "chart_label": "Appointments by Month",
-        }
-
-    if report_type == "tech_productivity":
-        tickets = await _sql_t("SELECT * FROM ticket", tenant_id)
-        all_users = await _sql("SELECT id, name FROM user")
-        user_name_map = {u["id"]: u.get("name", "Unknown") for u in all_users}
-
-        # Tech productivity
-        tech_data_map: dict[str, dict[str, Any]] = {}
-        for t in tickets:
-            uid = t.get("assigned_user_id", "")
-            if not uid:
-                continue
-            if uid not in tech_data_map:
-                tech_data_map[uid] = {"assigned": 0, "resolved": 0, "hours": 0.0}
-            tech_data_map[uid]["assigned"] += 1
-            if t.get("status") in ("resolved", "closed"):
-                tech_data_map[uid]["resolved"] += 1
-            created = t.get("created_at", 0)
-            updated = t.get("updated_at", 0)
-            if created and updated > created and t.get("status") in ("resolved", "closed"):
-                tech_data_map[uid]["hours"] += (updated - created) / (1000 * 3600)
-
-        tech_data = [
-            {
-                "label": user_name_map.get(uid, "Unknown"),
-                "value": d["resolved"],
-                "extra": f"{d['assigned']} assigned, {d['hours']:.1f}h avg",
-            }
-            for uid, d in sorted(tech_data_map.items(), key=lambda x: -x[1]["resolved"])
-        ]
-
-        total_resolved = sum(d["resolved"] for d in tech_data_map.values())
-        total_assigned = sum(d["assigned"] for d in tech_data_map.values())
-
-        return {
-            "title": "Tech Productivity Report",
-            "metrics": [
-                {"label": "Total Tickets", "value": str(total_assigned)},
-                {"label": "Resolved/Closed", "value": str(total_resolved)},
-                {
-                    "label": "Resolution Rate",
-                    "value": f"{round(total_resolved / total_assigned * 100, 1) if total_assigned else 0}%",
-                },
-                {"label": "Active Techs", "value": str(len(tech_counts))},
-            ],
-            "chart": tech_data,
-            "chart_label": "Tickets Closed by Tech",
-        }
-
-    if report_type == "customers":
-        customers = await _sql_t("SELECT * FROM customer", tenant_id)
-        invoices = await _sql_t("SELECT * FROM invoices", tenant_id)
-
-        customer_revenue: dict[str, float] = {}
-        for inv in invoices:
-            cid = inv.get("customer_id", "")
-            if inv.get("status") == "paid":
-                customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
-
-        top_customers = [
-            {
-                "label": c.get("first_name", "") + " " + c.get("last_name", ""),
-                "value": round(customer_revenue.get(c["id"], 0), 2),
-            }
-            for c in customers
-        ]
-        top_customers.sort(key=lambda x: -x["value"])
-
-        return {
-            "title": "Customer Report",
-            "metrics": [
-                {"label": "Total Customers", "value": str(len(customers))},
-                {
-                    "label": "Active (with invoices)",
-                    "value": str(len({inv.get("customer_id", "") for inv in invoices})),
-                },
-                {
-                    "label": "Avg Revenue/Customer",
-                    "value": f"${round(sum(customer_revenue.values()) / len(customer_revenue), 2) if customer_revenue else 0}",
-                },
-            ],
-            "chart": top_customers[:10],
-            "chart_label": "Top Customers by Revenue",
-        }
-
-    return {"title": "Unknown Report", "metrics": [], "chart": [], "chart_label": ""}
-
-
-def _render_report_email(report_type: str, name: str, data: dict) -> str:
-    """Render report data as an HTML email."""
-    metrics_html = "".join(
-        f'<tr><td style="padding:8px 16px;border-bottom:1px solid #eee;color:#666">{m["label"]}</td>'
-        f'<td style="padding:8px 16px;border-bottom:1px solid #eee;font-weight:bold;text-align:right">{m["value"]}</td></tr>'
-        for m in data.get("metrics", [])
-    )
-
-    chart_html = ""
-    if data.get("chart"):
-        max_val = max((c["value"] for c in data["chart"]), default=1) or 1
-        bars = "".join(
-            f'<div style="display:flex;align-items:center;margin:4px 0">'
-            f'<span style="width:80px;font-size:11px;color:#666;text-align:right;padding-right:8px">{c["label"]}</span>'
-            f'<div style="flex:1;background:#f0f0f0;border-radius:4px;overflow:hidden;height:20px">'
-            f'<div style="width:{max(c["value"] / max_val * 100, 5)}%;background:#6366f1;height:20px;border-radius:4px;text-align:right;padding-right:4px;line-height:20px;font-size:10px;color:#fff;min-width:fit-content">'
-            f"{c['value']}</div></div></div>"
-            for c in data["chart"]
-        )
-        chart_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart_label", "")}</h3>{bars}'
-
-    chart2_html = ""
-    if data.get("chart2"):
-        max_val = max((c["value"] for c in data["chart2"]), default=1) or 1
-        bars2 = "".join(
-            f'<div style="display:flex;align-items:center;margin:4px 0">'
-            f'<span style="width:120px;font-size:11px;color:#666;text-align:right;padding-right:8px">{c["label"]}</span>'
-            f'<div style="flex:1;background:#f0f0f0;border-radius:4px;overflow:hidden;height:20px">'
-            f'<div style="width:{max(c["value"] / max_val * 100, 5)}%;background:#22c55e;height:20px;border-radius:4px;text-align:right;padding-right:4px;line-height:20px;font-size:10px;color:#fff">'
-            f"{c['value']}</div></div></div>"
-            for c in data["chart2"]
-        )
-        chart2_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart2_label", "")}</h3>{bars2}'
-
-    extra_html = ""
-    if data.get("chart2"):
-        extra = data["chart2"][0].get("extra", "") if data["chart2"] else ""
-        if extra:
-            extra_html = f'<p style="color:#999;font-size:11px">{extra}</p>'
-
-    return f"""<!DOCTYPE html>
-<html><body style="font-family:sans-serif;max-width:640px;margin:0 auto;padding:20px;background:#f9fafb">
-<div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
-<h1 style="font-size:20px;color:#111;margin:0 0 4px">📊 {data.get("title", name)}</h1>
-<p style="color:#666;font-size:13px;margin:0 0 20px">{datetime.utcnow().strftime("%B %d, %Y")}</p>
-
-<table style="width:100%;border-collapse:collapse;margin:16px 0;background:#f8f8ff;border-radius:8px">{metrics_html}</table>
-
-{chart_html}
-{chart2_html}
-{extra_html}
-
-<p style="color:#999;font-size:11px;margin-top:24px;text-align:center">
-SpacetimeCRM · Automated Report Delivery
-</p>
-</div></body></html>"""

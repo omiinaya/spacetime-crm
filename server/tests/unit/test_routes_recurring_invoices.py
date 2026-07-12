@@ -15,8 +15,8 @@ def admin_headers():
 class TestRecurringInvoices:
     def test_list_rules(self, client, monkeypatch) -> None:
         mock_sql = AsyncMock(side_effect=[
-            [{"id": "r1", "name": "Monthly rent"}],  # main rules
-            [],                                       # line items
+            [{"id": "r1", "name": "Monthly rent", "customer_id": "c1"}],  # main rules
+            [{"first_name": "John", "last_name": "Doe"}],                  # customer lookup
         ])
         monkeypatch.setattr("routes.recurring_invoices._sql", mock_sql)
         resp = client.get("/api/recurring-invoices", headers=admin_headers())
@@ -29,9 +29,9 @@ class TestRecurringInvoices:
         monkeypatch.setattr("routes.recurring_invoices._fire_webhook", AsyncMock())
         body = {
             "customer_id": "c1",
+            "name": "Monthly rent",
             "line_items": [{"description": "Rent", "quantity": 1, "unit_price": 1000}],
             "frequency": "monthly",
-            "day_of_month": 1,
         }
         resp = client.post("/api/recurring-invoices", json=body, headers=admin_headers())
         assert resp.status_code == 200

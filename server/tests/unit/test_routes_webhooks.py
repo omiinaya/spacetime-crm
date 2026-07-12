@@ -27,7 +27,7 @@ class TestWebhooks:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.webhooks._call", mock_call)
         monkeypatch.setattr("routes.webhooks._log_audit", AsyncMock())
-        body = {"url": "http://example.com/hook", "events": "*", "secret": ""}
+        body = {"url": "http://example.com/hook", "events": "customer.created", "secret": ""}
         resp = client.post("/api/webhook-subscriptions", json=body, headers=admin_headers())
         assert resp.status_code == 200
 
@@ -35,7 +35,7 @@ class TestWebhooks:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.webhooks._call", mock_call)
         monkeypatch.setattr("routes.webhooks._log_audit", AsyncMock())
-        body = {"url": "http://example.com/hook", "events": "*", "secret": "", "active": True}
+        body = {"url": "http://example.com/hook", "events": "customer.created", "secret": "", "active": True}
         resp = client.put("/api/webhook-subscriptions/ws1", json=body, headers=admin_headers())
         assert resp.status_code == 200
 
@@ -47,9 +47,9 @@ class TestWebhooks:
         assert resp.status_code == 200
 
     def test_test_subscription(self, client, monkeypatch) -> None:
-        mock_call = AsyncMock(return_value={"id": "ws1"})
-        monkeypatch.setattr("routes.webhooks._call", mock_call)
-        monkeypatch.setattr("routes.webhooks._fire_webhook", AsyncMock())
+        mock_sql = AsyncMock(return_value=[{"id": "ws1", "url": "http://example.com/hook", "secret": ""}])
+        monkeypatch.setattr("routes.webhooks._sql", mock_sql)
+        monkeypatch.setattr("routes.webhooks._deliver", AsyncMock(return_value={"ok": True}))
         resp = client.post("/api/webhook-subscriptions/ws1/test", headers=admin_headers())
         assert resp.status_code == 200
         assert resp.json()["ok"] is True

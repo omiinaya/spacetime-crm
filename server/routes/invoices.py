@@ -132,7 +132,7 @@ async def create_invoice(body: InvoiceCreate, user: Annotated[dict, Depends(requ
 async def get_invoice_summary(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Get invoice summary: counts and totals by status."""
     rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}'")  # nosec - tenant_id from JWT or internal whitelist
-    now = int(datetime.now(timezone.utc).timestamp() * 1000)
+    now = int(datetime.now(UTC).timestamp() * 1000)
     summary: dict[str, dict] = {}
     for inv in rows:
         s = inv.get("status", "draft")
