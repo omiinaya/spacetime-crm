@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 import pytest
-from server.invoice_delivery import (
+from invoice_delivery import (
     INVOICE_STATUSES,
     STATUS_CSS,
     STATUS_LABELS,

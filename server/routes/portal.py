@@ -275,7 +275,7 @@ async def portal_make_payment(body: PortalPaymentCreate, customer: Annotated[dic
 @router.get("/api/portal/appointments")
 async def portal_appointments(customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer's appointments."""
-    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    now_ms = int(datetime.now(UTC).timestamp() * 1000)
     rows = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{_safe_id(customer['id'])}'")
     upcoming = [a for a in rows if a.get("start_time", 0) > now_ms]
     past = [a for a in rows if a.get("start_time", 0) <= now_ms]

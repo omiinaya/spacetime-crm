@@ -1,7 +1,7 @@
 """Unit tests for report_engine module (extracted from report_schedules.py)."""
 
 from datetime import datetime, timezone
-from server.report_engine import render_report_email, calc_next_run
+from report_engine import render_report_email, calc_next_run
 
 
 class TestCalcNextRun:
