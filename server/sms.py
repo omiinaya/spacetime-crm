@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 SETTINGS_PATH = Path(__file__).resolve().parent / "sms_settings.json"
 
 
-def _load_settings() -> Optional[dict]:
+def _load_settings() -> dict | None:
     if not SETTINGS_PATH.exists():
         return None
     try:
@@ -35,7 +35,7 @@ def _save_settings(settings: dict) -> None:
     logger.info("SMS settings saved to %s", SETTINGS_PATH)
 
 
-def get_settings() -> Optional[dict]:
+def get_settings() -> dict | None:
     settings = _load_settings()
     if not settings:
         return None
@@ -67,7 +67,7 @@ def is_configured() -> bool:
     return bool(settings.get("account_sid") and settings.get("auth_token") and settings.get("from_number"))
 
 
-def _customer_phone(customer: Optional[dict]) -> Optional[str]:
+def _customer_phone(customer: dict | None) -> str | None:
     """Get customer's preferred notification phone number."""
     if not customer:
         return None

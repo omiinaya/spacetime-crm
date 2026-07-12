@@ -28,7 +28,7 @@ DEFAULT_HOURS = {
 DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
-def _load_settings() -> Optional[dict]:
+def _load_settings() -> dict | None:
     if not SETTINGS_PATH.exists():
         return None
     try:
@@ -47,7 +47,7 @@ def _save_settings(settings: dict) -> None:
     SETTINGS_PATH.write_text(json.dumps(settings, indent=2))
 
 
-def get_settings() -> Optional[dict]:
+def get_settings() -> dict | None:
     """Get current business hours, or None if default."""
     return _load_settings()
 

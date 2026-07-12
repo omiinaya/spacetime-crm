@@ -1,6 +1,6 @@
 """Customer portal routes + Stripe checkout session creation."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -87,7 +87,7 @@ async def portal_login(request: Request, body: PortalLoginRequest):
     if not pw_hash or not bcrypt.checkpw(password.encode(), pw_hash.encode()):
         raise HTTPException(401, "Invalid email or password")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": customer["id"],
         "tenant_id": customer.get("tenant_id", ""),
@@ -277,7 +277,7 @@ async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depend
 @router.get("/api/portal/appointments")
 async def portal_appointments(customer: dict = Depends(get_current_customer)):
     """Customer's appointments."""
-    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    now_ms = int(datetime.now(UTC).timestamp() * 1000)
     rows = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{customer['id']}'")
     upcoming = [a for a in rows if a.get("start_time", 0) > now_ms]
     past = [a for a in rows if a.get("start_time", 0) <= now_ms]

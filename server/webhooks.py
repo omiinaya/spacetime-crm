@@ -8,7 +8,7 @@ import hmac
 import json
 import logging
 from typing import Any, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 import httpx
 from client import get_http_client
@@ -66,14 +66,14 @@ async def _deliver(
     """Deliver a single webhook event. Returns delivery result."""
     body_dict = {
         "event": event_type,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "data": payload,
     }
     body_bytes = json.dumps(body_dict).encode("utf-8")
     signature = _sign_payload(body_bytes, secret)
 
-    last_error: Optional[str] = None
-    status_code: Optional[int] = None
+    last_error: str | None = None
+    status_code: int | None = None
 
     for attempt in range(1, max_retries + 1):
         try:

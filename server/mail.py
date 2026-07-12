@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 SETTINGS_PATH = Path(__file__).resolve().parent / "mail_settings.json"
 
 
-def _load_settings() -> Optional[dict]:
+def _load_settings() -> dict | None:
     if not SETTINGS_PATH.exists():
         return None
     try:
@@ -34,7 +34,7 @@ def _save_settings(settings: dict) -> None:
     logger.info("Mail settings saved to %s", SETTINGS_PATH)
 
 
-def get_settings() -> Optional[dict]:
+def get_settings() -> dict | None:
     settings = _load_settings()
     if not settings:
         return None
@@ -67,7 +67,7 @@ def update_settings(data: dict) -> dict:
     return get_settings()
 
 
-def send_email(to: str, subject: str, html_body: str, text_body: Optional[str] = None) -> bool:
+def send_email(to: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
     """Send an email via configured SMTP. Returns True on success."""
     settings = _load_settings()
     if not settings:
@@ -171,7 +171,7 @@ _STATUS_LABELS = {
 }
 
 
-def _customer_email(customer: Optional[dict]) -> Optional[str]:
+def _customer_email(customer: dict | None) -> str | None:
     """Get customer's preferred notification email address."""
     if not customer:
         return None
