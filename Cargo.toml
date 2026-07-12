@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "server/spacetimedb",
+    "server/container-tests",
+]
+resolver = "2"
