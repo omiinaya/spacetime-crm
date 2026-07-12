@@ -1,30 +1,26 @@
 """Tenant management integration tests."""
 
-import pytest
-import httpx
 import uuid
+
+import httpx
+
 from .conftest import (
     SERVER_URL,
     assert_ok,
-    test_admin_headers,
-    test_tenant_id,
-    test_admin_token,
-    _track_entity,
-    _stdb_sql,
 )
 
 
 class TestTenants:
     """Multi-tenant CRUD and member management."""
 
-    def test_list_tenants(self, test_admin_headers: dict):
+    def test_list_tenants(self, test_admin_headers: dict) -> None:
         """Admin can list all tenants."""
         resp = httpx.get(f"{SERVER_URL}/api/tenants", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "tenants" in data
         assert len(data["tenants"]) >= 1  # At least the default tenant
 
-    def test_get_tenant(self, test_admin_headers: dict, test_tenant_id: str):
+    def test_get_tenant(self, test_admin_headers: dict, test_tenant_id: str) -> None:
         """Admin can fetch a specific tenant."""
         tid = test_tenant_id
         resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10)
@@ -32,7 +28,7 @@ class TestTenants:
         assert "tenant" in data
         assert data["tenant"]["id"] == tid
 
-    def test_create_tenant(self, test_admin_headers: dict):
+    def test_create_tenant(self, test_admin_headers: dict) -> None:
         """Create a new tenant."""
         slug = f"test-tenant-{uuid.uuid4().hex[:8]}"
         resp = httpx.post(
@@ -44,7 +40,7 @@ class TestTenants:
         data = assert_ok(resp)
         assert data.get("ok") is True
 
-    def test_tenant_members(self, test_admin_headers: dict, test_tenant_id: str, test_tenant_slug: str):
+    def test_tenant_members(self, test_admin_headers: dict, test_tenant_id: str, test_tenant_slug: str) -> None:
         """Tenant members list includes admin."""
         tid = test_tenant_id
         resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10)
@@ -56,12 +52,12 @@ class TestTenants:
         expected_username = f"test-admin-{test_tenant_slug}"
         assert expected_username in member_names, f"Admin {expected_username} not in {member_names}"
 
-    def test_unauthenticated_tenant_access(self, client: httpx.Client):
+    def test_unauthenticated_tenant_access(self, client: httpx.Client) -> None:
         """Unauthenticated requests to tenant endpoints fail."""
         resp = client.get("/api/tenants")
         assert resp.status_code in (401, 403)
 
-    def test_tenant_update(self, test_admin_headers: dict, test_tenant_id: str):
+    def test_tenant_update(self, test_admin_headers: dict, test_tenant_id: str) -> None:
         """Update tenant settings. Always restores original name/slug."""
         tid = test_tenant_id
         # Fetch current tenant so we can restore

@@ -1,8 +1,8 @@
 """Webhook routes: Stripe webhook, subscription CRUD, and test delivery."""
 
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
+
+from .conftest import SERVER_URL, _stdb_sql, _track_entity, assert_ok, unique_suffix
 
 
 def _create_webhook(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
@@ -32,7 +32,7 @@ def _create_webhook(test_admin_headers: dict, session_suffix: str = "", suffix: 
 class TestWebhookCRUD:
     """Webhook subscription create, list, update, delete."""
 
-    def test_create(self, test_admin_headers: dict, session_suffix: str):
+    def test_create(self, test_admin_headers: dict, session_suffix: str) -> None:
         url = f"https://hooks-{session_suffix}-{unique_suffix()}.example.com/crm"
         resp = httpx.post(
             f"{SERVER_URL}/api/webhook-subscriptions",
@@ -42,7 +42,7 @@ class TestWebhookCRUD:
         )
         assert_ok(resp)
 
-    def test_create_missing_url(self, test_admin_headers: dict):
+    def test_create_missing_url(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/webhook-subscriptions",
             json={"events": "customer.created"},
@@ -51,7 +51,7 @@ class TestWebhookCRUD:
         )
         assert resp.status_code == 422
 
-    def test_create_invalid_events(self, test_admin_headers: dict):
+    def test_create_invalid_events(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/webhook-subscriptions",
             json={"url": "https://example.com/hook", "events": "nonexistent.event"},
@@ -60,7 +60,7 @@ class TestWebhookCRUD:
         )
         assert resp.status_code == 400
 
-    def test_list(self, test_admin_headers: dict, session_suffix: str):
+    def test_list(self, test_admin_headers: dict, session_suffix: str) -> None:
         # Create one first so list is non-empty
         _create_webhook(test_admin_headers, session_suffix, "list")
         resp = httpx.get(f"{SERVER_URL}/api/webhook-subscriptions", headers=test_admin_headers, timeout=10)
@@ -68,7 +68,7 @@ class TestWebhookCRUD:
         assert "subscriptions" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict, session_suffix: str):
+    def test_update(self, test_admin_headers: dict, session_suffix: str) -> None:
         sub_id = _create_webhook(test_admin_headers, session_suffix, "update")
         resp = httpx.put(
             f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}",
@@ -83,7 +83,7 @@ class TestWebhookCRUD:
         )
         assert_ok(resp)
 
-    def test_update_invalid_events(self, test_admin_headers: dict, session_suffix: str):
+    def test_update_invalid_events(self, test_admin_headers: dict, session_suffix: str) -> None:
         sub_id = _create_webhook(test_admin_headers, session_suffix, "inv")
         resp = httpx.put(
             f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}",
@@ -93,14 +93,14 @@ class TestWebhookCRUD:
         )
         assert resp.status_code == 400
 
-    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete(self, test_admin_headers: dict, session_suffix: str) -> None:
         sub_id = _create_webhook(test_admin_headers, session_suffix, "delete")
         resp = httpx.delete(f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_delete_nonexistent(self, test_admin_headers: dict):
+    def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code < 500
 
@@ -108,18 +108,18 @@ class TestWebhookCRUD:
 class TestWebhookTest:
     """Test delivery endpoint."""
 
-    def test_test_endpoint(self, test_admin_headers: dict, session_suffix: str):
+    def test_test_endpoint(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Test endpoint should attempt delivery (may fail, that's ok)."""
         sub_id = _create_webhook(test_admin_headers, session_suffix, "test")
         resp = httpx.post(
-            f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}/test", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}/test", headers=test_admin_headers, timeout=10,
         )
         # The delivery attempt might fail or succeed depending on network
         assert resp.status_code < 500, f"Test endpoint returned {resp.status_code}: {resp.text[:200]}"
 
-    def test_test_nonexistent(self, test_admin_headers: dict):
+    def test_test_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999/test", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999/test", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code == 404
 
@@ -127,7 +127,7 @@ class TestWebhookTest:
 class TestWebhookStripe:
     """Stripe webhook endpoint (signature verification)."""
 
-    def test_stripe_webhook_no_signature(self, test_admin_headers: dict):
+    def test_stripe_webhook_no_signature(self, test_admin_headers: dict) -> None:
         """Without a valid stripe signature, should return 400."""
         resp = httpx.post(
             f"{SERVER_URL}/api/webhooks/stripe",
@@ -141,12 +141,12 @@ class TestWebhookStripe:
 class TestWebhookErrors:
     """Auth enforcement for webhook subscriptions."""
 
-    def test_unauthorized_list(self, client: httpx.Client):
+    def test_unauthorized_list(self, client: httpx.Client) -> None:
         resp = client.get("/api/webhook-subscriptions", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_unauthorized_create(self, client: httpx.Client):
+    def test_unauthorized_create(self, client: httpx.Client) -> None:
         resp = client.post(
-            "/api/webhook-subscriptions", json={"url": "https://example.com", "events": "customer.created"}, timeout=10
+            "/api/webhook-subscriptions", json={"url": "https://example.com", "events": "customer.created"}, timeout=10,
         )
         assert resp.status_code in (401, 403)

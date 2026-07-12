@@ -10,6 +10,10 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from config import settings
 from helpers import (
+
+# FIXME: S608 - Possible SQL injection via f-string queries
+# FIXME: DTZ003 - datetime.utcnow() without tz
+
     _call,
     _safe_customer,
     _safe_id,

@@ -1,8 +1,8 @@
 """Report schedule CRUD + run-now + check-due tests."""
 
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+
+from .conftest import SERVER_URL, _track_entity, assert_ok, unique_suffix
 
 
 def _create_schedule(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
@@ -34,7 +34,7 @@ def _create_schedule(test_admin_headers: dict, session_suffix: str = "", suffix:
 
 
 class TestReportScheduleCRUD:
-    def test_create(self, test_admin_headers: dict, session_suffix: str):
+    def test_create(self, test_admin_headers: dict, session_suffix: str) -> None:
         name = f"Weekly Revenue Report {session_suffix}-{unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/report-schedules",
@@ -51,7 +51,7 @@ class TestReportScheduleCRUD:
         )
         assert_ok(resp)
 
-    def test_create_missing_recipients(self, test_admin_headers: dict):
+    def test_create_missing_recipients(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/report-schedules",
             json={
@@ -64,7 +64,7 @@ class TestReportScheduleCRUD:
         )
         assert resp.status_code == 400
 
-    def test_create_invalid_type(self, test_admin_headers: dict):
+    def test_create_invalid_type(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/report-schedules",
             json={
@@ -78,7 +78,7 @@ class TestReportScheduleCRUD:
         )
         assert resp.status_code == 400
 
-    def test_create_invalid_frequency(self, test_admin_headers: dict):
+    def test_create_invalid_frequency(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/report-schedules",
             json={
@@ -92,14 +92,14 @@ class TestReportScheduleCRUD:
         )
         assert resp.status_code == 400
 
-    def test_list(self, test_admin_headers: dict, session_suffix: str):
+    def test_list(self, test_admin_headers: dict, session_suffix: str) -> None:
         _create_schedule(test_admin_headers, session_suffix, "lst")
         resp = httpx.get(f"{SERVER_URL}/api/report-schedules", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "schedules" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict, session_suffix: str):
+    def test_update(self, test_admin_headers: dict, session_suffix: str) -> None:
         sid = _create_schedule(test_admin_headers, session_suffix, "upd")
         resp = httpx.put(
             f"{SERVER_URL}/api/report-schedules/{sid}",
@@ -115,7 +115,7 @@ class TestReportScheduleCRUD:
         )
         assert_ok(resp)
 
-    def test_update_nonexistent(self, test_admin_headers: dict):
+    def test_update_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.put(
             f"{SERVER_URL}/api/report-schedules/nonexistent-999",
             json={
@@ -128,20 +128,20 @@ class TestReportScheduleCRUD:
         )
         assert resp.status_code == 404
 
-    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete(self, test_admin_headers: dict, session_suffix: str) -> None:
         sid = _create_schedule(test_admin_headers, session_suffix, "del")
         resp = httpx.delete(f"{SERVER_URL}/api/report-schedules/{sid}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_delete_nonexistent(self, test_admin_headers: dict):
+    def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/report-schedules/nonexistent-999", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/report-schedules/nonexistent-999", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code < 500
 
 
 class TestReportScheduleRun:
-    def test_run_now(self, test_admin_headers: dict, session_suffix: str):
+    def test_run_now(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Run-now should attempt delivery (may fail without mail config, that's ok)."""
         sid = _create_schedule(test_admin_headers, session_suffix, "run")
         # Need to ensure recipients includes an email to avoid validation issues
@@ -149,13 +149,13 @@ class TestReportScheduleRun:
         # Should not crash — may fail gracefully due to no mail config
         assert resp.status_code < 500, resp.text[:200]
 
-    def test_run_now_nonexistent(self, test_admin_headers: dict):
+    def test_run_now_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/report-schedules/nonexistent-999/run-now", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/report-schedules/nonexistent-999/run-now", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code == 404
 
-    def test_check_due(self, test_admin_headers: dict):
+    def test_check_due(self, test_admin_headers: dict) -> None:
         """Check-due should return a list, possibly empty."""
         resp = httpx.get(f"{SERVER_URL}/api/report-schedules/check-due", headers=test_admin_headers, timeout=15)
         data = assert_ok(resp)
@@ -164,11 +164,11 @@ class TestReportScheduleRun:
 
 
 class TestReportScheduleErrors:
-    def test_unauthorized_list(self, client: httpx.Client):
+    def test_unauthorized_list(self, client: httpx.Client) -> None:
         resp = client.get("/api/report-schedules", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_unauthorized_create(self, client: httpx.Client):
+    def test_unauthorized_create(self, client: httpx.Client) -> None:
         resp = client.post(
             "/api/report-schedules",
             json={

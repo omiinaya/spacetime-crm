@@ -11,53 +11,51 @@ _server_dir = str(Path(__file__).resolve().parent.parent.parent)
 if _server_dir not in sys.path:
     sys.path.insert(0, _server_dir)
 
-import pytest
-from typing import Optional
 from pydantic import Field
 
 
 class TestStripHtml:
-    def test_removes_simple_tags(self):
+    def test_removes_simple_tags(self) -> None:
         from sanitize import strip_html
 
         assert strip_html("<b>hello</b>") == "hello"
 
-    def test_removes_script_tags(self):
+    def test_removes_script_tags(self) -> None:
         from sanitize import strip_html
 
         result = strip_html('<script>alert("xss")</script>hello')
         assert "script" not in result
         assert result == 'alert("xss")hello'
 
-    def test_preserves_non_html_text(self):
+    def test_preserves_non_html_text(self) -> None:
         from sanitize import strip_html
 
         assert strip_html("Hello, World!") == "Hello, World!"
 
-    def test_handles_nested_tags(self):
+    def test_handles_nested_tags(self) -> None:
         from sanitize import strip_html
 
         assert strip_html("<div><p>text</p></div>") == "text"
 
-    def test_handles_attributes(self):
+    def test_handles_attributes(self) -> None:
         from sanitize import strip_html
 
         result = strip_html('<a href="http://evil.com">click</a>')
         assert result == "click"
 
-    def test_returns_non_string_as_is(self):
+    def test_returns_non_string_as_is(self) -> None:
         from sanitize import strip_html
 
         assert strip_html(42) == 42
         assert strip_html(None) is None
         assert strip_html(3.14) == 3.14
 
-    def test_handles_empty_string(self):
+    def test_handles_empty_string(self) -> None:
         from sanitize import strip_html
 
         assert strip_html("") == ""
 
-    def test_handles_malformed_html(self):
+    def test_handles_malformed_html(self) -> None:
         from sanitize import strip_html
 
         assert strip_html("<b>broken") == "broken"
@@ -65,7 +63,7 @@ class TestStripHtml:
 
 
 class TestSanitizedModel:
-    def test_strips_html_from_name(self):
+    def test_strips_html_from_name(self) -> None:
         from sanitize import SanitizedModel
 
         class TestModel(SanitizedModel):
@@ -76,7 +74,7 @@ class TestSanitizedModel:
         assert obj.name == "John"
         assert obj.bio == "alert('x')bio"
 
-    def test_preserves_password_field(self):
+    def test_preserves_password_field(self) -> None:
         from sanitize import SanitizedModel
 
         class TestModel(SanitizedModel):
@@ -85,7 +83,7 @@ class TestSanitizedModel:
         obj = TestModel(password="<b>secret</b>")
         assert obj.password == "<b>secret</b>"
 
-    def test_preserves_token_field(self):
+    def test_preserves_token_field(self) -> None:
         from sanitize import SanitizedModel
 
         class TestModel(SanitizedModel):
@@ -94,7 +92,7 @@ class TestSanitizedModel:
         obj = TestModel(token="<b>tok</b>")
         assert obj.token == "<b>tok</b>"
 
-    def test_default_values_unchanged(self):
+    def test_default_values_unchanged(self) -> None:
         from sanitize import SanitizedModel
 
         class TestModel(SanitizedModel):
@@ -107,7 +105,7 @@ class TestSanitizedModel:
         assert obj.bio == "default bio"
         assert obj.password == ""
 
-    def test_multiple_string_fields(self):
+    def test_multiple_string_fields(self) -> None:
         from sanitize import SanitizedModel
 
         class TestModel(SanitizedModel):
@@ -124,7 +122,7 @@ class TestSanitizedModel:
         assert obj.last_name == "Doe"
         assert obj.notes == "link"
 
-    def test_skip_sanitize_includes_common_secrets(self):
+    def test_skip_sanitize_includes_common_secrets(self) -> None:
         from sanitize import _SKIP_SANITIZE
 
         assert "password" in _SKIP_SANITIZE

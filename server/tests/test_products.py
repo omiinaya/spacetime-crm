@@ -1,8 +1,9 @@
 """Product CRUD, inventory adjustments, low stock alert integration tests."""
 
-import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+import pytest
+
+from .conftest import SERVER_URL, _track_entity, assert_ok, unique_suffix
 
 
 def _unique_sku(base: str) -> str:
@@ -12,7 +13,7 @@ def _unique_sku(base: str) -> str:
 class TestProductCRUD:
     """Product create, list, update, delete lifecycle."""
 
-    def test_create_product(self, test_admin_headers: dict, session_suffix: str):
+    def test_create_product(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create a basic product."""
         sku = _unique_sku(f"TST-{session_suffix}")
         resp = httpx.post(
@@ -28,14 +29,14 @@ class TestProductCRUD:
         if prods:
             _track_entity("product", prods[0]["id"])
 
-    def test_list_products(self, test_admin_headers: dict):
+    def test_list_products(self, test_admin_headers: dict) -> None:
         """List products returns paginated results."""
         resp = httpx.get(f"{SERVER_URL}/api/products", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "products" in data
         assert "total" in data
 
-    def test_update_product_quantity(self, test_admin_headers: dict, session_suffix: str):
+    def test_update_product_quantity(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Update product quantity."""
         # Create product first
         sku = _unique_sku(f"QTY-{session_suffix}")
@@ -60,7 +61,7 @@ class TestProductCRUD:
         )
         assert_ok(resp)
 
-    def test_update_product(self, test_admin_headers: dict, session_suffix: str):
+    def test_update_product(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Update product fields (name, price, min_stock)."""
         sku = _unique_sku(f"UPD-{session_suffix}")
         httpx.post(
@@ -92,7 +93,7 @@ class TestProductCRUD:
         )
         assert_ok(resp)
 
-    def test_delete_product(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_product(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Delete a product (admin only)."""
         sku = _unique_sku(f"DEL-{session_suffix}")
         httpx.post(
@@ -111,7 +112,7 @@ class TestProductCRUD:
         resp = httpx.delete(f"{SERVER_URL}/api/products/{pid}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_inventory_adjustment(self, test_admin_headers: dict, session_suffix: str):
+    def test_inventory_adjustment(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create an inventory adjustment for a product."""
         sku = _unique_sku(f"ADJ-{session_suffix}")
         httpx.post(
@@ -135,7 +136,7 @@ class TestProductCRUD:
         )
         assert_ok(resp)
 
-    def test_list_adjustments(self, test_admin_headers: dict, session_suffix: str):
+    def test_list_adjustments(self, test_admin_headers: dict, session_suffix: str) -> None:
         """List inventory adjustments for a product."""
         sku = _unique_sku(f"ADJL-{session_suffix}")
         httpx.post(
@@ -164,7 +165,7 @@ class TestProductCRUD:
         assert "adjustments" in data
         assert len(data["adjustments"]) >= 1
 
-    def test_low_stock_list(self, test_admin_headers: dict, session_suffix: str):
+    def test_low_stock_list(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Low stock endpoint returns products below threshold."""
         # Create a product with min_stock > quantity_on_hand
         sku = _unique_sku(f"LOW-{session_suffix}")
@@ -184,7 +185,7 @@ class TestProductCRUD:
         assert "products" in data
         assert "count" in data
 
-    def test_low_stock_notify(self, test_admin_headers: dict):
+    def test_low_stock_notify(self, test_admin_headers: dict) -> None:
         """Low stock notify returns ok (email may fail gracefully)."""
         resp = httpx.post(f"{SERVER_URL}/api/products/low-stock/notify", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -195,7 +196,7 @@ class TestProductCRUD:
 class TestProductErrors:
     """Product endpoint error handling."""
 
-    def test_create_missing_name(self, test_admin_headers: dict):
+    def test_create_missing_name(self, test_admin_headers: dict) -> None:
         """Missing product name returns 422."""
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
@@ -205,7 +206,7 @@ class TestProductErrors:
         )
         assert resp.status_code == 422
 
-    def test_negative_price(self, test_admin_headers: dict):
+    def test_negative_price(self, test_admin_headers: dict) -> None:
         """Negative price returns 422."""
         resp = httpx.post(
             f"{SERVER_URL}/api/products",
@@ -215,7 +216,7 @@ class TestProductErrors:
         )
         assert resp.status_code == 422
 
-    def test_unauthorized_access(self, client: httpx.Client):
+    def test_unauthorized_access(self, client: httpx.Client) -> None:
         """Product endpoints require auth."""
         for path in [
             "/api/products",
@@ -230,7 +231,7 @@ class TestProductErrors:
 class TestBarcodeLookup:
     """Barcode-based product lookup."""
 
-    def test_lookup_by_barcode(self, test_admin_headers: dict, session_suffix: str):
+    def test_lookup_by_barcode(self, test_admin_headers: dict, session_suffix: str) -> None:
         sku = _unique_sku(f"BAR-{session_suffix}")
         barcode = f"59{session_suffix}{unique_suffix()[:6]}"
         product = {
@@ -244,7 +245,7 @@ class TestBarcodeLookup:
         httpx.post(f"{SERVER_URL}/api/products", json=product, headers=test_admin_headers, timeout=10)
         # Track for session cleanup
         r_search = httpx.get(
-            f"{SERVER_URL}/api/products", params={"search": sku}, headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/products", params={"search": sku}, headers=test_admin_headers, timeout=10,
         )
         prods = r_search.json().get("products", [])
         if prods:
@@ -254,8 +255,8 @@ class TestBarcodeLookup:
         assert data["product"]["name"] == "Barcode Test"
         assert data["product"]["barcode"] == barcode
 
-    def test_lookup_nonexistent(self, test_admin_headers: dict):
+    def test_lookup_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/products/by-barcode/nonexistent-999", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/products/by-barcode/nonexistent-999", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code == 404

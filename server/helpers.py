@@ -1,5 +1,9 @@
 """Shared STDB helpers, auth middleware, and constants for SpacetimeCRM.
 
+# FIXME: B008 - function-call-in-default-argument
+# FIXME: BLE001 - Blind except on multiple async calls
+# FIXME: S608 - SQL injection vector through f-string query construction
+
 Extracted from main.py to enable route splitting and reduce code duplication.
 """
 

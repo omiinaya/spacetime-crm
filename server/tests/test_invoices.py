@@ -1,8 +1,8 @@
 """Invoice CRUD, line items, tax, PDF, and status workflow integration tests."""
 
-import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity, test_admin_headers
+
+from .conftest import SERVER_URL, _track_entity, assert_ok, create_customer, unique_suffix
 
 
 def _create_test_customer(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
@@ -10,7 +10,7 @@ def _create_test_customer(test_admin_headers: dict, session_suffix: str = "", su
     suf = suffix or unique_suffix()
     email = f"inv-cust-{session_suffix}-{suf}@example.com"
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, first_name="Invoice", last_name=f"Test{suf}", email=email
+        test_admin_headers, session_suffix=session_suffix, first_name="Invoice", last_name=f"Test{suf}", email=email,
     )
     cid = c.get("id")
     assert cid, f"Failed to create customer: {c}"
@@ -19,7 +19,7 @@ def _create_test_customer(test_admin_headers: dict, session_suffix: str = "", su
 
 
 def _create_invoice(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides
+    test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides,
 ) -> tuple[str, str]:
     """Create a customer + invoice and return the (invoice_id, customer_id).
 
@@ -44,7 +44,7 @@ def _create_invoice(
 
     # Find invoice by customer_id (unique to this test call)
     r = httpx.get(
-        f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10
+        f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10,
     )
     invs = r.json().get("invoices", [])
     assert len(invs) >= 1, f"No invoice found for customer {cid}"
@@ -56,7 +56,7 @@ def _create_invoice(
 class TestInvoiceCRUD:
     """Full invoice lifecycle: create, list, line items, tax, status workflow."""
 
-    def test_create_invoice(self, test_admin_headers: dict, session_suffix: str):
+    def test_create_invoice(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create a basic invoice."""
         cid = _create_test_customer(test_admin_headers, session_suffix, "create")
         resp = httpx.post(
@@ -67,7 +67,7 @@ class TestInvoiceCRUD:
         )
         assert_ok(resp)
 
-    def test_list_invoices(self, test_admin_headers: dict):
+    def test_list_invoices(self, test_admin_headers: dict) -> None:
         """List invoices returns paginated results."""
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices",
@@ -79,7 +79,7 @@ class TestInvoiceCRUD:
         assert "total" in data
         assert isinstance(data["invoices"], list)
 
-    def test_list_invoices_filter_by_status(self, test_admin_headers: dict):
+    def test_list_invoices_filter_by_status(self, test_admin_headers: dict) -> None:
         """Filter invoices by status."""
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices",
@@ -91,7 +91,7 @@ class TestInvoiceCRUD:
         for inv in data["invoices"]:
             assert inv["status"] == "draft"
 
-    def test_invoice_has_line_items(self, test_admin_headers: dict, session_suffix: str):
+    def test_invoice_has_line_items(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create invoice with line items and verify they appear."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "lineitems", notes="Line item test")
 
@@ -120,7 +120,7 @@ class TestInvoiceCRUD:
         assert "Diagnostic" in descriptions
         assert "Screen replacement" in descriptions
 
-    def test_delete_line_item(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_line_item(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Delete a single line item."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "delline", notes="Delete line")
 
@@ -147,7 +147,7 @@ class TestInvoiceCRUD:
         ids = [li["id"] for li in r3.json()["line_items"]]
         assert item_id not in ids
 
-    def test_update_invoice_status(self, test_admin_headers: dict, session_suffix: str):
+    def test_update_invoice_status(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Update invoice status to sent."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "status", notes="Status test")
         resp = httpx.put(
@@ -158,7 +158,7 @@ class TestInvoiceCRUD:
         )
         assert_ok(resp)
 
-    def test_set_tax_rate(self, test_admin_headers: dict, session_suffix: str):
+    def test_set_tax_rate(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Set tax rate on an invoice."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "tax", notes="Tax test")
         resp = httpx.put(
@@ -169,7 +169,7 @@ class TestInvoiceCRUD:
         )
         assert_ok(resp)
 
-    def test_delete_invoice(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_invoice(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Delete an invoice (admin only)."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "delete", notes="Delete test")
         resp = httpx.delete(
@@ -179,7 +179,7 @@ class TestInvoiceCRUD:
         )
         assert_ok(resp)
 
-    def test_pdf_generation(self, test_admin_headers: dict, session_suffix: str):
+    def test_pdf_generation(self, test_admin_headers: dict, session_suffix: str) -> None:
         """PDF endpoint returns application/pdf content."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "pdf", notes="PDF test")
         resp = httpx.get(
@@ -193,7 +193,7 @@ class TestInvoiceCRUD:
         )
         assert len(resp.content) > 500, f"PDF too small: {len(resp.content)} bytes"
 
-    def test_full_workflow(self, test_admin_headers: dict, session_suffix: str):
+    def test_full_workflow(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Complete invoice lifecycle: create -> add items -> update status -> PDF."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "workflow", notes="Full workflow")
 
@@ -236,7 +236,7 @@ class TestInvoiceCRUD:
 class TestInvoiceErrors:
     """Invoice endpoint error handling."""
 
-    def test_create_missing_customer(self, test_admin_headers: dict):
+    def test_create_missing_customer(self, test_admin_headers: dict) -> None:
         """Create invoice with non-existent customer should not crash."""
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices",
@@ -246,7 +246,7 @@ class TestInvoiceErrors:
         )
         assert resp.status_code < 500, f"Server error on bad customer: {resp.text[:200]}"
 
-    def test_create_missing_body(self, test_admin_headers: dict):
+    def test_create_missing_body(self, test_admin_headers: dict) -> None:
         """POST with empty body returns 422."""
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices",
@@ -256,7 +256,7 @@ class TestInvoiceErrors:
         )
         assert resp.status_code == 422
 
-    def test_invalid_status(self, test_admin_headers: dict, session_suffix: str):
+    def test_invalid_status(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Setting an invalid status should not crash."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "badstatus", notes="")
         resp = httpx.put(
@@ -268,7 +268,7 @@ class TestInvoiceErrors:
         # STDB accepts any string for status — just don't crash
         assert resp.status_code < 500
 
-    def test_pdf_nonexistent(self, test_admin_headers: dict):
+    def test_pdf_nonexistent(self, test_admin_headers: dict) -> None:
         """PDF for non-existent invoice returns 404."""
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices/nonexistent-id-99999/pdf",
@@ -277,13 +277,13 @@ class TestInvoiceErrors:
         )
         assert resp.status_code == 404
 
-    def test_unauthorized_access(self, client: httpx.Client):
+    def test_unauthorized_access(self, client: httpx.Client) -> None:
         """All invoice endpoints require auth."""
         for path in ["/api/invoices", "/api/invoices/fake/pdf"]:
             resp = client.get(path, timeout=10)
             assert resp.status_code in (401, 403), f"{path} allowed unauthenticated: {resp.status_code}"
 
-    def test_overdue_count(self, test_admin_headers: dict):
+    def test_overdue_count(self, test_admin_headers: dict) -> None:
         """Overdue count endpoint returns expected shape."""
         resp = httpx.get(f"{SERVER_URL}/api/invoices/overdue-count", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -292,7 +292,7 @@ class TestInvoiceErrors:
         assert isinstance(data["count"], int)
         assert isinstance(data["total"], (int, float))
 
-    def test_trigger_overdue_check(self, test_admin_headers: dict):
+    def test_trigger_overdue_check(self, test_admin_headers: dict) -> None:
         """Trigger overdue check returns ok."""
         resp = httpx.post(f"{SERVER_URL}/api/invoices/trigger-overdue-check", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -300,17 +300,17 @@ class TestInvoiceErrors:
         assert "marked" in data
         assert isinstance(data["marked"], int)
 
-    def test_overdue_count_unauthorized(self, client: httpx.Client):
+    def test_overdue_count_unauthorized(self, client: httpx.Client) -> None:
         """Overdue count requires auth."""
         resp = client.get("/api/invoices/overdue-count", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_trigger_overdue_unauthorized(self, client: httpx.Client):
+    def test_trigger_overdue_unauthorized(self, client: httpx.Client) -> None:
         """Trigger overdue check requires auth."""
         resp = client.post("/api/invoices/trigger-overdue-check", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_summary(self, test_admin_headers: dict):
+    def test_summary(self, test_admin_headers: dict) -> None:
         """Summary endpoint returns expected shape."""
         resp = httpx.get(f"{SERVER_URL}/api/invoices/summary", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -322,7 +322,7 @@ class TestInvoiceErrors:
         assert "overdue_total" in data
         assert isinstance(data["total_count"], int)
 
-    def test_bulk_status_update(self, test_admin_headers: dict, session_suffix: str):
+    def test_bulk_status_update(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Bulk status update changes invoice statuses."""
         # Create our own invoices to ensure isolation
         inv_id1, _ = _create_invoice(test_admin_headers, session_suffix, "bulk1")
@@ -339,19 +339,19 @@ class TestInvoiceErrors:
         assert data["updated"] >= 1
         assert data["errors"] == 0
 
-    def test_summary_unauthorized(self, client: httpx.Client):
+    def test_summary_unauthorized(self, client: httpx.Client) -> None:
         """Summary requires auth."""
         resp = client.get("/api/invoices/summary", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_bulk_status_unauthorized(self, client: httpx.Client):
+    def test_bulk_status_unauthorized(self, client: httpx.Client) -> None:
         """Bulk status update requires auth."""
         resp = client.post(
-            "/api/invoices/bulk-status-update", json={"invoice_ids": ["fake"], "status": "sent"}, timeout=10
+            "/api/invoices/bulk-status-update", json={"invoice_ids": ["fake"], "status": "sent"}, timeout=10,
         )
         assert resp.status_code in (401, 403)
 
-    def test_send_overdue_reminders(self, test_admin_headers: dict):
+    def test_send_overdue_reminders(self, test_admin_headers: dict) -> None:
         """Send overdue reminders returns expected shape."""
         resp = httpx.post(f"{SERVER_URL}/api/invoices/send-overdue-reminders", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -362,7 +362,7 @@ class TestInvoiceErrors:
         assert isinstance(data["email"], int)
         assert isinstance(data["sms"], int)
 
-    def test_send_overdue_reminders_unauthorized(self, client: httpx.Client):
+    def test_send_overdue_reminders_unauthorized(self, client: httpx.Client) -> None:
         """Send overdue reminders requires auth."""
         resp = client.post("/api/invoices/send-overdue-reminders", timeout=10)
         assert resp.status_code in (401, 403)
@@ -371,7 +371,7 @@ class TestInvoiceErrors:
 class TestInvoiceEmailQueue:
     """Invoice email delivery endpoints."""
 
-    def test_send_email_requires_invoice_id(self, test_admin_headers: dict):
+    def test_send_email_requires_invoice_id(self, test_admin_headers: dict) -> None:
         """Send email endpoint rejects missing invoice_id."""
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-email",
@@ -381,7 +381,7 @@ class TestInvoiceEmailQueue:
         )
         assert resp.status_code == 400
 
-    def test_send_email_nonexistent(self, test_admin_headers: dict):
+    def test_send_email_nonexistent(self, test_admin_headers: dict) -> None:
         """Send email on nonexistent invoice returns 404."""
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-email",
@@ -391,7 +391,7 @@ class TestInvoiceEmailQueue:
         )
         assert resp.status_code == 404
 
-    def test_send_email_valid(self, test_admin_headers: dict, session_suffix: str):
+    def test_send_email_valid(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Send email on valid invoice returns ok."""
         # Create our own invoice
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "sendmail", notes="Email test")
@@ -405,12 +405,12 @@ class TestInvoiceEmailQueue:
         assert data["ok"] is True
         assert "sent_to" in data
 
-    def test_send_email_unauthorized(self, client: httpx.Client):
+    def test_send_email_unauthorized(self, client: httpx.Client) -> None:
         """Send email requires auth."""
         resp = client.post("/api/invoices/send-email", json={"invoice_id": "x"}, timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_batch_email_empty_ids(self, test_admin_headers: dict):
+    def test_batch_email_empty_ids(self, test_admin_headers: dict) -> None:
         """Batch email rejects empty invoice_ids array."""
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-batch-email",
@@ -420,7 +420,7 @@ class TestInvoiceEmailQueue:
         )
         assert resp.status_code == 400
 
-    def test_batch_email_valid(self, test_admin_headers: dict, session_suffix: str):
+    def test_batch_email_valid(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Batch email on valid invoices returns ok."""
         # Create our own invoices
         inv_id1, _ = _create_invoice(test_admin_headers, session_suffix, "batch1")
@@ -437,12 +437,12 @@ class TestInvoiceEmailQueue:
         assert "failed" in data
         assert "skipped" in data
 
-    def test_batch_email_unauthorized(self, client: httpx.Client):
+    def test_batch_email_unauthorized(self, client: httpx.Client) -> None:
         """Batch email requires auth."""
         resp = client.post("/api/invoices/send-batch-email", json={"invoice_ids": ["x"]}, timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_email_queue_status(self, test_admin_headers: dict):
+    def test_email_queue_status(self, test_admin_headers: dict) -> None:
         """Email queue status returns sends list."""
         resp = httpx.get(f"{SERVER_URL}/api/invoices/email-queue-status", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -451,7 +451,7 @@ class TestInvoiceEmailQueue:
         assert isinstance(data["sends"], list)
         assert isinstance(data["count"], int)
 
-    def test_email_queue_status_unauthorized(self, client: httpx.Client):
+    def test_email_queue_status_unauthorized(self, client: httpx.Client) -> None:
         """Email queue status requires auth."""
         resp = client.get("/api/invoices/email-queue-status", timeout=10)
         assert resp.status_code in (401, 403)

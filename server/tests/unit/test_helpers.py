@@ -14,33 +14,34 @@ _server_dir = str(Path(__file__).resolve().parent.parent.parent)
 if _server_dir not in sys.path:
     sys.path.insert(0, _server_dir)
 
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # Patch httpx.AsyncClient before importing anything from server
 with patch("httpx.AsyncClient", return_value=AsyncMock()):
     import pytest
     from fastapi import HTTPException
-    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
     from helpers import (
-        _sanitize_sql,
-        _safe_id,
-        _safe_customer,
-        STATUS_LABELS,
-        STATUS_CSS,
         CUSTOMER_SENSITIVE_FIELDS,
-        security,
+        STATUS_CSS,
+        STATUS_LABELS,
         TEMPLATE_DIR,
-        jinja_env,
+        _call,
+        _fire_webhook,
+        _get_webhook_subscriptions,
+        _log_audit,
+        _paginated,
+        _safe_customer,
+        _safe_id,
+        _sanitize_sql,
+        _sort,
         _sql,
         _sql_t,
-        _paginated,
-        _call,
-        _sort,
-        _log_audit,
-        _get_webhook_subscriptions,
-        _fire_webhook,
-        require_role,
         get_current_user,
+        jinja_env,
+        require_role,
+        security,
         settings,
     )
 
@@ -51,23 +52,23 @@ with patch("httpx.AsyncClient", return_value=AsyncMock()):
 class TestModuleLevel:
     """Tests module-level instantiation — including HTTPBearer at line 13/23."""
 
-    def test_security_is_httpbearer(self):
+    def test_security_is_httpbearer(self) -> None:
         """Verify the security dependency is an HTTPBearer instance."""
         assert isinstance(security, HTTPBearer)
         assert security.auto_error is True
 
-    def test_template_dir_exists(self):
+    def test_template_dir_exists(self) -> None:
         """Verify TEMPLATE_DIR points to the templates directory."""
         assert TEMPLATE_DIR.name == "templates"
         assert TEMPLATE_DIR.is_dir() or str(TEMPLATE_DIR).endswith("templates")
 
-    def test_jinja_env_loaded(self):
+    def test_jinja_env_loaded(self) -> None:
         """Verify jinja_env is an Environment instance."""
         from jinja2 import Environment
 
         assert isinstance(jinja_env, Environment)
 
-    def test_jinja_env_uses_correct_dir(self):
+    def test_jinja_env_uses_correct_dir(self) -> None:
         """Verify jinja template directory matches TEMPLATE_DIR."""
         loader = jinja_env.loader
         assert str(TEMPLATE_DIR) in str(loader.searchpath)
@@ -77,11 +78,11 @@ class TestModuleLevel:
 
 
 class TestStatusConstants:
-    def test_status_labels_contains_all_keys(self):
+    def test_status_labels_contains_all_keys(self) -> None:
         for key in ("draft", "sent", "paid", "partial", "overdue", "cancelled"):
             assert key in STATUS_LABELS
 
-    def test_status_labels_contains_all_labels(self):
+    def test_status_labels_contains_all_labels(self) -> None:
         labels = {
             "draft": "Draft",
             "sent": "Sent",
@@ -90,13 +91,13 @@ class TestStatusConstants:
             "overdue": "Overdue",
             "cancelled": "Cancelled",
         }
-        assert STATUS_LABELS == labels
+        assert labels == STATUS_LABELS
 
-    def test_status_css_contains_all_keys(self):
+    def test_status_css_contains_all_keys(self) -> None:
         for key in ("draft", "sent", "paid", "partial", "overdue", "cancelled"):
             assert key in STATUS_CSS
 
-    def test_status_css_maps_correctly(self):
+    def test_status_css_maps_correctly(self) -> None:
         expected = {
             "draft": "draft",
             "sent": "sent",
@@ -105,9 +106,9 @@ class TestStatusConstants:
             "overdue": "overdue",
             "cancelled": "cancelled",
         }
-        assert STATUS_CSS == expected
+        assert expected == STATUS_CSS
 
-    def test_customer_sensitive_fields(self):
+    def test_customer_sensitive_fields(self) -> None:
         assert "portal_password_hash" in CUSTOMER_SENSITIVE_FIELDS
         assert len(CUSTOMER_SENSITIVE_FIELDS) == 1
 
@@ -116,30 +117,30 @@ class TestStatusConstants:
 
 
 class TestSafeCustomer:
-    def test_strips_sensitive_fields(self):
+    def test_strips_sensitive_fields(self) -> None:
         c = {"id": "1", "name": "Test", "portal_password_hash": "secret"}
         result = _safe_customer(c)
         assert "portal_password_hash" not in result
         assert result == {"id": "1", "name": "Test"}
 
-    def test_preserves_other_fields(self):
+    def test_preserves_other_fields(self) -> None:
         c = {"id": "1", "name": "Test", "email": "a@b.com"}
         assert _safe_customer(c) == c
 
-    def test_empty_dict(self):
+    def test_empty_dict(self) -> None:
         assert _safe_customer({}) == {}
 
-    def test_no_sensitive_fields(self):
+    def test_no_sensitive_fields(self) -> None:
         c = {"id": "1", "name": "Test"}
         assert _safe_customer(c) == c
 
-    def test_only_sensitive_fields(self):
+    def test_only_sensitive_fields(self) -> None:
         c = {"portal_password_hash": "secret"}
         result = _safe_customer(c)
         assert result == {}
         assert "portal_password_hash" not in result
 
-    def test_sensitive_field_case_sensitive(self):
+    def test_sensitive_field_case_sensitive(self) -> None:
         """Ensure only exact match is stripped."""
         c = {"PORTAL_PASSWORD_HASH": "secret"}
         assert _safe_customer(c) == c
@@ -149,29 +150,29 @@ class TestSafeCustomer:
 
 
 class TestSanitizeSql:
-    def test_doubles_single_quotes(self):
+    def test_doubles_single_quotes(self) -> None:
         assert _sanitize_sql("O'Brien") == "O''Brien"
 
-    def test_no_quotes_unchanged(self):
+    def test_no_quotes_unchanged(self) -> None:
         assert _sanitize_sql("hello") == "hello"
 
-    def test_empty_string(self):
+    def test_empty_string(self) -> None:
         assert _sanitize_sql("") == ""
 
-    def test_multiple_quotes(self):
+    def test_multiple_quotes(self) -> None:
         assert _sanitize_sql("it's a 'test'") == "it''s a ''test''"
 
-    def test_special_chars_preserved(self):
+    def test_special_chars_preserved(self) -> None:
         assert _sanitize_sql("user@domain.com") == "user@domain.com"
         assert _sanitize_sql("john.doe") == "john.doe"
 
-    def test_unicode_preserved(self):
+    def test_unicode_preserved(self) -> None:
         assert _sanitize_sql("café") == "café"
 
-    def test_numeric_value(self):
+    def test_numeric_value(self) -> None:
         assert _sanitize_sql("123") == "123"
 
-    def test_whitespace_preserved(self):
+    def test_whitespace_preserved(self) -> None:
         assert _sanitize_sql("hello world") == "hello world"
 
 
@@ -179,40 +180,40 @@ class TestSanitizeSql:
 
 
 class TestSafeId:
-    def test_valid_alphanumeric(self):
+    def test_valid_alphanumeric(self) -> None:
         assert _safe_id("abc123") == "abc123"
 
-    def test_valid_with_underscores_and_dashes(self):
+    def test_valid_with_underscores_and_dashes(self) -> None:
         assert _safe_id("abc-123_def") == "abc-123_def"
 
-    def test_valid_uuid_style(self):
+    def test_valid_uuid_style(self) -> None:
         assert _safe_id("a1b2c3d4-e5f6-7890-abcd-ef1234567890") == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
-    def test_empty_raises(self):
+    def test_empty_raises(self) -> None:
         with pytest.raises(HTTPException, match="Invalid ID format"):
             _safe_id("")
 
-    def test_sql_injection_raises(self):
+    def test_sql_injection_raises(self) -> None:
         with pytest.raises(HTTPException, match="Invalid ID format"):
             _safe_id("'; DROP TABLE users; --")
 
-    def test_spaces_raises(self):
+    def test_spaces_raises(self) -> None:
         with pytest.raises(HTTPException, match="Invalid ID format"):
             _safe_id("abc 123")
 
-    def test_special_chars_raises(self):
+    def test_special_chars_raises(self) -> None:
         with pytest.raises(HTTPException, match="Invalid ID format"):
             _safe_id("abc@123")
 
-    def test_none_value_raises(self):
+    def test_none_value_raises(self) -> None:
         with pytest.raises(HTTPException):
             _safe_id("")
 
-    def test_newlines_raises(self):
+    def test_newlines_raises(self) -> None:
         with pytest.raises(HTTPException, match="Invalid ID format"):
             _safe_id("abc\n123")
 
-    def test_semicolons_raises(self):
+    def test_semicolons_raises(self) -> None:
         with pytest.raises(HTTPException, match="Invalid ID format"):
             _safe_id("abc;123")
 
@@ -221,17 +222,17 @@ class TestSafeId:
 
 
 class TestSort:
-    def test_sorts_ascending(self):
+    def test_sorts_ascending(self) -> None:
         data = [{"name": "z"}, {"name": "a"}, {"name": "m"}]
         result = _sort(data, "name", desc=False)
         assert [r["name"] for r in result] == ["a", "m", "z"]
 
-    def test_sorts_descending(self):
+    def test_sorts_descending(self) -> None:
         data = [{"name": "a"}, {"name": "z"}, {"name": "m"}]
         result = _sort(data, "name", desc=True)
         assert [r["name"] for r in result] == ["z", "m", "a"]
 
-    def test_sorts_by_missing_key(self):
+    def test_sorts_by_missing_key(self) -> None:
         data = [{"id": 2}, {"id": 1}]
         result = _sort(data, "name", desc=False)
         assert len(result) == 2
@@ -242,7 +243,7 @@ class TestSort:
 
 
 @pytest.mark.asyncio
-async def test_sql_returns_rows():
+async def test_sql_returns_rows() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -251,7 +252,7 @@ async def test_sql_returns_rows():
         {
             "rows": [["v1", "v2"], ["v3", "v4"]],
             "schema": {"elements": [{"name": {"some": "col1"}}, {"name": {"some": "col2"}}]},
-        }
+        },
     ]
     client.post = AsyncMock(return_value=mock_response)
     result = await _sql("SELECT * FROM test")
@@ -259,7 +260,7 @@ async def test_sql_returns_rows():
 
 
 @pytest.mark.asyncio
-async def test_sql_error_raises_502():
+async def test_sql_error_raises_502() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -270,7 +271,7 @@ async def test_sql_error_raises_502():
 
 
 @pytest.mark.asyncio
-async def test_sql_empty_response():
+async def test_sql_empty_response() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -282,7 +283,7 @@ async def test_sql_empty_response():
 
 
 @pytest.mark.asyncio
-async def test_sql_ignores_bad_schema():
+async def test_sql_ignores_bad_schema() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -291,7 +292,7 @@ async def test_sql_ignores_bad_schema():
         {
             "rows": [["x"]],
             "schema": {"elements": [{"name": {}}]},
-        }
+        },
     ]
     client.post = AsyncMock(return_value=mock_response)
     result = await _sql("SELECT * FROM bad_schema")
@@ -302,7 +303,7 @@ async def test_sql_ignores_bad_schema():
 
 
 @pytest.mark.asyncio
-async def test_sql_t_appends_tenant_filter():
+async def test_sql_t_appends_tenant_filter() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -311,7 +312,7 @@ async def test_sql_t_appends_tenant_filter():
         {
             "rows": [["t1"]],
             "schema": {"elements": [{"name": {"some": "id"}}]},
-        }
+        },
     ]
     client.post = AsyncMock(return_value=mock_response)
     result = await _sql_t("SELECT * FROM items", tenant_id="tenant-123")
@@ -321,17 +322,17 @@ async def test_sql_t_appends_tenant_filter():
 
 
 @pytest.mark.asyncio
-async def test_sql_t_no_tenant_passes_through():
+async def test_sql_t_no_tenant_passes_through() -> None:
     from client import get_http_client
 
     client = get_http_client()
-    client.post = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: []))
+    client.post = AsyncMock(return_value=MagicMock(status_code=200, json=list))
     result = await _sql_t("SELECT * FROM items", tenant_id="")
     assert result == []
 
 
 @pytest.mark.asyncio
-async def test_sql_t_invalid_tenant_raises_400():
+async def test_sql_t_invalid_tenant_raises_400() -> None:
     with pytest.raises(HTTPException) as exc:
         await _sql_t("SELECT * FROM items", tenant_id="''; DROP TABLE users")
     assert exc.value.status_code == 400
@@ -341,7 +342,7 @@ async def test_sql_t_invalid_tenant_raises_400():
 
 
 @pytest.mark.asyncio
-async def test_call_success():
+async def test_call_success() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -354,7 +355,7 @@ async def test_call_success():
 
 
 @pytest.mark.asyncio
-async def test_call_no_args():
+async def test_call_no_args() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -364,7 +365,7 @@ async def test_call_no_args():
 
 
 @pytest.mark.asyncio
-async def test_call_error_raises_502():
+async def test_call_error_raises_502() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -378,7 +379,7 @@ async def test_call_error_raises_502():
 
 
 @pytest.mark.asyncio
-async def test_paginated_basic():
+async def test_paginated_basic() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -389,7 +390,7 @@ async def test_paginated_basic():
         {
             "rows": [["c", 1], ["a", 2], ["b", 3]],
             "schema": {"elements": [{"name": {"some": "name"}}, {"name": {"some": "val"}}]},
-        }
+        },
     ]
     client.post = AsyncMock(side_effect=[mock_count, mock_data])
     rows, total = await _paginated("test_table", "tid", offset=0, limit=10, order_by="name", order_desc=False)
@@ -400,7 +401,7 @@ async def test_paginated_basic():
 
 
 @pytest.mark.asyncio
-async def test_paginated_with_sensitive_fields():
+async def test_paginated_with_sensitive_fields() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -411,7 +412,7 @@ async def test_paginated_with_sensitive_fields():
         {
             "rows": [["a", "secret"]],
             "schema": {"elements": [{"name": {"some": "name"}}, {"name": {"some": "pw"}}]},
-        }
+        },
     ]
     client.post = AsyncMock(side_effect=[mock_count, mock_data])
     rows, total = await _paginated("test_table", "tid", offset=0, limit=10, sensitive_fields={"pw"})
@@ -424,19 +425,19 @@ async def test_paginated_with_sensitive_fields():
 
 
 @pytest.mark.asyncio
-async def test_log_audit_success():
+async def test_log_audit_success() -> None:
     from client import get_http_client
 
     client = get_http_client()
-    client.post = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: {}))
+    client.post = AsyncMock(return_value=MagicMock(status_code=200, json=dict))
     await _log_audit(
-        {"tenant_id": "t1", "id": "u1", "name": "Alice"}, "create", "invoice", "inv-123", "Created invoice"
+        {"tenant_id": "t1", "id": "u1", "name": "Alice"}, "create", "invoice", "inv-123", "Created invoice",
     )
     client.post.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_log_audit_failure_does_not_raise():
+async def test_log_audit_failure_does_not_raise() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -448,7 +449,7 @@ async def test_log_audit_failure_does_not_raise():
 
 
 @pytest.mark.asyncio
-async def test_get_webhook_subs_success():
+async def test_get_webhook_subs_success() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -457,7 +458,7 @@ async def test_get_webhook_subs_success():
         {
             "rows": [["sub1", "url1"]],
             "schema": {"elements": [{"name": {"some": "id"}}, {"name": {"some": "url"}}]},
-        }
+        },
     ]
     client.post = AsyncMock(return_value=mock_response)
     result = await _get_webhook_subscriptions()
@@ -466,7 +467,7 @@ async def test_get_webhook_subs_success():
 
 
 @pytest.mark.asyncio
-async def test_get_webhook_subs_error_returns_empty():
+async def test_get_webhook_subs_error_returns_empty() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -479,7 +480,7 @@ async def test_get_webhook_subs_error_returns_empty():
 
 
 @pytest.mark.asyncio
-async def test_fire_webhook_success():
+async def test_fire_webhook_success() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -488,14 +489,14 @@ async def test_fire_webhook_success():
         {
             "rows": [["sub1", "http://example.com/hook"]],
             "schema": {"elements": [{"name": {"some": "id"}}, {"name": {"some": "url"}}]},
-        }
+        },
     ]
     client.post = AsyncMock(return_value=mock_sub_response)
     await _fire_webhook("invoice.created", {"id": "inv-1"})
 
 
 @pytest.mark.asyncio
-async def test_fire_webhook_no_subs():
+async def test_fire_webhook_no_subs() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -506,7 +507,7 @@ async def test_fire_webhook_no_subs():
 
 
 @pytest.mark.asyncio
-async def test_fire_webhook_error_caught():
+async def test_fire_webhook_error_caught() -> None:
     from client import get_http_client
 
     client = get_http_client()
@@ -518,15 +519,15 @@ async def test_fire_webhook_error_caught():
 
 
 class TestRequireRole:
-    def test_require_role_returns_callable(self):
+    def test_require_role_returns_callable(self) -> None:
         dep = require_role("admin")
         assert callable(dep)
 
-    def test_require_role_no_credentials_raises_401(self):
+    def test_require_role_no_credentials_raises_401(self) -> None:
         dep = require_role("admin")
         import asyncio
 
-        async def run_test():
+        async def run_test() -> None:
             with pytest.raises(HTTPException) as exc:
                 await dep(None)
             assert exc.value.status_code == 401
@@ -538,14 +539,14 @@ class TestRequireRole:
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_no_credentials():
+async def test_get_current_user_no_credentials() -> None:
     with pytest.raises(HTTPException) as exc:
         await get_current_user(None)
     assert exc.value.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_invalid_token():
+async def test_get_current_user_invalid_token() -> None:
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="invalid-token")
     with pytest.raises(HTTPException) as exc:
         await get_current_user(creds)
@@ -553,9 +554,11 @@ async def test_get_current_user_invalid_token():
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_expired_token():
-    import jwt
+async def test_get_current_user_expired_token() -> None:
     import time
+
+    import jwt
+
     from config import settings
 
     expired_token = jwt.encode(
@@ -570,8 +573,9 @@ async def test_get_current_user_expired_token():
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_no_subject():
+async def test_get_current_user_no_subject() -> None:
     import jwt
+
     from config import settings
 
     token = jwt.encode(
@@ -586,10 +590,11 @@ async def test_get_current_user_no_subject():
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_not_found():
+async def test_get_current_user_not_found() -> None:
     import jwt
-    from config import settings
+
     from client import get_http_client
+    from config import settings
 
     token = jwt.encode(
         {"sub": "unknown-user", "tenant_id": "t1"},
@@ -607,10 +612,11 @@ async def test_get_current_user_not_found():
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_disabled():
+async def test_get_current_user_disabled() -> None:
     import jwt
-    from config import settings
+
     from client import get_http_client
+    from config import settings
 
     token = jwt.encode(
         {"sub": "user-1", "tenant_id": "t1"},
@@ -629,9 +635,9 @@ async def test_get_current_user_disabled():
                     {"name": {"some": "name"}},
                     {"name": {"some": "role"}},
                     {"name": {"some": "active"}},
-                ]
+                ],
             },
-        }
+        },
     ]
     client.post = AsyncMock(return_value=mock_response)
     with pytest.raises(HTTPException) as exc:
@@ -640,10 +646,11 @@ async def test_get_current_user_disabled():
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_success():
+async def test_get_current_user_success() -> None:
     import jwt
-    from config import settings
+
     from client import get_http_client
+    from config import settings
 
     token = jwt.encode(
         {"sub": "user-1", "tenant_id": "t1"},
@@ -662,9 +669,9 @@ async def test_get_current_user_success():
                     {"name": {"some": "name"}},
                     {"name": {"some": "role"}},
                     {"name": {"some": "active"}},
-                ]
+                ],
             },
-        }
+        },
     ]
     client.post = AsyncMock(return_value=mock_response)
     user = await get_current_user(creds)

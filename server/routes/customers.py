@@ -10,6 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from client import get_http_client
 from helpers import (
+
+# FIXME: S608 - Possible SQL injection via f-string queries
+# FIXME: RUF006 - asyncio.ensure_future without storing reference
+
     CUSTOMER_SENSITIVE_FIELDS,
     _call,
     _fire_webhook,

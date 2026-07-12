@@ -1,18 +1,18 @@
 """User management tests."""
 
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+
+from .conftest import SERVER_URL, _track_entity, assert_ok, unique_suffix
 
 
 class TestUserCRUD:
-    def test_list(self, test_admin_headers: dict):
+    def test_list(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/users", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "users" in data
         assert "total" in data
 
-    def test_create(self, test_admin_headers: dict, session_suffix: str):
+    def test_create(self, test_admin_headers: dict, session_suffix: str) -> None:
         suf = unique_suffix()
         email = f"tech-{session_suffix}-{suf}@test.com"
         resp = httpx.post(
@@ -38,7 +38,7 @@ class TestUserCRUD:
                 _track_entity("user", u["id"])
                 break
 
-    def test_create_invalid_role(self, test_admin_headers: dict):
+    def test_create_invalid_role(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/users",
             json={
@@ -51,7 +51,7 @@ class TestUserCRUD:
         )
         assert resp.status_code == 422
 
-    def test_create_missing_name(self, test_admin_headers: dict):
+    def test_create_missing_name(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/users",
             json={
@@ -65,10 +65,10 @@ class TestUserCRUD:
 
 
 class TestUserErrors:
-    def test_unauthorized_list(self, client: httpx.Client):
+    def test_unauthorized_list(self, client: httpx.Client) -> None:
         resp = client.get("/api/users", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_unauthorized_create(self, client: httpx.Client):
+    def test_unauthorized_create(self, client: httpx.Client) -> None:
         resp = client.post("/api/users", json={"name": "X", "email": "x@x.com", "role": "tech"}, timeout=10)
         assert resp.status_code in (401, 403)

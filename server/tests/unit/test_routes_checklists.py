@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 def auth_headers(role="admin"):
     import jwt
+
     from config import settings
     token = jwt.encode({"sub": "u1", "tenant_id": "t1", "role": role},
                        settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -12,7 +13,7 @@ def auth_headers(role="admin"):
 
 
 class TestChecklists:
-    def test_list_templates(self, client, monkeypatch):
+    def test_list_templates(self, client, monkeypatch) -> None:
         mock_paginated = AsyncMock(return_value=([{"id": "c1", "name": "Oil Change", "items": []}], 1))
         monkeypatch.setattr("routes.checklists._paginated", mock_paginated)
         resp = client.get("/api/checklist-templates", headers=auth_headers())
@@ -20,7 +21,7 @@ class TestChecklists:
         data = resp.json()
         assert data["total"] == 1
 
-    def test_create_template(self, client, monkeypatch):
+    def test_create_template(self, client, monkeypatch) -> None:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.checklists._call", mock_call)
         monkeypatch.setattr("routes.checklists._log_audit", AsyncMock())
@@ -29,7 +30,7 @@ class TestChecklists:
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
 
-    def test_update_template(self, client, monkeypatch):
+    def test_update_template(self, client, monkeypatch) -> None:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.checklists._call", mock_call)
         monkeypatch.setattr("routes.checklists._log_audit", AsyncMock())
@@ -37,7 +38,7 @@ class TestChecklists:
         resp = client.put("/api/checklist-templates/c1", json=body, headers=auth_headers())
         assert resp.status_code == 200
 
-    def test_delete_template(self, client, monkeypatch):
+    def test_delete_template(self, client, monkeypatch) -> None:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.checklists._call", mock_call)
         monkeypatch.setattr("routes.checklists._log_audit", AsyncMock())

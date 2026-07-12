@@ -8,6 +8,7 @@ from business_hours import DEFAULT_HOURS
 from business_hours import get_settings as _bh_get
 from business_hours import update_settings as _bh_update
 from helpers import (
+
     require_role,
 )
 from mail import get_settings as _mail_get

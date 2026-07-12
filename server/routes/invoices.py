@@ -10,6 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from config import settings
 from helpers import (
+
+# FIXME: S608 - Possible SQL injection via f-string queries
+# FIXME: ARG001 - Unused function arguments
+
     STATUS_CSS,
     STATUS_LABELS,
     _call,
@@ -255,6 +259,7 @@ async def trigger_overdue_check(user: Annotated[dict, Depends(require_role("admi
             await _call("update_invoice_status", [inv["id"], "overdue"])
             marked += 1
         except HTTPException:
+    logger.warning("except HTTPException:")
             pass
     return {"ok": True, "marked": marked}
 

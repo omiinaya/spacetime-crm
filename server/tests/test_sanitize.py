@@ -1,8 +1,8 @@
 """Tests for input sanitization (XSS protection)."""
 
-import pytest
-from sanitize import strip_html, SanitizedModel, _SKIP_SANITIZE
 from pydantic import Field
+
+from sanitize import _SKIP_SANITIZE, SanitizedModel, strip_html
 
 
 class _TestModel(SanitizedModel):
@@ -12,56 +12,56 @@ class _TestModel(SanitizedModel):
 
 
 class TestStripHtml:
-    def test_removes_simple_tags(self):
+    def test_removes_simple_tags(self) -> None:
         assert strip_html("<b>hello</b>") == "hello"
 
-    def test_removes_script_tags(self):
+    def test_removes_script_tags(self) -> None:
         result = strip_html('<script>alert("xss")</script>hello')
         assert "script" not in result
         assert result == 'alert("xss")hello'
 
-    def test_preserves_non_html_text(self):
+    def test_preserves_non_html_text(self) -> None:
         assert strip_html("Hello, World!") == "Hello, World!"
 
-    def test_handles_nested_tags(self):
+    def test_handles_nested_tags(self) -> None:
         assert strip_html("<div><p>text</p></div>") == "text"
 
-    def test_handles_attributes(self):
+    def test_handles_attributes(self) -> None:
         result = strip_html('<a href="http://evil.com">click</a>')
         assert result == "click"
 
-    def test_returns_non_string_as_is(self):
+    def test_returns_non_string_as_is(self) -> None:
         assert strip_html(123) == 123
         assert strip_html(None) is None
 
-    def test_handles_empty_string(self):
+    def test_handles_empty_string(self) -> None:
         assert strip_html("") == ""
 
-    def test_handles_malformed_html(self):
+    def test_handles_malformed_html(self) -> None:
         result = strip_html("<b>unclosed")
         assert result == "unclosed"
 
 
 class TestSanitizedModel:
-    def test_strips_html_from_name(self):
+    def test_strips_html_from_name(self) -> None:
         m = _TestModel(name="<script>alert(1)</script>John", bio="Hello")
         assert "<script>" not in m.name
         assert m.name == "alert(1)John"
 
-    def test_preserves_password_field(self):
+    def test_preserves_password_field(self) -> None:
         m = _TestModel(name="John", password="pass<word>")
         assert m.password == "pass<word>"
 
-    def test_default_values_unchanged(self):
+    def test_default_values_unchanged(self) -> None:
         m = _TestModel(name="John")
         assert m.bio == ""
 
-    def test_multiple_string_fields(self):
+    def test_multiple_string_fields(self) -> None:
         m = _TestModel(name="<b>John</b>", bio="Hello <i>World</i>")
         assert m.name == "John"
         assert m.bio == "Hello World"
 
-    def test_skip_sanitize_includes_common_secrets(self):
+    def test_skip_sanitize_includes_common_secrets(self) -> None:
         assert "password" in _SKIP_SANITIZE
         assert "token" in _SKIP_SANITIZE
         assert "secret" in _SKIP_SANITIZE

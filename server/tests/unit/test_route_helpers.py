@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
+from unittest.mock import MagicMock
 
 import jwt
-import pytest
 
 from config import settings
 
@@ -37,7 +36,7 @@ def mock_stdb_sql_response(rows: list[list], columns: list[str] | None = None) -
     return [{"rows": rows, "schema": schema}]
 
 
-def configure_stdb_mock(mock_client, sql_results: list | None = None, call_result: Any = None):
+def configure_stdb_mock(mock_client, sql_results: list | None = None, call_result: Any = None) -> None:
     """Configure the mock STDB client with canned responses."""
     # Default SQL response returns empty
     if sql_results is not None:

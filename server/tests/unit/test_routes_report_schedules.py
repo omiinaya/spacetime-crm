@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock
 
 import jwt
-import pytest
 
 from config import settings
 
@@ -21,7 +20,7 @@ def auth_headers(role="admin"):
 
 
 class TestReportSchedules:
-    def test_list_schedules(self, client, monkeypatch):
+    def test_list_schedules(self, client, monkeypatch) -> None:
         """GET /api/report-schedules returns schedules list."""
         schedules = [
             {"id": "s1", "name": "Daily Report", "next_run_at": 1000},
@@ -37,7 +36,7 @@ class TestReportSchedules:
         assert len(data["schedules"]) == 2
         assert data["total"] == 2
 
-    def test_create_schedule(self, client, monkeypatch):
+    def test_create_schedule(self, client, monkeypatch) -> None:
         """POST /api/report-schedules creates a schedule."""
         mock_call = AsyncMock(return_value={"id": "sched-1"})
         monkeypatch.setattr("routes.report_schedules._call", mock_call)
@@ -56,7 +55,7 @@ class TestReportSchedules:
         assert data["ok"] is True
         assert data["id"] == "sched-1"
 
-    def test_delete_schedule(self, client, monkeypatch):
+    def test_delete_schedule(self, client, monkeypatch) -> None:
         """DELETE /api/report-schedules/{id} deletes a schedule."""
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.report_schedules._call", mock_call)
@@ -64,7 +63,7 @@ class TestReportSchedules:
         resp = client.delete("/api/report-schedules/sched-1", headers=auth_headers())
         assert resp.status_code == 200, resp.text
 
-    def test_update_schedule(self, client, monkeypatch):
+    def test_update_schedule(self, client, monkeypatch) -> None:
         """PUT /api/report-schedules/{id} updates a schedule."""
         mock_sql = AsyncMock(return_value=[{"id": "sched-1"}])
         mock_call = AsyncMock(return_value={"id": "sched-1"})
@@ -83,7 +82,7 @@ class TestReportSchedules:
         )
         assert resp.status_code == 200, resp.text
 
-    def test_update_schedule_not_found(self, client, monkeypatch):
+    def test_update_schedule_not_found(self, client, monkeypatch) -> None:
         """PUT with non-existent id returns 404."""
         mock_sql = AsyncMock(return_value=[])
         monkeypatch.setattr("routes.report_schedules._sql", mock_sql)

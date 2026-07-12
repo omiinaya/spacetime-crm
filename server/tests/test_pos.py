@@ -1,8 +1,9 @@
 """POS / Counter Sale endpoint tests."""
 
-import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
+import pytest
+
+from .conftest import SERVER_URL, _stdb_sql, _track_entity, assert_ok, unique_suffix
 
 
 @pytest.fixture
@@ -52,8 +53,8 @@ def _create_sale(test_admin_headers: dict, session_suffix: str = "", suffix: str
 class TestPOSCRUD:
     """Counter sale lifecycle: create, list, get, delete."""
 
-    def test_create_sale(self, test_admin_headers: dict, session_suffix: str):
-        from .conftest import unique_suffix, test_admin_headers
+    def test_create_sale(self, test_admin_headers: dict, session_suffix: str) -> None:
+        from .conftest import test_admin_headers, unique_suffix
 
         name = f"Jane Customer {session_suffix}-{unique_suffix()}"
         resp = httpx.post(
@@ -70,13 +71,13 @@ class TestPOSCRUD:
         )
         assert_ok(resp)
 
-    def test_list_sales(self, test_admin_headers: dict):
+    def test_list_sales(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "sales" in data
         assert "total" in data
 
-    def test_get_sale(self, test_admin_headers: dict, session_suffix: str):
+    def test_get_sale(self, test_admin_headers: dict, session_suffix: str) -> None:
         sale_id = _create_sale(test_admin_headers, session_suffix, "get")
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -84,16 +85,16 @@ class TestPOSCRUD:
         assert data["sale"]["id"] == sale_id
         assert "line_items" in data["sale"]
 
-    def test_get_nonexistent(self, test_admin_headers: dict):
+    def test_get_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/nonexistent-999", headers=test_admin_headers, timeout=10)
         assert resp.status_code in (404, 500)
 
-    def test_delete_sale_admin_only(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_sale_admin_only(self, test_admin_headers: dict, session_suffix: str) -> None:
         sale_id = _create_sale(test_admin_headers, session_suffix, "delete")
         resp = httpx.delete(f"{SERVER_URL}/api/pos/sales/{sale_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_list_receipts(self, test_admin_headers: dict):
+    def test_list_receipts(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/pos/receipts", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "receipts" in data
@@ -103,7 +104,7 @@ class TestPOSCRUD:
 class TestPOSItems:
     """Counter sale line item operations."""
 
-    def test_add_item(self, test_admin_headers: dict, test_product_id: str, session_suffix: str):
+    def test_add_item(self, test_admin_headers: dict, test_product_id: str, session_suffix: str) -> None:
         sale_id = _create_sale(test_admin_headers, session_suffix, "add")
         resp = httpx.post(
             f"{SERVER_URL}/api/pos/items",
@@ -126,7 +127,7 @@ class TestPOSItems:
         assert sale["items_count"] >= 1
         assert sale["subtotal"] >= 39.98  # 2 * 19.99
 
-    def test_multiple_items_update_totals(self, test_admin_headers: dict, test_product_id: str, session_suffix: str):
+    def test_multiple_items_update_totals(self, test_admin_headers: dict, test_product_id: str, session_suffix: str) -> None:
         sale_id = _create_sale(test_admin_headers, session_suffix, "multi")
         # Add first item
         httpx.post(
@@ -165,7 +166,7 @@ class TestPOSItems:
         assert sale["total"] == 43.30  # 40 + 3.30
         assert sale["change_due"] == 56.70  # 100 - 43.30
 
-    def test_item_line_item_ordering(self, test_admin_headers: dict, test_product_id: str, session_suffix: str):
+    def test_item_line_item_ordering(self, test_admin_headers: dict, test_product_id: str, session_suffix: str) -> None:
         sale_id = _create_sale(test_admin_headers, session_suffix, "order")
         for i in range(3):
             httpx.post(
@@ -193,7 +194,7 @@ class TestPOSItems:
 class TestPOSRefund:
     """Counter sale refund operations."""
 
-    def test_refund_sale(self, test_admin_headers: dict, session_suffix: str):
+    def test_refund_sale(self, test_admin_headers: dict, session_suffix: str) -> None:
         sale_id = _create_sale(test_admin_headers, session_suffix, "refund")
         resp = httpx.post(f"{SERVER_URL}/api/pos/refund/{sale_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
@@ -206,7 +207,7 @@ class TestPOSRefund:
 class TestPOSReceiptPdf:
     """POS receipt PDF generation."""
 
-    def test_receipt_pdf_returns_pdf(self, test_admin_headers: dict, session_suffix: str):
+    def test_receipt_pdf_returns_pdf(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Getting receipt PDF for a completed sale returns PDF content type."""
         sale_id = _create_sale(test_admin_headers, session_suffix, "pdf")
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}/receipt-pdf", headers=test_admin_headers, timeout=10)
@@ -215,19 +216,19 @@ class TestPOSReceiptPdf:
         content = resp.content
         assert len(content) > 200  # PDF is at least a few hundred bytes
 
-    def test_receipt_pdf_nonexistent(self, test_admin_headers: dict):
+    def test_receipt_pdf_nonexistent(self, test_admin_headers: dict) -> None:
         """Getting receipt PDF for a nonexistent sale returns 404."""
         resp = httpx.get(
-            f"{SERVER_URL}/api/pos/sales/nonexistent-999/receipt-pdf", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/pos/sales/nonexistent-999/receipt-pdf", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code == 404
 
-    def test_receipt_pdf_requires_auth(self, client: httpx.Client):
+    def test_receipt_pdf_requires_auth(self, client: httpx.Client) -> None:
         """Getting receipt PDF without auth returns 401."""
         resp = client.get(f"{SERVER_URL}/api/pos/sales/fake-id/receipt-pdf", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_receipt_pdf_has_content_disposition(self, test_admin_headers: dict, session_suffix: str):
+    def test_receipt_pdf_has_content_disposition(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Receipt PDF response includes a Content-Disposition header."""
         sale_id = _create_sale(test_admin_headers, session_suffix, "disp")
         resp = httpx.get(f"{SERVER_URL}/api/pos/sales/{sale_id}/receipt-pdf", headers=test_admin_headers, timeout=10)

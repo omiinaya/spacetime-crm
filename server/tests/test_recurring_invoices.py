@@ -1,15 +1,14 @@
 """Recurring invoice rules CRUD + generate trigger tests."""
 
 import httpx
-import pytest
+
 from .conftest import (
     SERVER_URL,
+    _stdb_sql,
+    _track_entity,
     assert_ok,
     create_customer,
     unique_suffix,
-    _stdb_sql,
-    _track_entity,
-    test_admin_headers,
 )
 
 
@@ -17,7 +16,7 @@ def _customer_id(test_admin_headers: dict, session_suffix: str = "", suffix: str
     """Create a customer and return ID."""
     suf = suffix or unique_suffix()
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, email=f"rec-{session_suffix}-{suf}@example.com"
+        test_admin_headers, session_suffix=session_suffix, email=f"rec-{session_suffix}-{suf}@example.com",
     )
     return c.get("id", "")
 
@@ -55,7 +54,7 @@ def _create_rule(test_admin_headers: dict, session_suffix: str = "", suffix: str
 class TestRecurringInvoiceCRUD:
     """Recurring invoice rule create, list, update, delete."""
 
-    def test_create(self, test_admin_headers: dict, session_suffix: str):
+    def test_create(self, test_admin_headers: dict, session_suffix: str) -> None:
         cid = _customer_id(test_admin_headers, session_suffix, "cr-create")
         name = f"Weekly Cleaning {session_suffix}-{unique_suffix()}"
         resp = httpx.post(
@@ -74,7 +73,7 @@ class TestRecurringInvoiceCRUD:
         )
         assert_ok(resp)
 
-    def test_create_invalid_frequency(self, test_admin_headers: dict, session_suffix: str):
+    def test_create_invalid_frequency(self, test_admin_headers: dict, session_suffix: str) -> None:
         cid = _customer_id(test_admin_headers, session_suffix, "cr-badfreq")
         resp = httpx.post(
             f"{SERVER_URL}/api/recurring-invoices",
@@ -90,7 +89,7 @@ class TestRecurringInvoiceCRUD:
         )
         assert resp.status_code == 422
 
-    def test_create_missing_customer(self, test_admin_headers: dict):
+    def test_create_missing_customer(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/recurring-invoices",
             json={
@@ -104,7 +103,7 @@ class TestRecurringInvoiceCRUD:
         )
         assert resp.status_code == 422
 
-    def test_list(self, test_admin_headers: dict, session_suffix: str):
+    def test_list(self, test_admin_headers: dict, session_suffix: str) -> None:
         _create_rule(test_admin_headers, session_suffix, "lst")
         resp = httpx.get(f"{SERVER_URL}/api/recurring-invoices", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -113,7 +112,7 @@ class TestRecurringInvoiceCRUD:
         if data["rules"]:
             assert "customer_name" in data["rules"][0]
 
-    def test_update(self, test_admin_headers: dict, session_suffix: str):
+    def test_update(self, test_admin_headers: dict, session_suffix: str) -> None:
         rule_id = _create_rule(test_admin_headers, session_suffix, "upd")
         resp = httpx.put(
             f"{SERVER_URL}/api/recurring-invoices/{rule_id}",
@@ -131,7 +130,7 @@ class TestRecurringInvoiceCRUD:
         )
         assert_ok(resp)
 
-    def test_update_nonexistent(self, test_admin_headers: dict):
+    def test_update_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.put(
             f"{SERVER_URL}/api/recurring-invoices/nonexistent-999",
             json={
@@ -148,23 +147,23 @@ class TestRecurringInvoiceCRUD:
         )
         assert resp.status_code < 500
 
-    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete(self, test_admin_headers: dict, session_suffix: str) -> None:
         rule_id = _create_rule(test_admin_headers, session_suffix, "del")
         resp = httpx.delete(f"{SERVER_URL}/api/recurring-invoices/{rule_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_delete_nonexistent(self, test_admin_headers: dict):
+    def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/recurring-invoices/nonexistent-999", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/recurring-invoices/nonexistent-999", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code < 500
 
-    def test_generate(self, test_admin_headers: dict):
+    def test_generate(self, test_admin_headers: dict) -> None:
         """Generate endpoint should trigger the reducer without error."""
         resp = httpx.post(f"{SERVER_URL}/api/recurring-invoices/generate", headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_generate_with_data(self, test_admin_headers: dict, session_suffix: str):
+    def test_generate_with_data(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create a rule, then generate — should create invoices."""
         cid = _customer_id(test_admin_headers, session_suffix, "gen-data")
         name = f"Generate Test {session_suffix}-{unique_suffix()}"
@@ -192,11 +191,11 @@ class TestRecurringInvoiceCRUD:
 class TestRecurringInvoiceErrors:
     """Auth enforcement."""
 
-    def test_unauthorized_list(self, client: httpx.Client):
+    def test_unauthorized_list(self, client: httpx.Client) -> None:
         resp = client.get("/api/recurring-invoices", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_unauthorized_create(self, client: httpx.Client):
+    def test_unauthorized_create(self, client: httpx.Client) -> None:
         resp = client.post(
             "/api/recurring-invoices",
             json={
@@ -210,6 +209,6 @@ class TestRecurringInvoiceErrors:
         )
         assert resp.status_code in (401, 403)
 
-    def test_unauthorized_delete(self, client: httpx.Client):
+    def test_unauthorized_delete(self, client: httpx.Client) -> None:
         resp = client.delete("/api/recurring-invoices/fake-id", timeout=10)
         assert resp.status_code in (401, 403)

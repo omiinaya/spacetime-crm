@@ -1,8 +1,8 @@
 """Checklist template CRUD tests."""
 
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
+
+from .conftest import SERVER_URL, _stdb_sql, _track_entity, assert_ok, unique_suffix
 
 
 def _create_template(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
@@ -33,8 +33,8 @@ def _create_template(test_admin_headers: dict, session_suffix: str = "", suffix:
 
 
 class TestChecklistCRUD:
-    def test_create(self, test_admin_headers: dict):
-        from .conftest import unique_suffix, test_admin_headers
+    def test_create(self, test_admin_headers: dict) -> None:
+        from .conftest import test_admin_headers, unique_suffix
 
         name = f"Inspection Checklist {unique_suffix()}"
         resp = httpx.post(
@@ -53,8 +53,8 @@ class TestChecklistCRUD:
         )
         assert_ok(resp)
 
-    def test_create_minimal(self, test_admin_headers: dict):
-        from .conftest import unique_suffix, test_admin_headers
+    def test_create_minimal(self, test_admin_headers: dict) -> None:
+        from .conftest import test_admin_headers, unique_suffix
 
         name = f"Minimal Checklist {unique_suffix()}"
         resp = httpx.post(
@@ -69,18 +69,18 @@ class TestChecklistCRUD:
         )
         assert_ok(resp)
 
-    def test_create_missing_name(self, test_admin_headers: dict):
+    def test_create_missing_name(self, test_admin_headers: dict) -> None:
         resp = httpx.post(f"{SERVER_URL}/api/checklist-templates", json={}, headers=test_admin_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_list(self, test_admin_headers: dict, session_suffix: str):
+    def test_list(self, test_admin_headers: dict, session_suffix: str) -> None:
         _create_template(test_admin_headers, session_suffix, "lst")
         resp = httpx.get(f"{SERVER_URL}/api/checklist-templates", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "templates" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict, session_suffix: str):
+    def test_update(self, test_admin_headers: dict, session_suffix: str) -> None:
         tid = _create_template(test_admin_headers, session_suffix, "upd")
         resp = httpx.put(
             f"{SERVER_URL}/api/checklist-templates/{tid}",
@@ -94,7 +94,7 @@ class TestChecklistCRUD:
         )
         assert_ok(resp)
 
-    def test_update_nonexistent(self, test_admin_headers: dict):
+    def test_update_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.put(
             f"{SERVER_URL}/api/checklist-templates/nonexistent-999",
             json={
@@ -107,23 +107,23 @@ class TestChecklistCRUD:
         )
         assert resp.status_code < 500
 
-    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete(self, test_admin_headers: dict, session_suffix: str) -> None:
         tid = _create_template(test_admin_headers, session_suffix, "del")
         resp = httpx.delete(f"{SERVER_URL}/api/checklist-templates/{tid}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
-    def test_delete_nonexistent(self, test_admin_headers: dict):
+    def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/checklist-templates/nonexistent-999", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/checklist-templates/nonexistent-999", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code < 500
 
 
 class TestChecklistErrors:
-    def test_unauthorized_list(self, client: httpx.Client):
+    def test_unauthorized_list(self, client: httpx.Client) -> None:
         resp = client.get("/api/checklist-templates", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_unauthorized_create(self, client: httpx.Client):
+    def test_unauthorized_create(self, client: httpx.Client) -> None:
         resp = client.post("/api/checklist-templates", json={"name": "X", "description": "", "items": []}, timeout=10)
         assert resp.status_code in (401, 403)

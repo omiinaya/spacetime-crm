@@ -5,11 +5,14 @@ never affects the global admin. All test users are created within the
 isolated tenant scope and cleaned up at module end.
 """
 
-import pyotp
+
+import contextlib
+
 import httpx
-import time
+import pyotp
 import pytest
-from .conftest import SERVER_URL, assert_ok, _track_entity
+
+from .conftest import SERVER_URL, _track_entity, assert_ok
 
 
 @pytest.fixture(scope="module")
@@ -51,10 +54,8 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
 
     # --- Cleanup ---
     # Delete the test user (regardless of 2FA state)
-    try:
+    with contextlib.suppress(Exception):
         httpx.delete(f"{SERVER_URL}/api/users/{uid}", headers=test_admin_headers, timeout=10)
-    except Exception:
-        pass
 
 
 def _disable_2fa_user(email: str, pw: str, secret: str, admin_headers: dict) -> None:
@@ -88,7 +89,7 @@ def _disable_2fa_user(email: str, pw: str, secret: str, admin_headers: dict) -> 
 # ── Tests ──
 
 
-def test_setup_returns_secret(_2fa_user, test_admin_headers: dict):
+def test_setup_returns_secret(_2fa_user, test_admin_headers: dict) -> None:
     """Setup generates a secret and provisioning URI."""
     email, pw, _uid = _2fa_user
     r = httpx.post(
@@ -107,7 +108,7 @@ def test_setup_returns_secret(_2fa_user, test_admin_headers: dict):
     assert "otpauth://" in data["provisioning_uri"]
 
 
-def test_verify_valid_code_enables_2fa(_2fa_user, test_admin_headers: dict):
+def test_verify_valid_code_enables_2fa(_2fa_user, test_admin_headers: dict) -> None:
     """Verify a valid TOTP code enables 2FA. Cleanup always runs."""
     email, pw, _uid = _2fa_user
 
@@ -133,7 +134,7 @@ def test_verify_valid_code_enables_2fa(_2fa_user, test_admin_headers: dict):
     _disable_2fa_user(email, pw, secret, test_admin_headers)
 
 
-def test_verify_invalid_code_fails(_2fa_user, test_admin_headers: dict):
+def test_verify_invalid_code_fails(_2fa_user, test_admin_headers: dict) -> None:
     """Verify with wrong code returns 401."""
     email, pw, _uid = _2fa_user
 
@@ -154,7 +155,7 @@ def test_verify_invalid_code_fails(_2fa_user, test_admin_headers: dict):
     _disable_2fa_user(email, pw, secret, test_admin_headers)
 
 
-def test_double_setup_fails_after_enable(_2fa_user, test_admin_headers: dict):
+def test_double_setup_fails_after_enable(_2fa_user, test_admin_headers: dict) -> None:
     """Setting up 2FA again after it's enabled should fail."""
     email, pw, _uid = _2fa_user
 
@@ -177,7 +178,7 @@ def test_double_setup_fails_after_enable(_2fa_user, test_admin_headers: dict):
     _disable_2fa_user(email, pw, secret, test_admin_headers)
 
 
-def test_login_requires_2fa_when_enabled(_2fa_user, test_admin_headers: dict):
+def test_login_requires_2fa_when_enabled(_2fa_user, test_admin_headers: dict) -> None:
     """Login should return requires_2fa when 2FA is enabled."""
     email, pw, _uid = _2fa_user
 
@@ -207,7 +208,7 @@ def test_login_requires_2fa_when_enabled(_2fa_user, test_admin_headers: dict):
     _disable_2fa_user(email, pw, secret, test_admin_headers)
 
 
-def test_complete_login_with_valid_code(_2fa_user, test_admin_headers: dict):
+def test_complete_login_with_valid_code(_2fa_user, test_admin_headers: dict) -> None:
     """Complete login with valid TOTP code returns full JWT."""
     email, pw, _uid = _2fa_user
 
@@ -241,7 +242,7 @@ def test_complete_login_with_valid_code(_2fa_user, test_admin_headers: dict):
     _disable_2fa_user(email, pw, secret, test_admin_headers)
 
 
-def test_complete_login_with_invalid_code_fails(_2fa_user, test_admin_headers: dict):
+def test_complete_login_with_invalid_code_fails(_2fa_user, test_admin_headers: dict) -> None:
     """Complete login with invalid code returns 401."""
     email, pw, _uid = _2fa_user
 
@@ -273,7 +274,7 @@ def test_complete_login_with_invalid_code_fails(_2fa_user, test_admin_headers: d
     _disable_2fa_user(email, pw, secret, test_admin_headers)
 
 
-def test_disable_with_valid_code(_2fa_user, test_admin_headers: dict):
+def test_disable_with_valid_code(_2fa_user, test_admin_headers: dict) -> None:
     """Disable 2FA with a valid TOTP code."""
     email, pw, _uid = _2fa_user
 

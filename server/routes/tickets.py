@@ -10,6 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from config import settings
 from helpers import (
+
+# FIXME: S608 - Possible SQL injection via f-string queries
+# FIXME: FAST002 - FastAPI dependency without Annotated
+# FIXME: B008 - require_role/Depends in argument defaults
+
     _call,
     _fire_webhook,
     _log_audit,
@@ -313,6 +318,7 @@ async def _load_sla_targets(tenant_id: str) -> dict[str, float]:
             merged.update({k: float(v) for k, v in loaded.items() if isinstance(v, (int, float))})
             return merged
         except (json.JSONDecodeError, KeyError, TypeError):
+    logger.warning("except (json.JSONDecodeError, KeyError, TypeError):")
             pass
     return dict(DEFAULT_SLA_TARGETS)
 

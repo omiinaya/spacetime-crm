@@ -16,7 +16,7 @@ if _venv_site not in sys.path:
     sys.path.insert(0, _venv_site)
 
 import os
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 os.environ.setdefault("STDB_HOST", "localhost")
 os.environ.setdefault("STDB_PORT", "3001")
@@ -38,6 +38,7 @@ class _NoopLimiter:
         return dec
 
 import rate_limit
+
 rate_limit.limiter = _NoopLimiter()
 
 # Mock STDB HTTP client — AsyncMock so await works everywhere
@@ -56,24 +57,24 @@ _default_resp.json.return_value = [{
             {"name": {"some": "email"}}, {"name": {"some": "role"}},
             {"name": {"some": "tenant_id"}}, {"name": {"some": "active"}},
             {"name": {"some": "password_hash"}}, {"name": {"some": "created_at"}},
-        ]
+        ],
     },
 }]
 _mc.post = AsyncMock(return_value=_default_resp)
-_mc.get = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: {}))
-_mc.put = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: {}))
-_mc.delete = AsyncMock(return_value=MagicMock(status_code=200, json=lambda: {}))
+_mc.get = AsyncMock(return_value=MagicMock(status_code=200, json=dict))
+_mc.put = AsyncMock(return_value=MagicMock(status_code=200, json=dict))
+_mc.delete = AsyncMock(return_value=MagicMock(status_code=200, json=dict))
 _client_mod._shared_client = _mc
 _client_mod.get_http_client = lambda: _mc
 
 # Import helpers (will use mocked client)
-import helpers as _helpers_mod
-from fastapi import HTTPException
 
 MOCK_USER = {
     "id": "user-1", "name": "Admin", "email": "admin@crm.local",
-    "role": "admin", "tenant_id": "t1", "active": True
+    "role": "admin", "tenant_id": "t1", "active": True,
 }
+
+import contextlib
 
 import pytest
 from starlette.testclient import TestClient as _TestClient
@@ -83,7 +84,7 @@ def _make_stdb_response(status: int = 200, json_data: list | None = None) -> Mag
     if json_data is None:
         json_data = [{
             "rows": [["1"]],
-            "schema": {"elements": [{"name": {"some": "ok"}}]}
+            "schema": {"elements": [{"name": {"some": "ok"}}]},
         }]
     resp = MagicMock()
     resp.status_code = status
@@ -98,7 +99,7 @@ def app():
     return app
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def client(app):
     with _TestClient(app, base_url="http://localhost") as c:
         yield c
@@ -113,6 +114,7 @@ def stdb_mock():
 def auth_headers():
     """Return valid auth headers with admin JWT token."""
     import jwt
+
     from config import settings
     token = jwt.encode(
         {"sub": "user-1", "tenant_id": "t1", "role": "admin"},
@@ -132,7 +134,7 @@ def configure_stdb(stdb_mock):
 
 
 @pytest.fixture(autouse=True)
-def _mock_require_role_in_routes(monkeypatch):
+def _mock_require_role_in_routes(monkeypatch) -> None:
     """Mock require_role in route modules to bypass auth."""
     MOCK_USER = {"id": "user-1", "name": "Admin", "role": "admin", "tenant_id": "t1", "active": True}
     async def _check():
@@ -148,7 +150,5 @@ def _mock_require_role_in_routes(monkeypatch):
         "report_schedules", "settings", "tenants", "tickets", "webhooks",
         "export_import", "auth",
     ]:
-        try:
+        with contextlib.suppress(Exception):
             monkeypatch.setattr(f"routes.{mod_name}.require_role", _mock)
-        except Exception:
-            pass

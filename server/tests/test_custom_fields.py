@@ -4,8 +4,8 @@ Uses unique_suffix for all identifiers to avoid parallel-session collisions.
 """
 
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+
+from .conftest import SERVER_URL, _track_entity, assert_ok, unique_suffix
 
 
 def _create_field(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> dict:
@@ -38,11 +38,11 @@ def _create_field(test_admin_headers: dict, session_suffix: str = "", suffix: st
 class TestCustomFieldDefinitions:
     """Custom field definition CRUD."""
 
-    def test_create(self, test_admin_headers: dict, session_suffix: str):
+    def test_create(self, test_admin_headers: dict, session_suffix: str) -> None:
         data = _create_field(test_admin_headers, session_suffix, "create")
         assert data.get("id", ""), f"Expected field ID in response: {data}"
 
-    def test_create_invalid_entity_type(self, test_admin_headers: dict):
+    def test_create_invalid_entity_type(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/custom-field-definitions",
             json={"entity_type": "invalid_type", "label": "Bad", "field_type": "text"},
@@ -51,7 +51,7 @@ class TestCustomFieldDefinitions:
         )
         assert resp.status_code == 422
 
-    def test_create_invalid_field_type(self, test_admin_headers: dict):
+    def test_create_invalid_field_type(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/custom-field-definitions",
             json={"entity_type": "customer", "label": "Bad", "field_type": "binary"},
@@ -60,14 +60,14 @@ class TestCustomFieldDefinitions:
         )
         assert resp.status_code == 422
 
-    def test_list(self, test_admin_headers: dict, session_suffix: str):
+    def test_list(self, test_admin_headers: dict, session_suffix: str) -> None:
         _create_field(test_admin_headers, session_suffix, "list")
         resp = httpx.get(f"{SERVER_URL}/api/custom-field-definitions", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "custom_fields" in data
         assert "total" in data
 
-    def test_update(self, test_admin_headers: dict, session_suffix: str):
+    def test_update(self, test_admin_headers: dict, session_suffix: str) -> None:
         data = _create_field(test_admin_headers, session_suffix, "update")
         field_id = data["id"]
         resp = httpx.put(
@@ -86,17 +86,17 @@ class TestCustomFieldDefinitions:
         )
         assert_ok(resp)
 
-    def test_delete(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete(self, test_admin_headers: dict, session_suffix: str) -> None:
         data = _create_field(test_admin_headers, session_suffix, "delete")
         field_id = data["id"]
         resp = httpx.delete(
-            f"{SERVER_URL}/api/custom-field-definitions/{field_id}", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/custom-field-definitions/{field_id}", headers=test_admin_headers, timeout=10,
         )
         assert_ok(resp)
 
-    def test_delete_nonexistent(self, test_admin_headers: dict):
+    def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/custom-field-definitions/nonexistent-999", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/custom-field-definitions/nonexistent-999", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code < 500
 
@@ -104,14 +104,14 @@ class TestCustomFieldDefinitions:
 class TestCustomFieldValues:
     """Custom field values get/set on entities."""
 
-    def test_get_values_empty(self, test_admin_headers: dict):
+    def test_get_values_empty(self, test_admin_headers: dict) -> None:
         """Get values for a non-existent entity — should return empty array."""
         entity_id = f"entity-empty-{unique_suffix()}"
         resp = httpx.get(f"{SERVER_URL}/api/custom-field-values/{entity_id}", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert data.get("values") == []
 
-    def test_set_and_get_values(self, test_admin_headers: dict, admin_user: dict, session_suffix: str):
+    def test_set_and_get_values(self, test_admin_headers: dict, admin_user: dict, session_suffix: str) -> None:
         # Create a field
         data = _create_field(test_admin_headers, session_suffix, "vals")
         field_id = data["id"]
@@ -155,9 +155,10 @@ class TestCustomFieldValues:
                 assert str(v.get("value", "")) == "Hello World"
                 break
         else:
-            assert False, f"Field {field_id} not found in values: {values}"
+            msg = f"Field {field_id} not found in values: {values}"
+            raise AssertionError(msg)
 
-    def test_set_values_invalid_entity(self, test_admin_headers: dict, session_suffix: str):
+    def test_set_values_invalid_entity(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Set values on nonexistent entity — should still work (STDB allows it)."""
         entity_id = f"entity-nonexistent-{session_suffix}-{unique_suffix()}"
         data = _create_field(test_admin_headers, session_suffix, "inv")
@@ -173,11 +174,11 @@ class TestCustomFieldValues:
 class TestCustomFieldErrors:
     """Auth enforcement for custom fields."""
 
-    def test_unauthorized_list(self, client: httpx.Client):
+    def test_unauthorized_list(self, client: httpx.Client) -> None:
         resp = client.get("/api/custom-field-definitions", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_unauthorized_create(self, client: httpx.Client):
+    def test_unauthorized_create(self, client: httpx.Client) -> None:
         resp = client.post(
             "/api/custom-field-definitions",
             json={"entity_type": "customer", "label": "X", "field_type": "text"},

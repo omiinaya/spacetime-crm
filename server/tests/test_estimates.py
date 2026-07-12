@@ -1,15 +1,14 @@
 """Estimate CRUD, line items, status workflow, and conversion integration tests."""
 
-import pytest
 import httpx
+
 from .conftest import (
     SERVER_URL,
+    _stdb_sql,
+    _track_entity,
     assert_ok,
     create_customer,
     unique_suffix,
-    _stdb_sql,
-    _track_entity,
-    test_admin_headers,
 )
 
 
@@ -44,9 +43,9 @@ def _create_estimate(test_admin_headers: dict, session_suffix: str = "", suffix:
 class TestEstimateCRUD:
     """Estimate create, list, line items, status workflow."""
 
-    def test_create_estimate(self, test_admin_headers: dict, session_suffix: str):
+    def test_create_estimate(self, test_admin_headers: dict, session_suffix: str) -> None:
         cid = _create_customer(test_admin_headers, session_suffix, "create")
-        from .conftest import unique_suffix, test_admin_headers
+        from .conftest import test_admin_headers, unique_suffix
 
         notes = f"Test estimate {session_suffix}-{unique_suffix()}"
         resp = httpx.post(
@@ -57,21 +56,21 @@ class TestEstimateCRUD:
         )
         assert_ok(resp)
 
-    def test_list_estimates(self, test_admin_headers: dict):
+    def test_list_estimates(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/estimates", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "estimates" in data
         assert "total" in data
 
-    def test_list_estimates_filter_by_status(self, test_admin_headers: dict):
+    def test_list_estimates_filter_by_status(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/estimates", params={"status": "draft"}, headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/estimates", params={"status": "draft"}, headers=test_admin_headers, timeout=10,
         )
         data = assert_ok(resp)
         for est in data["estimates"]:
             assert est["status"] == "draft"
 
-    def test_add_line_items(self, test_admin_headers: dict, session_suffix: str):
+    def test_add_line_items(self, test_admin_headers: dict, session_suffix: str) -> None:
         est_id = _create_estimate(test_admin_headers, session_suffix, "lineitems")
 
         for item in [
@@ -90,7 +89,7 @@ class TestEstimateCRUD:
         data = assert_ok(r)
         assert len(data["line_items"]) >= 2
 
-    def test_update_status(self, test_admin_headers: dict, session_suffix: str):
+    def test_update_status(self, test_admin_headers: dict, session_suffix: str) -> None:
         est_id = _create_estimate(test_admin_headers, session_suffix, "status")
 
         for status in ["sent", "approved", "rejected"]:
@@ -102,7 +101,7 @@ class TestEstimateCRUD:
             )
             assert_ok(resp)
 
-    def test_delete_estimate(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_estimate(self, test_admin_headers: dict, session_suffix: str) -> None:
         est_id = _create_estimate(test_admin_headers, session_suffix, "delete")
         resp = httpx.delete(f"{SERVER_URL}/api/estimates/{est_id}", headers=test_admin_headers, timeout=10)
         assert_ok(resp)
@@ -111,10 +110,10 @@ class TestEstimateCRUD:
 class TestEstimateConversion:
     """Estimate-to-invoice conversion workflow."""
 
-    def test_convert_approved_estimate(self, test_admin_headers: dict, session_suffix: str):
+    def test_convert_approved_estimate(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Full conversion: create estimate → approve → convert → get invoice."""
         est_id = _create_estimate(test_admin_headers, session_suffix, "convert")
-        cid = _create_customer(test_admin_headers, session_suffix, "conv2")
+        _create_customer(test_admin_headers, session_suffix, "conv2")
 
         # Add line item (so estimate has content)
         httpx.post(
@@ -144,32 +143,32 @@ class TestEstimateConversion:
         inv_ids = [inv["id"] for inv in r2.json().get("invoices", [])]
         assert invoice_id in inv_ids, f"Invoice {invoice_id} not found in list"
 
-    def test_convert_non_approved_rejected(self, test_admin_headers: dict, session_suffix: str):
+    def test_convert_non_approved_rejected(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Only approved estimates can be converted."""
         est_id = _create_estimate(test_admin_headers, session_suffix, "noconvert")
 
         resp = httpx.post(f"{SERVER_URL}/api/estimates/{est_id}/convert", headers=test_admin_headers, timeout=10)
         assert resp.status_code == 400, f"Expected 400 for non-approved, got {resp.status_code}: {resp.text[:200]}"
 
-    def test_convert_nonexistent(self, test_admin_headers: dict):
+    def test_convert_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/estimates/nonexistent-id-99999/convert", headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/estimates/nonexistent-id-99999/convert", headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code == 404
 
 
 class TestEstimateErrors:
-    def test_create_missing_customer(self, test_admin_headers: dict):
+    def test_create_missing_customer(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/estimates", json={"notes": "No customer"}, headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/estimates", json={"notes": "No customer"}, headers=test_admin_headers, timeout=10,
         )
         assert resp.status_code == 422
 
-    def test_delete_nonexistent(self, test_admin_headers: dict):
+    def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(f"{SERVER_URL}/api/estimates/nonexistent-999", headers=test_admin_headers, timeout=10)
         assert resp.status_code < 500
 
-    def test_unauthorized_access(self, client: httpx.Client):
+    def test_unauthorized_access(self, client: httpx.Client) -> None:
         for path in ["/api/estimates"]:
             resp = client.get(path, timeout=10)
             assert resp.status_code in (401, 403)

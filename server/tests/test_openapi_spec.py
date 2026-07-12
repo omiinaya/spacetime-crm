@@ -10,10 +10,11 @@ Validates the auto-generated OpenAPI schema and endpoint contracts:
 """
 
 import json
-import pytest
-import httpx
-from .conftest import SERVER_URL, assert_ok, assert_unauthorized, test_admin_headers
 
+import httpx
+import pytest
+
+from .conftest import SERVER_URL, assert_ok, assert_unauthorized
 
 # ── Helpers ──────────────────────────────────────────────────────
 
@@ -64,20 +65,20 @@ def requires_auth(schema: dict, path: str, method: str) -> bool:
 class TestOpenAPISchema:
     """The /openapi.json endpoint is valid and well-formed."""
 
-    def test_schema_is_served(self):
+    def test_schema_is_served(self) -> None:
         """OpenAPI schema is accessible."""
         schema = get_openapi_schema()
         assert schema.get("openapi", "").startswith("3.")
         assert schema["info"]["title"] == "SpacetimeCRM"
 
-    def test_schema_has_components(self):
+    def test_schema_has_components(self) -> None:
         """Schema defines reusable components."""
         schema = get_openapi_schema()
         assert "components" in schema
         assert "schemas" in schema["components"]
         assert "securitySchemes" in schema["components"]
 
-    def test_schema_has_bearer_auth(self):
+    def test_schema_has_bearer_auth(self) -> None:
         """Security scheme includes HTTP Bearer."""
         schema = get_openapi_schema()
         schemes = schema["components"].get("securitySchemes", {})
@@ -85,7 +86,7 @@ class TestOpenAPISchema:
         assert schemes["HTTPBearer"]["type"] == "http"
         assert schemes["HTTPBearer"]["scheme"] == "bearer"
 
-    def test_all_routes_documented(self):
+    def test_all_routes_documented(self) -> None:
         """Every FastAPI route appears in the OpenAPI spec."""
         schema = get_openapi_schema()
         paths = schema.get("paths", {})
@@ -100,14 +101,14 @@ class TestOpenAPISchema:
         for path in essential_paths:
             assert path in paths, f"Missing path in OpenAPI spec: {path}"
 
-    def test_no_empty_responses(self):
+    def test_no_empty_responses(self) -> None:
         """Every operation should have at least a 200/201 response documented."""
         schema = get_openapi_schema()
         for path, methods in schema["paths"].items():
             if path == "/{full_path}":
                 continue
             for method, op in methods.items():
-                if method in ("parameters",):
+                if method == "parameters":
                     continue
                 assert "responses" in op, f"{method.upper()} {path} has no responses"
 
@@ -143,7 +144,7 @@ class TestAuthEnforcement:
         ("GET", "/api/reports"),
     ]
 
-    def test_protected_endpoints_reject_no_auth(self, client: httpx.Client):
+    def test_protected_endpoints_reject_no_auth(self, client: httpx.Client) -> None:
         """All protected GET endpoints return 401/403 without a token."""
         for method, path in self.PROTECTED_ENDPOINTS:
             resp = client.request(method, path)
@@ -151,7 +152,7 @@ class TestAuthEnforcement:
                 f"{method} {path} expected 401/403, got {resp.status_code}: {resp.text[:100]}"
             )
 
-    def test_protected_endpoints_reject_bad_token(self, client: httpx.Client):
+    def test_protected_endpoints_reject_bad_token(self, client: httpx.Client) -> None:
         """All protected GET endpoints return 401/403 with an invalid token."""
         headers = {"Authorization": "Bearer definitely-not-a-valid-jwt-token"}
         for method, path in self.PROTECTED_ENDPOINTS:
@@ -160,7 +161,7 @@ class TestAuthEnforcement:
                 f"{method} {path} expected 401/403 with bad token, got {resp.status_code}"
             )
 
-    def test_public_endpoints_accessible(self, client: httpx.Client):
+    def test_public_endpoints_accessible(self, client: httpx.Client) -> None:
         """Public endpoints return <500 without auth."""
         for method, path in self.PUBLIC_ENDPOINTS:
             resp = client.request(method, path)
@@ -173,7 +174,7 @@ class TestAuthEnforcement:
 class TestResponseContracts:
     """Validate response shapes match expected patterns."""
 
-    def test_health_returns_expected_structure(self, client: httpx.Client):
+    def test_health_returns_expected_structure(self, client: httpx.Client) -> None:
         """GET /api/health returns {server, stdb, module} with 'ok' values."""
         resp = client.get("/api/health")
         data = assert_ok(resp)
@@ -185,7 +186,7 @@ class TestResponseContracts:
         extra = set(data.keys()) - allowed
         assert not extra, f"Unexpected health keys: {extra}"
 
-    def test_auth_me_returns_user(self, auth_client: httpx.Client):
+    def test_auth_me_returns_user(self, auth_client: httpx.Client) -> None:
         """GET /api/auth/me returns user info with expected fields."""
         resp = auth_client.get("/api/auth/me")
         data = assert_ok(resp)
@@ -193,7 +194,7 @@ class TestResponseContracts:
         assert "role" in data
         assert "name" in data or "first_name" in data
 
-    def test_customers_list_returns_paginated(self, auth_client: httpx.Client):
+    def test_customers_list_returns_paginated(self, auth_client: httpx.Client) -> None:
         """GET /api/customers returns paginated list."""
         resp = auth_client.get("/api/customers")
         data = assert_ok(resp)
@@ -202,7 +203,7 @@ class TestResponseContracts:
         elif isinstance(data, list):
             assert len(data) >= 0
 
-    def test_422_on_invalid_body(self, client: httpx.Client):
+    def test_422_on_invalid_body(self, client: httpx.Client) -> None:
         """POST /api/customers with empty body returns 422 (validation is pre-auth)."""
         resp = client.post("/api/customers", json={})
         # 422 comes from FastAPI validation, which runs before auth middleware
@@ -210,7 +211,7 @@ class TestResponseContracts:
             f"Expected 422 or 401/403 for empty body, got {resp.status_code}: {resp.text[:200]}"
         )
 
-    def test_422_on_missing_required(self, client: httpx.Client):
+    def test_422_on_missing_required(self, client: httpx.Client) -> None:
         """POST /api/customers with missing required fields returns 422 (validation is pre-auth)."""
         resp = client.post("/api/customers", json={"email": "test@test.com"})
         assert resp.status_code in (422, 401, 403), (
@@ -229,7 +230,7 @@ class TestResponseContracts:
 class TestErrorContracts:
     """Error responses follow a consistent format."""
 
-    def test_401_returns_json(self, client: httpx.Client):
+    def test_401_returns_json(self, client: httpx.Client) -> None:
         """Unauthenticated requests return JSON, not HTML."""
         resp = client.get("/api/customers")
         assert_unauthorized(resp)
@@ -238,7 +239,7 @@ class TestErrorContracts:
         data = resp.json()
         assert "detail" in data, f"401 response missing 'detail' field: {data}"
 
-    def test_404_returns_not_crash(self, client: httpx.Client):
+    def test_404_returns_not_crash(self, client: httpx.Client) -> None:
         """Non-existent API-like path returns appropriate status (SPA fallback may catch)."""
         # The SPA fallback at /{full_path:path} catches all unmatched routes,
         # so /api/nonexistent-route-xy1234 may return 200 with index.html
@@ -246,7 +247,7 @@ class TestErrorContracts:
         # Should not crash — either 404 from FastAPI or 200 from SPA fallback
         assert resp.status_code < 500, f"Request crashed: {resp.status_code}"
 
-    def test_validation_error_format(self, client: httpx.Client):
+    def test_validation_error_format(self, client: httpx.Client) -> None:
         """422 validation errors include 'detail' array with 'loc' and 'msg'."""
         resp = client.post("/api/customers", json={})
         if resp.status_code == 422:
@@ -265,14 +266,14 @@ class TestErrorContracts:
 class TestHTTPMethodContract:
     """Unsupported HTTP methods return 405 or appropriate error."""
 
-    def test_unsupported_method_returns_405(self, client: httpx.Client):
+    def test_unsupported_method_returns_405(self, client: httpx.Client) -> None:
         """PATCH on a GET-only endpoint returns 405."""
         resp = client.patch("/api/stats")
         assert resp.status_code in (405, 404, 401, 403), (
             f"Expected 405/404 for unsupported method, got {resp.status_code}"
         )
 
-    def test_delete_on_nonexistent_does_not_crash(self, client: httpx.Client):
+    def test_delete_on_nonexistent_does_not_crash(self, client: httpx.Client) -> None:
         """DELETE on nonexistent resource returns error, not crash."""
         resp = client.delete("/api/tax-rates/nonexistent-999999")
         assert resp.status_code < 500, f"DELETE crashed: {resp.status_code}"
@@ -284,13 +285,13 @@ class TestHTTPMethodContract:
 class TestCORSContract:
     """CORS headers are present on all API responses."""
 
-    def test_cors_origin_present(self, client: httpx.Client):
+    def test_cors_origin_present(self, client: httpx.Client) -> None:
         """API responses include Access-Control-Allow-Origin when Origin sent."""
         resp = client.get("/api/health", headers={"Origin": "http://localhost:5185"})
         origin = resp.headers.get("access-control-allow-origin")
         assert origin is not None, "Missing CORS Access-Control-Allow-Origin"
 
-    def test_cors_preflight_succeeds(self, client: httpx.Client):
+    def test_cors_preflight_succeeds(self, client: httpx.Client) -> None:
         """OPTIONS preflight succeeds for API paths."""
         resp = client.options(
             "/api/customers",
@@ -301,7 +302,7 @@ class TestCORSContract:
         )
         assert resp.status_code in (200, 204), f"CORS preflight failed: {resp.status_code}"
 
-    def test_cors_allows_all_methods(self, client: httpx.Client):
+    def test_cors_allows_all_methods(self, client: httpx.Client) -> None:
         """OPTIONS returns permissive Access-Control-Allow-Methods."""
         resp = client.options(
             "/api/customers",
@@ -338,21 +339,20 @@ class TestSchemaCoverage:
                 except SyntaxError:
                     continue
             for node in ast.walk(tree):
-                if isinstance(node, ast.Call):
-                    if (
-                        isinstance(node.func, ast.Attribute)
-                        and isinstance(node.func.value, ast.Name)
-                        and node.func.value.id in ("router", "app")
-                        and node.func.attr in ("get", "post", "put", "patch", "delete")
-                    ):
-                        method = node.func.attr.upper()
-                        if node.args:
-                            path_literal = node.args[0]
-                            if isinstance(path_literal, ast.Constant) and isinstance(path_literal.value, str):
-                                routes.add((method, path_literal.value))
+                if isinstance(node, ast.Call) and (
+                    isinstance(node.func, ast.Attribute)
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id in ("router", "app")
+                    and node.func.attr in ("get", "post", "put", "patch", "delete")
+                ):
+                    method = node.func.attr.upper()
+                    if node.args:
+                        path_literal = node.args[0]
+                        if isinstance(path_literal, ast.Constant) and isinstance(path_literal.value, str):
+                            routes.add((method, path_literal.value))
         return routes
 
-    def test_all_registered_routes_in_openapi(self):
+    def test_all_registered_routes_in_openapi(self) -> None:
         """Every route defined in routes/*.py appears in the OpenAPI spec."""
         schema = get_openapi_schema()
         schema_paths = schema.get("paths", {})
@@ -367,7 +367,7 @@ class TestSchemaCoverage:
         if missing:
             pytest.fail("Routes missing from OpenAPI spec:\n  " + "\n  ".join(missing[:20]))
 
-    def test_no_orphan_schema_paths(self):
+    def test_no_orphan_schema_paths(self) -> None:
         """Every OpenAPI path (except SPA fallback) has a corresponding route handler."""
         import ast
         import os
@@ -384,17 +384,15 @@ class TestSchemaCoverage:
                 except SyntaxError:
                     continue
             for node in ast.walk(tree):
-                if isinstance(node, ast.Call):
-                    if (
-                        isinstance(node.func, ast.Attribute)
-                        and isinstance(node.func.value, ast.Name)
-                        and node.func.value.id in ("router", "app")
-                        and node.func.attr in ("get", "post", "put", "patch", "delete")
-                    ):
-                        if node.args:
-                            path_literal = node.args[0]
-                            if isinstance(path_literal, ast.Constant) and isinstance(path_literal.value, str):
-                                registered.add(path_literal.value)
+                if isinstance(node, ast.Call) and (
+                    isinstance(node.func, ast.Attribute)
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id in ("router", "app")
+                    and node.func.attr in ("get", "post", "put", "patch", "delete")
+                ) and node.args:
+                    path_literal = node.args[0]
+                    if isinstance(path_literal, ast.Constant) and isinstance(path_literal.value, str):
+                        registered.add(path_literal.value)
         schema = get_openapi_schema()
         orphan = []
         for path in schema["paths"]:
@@ -430,7 +428,7 @@ class TestRequestBodyContract:
             return resolved
         return json_schema
 
-    def test_login_has_request_body(self):
+    def test_login_has_request_body(self) -> None:
         """POST /api/auth/login defines a request body."""
         schema = get_openapi_schema()
         req_schema = self._get_request_schema(schema, "/api/auth/login", "post")
@@ -439,7 +437,7 @@ class TestRequestBodyContract:
         assert "email" in props
         assert "password" in props
 
-    def test_customer_create_has_required_fields(self):
+    def test_customer_create_has_required_fields(self) -> None:
         """POST /api/customers requires first_name and last_name."""
         schema = get_openapi_schema()
         req_schema = self._get_request_schema(schema, "/api/customers", "post")
@@ -448,7 +446,7 @@ class TestRequestBodyContract:
         assert "first_name" in required
         assert "last_name" in required
 
-    def test_ticket_create_has_required_fields(self):
+    def test_ticket_create_has_required_fields(self) -> None:
         """POST /api/tickets requires customer_id and title."""
         schema = get_openapi_schema()
         req_schema = self._get_request_schema(schema, "/api/tickets", "post")
@@ -457,7 +455,7 @@ class TestRequestBodyContract:
         assert "customer_id" in required
         assert "title" in required
 
-    def test_invoice_create_has_required_fields(self):
+    def test_invoice_create_has_required_fields(self) -> None:
         """POST /api/invoices requires customer_id."""
         schema = get_openapi_schema()
         req_schema = self._get_request_schema(schema, "/api/invoices", "post")
@@ -465,7 +463,7 @@ class TestRequestBodyContract:
         required = req_schema.get("required", [])
         assert "customer_id" in required
 
-    def test_payment_create_has_required_fields(self):
+    def test_payment_create_has_required_fields(self) -> None:
         """POST /api/payments requires invoice_id, customer_id, amount."""
         schema = get_openapi_schema()
         req_schema = self._get_request_schema(schema, "/api/payments", "post")
@@ -475,7 +473,7 @@ class TestRequestBodyContract:
         assert "customer_id" in required
         assert "amount" in required
 
-    def test_appointment_create_has_required_fields(self):
+    def test_appointment_create_has_required_fields(self) -> None:
         """POST /api/appointments requires customer_id, title, start_time, end_time."""
         schema = get_openapi_schema()
         req_schema = self._get_request_schema(schema, "/api/appointments", "post")
@@ -486,7 +484,7 @@ class TestRequestBodyContract:
         assert "start_time" in required
         assert "end_time" in required
 
-    def test_product_create_has_required_name(self):
+    def test_product_create_has_required_name(self) -> None:
         """POST /api/products requires name."""
         schema = get_openapi_schema()
         req_schema = self._get_request_schema(schema, "/api/products", "post")

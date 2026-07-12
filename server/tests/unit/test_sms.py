@@ -1,8 +1,13 @@
 """Unit tests for server/sms.py."""
 
-import asyncio, json, os, sys, tempfile
+import asyncio
+import json
+import os
+import sys
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 _server_dir = str(Path(__file__).resolve().parent.parent.parent)
@@ -25,63 +30,63 @@ def _patch_path():
 
 
 class TestSettings:
-    def test_load_no_file(self):
+    def test_load_no_file(self) -> None:
         from sms import _load_settings
 
         assert _load_settings() is None
 
-    def test_load_valid(self):
+    def test_load_valid(self) -> None:
         import sms
 
         d = {"account_sid": "AC1", "auth_token": "t", "from_number": "+1"}
         sms.SETTINGS_PATH.write_text(json.dumps(d))
         assert sms._load_settings() == d
 
-    def test_load_parse_error(self):
+    def test_load_parse_error(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text("bad")
         with patch("sms.logger"):
             assert sms._load_settings() is None
 
-    def test_save(self):
+    def test_save(self) -> None:
         import sms
 
         sms._save_settings({"a": "b"})
         assert sms._load_settings() == {"a": "b"}
 
-    def test_get_not_configured(self):
+    def test_get_not_configured(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": ""}))
         assert sms.get_settings()["configured"] is False
 
-    def test_get_configured(self):
+    def test_get_configured(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC1", "auth_token": "t", "from_number": "+1"}))
         assert sms.get_settings()["configured"] is True
 
-    def test_get_no_file(self):
+    def test_get_no_file(self) -> None:
         import sms
 
         assert sms.get_settings() is None
 
-    def test_update(self):
+    def test_update(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "old", "auth_token": "t", "from_number": "+1"}))
         r = sms.update_settings({"account_sid": "new"})
         assert r["account_sid"] == "new"
 
-    def test_update_with_auth(self):
+    def test_update_with_auth(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "old", "auth_token": "t", "from_number": "+1"}))
         r = sms.update_settings({"account_sid": "new", "auth_token": "newtoken"})
         assert r["account_sid"] == "new"
 
-    def test_is_configured(self):
+    def test_is_configured(self) -> None:
         import sms
 
         assert sms.is_configured() is False
@@ -90,17 +95,17 @@ class TestSettings:
 
 
 class TestPhone:
-    def test_mobile(self):
+    def test_mobile(self) -> None:
         from sms import _customer_phone
 
         assert _customer_phone({"mobile": "+1555"}) == "+1555"
 
-    def test_phone(self):
+    def test_phone(self) -> None:
         from sms import _customer_phone
 
         assert _customer_phone({"phone": "+1556"}) == "+1556"
 
-    def test_none(self):
+    def test_none(self) -> None:
         from sms import _customer_phone
 
         assert _customer_phone(None) is None
@@ -109,20 +114,20 @@ class TestPhone:
 
 class TestSend:
     @pytest.mark.asyncio
-    async def test_not_configured(self):
+    async def test_not_configured(self) -> None:
         from sms import send_sms
 
         assert await send_sms("+1", "hi") is False
 
     @pytest.mark.asyncio
-    async def test_incomplete_settings(self):
+    async def test_incomplete_settings(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC1"}))
         assert await sms.send_sms("+1", "hi") is False
 
     @pytest.mark.asyncio
-    async def test_success(self):
+    async def test_success(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC1", "auth_token": "t", "from_number": "+1"}))
@@ -133,21 +138,21 @@ class TestSend:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_failure(self):
+    async def test_failure(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC1", "auth_token": "t", "from_number": "+1"}))
         import client
 
         client._shared_client.post = AsyncMock(
-            return_value=MagicMock(status_code=400, text="bad", json=lambda: {"message": "err"})
+            return_value=MagicMock(status_code=400, text="bad", json=lambda: {"message": "err"}),
         )
         with patch("sms.logger"):
             result = await sms.send_sms("+1555", "hi")
             assert result is False
 
     @pytest.mark.asyncio
-    async def test_phone_normalization_10_digit(self):
+    async def test_phone_normalization_10_digit(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC1", "auth_token": "t", "from_number": "+1"}))
@@ -160,7 +165,7 @@ class TestSend:
         assert call_kwargs["data"]["To"] == "+15551234567"
 
     @pytest.mark.asyncio
-    async def test_phone_normalization_11_digit(self):
+    async def test_phone_normalization_11_digit(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC1", "auth_token": "t", "from_number": "+1"}))
@@ -172,7 +177,7 @@ class TestSend:
         assert call_kwargs["data"]["To"] == "+15551234567"
 
     @pytest.mark.asyncio
-    async def test_phone_normalization_already_plus(self):
+    async def test_phone_normalization_already_plus(self) -> None:
         import sms
 
         sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC1", "auth_token": "t", "from_number": "+1"}))
@@ -185,7 +190,7 @@ class TestSend:
 
 
 class TestNotifications:
-    def _check(self, func, *a):
+    def _check(self, func, *a) -> None:
         import sms
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as m:
@@ -198,37 +203,37 @@ class TestNotifications:
             finally:
                 loop.close()
 
-    def test_ticket_status(self):
+    def test_ticket_status(self) -> None:
         from sms import _notify_ticket_status_change
 
         self._check(_notify_ticket_status_change, "+1", 1, "open", "t")
 
-    def test_invoice_created(self):
+    def test_invoice_created(self) -> None:
         from sms import _notify_invoice_created
 
         self._check(_notify_invoice_created, "+1", 1, 10.0)
 
-    def test_payment_received(self):
+    def test_payment_received(self) -> None:
         from sms import _notify_payment_received
 
         self._check(_notify_payment_received, "+1", 1, 10.0)
 
-    def test_appt_created(self):
+    def test_appt_created(self) -> None:
         from sms import _notify_appointment_created
 
         self._check(_notify_appointment_created, "+1", "meet", 1700000000000)
 
-    def test_appt_reminder(self):
+    def test_appt_reminder(self) -> None:
         from sms import _notify_appointment_reminder
 
         self._check(_notify_appointment_reminder, "+1", "meet", 1700000000000)
 
-    def test_estimate(self):
+    def test_estimate(self) -> None:
         from sms import _notify_estimate_approved
 
         self._check(_notify_estimate_approved, "+1", 1, 10.0)
 
-    def test_overdue(self):
+    def test_overdue(self) -> None:
         from sms import _notify_overdue_reminder
 
         self._check(_notify_overdue_reminder, "+1", 1, 10.0)

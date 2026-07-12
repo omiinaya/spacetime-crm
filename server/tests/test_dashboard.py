@@ -1,12 +1,12 @@
 """Dashboard stats, reports, and audit log tests."""
 
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, test_admin_headers
+
+from .conftest import SERVER_URL, assert_ok
 
 
 class TestDashboard:
-    def test_stats(self, test_admin_headers: dict):
+    def test_stats(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/stats", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "total_customers" in data
@@ -19,7 +19,7 @@ class TestDashboard:
         assert "overdue_invoices_total" in data
         assert "overdue_invoices" in data
 
-    def test_reports(self, test_admin_headers: dict):
+    def test_reports(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/reports", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "revenue_by_month" in data
@@ -31,7 +31,7 @@ class TestDashboard:
         assert "top_customers" in data
         assert "total_revenue" in data["totals"]
 
-    def test_audit_log(self, test_admin_headers: dict):
+    def test_audit_log(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/audit-log", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "entries" in data
@@ -39,18 +39,18 @@ class TestDashboard:
         assert "offset" in data
         assert "limit" in data
 
-    def test_audit_log_filtered_by_entity(self, test_admin_headers: dict):
+    def test_audit_log_filtered_by_entity(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/audit-log", params={"entity": "customer"}, headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/audit-log", params={"entity": "customer"}, headers=test_admin_headers, timeout=10,
         )
         data = assert_ok(resp)
         for entry in data["entries"]:
             if entry.get("entity"):
                 assert entry["entity"] == "customer"
 
-    def test_audit_log_filtered_by_action(self, test_admin_headers: dict):
+    def test_audit_log_filtered_by_action(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/audit-log", params={"action": "create"}, headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/audit-log", params={"action": "create"}, headers=test_admin_headers, timeout=10,
         )
         data = assert_ok(resp)
         for entry in data["entries"]:
@@ -59,14 +59,14 @@ class TestDashboard:
 
 
 class TestDashboardErrors:
-    def test_stats_unauthorized(self, client: httpx.Client):
+    def test_stats_unauthorized(self, client: httpx.Client) -> None:
         resp = client.get("/api/stats", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_reports_unauthorized(self, client: httpx.Client):
+    def test_reports_unauthorized(self, client: httpx.Client) -> None:
         resp = client.get("/api/reports", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_audit_log_unauthorized(self, client: httpx.Client):
+    def test_audit_log_unauthorized(self, client: httpx.Client) -> None:
         resp = client.get("/api/audit-log", timeout=10)
         assert resp.status_code in (401, 403)

@@ -1,8 +1,9 @@
 """Error handling and input validation tests."""
 
-import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+import pytest
+
+from .conftest import SERVER_URL, _track_entity, unique_suffix
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ def product_id_for_validation(test_admin_headers: dict, session_suffix: str) -> 
 class TestValidation:
     """API input validation and error responses."""
 
-    def test_sql_injection_tenant_id(self, test_admin_headers: dict):
+    def test_sql_injection_tenant_id(self, test_admin_headers: dict) -> None:
         """tenant_id containing SQL injection characters is rejected."""
         # Attempt to use a crafted tenant_id — should 400
         resp = httpx.get(
@@ -38,7 +39,7 @@ class TestValidation:
         )
         assert resp.status_code in (400, 404), f"Expected 400/404, got {resp.status_code}"
 
-    def test_malformed_json_returns_422(self, client: httpx.Client):
+    def test_malformed_json_returns_422(self, client: httpx.Client) -> None:
         """Malformed JSON body returns 422 or 400."""
         resp = client.post(
             "/api/auth/login",
@@ -48,7 +49,7 @@ class TestValidation:
         )
         assert resp.status_code in (400, 422)
 
-    def test_invalid_http_method(self, test_admin_headers: dict):
+    def test_invalid_http_method(self, test_admin_headers: dict) -> None:
         """Unsupported HTTP method returns 405."""
         resp = httpx.patch(
             f"{SERVER_URL}/api/customers",
@@ -57,7 +58,7 @@ class TestValidation:
         )
         assert resp.status_code in (405, 400)
 
-    def test_empty_body_post(self, test_admin_headers: dict):
+    def test_empty_body_post(self, test_admin_headers: dict) -> None:
         """POST with empty JSON body returns 422 with Pydantic validation (where implemented)."""
         # Test with customer endpoint which has Pydantic validation
         resp = httpx.post(
@@ -68,7 +69,7 @@ class TestValidation:
         )
         assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
 
-    def test_invalid_url_returns_404_or_200(self, client: httpx.Client):
+    def test_invalid_url_returns_404_or_200(self, client: httpx.Client) -> None:
         """Non-existent API route returns appropriate status.
         NOTE: SPA catch-all route makes completely unknown paths return index.html (200).
         """
@@ -77,7 +78,7 @@ class TestValidation:
         # In production, the SPA serves index.html for non-API paths
         assert resp.status_code < 500
 
-    def test_negative_quantity_product(self, test_admin_headers: dict, product_id_for_validation: str):
+    def test_negative_quantity_product(self, test_admin_headers: dict, product_id_for_validation: str) -> None:
         """Creating product with negative quantity is handled."""
         # Product created in product_id_for_validation fixture
         assert True  # Fixture verifies the product creation doesn't crash

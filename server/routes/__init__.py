@@ -28,6 +28,7 @@ from routes.users import router as users_router
 from routes.webhooks import router as webhooks_router
 
 
+
 def register_routers(app) -> None:
     """Import and register all APIRouter modules on the app."""
     app.include_router(auth_router)

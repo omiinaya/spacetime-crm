@@ -1,5 +1,6 @@
 """Pydantic request/response models for SpacetimeCRM API.
 
+
 All POST/PUT endpoints should use these models instead of raw `body: dict`.
 This provides type validation, clear error messages (422), and API docs.
 """

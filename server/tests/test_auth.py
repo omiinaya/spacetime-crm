@@ -7,15 +7,16 @@ the bootstrap admin user exists and can log in.
 
 import base64
 import json
-import pytest
+
 import httpx
-from .conftest import SERVER_URL, ADMIN_EMAIL, ADMIN_PW, assert_ok, assert_unauthorized
+
+from .conftest import ADMIN_EMAIL, ADMIN_PW, SERVER_URL, assert_ok, assert_unauthorized
 
 
 class TestAuth:
     """Authentication and authorization flows."""
 
-    def test_login_success_admin(self, client: httpx.Client):
+    def test_login_success_admin(self, client: httpx.Client) -> None:
         """Global admin credentials return a token (bootstrap state test)."""
         resp = client.post(
             "/api/auth/login",
@@ -29,7 +30,7 @@ class TestAuth:
         assert data["user"]["role"] == "admin"
         assert "tenant_id" in data["user"]
 
-    def test_login_success_isolated(self, test_admin_headers: dict):
+    def test_login_success_isolated(self, test_admin_headers: dict) -> None:
         """Isolated tenant admin can also log in (uses session-specific creds)."""
         # We need to log in as the isolated admin — extract email from headers
         # The isolated tenant admin email is f"admin-{session_suffix}@test.local"
@@ -39,7 +40,7 @@ class TestAuth:
         assert "email" in data
         assert data["role"] == "admin"
 
-    def test_login_invalid_password(self, client: httpx.Client):
+    def test_login_invalid_password(self, client: httpx.Client) -> None:
         """Wrong password returns 401."""
         resp = client.post(
             "/api/auth/login",
@@ -50,7 +51,7 @@ class TestAuth:
         )
         assert resp.status_code == 401
 
-    def test_login_nonexistent_user(self, client: httpx.Client):
+    def test_login_nonexistent_user(self, client: httpx.Client) -> None:
         """Unknown email returns 401."""
         resp = client.post(
             "/api/auth/login",
@@ -61,12 +62,12 @@ class TestAuth:
         )
         assert resp.status_code == 401
 
-    def test_unauthenticated_request(self, client: httpx.Client):
+    def test_unauthenticated_request(self, client: httpx.Client) -> None:
         """Requests without a token return 401."""
         resp = client.get("/api/stats")
         assert_unauthorized(resp)
 
-    def test_bad_token(self, client: httpx.Client):
+    def test_bad_token(self, client: httpx.Client) -> None:
         """Invalid JWT returns 401."""
         resp = client.get(
             "/api/customers",
@@ -76,7 +77,7 @@ class TestAuth:
         )
         assert_unauthorized(resp)
 
-    def test_expired_token_returns_401(self, client: httpx.Client):
+    def test_expired_token_returns_401(self, client: httpx.Client) -> None:
         """Expired JWT returns 401."""
         # Craft a token that looks like a JWT but is clearly expired
         # Base64-encode a dummy expired payload
@@ -96,14 +97,14 @@ class TestAuth:
         )
         assert_unauthorized(resp)
 
-    def test_auth_me_endpoint(self, test_admin_headers: dict):
+    def test_auth_me_endpoint(self, test_admin_headers: dict) -> None:
         """GET /api/auth/me returns current user (using isolated tenant)."""
         resp = httpx.get(f"{SERVER_URL}/api/auth/me", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "email" in data
         assert data["role"] == "admin"
 
-    def test_portal_login_flow(self, client: httpx.Client):
+    def test_portal_login_flow(self, client: httpx.Client) -> None:
         """Customer portal login rejects admin credentials."""
         resp = client.post(
             "/api/portal/login",
@@ -119,18 +120,18 @@ class TestAuth:
 class TestPermissions:
     """Role-based access control."""
 
-    def test_health_public(self, client: httpx.Client):
+    def test_health_public(self, client: httpx.Client) -> None:
         """Health endpoints are public."""
         resp = client.get("/api/health/ready")
         assert_ok(resp)
 
-    def test_admin_access(self, test_admin_headers: dict):
+    def test_admin_access(self, test_admin_headers: dict) -> None:
         """Admin (isolated tenant) can access admin-only endpoints."""
         resp = httpx.get(f"{SERVER_URL}/api/audit-log", headers=test_admin_headers, timeout=10)
         # May return empty, but shouldn't 403
         assert resp.status_code != 403
 
-    def test_cors_header(self, client: httpx.Client):
+    def test_cors_header(self, client: httpx.Client) -> None:
         """CORS header is set for the configured origin."""
         resp = client.options(
             "/api/customers",

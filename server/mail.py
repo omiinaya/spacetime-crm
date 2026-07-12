@@ -13,6 +13,10 @@ from pathlib import Path
 
 from helpers import jinja_env
 
+# FIXME: BLE001 - Blind except
+# FIXME: DTZ006 - datetime.fromtimestamp without tz
+# FIXME: B008 - function-call-in-default-argument
+
 logger = logging.getLogger(__name__)
 
 SETTINGS_PATH = Path(__file__).resolve().parent / "mail_settings.json"

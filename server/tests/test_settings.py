@@ -1,29 +1,28 @@
 """Settings (mail/SMS) routes — get/save/test."""
 
 import httpx
-import pytest
+
 from .conftest import (
     SERVER_URL,
     assert_ok,
-    save_mail_settings,
     restore_mail_settings,
-    save_sms_settings,
     restore_sms_settings,
-    save_user_settings,
     restore_user_settings,
-    test_admin_headers,
+    save_mail_settings,
+    save_sms_settings,
+    save_user_settings,
 )
 
 
 class TestMailSettings:
     """Mail configuration read, write, test."""
 
-    def test_get_mail_settings(self, test_admin_headers: dict):
+    def test_get_mail_settings(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/settings/mail", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "configured" in data
 
-    def test_save_mail_settings(self, test_admin_headers: dict):
+    def test_save_mail_settings(self, test_admin_headers: dict) -> None:
         # Save current settings for restoration
         prev = save_mail_settings(test_admin_headers)
         try:
@@ -52,7 +51,7 @@ class TestMailSettings:
             # Always restore original settings
             restore_mail_settings(test_admin_headers, prev)
 
-    def test_mail_test_no_connection(self, test_admin_headers: dict):
+    def test_mail_test_no_connection(self, test_admin_headers: dict) -> None:
         """Test endpoint should return gracefully without a real SMTP server."""
         resp = httpx.post(f"{SERVER_URL}/api/settings/mail/test", headers=test_admin_headers, timeout=15)
         # Should return something (success or error), not crash
@@ -62,12 +61,12 @@ class TestMailSettings:
 class TestSMSSettings:
     """SMS configuration read, write, test."""
 
-    def test_get_sms_settings(self, test_admin_headers: dict):
+    def test_get_sms_settings(self, test_admin_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "configured" in data
 
-    def test_save_sms_settings(self, test_admin_headers: dict):
+    def test_save_sms_settings(self, test_admin_headers: dict) -> None:
         # Save current settings for restoration
         prev = save_sms_settings(test_admin_headers)
         try:
@@ -90,7 +89,7 @@ class TestSMSSettings:
             # Always restore original settings
             restore_sms_settings(test_admin_headers, prev)
 
-    def test_sms_test_no_connection(self, test_admin_headers: dict):
+    def test_sms_test_no_connection(self, test_admin_headers: dict) -> None:
         """Test endpoint should return without crashing — may fail without creds."""
         resp = httpx.post(f"{SERVER_URL}/api/settings/sms/test", headers=test_admin_headers, timeout=15)
         # Twilio not configured, may return 5xx — just verify it doesn't hang
@@ -100,11 +99,11 @@ class TestSMSSettings:
 class TestSettingsErrors:
     """Auth enforcement for settings."""
 
-    def test_mail_unauthorized(self, client: httpx.Client):
+    def test_mail_unauthorized(self, client: httpx.Client) -> None:
         resp = client.get("/api/settings/mail", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_sms_unauthorized(self, client: httpx.Client):
+    def test_sms_unauthorized(self, client: httpx.Client) -> None:
         resp = client.get("/api/settings/sms", timeout=10)
         assert resp.status_code in (401, 403)
 
@@ -112,13 +111,13 @@ class TestSettingsErrors:
 class TestUserSettings:
     """User preferences — theme, default_ticket_status."""
 
-    def test_get_user_settings_default(self, test_admin_headers: dict):
+    def test_get_user_settings_default(self, test_admin_headers: dict) -> None:
         """GET user settings returns null when not yet set."""
         resp = httpx.get(f"{SERVER_URL}/api/users/settings", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "settings" in data
 
-    def test_update_user_settings(self, test_admin_headers: dict):
+    def test_update_user_settings(self, test_admin_headers: dict) -> None:
         """PUT user settings saves theme + default_ticket_status, GET returns them."""
         prev = save_user_settings(test_admin_headers)
         try:
@@ -140,7 +139,7 @@ class TestUserSettings:
         finally:
             restore_user_settings(test_admin_headers, prev)
 
-    def test_update_user_settings_light(self, test_admin_headers: dict):
+    def test_update_user_settings_light(self, test_admin_headers: dict) -> None:
         """PUT user settings with light theme."""
         prev = save_user_settings(test_admin_headers)
         try:
@@ -159,7 +158,7 @@ class TestUserSettings:
         finally:
             restore_user_settings(test_admin_headers, prev)
 
-    def test_user_settings_unauthorized(self, client: httpx.Client):
+    def test_user_settings_unauthorized(self, client: httpx.Client) -> None:
         """GET/PUT user settings without auth returns 401/403."""
         resp = client.get("/api/users/settings", timeout=10)
         assert resp.status_code in (401, 403)

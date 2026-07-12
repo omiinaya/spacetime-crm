@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 def admin_headers():
     import jwt
+
     from config import settings
     token = jwt.encode({"sub": "user-1", "tenant_id": "t1", "role": "admin"},
                        settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -12,14 +13,14 @@ def admin_headers():
 
 
 class TestEstimates:
-    def test_list_estimates(self, client, monkeypatch):
+    def test_list_estimates(self, client, monkeypatch) -> None:
         mock_paginated = AsyncMock(return_value=([{"id": "e1", "number": "EST-001", "status": "draft"}], 1))
         monkeypatch.setattr("routes.estimates._paginated", mock_paginated)
         resp = client.get("/api/estimates", headers=admin_headers())
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
-    def test_create_estimate(self, client, monkeypatch):
+    def test_create_estimate(self, client, monkeypatch) -> None:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.estimates._call", mock_call)
         monkeypatch.setattr("routes.estimates._log_audit", AsyncMock())
@@ -34,7 +35,7 @@ class TestEstimates:
         resp = client.post("/api/estimates", json=body, headers=admin_headers())
         assert resp.status_code == 200
 
-    def test_update_estimate_status(self, client, monkeypatch):
+    def test_update_estimate_status(self, client, monkeypatch) -> None:
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.estimates._call", mock_call)
         monkeypatch.setattr("routes.estimates._log_audit", AsyncMock())

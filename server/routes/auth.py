@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from config import settings
 from helpers import (
+
     _call,
     _safe_id,
     _sanitize_sql,
@@ -134,6 +135,7 @@ async def login(request: Request, login_data: LoginRequest):
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
+        logger.warning("Authentication error during token lookup", exc_info=True)
         pass
 
     token = _make_full_token(user, tenant_id, now)
@@ -181,6 +183,7 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
+        logger.warning("Authentication error during token lookup", exc_info=True)
         pass
 
     token = _make_full_token(user, tenant_id, now)
@@ -207,6 +210,7 @@ async def auth_me(user: Annotated[dict, Depends(get_current_user)]):
             if trows:
                 tenant_info = trows[0]
         except Exception:
+            logger.warning("Authentication error during token lookup", exc_info=True)
             pass
 
     # Check 2FA status and PIN from DB (JWT doesn't contain pin)
@@ -218,6 +222,7 @@ async def auth_me(user: Annotated[dict, Depends(get_current_user)]):
             totp_enabled = rows[0].get("totp_enabled", False)
             has_pin = bool(rows[0].get("pin", ""))
     except Exception:
+        logger.warning("Authentication error during token lookup", exc_info=True)
         pass
 
     return {
@@ -308,6 +313,7 @@ async def refresh_token_tenant(user: Annotated[dict, Depends(get_current_user)])
         if tm_rows:
             tid = tm_rows[0]["tenant_id"]
     except Exception:
+        logger.warning("Authentication error during token lookup", exc_info=True)
         pass
     now = datetime.now(UTC)
     token = _make_full_token(user, tid, now)
@@ -373,6 +379,7 @@ async def pos_login(request: Request, body: PosLoginRequest):
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
+        logger.warning("Authentication error during token lookup", exc_info=True)
         pass
 
     token = _make_full_token(user, tenant_id, now)

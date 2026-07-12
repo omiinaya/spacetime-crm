@@ -6,11 +6,9 @@ import os
 import sys
 from unittest.mock import patch
 
-import pytest
-
 
 class TestLogConfig:
-    def test_json_formatter(self):
+    def test_json_formatter(self) -> None:
         from log_config import JsonFormatter
 
         fmt = JsonFormatter()
@@ -23,7 +21,7 @@ class TestLogConfig:
         assert data["module"] == "module"
         assert "timestamp" in data
 
-    def test_json_formatter_with_extra_fields(self):
+    def test_json_formatter_with_extra_fields(self) -> None:
         from log_config import JsonFormatter
 
         fmt = JsonFormatter()
@@ -34,12 +32,13 @@ class TestLogConfig:
         assert data["request_id"] == "abc123"
         assert data["level"] == "WARNING"
 
-    def test_json_formatter_with_exception(self):
+    def test_json_formatter_with_exception(self) -> None:
         from log_config import JsonFormatter
 
         fmt = JsonFormatter()
         try:
-            raise ValueError("test error")
+            msg = "test error"
+            raise ValueError(msg)
         except ValueError:
             exc_info = sys.exc_info()
         record = logging.LogRecord("test", logging.ERROR, "x.py", 5, "error msg", None, exc_info)
@@ -49,7 +48,7 @@ class TestLogConfig:
         assert "exception" in data
         assert "ValueError" in data["exception"]
 
-    def test_configure_logging_structured(self):
+    def test_configure_logging_structured(self) -> None:
         with patch.dict(
             os.environ,
             {
@@ -59,6 +58,7 @@ class TestLogConfig:
             clear=True,
         ):
             import importlib
+
             import log_config
 
             importlib.reload(log_config)
@@ -69,7 +69,7 @@ class TestLogConfig:
             assert root.level == logging.DEBUG
             assert len(root.handlers) > 0
 
-    def test_configure_logging_unstructured(self):
+    def test_configure_logging_unstructured(self) -> None:
         with patch.dict(
             os.environ,
             {
@@ -79,6 +79,7 @@ class TestLogConfig:
             clear=True,
         ):
             import importlib
+
             import log_config
 
             importlib.reload(log_config)

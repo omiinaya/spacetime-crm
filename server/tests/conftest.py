@@ -11,13 +11,13 @@ tracked and cleaned up at session end via STDB SQL DELETE (not fragile
 HTTP endpoint calls).
 """
 
+import contextlib
 import os
-import json
 import uuid
-import time
-import pytest
-import httpx
+
 import bcrypt
+import httpx
+import pytest
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
@@ -52,15 +52,13 @@ def _stdb_write(query: str) -> None:
 
     Ignores errors on DELETE — the table may not exist or be empty.
     """
-    try:
+    with contextlib.suppress(Exception):
         httpx.post(
             STDB_SQL_URL,
             content=query,
             headers={"Content-Type": "application/sql"},
             timeout=30,
         )
-    except Exception:
-        pass
 
 
 def unique_suffix() -> str:
@@ -192,7 +190,7 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
                 f"OR (slug IS NOT NULL AND slug LIKE '%{suffix}%') "
                 f"OR (label IS NOT NULL AND label LIKE '%{suffix}%') "
                 f"OR (url IS NOT NULL AND url LIKE '%{suffix}%') "
-                f"OR (username IS NOT NULL AND username LIKE '%{suffix}%')"
+                f"OR (username IS NOT NULL AND username LIKE '%{suffix}%')",
             )
             count += 1
         except Exception:
@@ -320,8 +318,7 @@ def isolated_tenant(
     test_admin_password: str,
     auth_headers_session: dict,
 ) -> dict:
-    """
-    Create an isolated tenant with an admin user for this test session.
+    """Create an isolated tenant with an admin user for this test session.
 
     Returns a dict with tenant_id, admin_user_id, admin_email, admin_token.
     Cleans up the tenant at session end.
@@ -396,14 +393,12 @@ def isolated_tenant(
     yield tenant_info
 
     # Cleanup: delete tenant (cascades to all data)
-    try:
+    with contextlib.suppress(Exception):
         httpx.delete(
             f"{SERVER_URL}/api/tenants/{tenant_id}",
             headers=auth_headers_session,
             timeout=10,
         )
-    except Exception:
-        pass
 
 
 @pytest.fixture(scope="session")
@@ -452,7 +447,7 @@ def assert_ok(resp: httpx.Response, status: int = 200):
     return resp.json()
 
 
-def assert_unauthorized(resp: httpx.Response):
+def assert_unauthorized(resp: httpx.Response) -> None:
     """Assert a 401 or 403 response."""
     assert resp.status_code in (401, 403), f"Expected 401/403, got {resp.status_code}: {resp.text[:300]}"
 
@@ -516,7 +511,7 @@ def restore_mail_settings(auth_headers: dict, settings: dict | None) -> None:
     """Restore previously saved mail settings."""
     if settings is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         httpx.post(
             f"{SERVER_URL}/api/settings/mail",
             json={
@@ -531,8 +526,6 @@ def restore_mail_settings(auth_headers: dict, settings: dict | None) -> None:
             headers=auth_headers,
             timeout=10,
         )
-    except Exception:
-        pass
 
 
 def save_sms_settings(auth_headers: dict) -> dict | None:
@@ -551,7 +544,7 @@ def restore_sms_settings(auth_headers: dict, settings: dict | None) -> None:
     """Restore previously saved SMS settings."""
     if settings is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         httpx.post(
             f"{SERVER_URL}/api/settings/sms",
             json={
@@ -562,8 +555,6 @@ def restore_sms_settings(auth_headers: dict, settings: dict | None) -> None:
             headers=auth_headers,
             timeout=10,
         )
-    except Exception:
-        pass
 
 
 def save_user_settings(auth_headers: dict) -> dict | None:
@@ -582,7 +573,7 @@ def restore_user_settings(auth_headers: dict, settings: dict | None) -> None:
     """Restore previously saved user settings."""
     if settings is None:
         return
-    try:
+    with contextlib.suppress(Exception):
         httpx.put(
             f"{SERVER_URL}/api/users/settings",
             json={
@@ -592,8 +583,6 @@ def restore_user_settings(auth_headers: dict, settings: dict | None) -> None:
             headers=auth_headers,
             timeout=10,
         )
-    except Exception:
-        pass
 
 
 # ── SLA save/restore helpers ──────────────────────────────────────
@@ -619,15 +608,13 @@ def restore_sla_targets(auth_headers: dict, targets: dict) -> None:
     """Restore SLA targets to previously saved values."""
     if not targets:
         targets = dict(DEFAULT_SLA_TARGETS)
-    try:
+    with contextlib.suppress(Exception):
         httpx.post(
             f"{SERVER_URL}/api/tickets/sla-settings",
             json={"targets": targets},
             headers=auth_headers,
             timeout=10,
         )
-    except Exception:
-        pass
 
 
 def reset_sla_targets(auth_headers: dict) -> None:
@@ -683,7 +670,7 @@ def restore_default_tax_rate(auth_headers: dict, saved: dict | None) -> None:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _reset_global_state(auth_headers_session: dict, session_suffix: str):
+def _reset_global_state(auth_headers_session: dict, session_suffix: str) -> None:
     """Reset all global mutable state (settings, SLA targets, defaults) before session starts.
 
     This runs BEFORE the first test in each session to ensure clean settings
@@ -694,7 +681,7 @@ def _reset_global_state(auth_headers_session: dict, session_suffix: str):
     # Reset SLA targets
     reset_sla_targets(auth_headers_session)
     # Reset mail settings
-    try:
+    with contextlib.suppress(Exception):
         httpx.post(
             f"{SERVER_URL}/api/settings/mail",
             json={
@@ -709,10 +696,8 @@ def _reset_global_state(auth_headers_session: dict, session_suffix: str):
             headers=auth_headers_session,
             timeout=10,
         )
-    except Exception:
-        pass
     # Reset SMS settings
-    try:
+    with contextlib.suppress(Exception):
         httpx.post(
             f"{SERVER_URL}/api/settings/sms",
             json={
@@ -723,6 +708,3 @@ def _reset_global_state(auth_headers_session: dict, session_suffix: str):
             headers=auth_headers_session,
             timeout=10,
         )
-    except Exception:
-        pass
-    yield  # Session runs here — no post-session reset needed, cleanup fixture handles entities

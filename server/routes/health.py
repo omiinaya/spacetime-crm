@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from client import get_http_client
 from config import settings
 
+
 router = APIRouter()
 
 
@@ -67,5 +68,6 @@ async def health_ready():
         if resp.status_code < 500:
             return {"status": "ok"}
     except Exception:
+    logger.warning("except Exception:")
         pass
     return {"status": "unavailable"}

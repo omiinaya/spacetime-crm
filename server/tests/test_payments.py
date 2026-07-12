@@ -1,8 +1,9 @@
 """Payment recording, listing, and deletion integration tests."""
 
-import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity, test_admin_headers
+import pytest
+
+from .conftest import SERVER_URL, _track_entity, assert_ok, create_customer, unique_suffix
 
 
 def _create_test_invoice(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
@@ -14,7 +15,7 @@ def _create_test_invoice(test_admin_headers: dict, session_suffix: str = "", suf
     suf = suffix or unique_suffix()
     email = f"pay-cust-{session_suffix}-{suf}@example.com"
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, first_name="Pay", last_name=f"Test{suf}", email=email
+        test_admin_headers, session_suffix=session_suffix, first_name="Pay", last_name=f"Test{suf}", email=email,
     )
     cid = c.get("id")
     assert cid
@@ -27,7 +28,7 @@ def _create_test_invoice(test_admin_headers: dict, session_suffix: str = "", suf
     )
     # Find invoice by customer_id (unique per test call)
     r = httpx.get(
-        f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10
+        f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10,
     )
     invs = r.json().get("invoices", [])
     assert len(invs) >= 1, f"No invoice found for customer {cid}"
@@ -47,7 +48,7 @@ def _create_test_invoice(test_admin_headers: dict, session_suffix: str = "", suf
 class TestPaymentCRUD:
     """Payment recording, listing, and full lifecycle."""
 
-    def test_record_payment(self, test_admin_headers: dict, session_suffix: str):
+    def test_record_payment(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Record a payment against an invoice."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "record")
 
@@ -67,7 +68,7 @@ class TestPaymentCRUD:
         data = assert_ok(resp)
         assert data.get("ok") is True
 
-    def test_list_payments(self, test_admin_headers: dict):
+    def test_list_payments(self, test_admin_headers: dict) -> None:
         """List payments returns paginated results."""
         resp = httpx.get(
             f"{SERVER_URL}/api/payments",
@@ -79,7 +80,7 @@ class TestPaymentCRUD:
         assert "total" in data
         assert isinstance(data["payments"], list)
 
-    def test_list_payments_filter_by_invoice(self, test_admin_headers: dict, session_suffix: str):
+    def test_list_payments_filter_by_invoice(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Filter payments by invoice_id."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "filterbyinv")
 
@@ -109,7 +110,7 @@ class TestPaymentCRUD:
             assert p["invoice_id"] == inv_id
         assert len(data["payments"]) >= 2
 
-    def test_payment_updates_invoice_status(self, test_admin_headers: dict, session_suffix: str):
+    def test_payment_updates_invoice_status(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Recording a full payment marks invoice as paid."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "statuscheck")
 
@@ -138,7 +139,7 @@ class TestPaymentCRUD:
                 f"Unexpected status after payment: {target['status']}"
             )
 
-    def test_delete_payment(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_payment(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Delete a payment (admin only)."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "deletepay")
 
@@ -152,7 +153,7 @@ class TestPaymentCRUD:
 
         # Get its ID
         r = httpx.get(
-            f"{SERVER_URL}/api/payments", params={"invoice_id": inv_id}, headers=test_admin_headers, timeout=10
+            f"{SERVER_URL}/api/payments", params={"invoice_id": inv_id}, headers=test_admin_headers, timeout=10,
         )
         payments = r.json().get("payments", [])
         if not payments:
@@ -166,7 +167,7 @@ class TestPaymentCRUD:
         )
         assert_ok(resp)
 
-    def test_multiple_payment_methods(self, test_admin_headers: dict, session_suffix: str):
+    def test_multiple_payment_methods(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Payments can use different methods: cash, card, check, bank_transfer."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "methods")
         methods = ["cash", "card", "check", "bank_transfer"]
@@ -190,7 +191,7 @@ class TestPaymentCRUD:
 class TestPaymentErrors:
     """Payment endpoint error handling."""
 
-    def test_create_missing_fields(self, test_admin_headers: dict):
+    def test_create_missing_fields(self, test_admin_headers: dict) -> None:
         """Missing required invoice_id returns 422."""
         resp = httpx.post(
             f"{SERVER_URL}/api/payments",
@@ -200,7 +201,7 @@ class TestPaymentErrors:
         )
         assert resp.status_code == 422
 
-    def test_create_bad_amount(self, test_admin_headers: dict):
+    def test_create_bad_amount(self, test_admin_headers: dict) -> None:
         """Zero or negative amounts are rejected by Pydantic."""
         for bad_amt in [0, -1, -100]:
             resp = httpx.post(
@@ -211,7 +212,7 @@ class TestPaymentErrors:
             )
             assert resp.status_code == 422, f"Amount {bad_amt} should be rejected"
 
-    def test_unauthorized_access(self, client: httpx.Client):
+    def test_unauthorized_access(self, client: httpx.Client) -> None:
         """Payment endpoints require auth."""
         for path in ["/api/payments"]:
             resp = client.get(path, timeout=10)

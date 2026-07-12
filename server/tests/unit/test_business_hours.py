@@ -1,17 +1,13 @@
 """Unit tests for business_hours module."""
 
 import json
-import os
 import sys
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
 
 import pytest
 
 
 @pytest.fixture(autouse=True)
-def clear_business_hours_cache():
+def clear_business_hours_cache() -> None:
     """Ensure fresh imports for each test."""
     if "business_hours" in sys.modules:
         del sys.modules["business_hours"]
@@ -30,12 +26,12 @@ def mock_settings_path(tmp_path):
 
 
 class TestBusinessHours:
-    def test_load_settings_no_file(self, mock_settings_path):
+    def test_load_settings_no_file(self, mock_settings_path) -> None:
         from business_hours import _load_settings
 
         assert _load_settings() is None
 
-    def test_load_settings_valid_json(self, mock_settings_path):
+    def test_load_settings_valid_json(self, mock_settings_path) -> None:
         from business_hours import _load_settings
 
         test_data = {"monday": {"enabled": True, "open": "09:00", "close": "18:00"}}
@@ -43,15 +39,15 @@ class TestBusinessHours:
         result = _load_settings()
         assert result == test_data
 
-    def test_load_settings_parse_error(self, mock_settings_path):
+    def test_load_settings_parse_error(self, mock_settings_path) -> None:
         from business_hours import _load_settings
 
         mock_settings_path.write_text("not valid json")
         result = _load_settings()
         assert result is None
 
-    def test_save_settings_fills_missing_days(self, mock_settings_path):
-        from business_hours import _save_settings, DAY_NAMES
+    def test_save_settings_fills_missing_days(self, mock_settings_path) -> None:
+        from business_hours import DAY_NAMES, _save_settings
 
         partial = {"monday": {"enabled": True, "open": "09:00", "close": "18:00"}}
         _save_settings(partial)
@@ -59,7 +55,7 @@ class TestBusinessHours:
         for day in DAY_NAMES:
             assert day in saved
 
-    def test_get_settings_from_file(self, mock_settings_path):
+    def test_get_settings_from_file(self, mock_settings_path) -> None:
         from business_hours import get_settings
 
         test_data = {"monday": {"enabled": True, "open": "09:00", "close": "18:00"}}
@@ -67,31 +63,31 @@ class TestBusinessHours:
         result = get_settings()
         assert result == test_data
 
-    def test_get_settings_no_file(self, mock_settings_path):
+    def test_get_settings_no_file(self, mock_settings_path) -> None:
         from business_hours import get_settings
 
         mock_settings_path.unlink(missing_ok=True)
         result = get_settings()
         assert result is None
 
-    def test_update_settings(self, mock_settings_path):
-        from business_hours import update_settings, DAY_NAMES
+    def test_update_settings(self, mock_settings_path) -> None:
+        from business_hours import DAY_NAMES, update_settings
 
         data = {"monday": {"enabled": True, "open": "08:00", "close": "16:00"}}
         result = update_settings(data)
-        assert result["monday"]["enabled"] == True
+        assert result["monday"]["enabled"]
         assert result["monday"]["open"] == "08:00"
         assert result["monday"]["close"] == "16:00"
         for day in DAY_NAMES:
             assert day in result
-        assert result["tuesday"]["enabled"] == False
+        assert not result["tuesday"]["enabled"]
         assert result["tuesday"]["open"] == "09:00"
 
-    def test_update_settings_empty_day(self, mock_settings_path):
+    def test_update_settings_empty_day(self, mock_settings_path) -> None:
         from business_hours import update_settings
 
         result = update_settings({})
         for day in ["monday", "tuesday", "wednesday"]:
-            assert result[day]["enabled"] == False
+            assert not result[day]["enabled"]
             assert result[day]["open"] == "09:00"
             assert result[day]["close"] == "18:00"

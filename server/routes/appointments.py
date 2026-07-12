@@ -9,6 +9,11 @@ from fastapi import APIRouter, Depends
 
 from config import settings
 from helpers import (
+
+# FIXME: S608 - Possible SQL injection via f-string queries
+# FIXME: RUF006 - asyncio.ensure_future without storing reference
+# FIXME: D103 - Missing docstrings
+
     _call,
     _fire_webhook,
     _log_audit,

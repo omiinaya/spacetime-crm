@@ -14,6 +14,7 @@ import httpx
 
 from client import get_http_client
 
+
 logger = logging.getLogger(__name__)
 
 # ── Event type constants ────────────────────────────────────────

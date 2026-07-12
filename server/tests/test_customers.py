@@ -1,14 +1,14 @@
 """Customer CRUD and tenant isolation integration tests."""
 
-import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, test_admin_headers, _track_entity
+
+from .conftest import SERVER_URL, _track_entity, assert_ok, create_customer
 
 
 class TestCustomerCRUD:
     """Basic customer create, read, update, delete."""
 
-    def test_create_customer(self, test_admin_headers: dict, session_suffix: str):
+    def test_create_customer(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create a customer returns ok."""
         from .conftest import unique_suffix
 
@@ -37,7 +37,7 @@ class TestCustomerCRUD:
                 _track_entity("customer", c["id"])
                 break
 
-    def test_search_customer(self, test_admin_headers: dict, session_suffix: str):
+    def test_search_customer(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Search by email works."""
         from .conftest import unique_suffix
 
@@ -55,10 +55,10 @@ class TestCustomerCRUD:
         data = assert_ok(resp)
         assert any(c["email"] == email for c in data.get("customers", []))
 
-    def test_update_customer(self, test_admin_headers: dict, session_suffix: str):
+    def test_update_customer(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Update customer fields."""
         customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, first_name="Update", last_name="Test"
+            test_admin_headers, session_suffix=session_suffix, first_name="Update", last_name="Test",
         )
         cid = customer.get("id")
         assert cid, f"No customer ID returned: {customer}"
@@ -83,10 +83,10 @@ class TestCustomerCRUD:
         assert found is not None
         assert found["first_name"] == "Updated"
 
-    def test_delete_customer(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_customer(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Delete a customer (admin only)."""
         customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, first_name="Delete", last_name="Me"
+            test_admin_headers, session_suffix=session_suffix, first_name="Delete", last_name="Me",
         )
         cid = customer.get("id")
         assert cid
@@ -112,7 +112,7 @@ class TestCustomerCRUD:
 class TestCustomerErrors:
     """Customer endpoint error handling."""
 
-    def test_create_missing_fields(self, test_admin_headers: dict):
+    def test_create_missing_fields(self, test_admin_headers: dict) -> None:
         """Missing required fields now return 422 with Pydantic validation."""
         resp = httpx.post(
             f"{SERVER_URL}/api/customers",
@@ -124,7 +124,7 @@ class TestCustomerErrors:
         data = resp.json()
         assert "detail" in data
 
-    def test_get_nonexistent_customer(self, test_admin_headers: dict):
+    def test_get_nonexistent_customer(self, test_admin_headers: dict) -> None:
         """GET non-existent customer returns appropriate error."""
         resp = httpx.get(
             f"{SERVER_URL}/api/customers",
@@ -135,7 +135,7 @@ class TestCustomerErrors:
         data = assert_ok(resp)
         assert len(data.get("customers", [])) == 0
 
-    def test_delete_nonexistent(self, test_admin_headers: dict):
+    def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         """DELETE non-existent ID should not crash."""
         resp = httpx.delete(
             f"{SERVER_URL}/api/customers/nonexistent-id-12345",
@@ -151,7 +151,7 @@ class TestSensitiveFieldExclusion:
 
     SENSITIVE_FIELDS = {"portal_password_hash"}
 
-    def test_list_customers_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str):
+    def test_list_customers_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Customer list endpoint does not return sensitive fields."""
         from .conftest import unique_suffix
 
@@ -171,7 +171,7 @@ class TestSensitiveFieldExclusion:
             for field in self.SENSITIVE_FIELDS:
                 assert field not in c, f"Sensitive field '{field}' leaked in customer list response: {c}"
 
-    def test_customer_geolocations_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str):
+    def test_customer_geolocations_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Customer geolocations endpoint does not return sensitive fields."""
         from .conftest import unique_suffix
 
@@ -190,7 +190,7 @@ class TestSensitiveFieldExclusion:
             for field in self.SENSITIVE_FIELDS:
                 assert field not in loc, f"Sensitive field '{field}' leaked in geolocations response"
 
-    def test_find_duplicates_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str):
+    def test_find_duplicates_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Customer duplicates endpoint does not return sensitive fields."""
         from .conftest import unique_suffix
 
@@ -199,7 +199,8 @@ class TestSensitiveFieldExclusion:
         # Create two customers with the same email to trigger duplicate detection
         c1 = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
         c2 = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
-        assert c1.get("id") and c2.get("id")
+        assert c1.get("id")
+        assert c2.get("id")
 
         resp = httpx.get(
             f"{SERVER_URL}/api/customers/duplicates",
@@ -216,10 +217,10 @@ class TestSensitiveFieldExclusion:
 class TestTenantIsolation:
     """Verify tenant_id is correctly set on created entities."""
 
-    def test_customer_has_tenant_id(self, test_admin_headers: dict, session_suffix: str):
+    def test_customer_has_tenant_id(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Created customer has a non-empty tenant_id."""
         customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, first_name="Tenant", last_name="Check"
+            test_admin_headers, session_suffix=session_suffix, first_name="Tenant", last_name="Check",
         )
         assert customer.get("tenant_id"), f"Missing tenant_id: {customer}"
         assert len(customer["tenant_id"]) > 5, f"tenant_id too short: {customer}"

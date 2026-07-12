@@ -5,11 +5,13 @@ All entities tracked for session cleanup.
 Uses isolated tenant admin (not global admin) for all admin operations.
 """
 
+import time
+
 import bcrypt
 import httpx
 import pytest
-import time
-from .conftest import SERVER_URL, assert_ok, _track_entity, test_admin_headers
+
+from .conftest import SERVER_URL, _track_entity, assert_ok
 
 _PORTAL_PW = "TestPortal123!"
 
@@ -128,22 +130,22 @@ def _create_portal_invoice(customer_id: str, admin_headers: dict, tag: str = "")
 class TestPortalAuth:
     """Portal login and profile."""
 
-    def test_login_invalid(self, client: httpx.Client):
+    def test_login_invalid(self, client: httpx.Client) -> None:
         resp = client.post("/api/portal/login", json={"email": "nobody@test.com", "password": "wrong"}, timeout=10)
         assert resp.status_code == 401
 
-    def test_login_missing_fields(self, client: httpx.Client):
+    def test_login_missing_fields(self, client: httpx.Client) -> None:
         resp = client.post("/api/portal/login", json={}, timeout=10)
         assert resp.status_code == 422
 
-    def test_portal_me(self, portal_headers: dict, portal_email: str):
+    def test_portal_me(self, portal_headers: dict, portal_email: str) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/portal/me", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert data["email"] == portal_email
         assert "first_name" in data
         assert "last_name" in data
 
-    def test_portal_stats(self, portal_headers: dict):
+    def test_portal_stats(self, portal_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/portal/stats", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "total_tickets" in data
@@ -155,25 +157,25 @@ class TestPortalAuth:
 class TestPortalTickets:
     """Customer ticket viewing and note adding — each test creates its own ticket."""
 
-    def test_list_tickets(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+    def test_list_tickets(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict) -> None:
         _create_portal_ticket(portal_customer_id, admin_headers, "list")
         resp = httpx.get(f"{SERVER_URL}/api/portal/tickets", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "tickets" in data
         assert len(data["tickets"]) >= 1
 
-    def test_ticket_detail(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+    def test_ticket_detail(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict) -> None:
         tid = _create_portal_ticket(portal_customer_id, admin_headers, "detail")
         resp = httpx.get(f"{SERVER_URL}/api/portal/tickets/{tid}", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "ticket" in data
         assert data["ticket"]["id"] == tid
 
-    def test_ticket_nonexistent(self, portal_headers: dict):
+    def test_ticket_nonexistent(self, portal_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/portal/tickets/fake-id-99999", headers=portal_headers, timeout=10)
         assert resp.status_code == 404
 
-    def test_add_note(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+    def test_add_note(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict) -> None:
         tid = _create_portal_ticket(portal_customer_id, admin_headers, "note")
         resp = httpx.post(
             f"{SERVER_URL}/api/portal/tickets/{tid}/notes",
@@ -187,14 +189,14 @@ class TestPortalTickets:
 class TestPortalInvoices:
     """Customer invoice viewing — each test creates its own invoice."""
 
-    def test_list_invoices(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+    def test_list_invoices(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict) -> None:
         _create_portal_invoice(portal_customer_id, admin_headers, "list")
         resp = httpx.get(f"{SERVER_URL}/api/portal/invoices", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "invoices" in data
         assert len(data["invoices"]) >= 1
 
-    def test_invoice_detail(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+    def test_invoice_detail(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict) -> None:
         inv_id = _create_portal_invoice(portal_customer_id, admin_headers, "detail")
         resp = httpx.get(f"{SERVER_URL}/api/portal/invoices/{inv_id}", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
@@ -203,7 +205,7 @@ class TestPortalInvoices:
         assert "line_items" in data["invoice"]
         assert "payments" in data["invoice"]
 
-    def test_invoice_nonexistent(self, portal_headers: dict):
+    def test_invoice_nonexistent(self, portal_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/portal/invoices/fake-999", headers=portal_headers, timeout=10)
         assert resp.status_code == 404
 
@@ -211,7 +213,7 @@ class TestPortalInvoices:
 class TestPortalPayments:
     """Customer making payments and checking payment methods."""
 
-    def test_make_payment(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict):
+    def test_make_payment(self, portal_headers: dict, portal_customer_id: str, admin_headers: dict) -> None:
         inv_id = _create_portal_invoice(portal_customer_id, admin_headers, "payment")
         # Add a line item so invoice has a balance
         httpx.post(
@@ -229,7 +231,7 @@ class TestPortalPayments:
         )
         assert_ok(resp)
 
-    def test_payment_invalid_amount(self, portal_headers: dict):
+    def test_payment_invalid_amount(self, portal_headers: dict) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/portal/payments",
             json={"invoice_id": "fake", "amount": 0, "method": "card"},
@@ -238,7 +240,7 @@ class TestPortalPayments:
         )
         assert resp.status_code == 422
 
-    def test_list_payment_methods(self, portal_headers: dict):
+    def test_list_payment_methods(self, portal_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/portal/payment-methods", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "payment_methods" in data
@@ -247,7 +249,7 @@ class TestPortalPayments:
 class TestPortalAppointments:
     """Customer appointment viewing."""
 
-    def test_list_appointments(self, portal_headers: dict):
+    def test_list_appointments(self, portal_headers: dict) -> None:
         resp = httpx.get(f"{SERVER_URL}/api/portal/appointments", headers=portal_headers, timeout=10)
         data = assert_ok(resp)
         assert "appointments" in data
@@ -258,7 +260,7 @@ class TestPortalAppointments:
 class TestPortalSettings:
     """Customer password change."""
 
-    def test_set_password(self, portal_headers: dict, portal_email: str, portal_token: str):
+    def test_set_password(self, portal_headers: dict, portal_email: str, portal_token: str) -> None:
         resp = httpx.post(
             f"{SERVER_URL}/api/portal/customer/set-password",
             json={"password": "NewPortalPass456!"},
@@ -268,7 +270,7 @@ class TestPortalSettings:
         assert_ok(resp)
 
         resp = httpx.post(
-            f"{SERVER_URL}/api/portal/login", json={"email": portal_email, "password": "NewPortalPass456!"}, timeout=10
+            f"{SERVER_URL}/api/portal/login", json={"email": portal_email, "password": "NewPortalPass456!"}, timeout=10,
         )
         assert resp.status_code == 200, f"New password login: {resp.text[:200]}"
 
@@ -276,13 +278,13 @@ class TestPortalSettings:
 class TestPortalErrors:
     """Portal auth enforcement."""
 
-    def test_admin_token_rejected(self, test_admin_headers: dict):
+    def test_admin_token_rejected(self, test_admin_headers: dict) -> None:
         """Admin token (even from isolated tenant) should be rejected by portal endpoints."""
         headers = test_admin_headers
         resp = httpx.get(f"{SERVER_URL}/api/portal/me", headers=headers, timeout=10)
         assert resp.status_code == 401, f"Admin token should be rejected, got {resp.status_code}"
 
-    def test_no_auth(self, client: httpx.Client):
+    def test_no_auth(self, client: httpx.Client) -> None:
         paths = [
             "/api/portal/me",
             "/api/portal/stats",

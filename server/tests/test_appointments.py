@@ -3,16 +3,15 @@
 Each test method creates its own data for STDB state isolation.
 """
 
-import pytest
 import httpx
+
 from .conftest import (
     SERVER_URL,
+    _stdb_sql,
+    _track_entity,
     assert_ok,
     create_customer,
     unique_suffix,
-    _stdb_sql,
-    _track_entity,
-    test_admin_headers,
 )
 
 
@@ -26,7 +25,7 @@ def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suff
     title = overrides.get("title", f"Appt-{session_suffix}-{suf}")
     email = f"appt-cust-{session_suffix}-{suf}@example.com"
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Test{suf}", email=email
+        test_admin_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Test{suf}", email=email,
     )
     cid = c.get("id")
     assert cid
@@ -56,12 +55,12 @@ def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suff
 class TestAppointmentCRUD:
     """Appointment create, list, status update, delete lifecycle."""
 
-    def test_create_appointment(self, test_admin_headers: dict, session_suffix: str):
+    def test_create_appointment(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create a basic appointment."""
         appt_id = _create_appointment(test_admin_headers, session_suffix, "create", title="Basic Appointment")
         assert appt_id, "Expected non-empty appointment ID"
 
-    def test_list_appointments(self, test_admin_headers: dict):
+    def test_list_appointments(self, test_admin_headers: dict) -> None:
         """List appointments returns paginated results."""
         resp = httpx.get(f"{SERVER_URL}/api/appointments", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -69,7 +68,7 @@ class TestAppointmentCRUD:
         assert "total" in data
         assert isinstance(data["appointments"], list)
 
-    def test_update_appointment_status(self, test_admin_headers: dict, session_suffix: str):
+    def test_update_appointment_status(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Update appointment status to completed."""
         appt_id = _create_appointment(test_admin_headers, session_suffix, "status", title="Status Test")
 
@@ -82,7 +81,7 @@ class TestAppointmentCRUD:
             )
             assert_ok(resp)
 
-    def test_delete_appointment(self, test_admin_headers: dict, session_suffix: str):
+    def test_delete_appointment(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Delete an appointment (admin only)."""
         appt_id = _create_appointment(test_admin_headers, session_suffix, "delete", title="Delete Me")
         resp = httpx.delete(f"{SERVER_URL}/api/appointments/{appt_id}", headers=test_admin_headers, timeout=10)
@@ -102,7 +101,7 @@ class TestRecurringAppointments:
         )
         return c["id"]
 
-    def test_create_recurring_appointment(self, test_admin_headers: dict, session_suffix: str):
+    def test_create_recurring_appointment(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create an appointment with recurrence rule."""
         cid = self._make_customer(test_admin_headers, session_suffix)
         resp = httpx.post(
@@ -119,14 +118,14 @@ class TestRecurringAppointments:
         )
         assert_ok(resp)
 
-    def test_list_recurring_series(self, test_admin_headers: dict):
+    def test_list_recurring_series(self, test_admin_headers: dict) -> None:
         """List recurring series returns series with occurrence counts."""
         resp = httpx.get(f"{SERVER_URL}/api/appointments/recurring", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "series" in data
         assert isinstance(data["series"], list)
 
-    def test_generate_next_occurrence(self, test_admin_headers: dict, session_suffix: str):
+    def test_generate_next_occurrence(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Generate next occurrence of a recurring series."""
         # Create an appointment with recurrence via the helper
         suf = unique_suffix()
@@ -135,7 +134,7 @@ class TestRecurringAppointments:
 
         # Find the series via recurring API (filter by our unique title)
         r = httpx.get(f"{SERVER_URL}/api/appointments/recurring", headers=test_admin_headers, timeout=10)
-        series_list = r.json().get("series", [])
+        r.json().get("series", [])
         # Find our series (the one matching our appointment's series_id)
         series = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
         assert len(series) > 0
@@ -155,7 +154,7 @@ class TestRecurringAppointments:
         assert data.get("start_time", 0) > 0, f"Expected start_time, got: {data}"
         assert data.get("end_time", 0) > 0
 
-    def test_set_recurrence_on_existing(self, test_admin_headers: dict, session_suffix: str):
+    def test_set_recurrence_on_existing(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Set recurrence rule on an existing appointment."""
         appt_id = _create_appointment(test_admin_headers, session_suffix, "setrecur", title="Make Recurring")
 
@@ -167,7 +166,7 @@ class TestRecurringAppointments:
         )
         assert_ok(resp)
 
-    def test_recurring_series_with_children(self, test_admin_headers: dict, session_suffix: str):
+    def test_recurring_series_with_children(self, test_admin_headers: dict, session_suffix: str) -> None:
         """After generating occurrences, series shows child count."""
         suf = unique_suffix()
         title = f"MultiGen-{session_suffix}-{suf}"
@@ -197,7 +196,7 @@ class TestRecurringAppointments:
 class TestAppointmentErrors:
     """Appointment error handling."""
 
-    def test_create_missing_title(self, test_admin_headers: dict):
+    def test_create_missing_title(self, test_admin_headers: dict) -> None:
         """Missing required title returns 422."""
         resp = httpx.post(
             f"{SERVER_URL}/api/appointments",
@@ -207,7 +206,7 @@ class TestAppointmentErrors:
         )
         assert resp.status_code == 422
 
-    def test_unauthorized_access(self, client: httpx.Client):
+    def test_unauthorized_access(self, client: httpx.Client) -> None:
         """Appointment endpoints require auth."""
         for path in ["/api/appointments", "/api/appointments/recurring", "/api/appointments/due-soon"]:
             resp = client.get(path, timeout=10)
@@ -217,7 +216,7 @@ class TestAppointmentErrors:
 class TestAppointmentReminders:
     """Appointment reminder endpoints."""
 
-    def test_due_soon_returns_appointments(self, test_admin_headers: dict):
+    def test_due_soon_returns_appointments(self, test_admin_headers: dict) -> None:
         """Due-soon endpoint returns appointments (may be empty)."""
         resp = httpx.get(f"{SERVER_URL}/api/appointments/due-soon", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
@@ -225,18 +224,18 @@ class TestAppointmentReminders:
         assert "count" in data
         assert isinstance(data["appointments"], list)
 
-    def test_due_soon_unauthorized(self, client: httpx.Client):
+    def test_due_soon_unauthorized(self, client: httpx.Client) -> None:
         """Due-soon endpoint requires auth."""
         resp = client.get("/api/appointments/due-soon", timeout=10)
         assert resp.status_code in (401, 403)
 
-    def test_send_reminders_returns_ok(self, test_admin_headers: dict):
+    def test_send_reminders_returns_ok(self, test_admin_headers: dict) -> None:
         """Send-reminders endpoint returns ok (gracefully handles no upcoming appts)."""
         resp = httpx.post(f"{SERVER_URL}/api/appointments/send-reminders", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "sent" in data
 
-    def test_send_reminders_unauthorized(self, client: httpx.Client):
+    def test_send_reminders_unauthorized(self, client: httpx.Client) -> None:
         """Send-reminders endpoint requires auth."""
         resp = client.post("/api/appointments/send-reminders", timeout=10)
         assert resp.status_code in (401, 403)

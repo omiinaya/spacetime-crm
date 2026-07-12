@@ -8,6 +8,10 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from helpers import (
+
+# FIXME: S608 - Possible SQL injection via f-string queries
+# FIXME: D103 - Missing docstrings
+
     _call,
     _log_audit,
     _paginated,
