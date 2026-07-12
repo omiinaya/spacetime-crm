@@ -10,7 +10,7 @@ import { Select } from '../ui/select';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
 
-const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const DAY_KEYS: (keyof BusinessHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS: Record<string, string> = {
   monday: 'Monday',
   tuesday: 'Tuesday',
@@ -53,7 +53,7 @@ export default function BusinessHoursSection() {
     onError: () => toast.error('Failed to save business hours'),
   });
 
-  const updateDay = (day: string, field: string, value: boolean | string) => {
+  const updateDay = (day: keyof BusinessHours, field: string, value: boolean | string) => {
     setHours((prev) => ({
       ...prev,
       [day]: { ...prev[day as keyof BusinessHours], [field]: value },
