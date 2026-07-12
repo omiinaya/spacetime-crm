@@ -68,6 +68,6 @@ async def health_ready():
         if resp.status_code < 500:
             return {"status": "ok"}
     except Exception:
-    logger.warning("except Exception:")
+        logger.warning("except Exception:")
         pass
     return {"status": "unavailable"}

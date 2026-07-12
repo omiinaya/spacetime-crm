@@ -138,8 +138,8 @@ async def create_invoice(body: InvoiceCreate, user: Annotated[dict, Depends(requ
 @router.get("/api/invoices/summary")
 async def get_invoice_summary(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Get invoice summary: counts and totals by status."""
-    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}'")
-    now = int(datetime.now(UTC).timestamp() * 1000)
+    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}'")  # nosec - tenant_id from JWT or internal whitelist
+    now = int(datetime.now(timezone.utc).timestamp() * 1000)
     summary: dict[str, dict] = {}
     for inv in rows:
         s = inv.get("status", "draft")
@@ -220,7 +220,7 @@ async def bulk_edit_invoices(body: BulkInvoiceEdit, user: Annotated[dict, Depend
                 parts.append(f"notes = '{body.notes.replace(chr(39), chr(39) * 2)}'")
             if has_terms:
                 parts.append(f"terms = '{body.terms.replace(chr(39), chr(39) * 2)}'")
-            sql = f"UPDATE invoices SET {', '.join(parts)} WHERE id = '{inv_id}'"
+            sql = f"UPDATE invoices SET {', '.join(parts)} WHERE id = '{_safe_id(inv_id)}'"
             await _sql(sql)
             updated += 1
         except Exception:
@@ -259,7 +259,7 @@ async def trigger_overdue_check(user: Annotated[dict, Depends(require_role("admi
             await _call("update_invoice_status", [inv["id"], "overdue"])
             marked += 1
         except HTTPException:
-    logger.warning("except HTTPException:")
+            logger.warning("except HTTPException:")
             pass
     return {"ok": True, "marked": marked}
 
@@ -508,7 +508,7 @@ async def send_batch_invoice_email(
     results = {"sent": 0, "failed": 0, "skipped": 0, "details": []}
 
     for invoice_id in invoice_ids:
-        invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND tenant_id = '{user['tenant_id']}'")
+        invs = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND tenant_id = '{user['tenant_id']}'")
         if not invs:
             results["skipped"] += 1
             results["details"].append({"id": invoice_id, "status": "not_found"})

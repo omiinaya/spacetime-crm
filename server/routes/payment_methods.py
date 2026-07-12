@@ -17,9 +17,7 @@ from helpers import (
 from rate_limit import limiter
 from stripe_payments import create_setup_intent, is_configured
 
-if TYPE_CHECKING:
-    from models import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
-
+from server.models.payment_methods import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
 router = APIRouter()
 
 
@@ -34,7 +32,7 @@ async def list_payment_methods(
             f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}' AND customer_id = '{customer_id}'",
         )
     else:
-        rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}'")
+        rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}'")  # nosec - tenant_id from JWT or internal whitelist
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 

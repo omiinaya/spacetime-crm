@@ -21,9 +21,7 @@ from stripe_payments import verify_webhook
 from webhooks import ALL_EVENTS as WEBHOOK_EVENTS
 from webhooks import _deliver
 
-if TYPE_CHECKING:
-    from models import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
-
+from server.models.webhook import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
 router = APIRouter()
 
 

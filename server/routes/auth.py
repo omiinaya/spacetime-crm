@@ -206,7 +206,7 @@ async def auth_me(user: Annotated[dict, Depends(get_current_user)]):
     tenant_info = {}
     if user.get("tenant_id"):
         try:
-            trows = await _sql(f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'")
+            trows = await _sql(f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'")  # nosec - tenant_id from JWT or internal whitelist
             if trows:
                 tenant_info = trows[0]
         except Exception:

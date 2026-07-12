@@ -20,6 +20,10 @@ from helpers import (
     _paginated,
     _safe_id,
     _sql,
+    _call,
+    _sort,
+    _log_audit,
+    _fire_webhook,
     require_role,
 )
 from mail import (
@@ -210,7 +214,7 @@ async def get_appointments_due_soon(user: Annotated[dict, Depends(require_role("
     result = sorted(rows, key=lambda r: r.get("start_time", 0))
     for r in result:
         cust = await _sql(
-            f"SELECT first_name, last_name, email, mobile, phone FROM customer WHERE id = '{r.get('customer_id', '')}'",
+            f"SELECT first_name, last_name, email, mobile, phone FROM customer WHERE id = '{_safe_id(r.get('customer_id', ''))}'"
         )
         r["customer"] = cust[0] if cust else {}
 
@@ -233,7 +237,7 @@ async def send_appointment_reminders(user: Annotated[dict, Depends(require_role(
     sent = {"email": 0, "sms": 0, "skipped": 0}
     for appt in rows:
         cust = await _sql(
-            f"SELECT first_name, last_name, email, mobile, phone FROM customer WHERE id = '{appt.get('customer_id', '')}'",
+            f"SELECT first_name, last_name, email, mobile, phone FROM customer WHERE id = '{_safe_id(appt.get('customer_id', ''))}'"
         )
         if not cust:
             sent["skipped"] += 1

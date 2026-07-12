@@ -16,9 +16,7 @@ from helpers import (
 )
 from rate_limit import limiter
 
-if TYPE_CHECKING:
-    from models import UserCreate, UserSettingsUpdate
-
+from server.models.user import UserCreate, UserSettingsUpdate
 router = APIRouter()
 
 

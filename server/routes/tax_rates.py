@@ -15,9 +15,7 @@ from helpers import (
 )
 from rate_limit import limiter
 
-if TYPE_CHECKING:
-    from models import TaxRateCreate, TaxRateUpdate
-
+from server.models.tax_rates import TaxRateCreate, TaxRateUpdate
 router = APIRouter()
 
 

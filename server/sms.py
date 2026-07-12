@@ -156,9 +156,7 @@ async def test_connection() -> dict:
             }
         return {"ok": False, "error": f"Twilio API error: {resp.status_code}"}
     except Exception as e:
-    logger.exception("Connection test failed")
-
-        return {"ok": False, "error": str(e)}
+        logger.exception("Connection test failed")
         return {"ok": False, "error": str(e)}
 
 

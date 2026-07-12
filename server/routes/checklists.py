@@ -16,9 +16,7 @@ from helpers import (
 )
 from rate_limit import limiter
 
-if TYPE_CHECKING:
-    from models import ChecklistTemplateCreate, ChecklistTemplateUpdate
-
+from server.models.checklist import ChecklistTemplateCreate, ChecklistTemplateUpdate
 router = APIRouter()
 
 

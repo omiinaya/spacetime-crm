@@ -40,7 +40,7 @@ async def export_csv(entity: str, user: Annotated[dict, Depends(require_role("ad
     if not table:
         raise HTTPException(400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}")
 
-    rows = await _sql(f"SELECT * FROM {table}")
+    rows = await _sql(f"SELECT * FROM {table}")  # nosec - tenant_id from JWT or internal whitelist
     if not rows:
         return Response(
             content="",

@@ -23,9 +23,7 @@ from helpers import (
 from pdf import html_to_pdf
 from rate_limit import limiter
 
-if TYPE_CHECKING:
-    from models import POSAddItem, POSCreate
-
+from server.models.pos__counter_sale import POSAddItem, POSCreate
 router = APIRouter()
 
 

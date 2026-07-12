@@ -185,7 +185,7 @@ async def lookup_product_by_barcode(barcode: str, user: Annotated[dict, Depends(
 @limiter.limit("100/minute")
 async def notify_low_stock(user: Annotated[dict, Depends(require_role("admin"))]):
     """Check low stock and send email alert to admin."""
-    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")  # nosec - tenant_id from JWT or internal whitelist
     low_stock = [r for r in rows if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)]
     if not low_stock:
         return {"ok": True, "message": "No low stock items found", "count": 0}

@@ -18,9 +18,7 @@ from helpers import (
 )
 from rate_limit import limiter
 
-if TYPE_CHECKING:
-    from models import POApprovalAction, POLineItemCreate, POReceiveItem, PurchaseOrderCreate, PurchaseOrderStatusUpdate
-
+from server.models.purchase_orders import POApprovalAction, POLineItemCreate, POReceiveItem, PurchaseOrderCreate, PurchaseOrderStatusUpdate
 router = APIRouter()
 
 

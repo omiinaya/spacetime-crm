@@ -22,9 +22,7 @@ from rate_limit import limiter
 from sms import _customer_phone as _sms_customer_phone
 from sms import _notify_estimate_approved as _sms_estimate_approved
 
-if TYPE_CHECKING:
-    from models import EstimateCreate, EstimateLineItemCreate, EstimateStatusUpdate
-
+from server.models.estimates import EstimateCreate, EstimateLineItemCreate, EstimateStatusUpdate
 router = APIRouter()
 
 

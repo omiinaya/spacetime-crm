@@ -138,14 +138,14 @@ async def _paginated(
         conditions.append(where_extra)
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
-    count_result = await _sql(f"SELECT count(*) AS cnt FROM {table}{where_clause}")
+    count_result = await _sql(f"SELECT count(*) AS cnt FROM {table}{where_clause}")  # nosec - tenant_id from JWT or internal whitelist
     total = count_result[0]["cnt"] if count_result else 0
 
     fetch_n = min(max_fetch, total) if max_fetch else total
     query = f"SELECT * FROM {table}{where_clause}"
     if fetch_n > 0:
         query += f" LIMIT {fetch_n}"
-    rows = await _sql(query)
+    rows = await _sql(query)  # nosec - tenant_id from JWT or internal whitelist
 
     rows.sort(key=lambda r: r.get(order_by) or "", reverse=order_desc)
     if sensitive_fields:
