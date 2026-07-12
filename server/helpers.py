@@ -25,7 +25,7 @@ security = HTTPBearer(auto_error=True)
 # ── Jinja2 template loader ────────────────────────────────────
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
-jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
+jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
 
 STATUS_LABELS = {
     "draft": "Draft",

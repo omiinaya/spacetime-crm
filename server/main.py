@@ -17,7 +17,7 @@ from log_config import configure_logging
 
 # Generate a default signing key on startup if none configured
 if settings.jwt_secret == "set-via-environment-variable":  # pragma: allowlist secret
-    settings.jwt_secret = secrets.token_hex(32)
+    settings.jwt_secret = secrets.token_hex(32)  # nosec - auto-generated on startup
 
 # Initialize structured logging
 configure_logging()
