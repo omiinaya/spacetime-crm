@@ -14,7 +14,10 @@ def admin_headers():
 
 class TestRecurringInvoices:
     def test_list_rules(self, client, monkeypatch) -> None:
-        mock_sql = AsyncMock(return_value=[{"id": "r1", "name": "Monthly rent"}])
+        mock_sql = AsyncMock(side_effect=[
+            [{"id": "r1", "name": "Monthly rent"}],  # main rules
+            [],                                       # line items
+        ])
         monkeypatch.setattr("routes.recurring_invoices._sql", mock_sql)
         resp = client.get("/api/recurring-invoices", headers=admin_headers())
         assert resp.status_code == 200

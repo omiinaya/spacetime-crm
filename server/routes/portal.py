@@ -21,14 +21,9 @@ from helpers import (
     _sql,
     security,
 )
-from models import (
-    PortalCheckoutSessionCreate,
-    PortalLoginRequest,
-    PortalNoteCreate,
-    PortalPaymentCreate,
-    PortalPayWithSavedCard,
-    PortalSetPassword,
-)
+from models.portal import PortalCheckoutSessionCreate, PortalLoginRequest, PortalNoteCreate, PortalPaymentCreate, PortalSetPassword
+
+from models.payment_methods import PortalPayWithSavedCard
 from rate_limit import limiter
 from stripe_payments import create_checkout_session, create_payment_intent
 from stripe_payments import is_configured as stripe_configured

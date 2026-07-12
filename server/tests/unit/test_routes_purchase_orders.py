@@ -27,7 +27,10 @@ class TestPurchaseOrders:
         assert resp.status_code == 404
 
     def test_get_po(self, client, monkeypatch) -> None:
-        mock_sql = AsyncMock(return_value=[{"id": "po1", "number": "PO-001"}])
+        mock_sql = AsyncMock(side_effect=[
+            [{"id": "po1", "number": "PO-001"}],  # main po
+            [],                                    # line items
+        ])
         monkeypatch.setattr("routes.purchase_orders._sql", mock_sql)
         resp = client.get("/api/purchase-orders/po1", headers=admin_headers())
         assert resp.status_code == 200

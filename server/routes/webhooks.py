@@ -21,7 +21,8 @@ from stripe_payments import verify_webhook
 from webhooks import ALL_EVENTS as WEBHOOK_EVENTS
 from webhooks import _deliver
 
-from server.models.webhook import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
+from models.webhook import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
+
 router = APIRouter()
 
 

@@ -19,17 +19,11 @@ from helpers import (
     logger,
 )
 from mail import send_email as _send_email
-from models import (
-    CompleteLoginRequest,
-    Disable2FARequest,
-    ForgotPasswordRequest,
-    LoginRequest,
-    PosLoginRequest,
-    ResetPasswordRequest,
-    SetPasswordRequest,
-    SetPinRequest,
-    Setup2FARequest,
-)
+from models.twofa import CompleteLoginRequest, Disable2FARequest, PosLoginRequest, SetPinRequest, Setup2FARequest
+
+from models.portal import ForgotPasswordRequest, ResetPasswordRequest
+from models.auth import LoginRequest, SetPasswordRequest
+
 from rate_limit import limiter
 
 router = APIRouter()

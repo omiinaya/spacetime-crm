@@ -21,7 +21,8 @@ from helpers import (
 from mail import send_email
 from rate_limit import limiter
 
-from server.models.scheduled_reports import ScheduledReportCreate, ScheduledReportUpdate
+from models.scheduled_reports import ScheduledReportCreate, ScheduledReportUpdate
+
 router = APIRouter()
 
 

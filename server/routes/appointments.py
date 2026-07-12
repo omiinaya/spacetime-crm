@@ -46,8 +46,8 @@ from sms import (
     _notify_appointment_reminder as _sms,
 )
 
-if TYPE_CHECKING:
-    from models import AppointmentCreate, AppointmentRecurrence, AppointmentStatusUpdate, GenerateNextOccurrence
+from models.appointments import AppointmentCreate, AppointmentRecurrence, AppointmentStatusUpdate, GenerateNextOccurrence
+
 
 router = APIRouter()
 

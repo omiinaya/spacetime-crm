@@ -19,7 +19,8 @@ from helpers import (
 )
 from rate_limit import limiter
 
-from server.models.recurring_invoices import RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
+from models.recurring_invoices import RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
+
 router = APIRouter()
 
 

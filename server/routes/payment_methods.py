@@ -17,7 +17,8 @@ from helpers import (
 from rate_limit import limiter
 from stripe_payments import create_setup_intent, is_configured
 
-from server.models.payment_methods import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
+from models.payment_methods import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
+
 router = APIRouter()
 
 

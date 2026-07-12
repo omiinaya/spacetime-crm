@@ -23,7 +23,8 @@ from helpers import (
 from pdf import html_to_pdf
 from rate_limit import limiter
 
-from server.models.pos__counter_sale import POSAddItem, POSCreate
+from models.pos_counter_sale import POSAddItem, POSCreate
+
 router = APIRouter()
 
 

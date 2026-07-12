@@ -47,15 +47,8 @@ from sms import (
     _notify_overdue_reminder as _sms_reminder,
 )
 
-if TYPE_CHECKING:
-    from models import (
-        BulkInvoiceEdit,
-        BulkInvoiceStatusUpdate,
-        InvoiceCreate,
-        InvoiceLineItemCreate,
-        InvoiceStatusUpdate,
-        InvoiceTaxRateUpdate,
-    )
+from models.invoices import BulkInvoiceEdit, BulkInvoiceStatusUpdate, InvoiceCreate, InvoiceLineItemCreate, InvoiceStatusUpdate, InvoiceTaxRateUpdate
+
 
 router = APIRouter()
 

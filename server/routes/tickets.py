@@ -31,17 +31,9 @@ from rate_limit import limiter
 from sms import _customer_phone as _sms_customer_phone
 from sms import _notify_ticket_status_change as _sms_ticket_status
 
-if TYPE_CHECKING:
-    from models import (
-        ChecklistApply,
-        ChecklistToggle,
-        TicketAssign,
-        TicketCreate,
-        TicketNoteCreate,
-        TicketStatusUpdate,
-        TicketTimerStart,
-    )
+from models.checklist import ChecklistApply, ChecklistToggle
 
+from models.tickets import TicketAssign, TicketCreate, TicketNoteCreate, TicketStatusUpdate, TicketTimerStart
 router = APIRouter()
 
 

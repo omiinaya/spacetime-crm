@@ -19,7 +19,8 @@ from helpers import (
 )
 from rate_limit import limiter
 
-from server.models.custom_fields import CustomFieldDefinitionCreate, CustomFieldValuesUpdate
+from models.custom_fields import CustomFieldDefinitionCreate, CustomFieldValuesUpdate
+
 router = APIRouter()
 
 

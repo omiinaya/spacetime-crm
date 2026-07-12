@@ -16,7 +16,8 @@ from helpers import (
 )
 from rate_limit import limiter
 
-from server.models.checklist import ChecklistTemplateCreate, ChecklistTemplateUpdate
+from models.checklist import ChecklistTemplateCreate, ChecklistTemplateUpdate
+
 router = APIRouter()
 
 

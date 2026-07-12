@@ -18,8 +18,9 @@ from helpers import (
 )
 from rate_limit import limiter
 
-if TYPE_CHECKING:
-    from models import TenantCreate, TenantMemberAdd, TenantMemberRoleUpdate, TenantMigrate, TenantUpdate
+from models.tenants import TenantCreate, TenantMemberAdd, TenantMemberRoleUpdate, TenantUpdate
+
+from models.portal import TenantMigrate
 
 router = APIRouter()
 

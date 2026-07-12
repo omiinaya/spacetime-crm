@@ -14,7 +14,10 @@ def admin_headers():
 
 class TestWebhooks:
     def test_list_subscriptions(self, client, monkeypatch) -> None:
-        mock_ws = AsyncMock(return_value=[{"id": "ws1", "url": "http://example.com/hook"}])
+        mock_ws = AsyncMock(side_effect=[
+            [{"id": "ws1", "url": "http://example.com/hook"}],  # subscription
+            [],                                                 # events
+        ])
         monkeypatch.setattr("routes.webhooks._get_webhook_subscriptions", mock_ws)
         resp = client.get("/api/webhook-subscriptions", headers=admin_headers())
         assert resp.status_code == 200

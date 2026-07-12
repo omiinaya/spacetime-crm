@@ -23,8 +23,9 @@ from helpers import (
 from mail import _notify_low_stock
 from rate_limit import limiter
 
-if TYPE_CHECKING:
-    from models import InventoryAdjustmentCreate, ProductCreate, ProductQuantityUpdate, StockTransferRequest
+from models.inventory import InventoryAdjustmentCreate, StockTransferRequest
+
+from models.products import ProductCreate, ProductQuantityUpdate
 
 router = APIRouter()
 

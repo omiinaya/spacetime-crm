@@ -16,7 +16,8 @@ from helpers import (
 )
 from rate_limit import limiter
 
-from server.models.user import UserCreate, UserSettingsUpdate
+from models.user import UserCreate, UserSettingsUpdate
+
 router = APIRouter()
 
 

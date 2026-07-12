@@ -14,8 +14,13 @@ from helpers import (
 from mail import get_settings as _mail_get
 from mail import test_connection as _mail_test
 from mail import update_settings as _mail_update
-from server.models.business_hours import BusinessHoursUpdate
-from server.models.mail_sms_settings import MailSettingsUpdate, SMSSettingsUpdate
+from sms import get_settings as _sms_get
+from sms import test_connection as _sms_test
+from sms import update_settings as _sms_update
+from models.business_hours import BusinessHoursUpdate
+
+from models.mail_sms_settings import MailSettingsUpdate, SMSSettingsUpdate
+from rate_limit import limiter
 router = APIRouter()
 
 

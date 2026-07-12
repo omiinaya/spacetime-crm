@@ -24,8 +24,8 @@ from rate_limit import limiter
 from sms import _customer_phone as _sms_customer_phone
 from sms import _notify_payment_received as _sms_payment_received
 
-if TYPE_CHECKING:
-    from models import PaymentCreate
+from models.payments import PaymentCreate
+
 
 router = APIRouter()
 
