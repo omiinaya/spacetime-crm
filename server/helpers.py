@@ -5,19 +5,18 @@ Extracted from main.py to enable route splitting and reduce code duplication.
 
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any
 from pathlib import Path
-import asyncio
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Any
+
 import jwt
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jinja2 import Environment, FileSystemLoader
 
 from client import get_http_client
 from config import settings
-from webhooks import fire_event as _fire_webhook_event, ALL_EVENTS as WEBHOOK_EVENTS
+from webhooks import fire_event as _fire_webhook_event
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ async def _sql(query: str) -> list[dict[str, Any]]:
             schema = table_result.get("schema", {})
             cols = [e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})]
             for row in rows:
-                result.append(dict(zip(cols, row)))
+                result.append(dict(zip(cols, row, strict=False)))
     return result
 
 
@@ -177,7 +176,7 @@ def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
     return sorted(rows, key=sort_key, reverse=desc)
 
 
-async def _log_audit(user: dict, action: str, entity: str, entity_id: str, details: str = ""):
+async def _log_audit(user: dict, action: str, entity: str, entity_id: str, details: str = "") -> None:
     """Record an audit log entry. Fire-and-forget — never raises."""
     try:
         await _call(

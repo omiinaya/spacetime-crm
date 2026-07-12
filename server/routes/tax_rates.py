@@ -2,25 +2,27 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends
 
 from helpers import (
-    _sql,
-    _paginated,
     _call,
     _log_audit,
+    _paginated,
     require_role,
-    logger,
 )
-from models import TaxRateCreate, TaxRateUpdate
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import TaxRateCreate, TaxRateUpdate
 
 router = APIRouter()
 
 
 @router.get("/api/tax-rates")
 async def list_tax_rates(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List tax rates with pagination."""
     rows, total = await _paginated(
@@ -36,7 +38,7 @@ async def list_tax_rates(
 
 @router.post("/api/tax-rates")
 @limiter.limit("100/minute")
-async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role("admin"))):
+async def create_tax_rate(body: TaxRateCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call(
         "create_tax_rate",
         [
@@ -52,7 +54,7 @@ async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role
 
 @router.put("/api/tax-rates/{tax_id}")
 @limiter.limit("100/minute")
-async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: dict = Depends(require_role("admin"))):
+async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call(
         "update_tax_rate",
         [
@@ -68,7 +70,7 @@ async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: dict = Depends
 
 @router.delete("/api/tax-rates/{tax_id}")
 @limiter.limit("100/minute")
-async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_tax_rate(tax_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_tax_rate", [tax_id])
     await _log_audit(user, "delete", "tax_rate", tax_id)
     return {"ok": True}

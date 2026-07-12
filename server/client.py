@@ -7,7 +7,7 @@ without creating circular imports.
 from __future__ import annotations
 
 import httpx
-from httpx import AsyncClient, Limits, Timeout
+from httpx import Limits, Timeout
 
 _shared_client: httpx.AsyncClient | None = None
 

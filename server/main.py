@@ -9,12 +9,11 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from config import settings
 from log_config import configure_logging
-from helpers import logger
 
 # Generate a default signing key on startup if none configured
 if settings.jwt_secret == "set-via-environment-variable":  # pragma: allowlist secret
@@ -45,9 +44,10 @@ app.add_middleware(
 )
 
 # ── Route registration ────────────────────────────────────────
-from rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
+from rate_limit import limiter
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

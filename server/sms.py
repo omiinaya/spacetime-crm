@@ -9,10 +9,8 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
 
 from client import get_http_client
-import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +24,7 @@ def _load_settings() -> dict | None:
         with open(SETTINGS_PATH) as f:
             return json.load(f)
     except Exception as e:
-        logger.error("Failed to load SMS settings: %s", e)
+        logger.exception("Failed to load SMS settings: %s", e)
         return None
 
 
@@ -52,9 +50,9 @@ def update_settings(data: dict) -> dict:
         {
             "account_sid": data.get("account_sid", current.get("account_sid", "")),
             "from_number": data.get("from_number", current.get("from_number", "")),
-        }
+        },
     )
-    if "auth_token" in data and data["auth_token"]:
+    if data.get("auth_token"):
         current["auth_token"] = data["auth_token"]
     _save_settings(current)
     return get_settings()
@@ -114,16 +112,15 @@ async def send_sms(to: str, body: str) -> bool:
         if resp.status_code < 400:
             logger.info("SMS sent to %s: %.60s", to, body)
             return True
-        else:
-            error_data = resp.json()
-            logger.error(
-                "Twilio API error: %s — %s",
-                resp.status_code,
-                error_data.get("message", resp.text[:200]),
-            )
-            return False
+        error_data = resp.json()
+        logger.error(
+            "Twilio API error: %s — %s",
+            resp.status_code,
+            error_data.get("message", resp.text[:200]),
+        )
+        return False
     except Exception as e:
-        logger.error("Failed to send SMS to %s: %s", to, e)
+        logger.exception("Failed to send SMS to %s: %s", to, e)
         return False
 
 
@@ -155,8 +152,7 @@ async def test_connection() -> dict:
                 "message": f"Connected: {friendly_name}",
                 "from_number": from_number,
             }
-        else:
-            return {"ok": False, "error": f"Twilio API error: {resp.status_code}"}
+        return {"ok": False, "error": f"Twilio API error: {resp.status_code}"}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from helpers import (
+    _call,
+    _get_webhook_subscriptions,
+    _log_audit,
     _safe_id,
     _sql,
-    _call,
-    _log_audit,
-    _get_webhook_subscriptions,
-    require_role,
-    get_current_user,
     logger,
+    require_role,
 )
-from models import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
-from webhooks import ALL_EVENTS as WEBHOOK_EVENTS, _deliver
-from stripe_payments import verify_webhook
 from rate_limit import limiter
+from stripe_payments import verify_webhook
+from webhooks import ALL_EVENTS as WEBHOOK_EVENTS
+from webhooks import _deliver
+
+if TYPE_CHECKING:
+    from models import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
 
 router = APIRouter()
 
@@ -41,7 +45,7 @@ async def stripe_webhook(request: Request):
         metadata = session.get("metadata", {})
         invoice_id = metadata.get("invoice_id", "")
         customer_id = metadata.get("customer_id", "")
-        invoice_number = metadata.get("invoice_number", "")
+        metadata.get("invoice_number", "")
         amount_total = float(session.get("amount_total", 0)) / 100.0
         payment_intent = session.get("payment_intent", "")
         stripe_session_id = session.get("id", "")
@@ -91,7 +95,7 @@ async def list_webhook_subscriptions(offset: int = 0, limit: int = 50, user: dic
 
 @router.post("/api/webhook-subscriptions")
 @limiter.limit("100/minute")
-async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dict = Depends(require_role("admin"))):
+async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Create a new webhook subscription."""
     url = body.url.strip()
     events = body.events.strip()
@@ -116,7 +120,7 @@ async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: dic
 @router.put("/api/webhook-subscriptions/{sub_id}")
 @limiter.limit("100/minute")
 async def update_webhook_subscription(
-    sub_id: str, body: WebhookSubscriptionUpdate, user: dict = Depends(require_role("admin"))
+    sub_id: str, body: WebhookSubscriptionUpdate, user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Update a webhook subscription."""
     url = body.url.strip()
@@ -141,7 +145,7 @@ async def update_webhook_subscription(
 
 @router.delete("/api/webhook-subscriptions/{sub_id}")
 @limiter.limit("100/minute")
-async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_webhook_subscription(sub_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a webhook subscription."""
     await _call("delete_webhook_subscription", [sub_id])
     await _log_audit(user, "delete", "webhook_subscription", sub_id)
@@ -150,7 +154,7 @@ async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_
 
 @router.post("/api/webhook-subscriptions/{sub_id}/test")
 @limiter.limit("100/minute")
-async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
+async def test_webhook_subscription(sub_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Send a test event to a specific subscription."""
     rows = await _sql(f"SELECT * FROM webhook_subscriptions WHERE id = '{_safe_id(sub_id)}'")
     if not rows:
@@ -161,11 +165,10 @@ async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_ro
         "id": "test_001",
         "message": "This is a test webhook event from SpacetimeCRM.",
     }
-    result = await _deliver(
+    return await _deliver(
         url=sub["url"],
         event_type="test.ping",
         payload=test_payload,
         secret=sub.get("secret", ""),
         max_retries=1,
     )
-    return result

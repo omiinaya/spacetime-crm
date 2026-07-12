@@ -4,25 +4,28 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends
 
 from helpers import (
-    _sql,
     _call,
-    _sort,
-    _log_audit,
     _fire_webhook,
+    _log_audit,
+    _sort,
+    _sql,
     require_role,
-    logger,
 )
-from models import RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
 
 router = APIRouter()
 
 
 @router.get("/api/recurring-invoices")
-async def list_recurring_rules(user: dict = Depends(require_role("admin", "tech"))):
+async def list_recurring_rules(user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """List all recurring invoice rules for the tenant."""
     rows = await _sql(f"SELECT * FROM recurring_invoice_rules WHERE tenant_id = '{user['tenant_id']}'")
     # Enrich with customer name
@@ -41,7 +44,7 @@ async def list_recurring_rules(user: dict = Depends(require_role("admin", "tech"
 @limiter.limit("100/minute")
 async def create_recurring_rule(
     body: RecurringInvoiceRuleCreate,
-    user: dict = Depends(require_role("admin", "tech")),
+    user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     """Create a recurring invoice rule."""
     line_items_json = json.dumps([li.model_dump() for li in body.line_items])
@@ -69,7 +72,7 @@ async def create_recurring_rule(
                 "customer_id": body.customer_id,
                 "frequency": body.frequency,
             },
-        )
+        ),
     )
     return {"ok": True}
 
@@ -79,7 +82,7 @@ async def create_recurring_rule(
 async def update_recurring_rule(
     rule_id: str,
     body: RecurringInvoiceRuleUpdate,
-    user: dict = Depends(require_role("admin", "tech")),
+    user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     """Update a recurring invoice rule."""
     line_items_json = json.dumps([li.model_dump() for li in body.line_items])
@@ -105,7 +108,7 @@ async def update_recurring_rule(
 @limiter.limit("100/minute")
 async def delete_recurring_rule(
     rule_id: str,
-    user: dict = Depends(require_role("admin")),
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Delete a recurring invoice rule."""
     await _call("delete_recurring_invoice_rule", [rule_id])
@@ -116,7 +119,7 @@ async def delete_recurring_rule(
 @router.post("/api/recurring-invoices/generate")
 @limiter.limit("100/minute")
 async def generate_recurring_invoices(
-    user: dict = Depends(require_role("admin", "tech")),
+    user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     """Trigger generation of due recurring invoices."""
     await _call("generate_recurring_invoices", [])

@@ -7,10 +7,10 @@ import logging
 import smtplib
 import ssl
 from datetime import datetime
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Optional
+
 from helpers import jinja_env
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def _load_settings() -> dict | None:
         with open(SETTINGS_PATH) as f:
             return json.load(f)
     except Exception as e:
-        logger.error("Failed to load mail settings: %s", e)
+        logger.exception("Failed to load mail settings: %s", e)
         return None
 
 
@@ -59,7 +59,7 @@ def update_settings(data: dict) -> dict:
             "use_tls": data.get("use_tls", current.get("use_tls", True)),
             "sender_name": data.get("sender_name", current.get("sender_name", "SpacetimeCRM")),
             "sender_email": data.get("sender_email", current.get("sender_email", "")),
-        }
+        },
     )
     if "password" in data:
         current["password"] = data["password"]
@@ -118,7 +118,7 @@ def send_email(to: str, subject: str, html_body: str, text_body: str | None = No
         logger.info("Email sent to %s: %s", to, subject)
         return True
     except Exception as e:
-        logger.error("Failed to send email to %s: %s", to, e)
+        logger.exception("Failed to send email to %s: %s", to, e)
         return False
 
 
@@ -144,7 +144,6 @@ def test_connection() -> dict:
         if use_tls:
             with smtplib.SMTP(host, port, timeout=10) as server:
                 server.ehlo()
-                status = server.ehlo_resp  # pylint: disable=maybe-no-member
                 server.starttls(context=context)
                 server.ehlo()
                 if username:

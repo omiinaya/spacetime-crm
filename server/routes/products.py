@@ -2,22 +2,25 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sanitize_sql,
-    _safe_id,
-    _sql,
-    _paginated,
     _call,
-    _sort,
     _log_audit,
+    _paginated,
+    _safe_id,
+    _sanitize_sql,
+    _sort,
+    _sql,
     require_role,
-    logger,
 )
-from models import ProductCreate, ProductQuantityUpdate, InventoryAdjustmentCreate, StockTransferRequest
 from mail import _notify_low_stock
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import InventoryAdjustmentCreate, ProductCreate, ProductQuantityUpdate, StockTransferRequest
 
 router = APIRouter()
 
@@ -63,7 +66,7 @@ async def list_products(
 
 @router.post("/api/products")
 @limiter.limit("100/minute")
-async def create_product(body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))):
+async def create_product(body: ProductCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     await _call(
         "create_product",
         [
@@ -87,7 +90,7 @@ async def create_product(body: ProductCreate, user: dict = Depends(require_role(
 @router.put("/api/products/{product_id}/quantity")
 @limiter.limit("100/minute")
 async def update_product_quantity(
-    product_id: str, body: ProductQuantityUpdate, user: dict = Depends(require_role("admin", "tech"))
+    product_id: str, body: ProductQuantityUpdate, user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     await _call("update_product_quantity", [product_id, body.quantity_on_hand])
     await _log_audit(user, "update", "product_qty", product_id, f"qty={body.quantity_on_hand}")
@@ -96,7 +99,7 @@ async def update_product_quantity(
 
 @router.delete("/api/products/{product_id}")
 @limiter.limit("100/minute")
-async def delete_product(product_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_product(product_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_product", [product_id])
     await _log_audit(user, "delete", "product", product_id)
     return {"ok": True}
@@ -104,7 +107,7 @@ async def delete_product(product_id: str, user: dict = Depends(require_role("adm
 
 @router.put("/api/products/{product_id}")
 @limiter.limit("100/minute")
-async def update_product(product_id: str, body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))):
+async def update_product(product_id: str, body: ProductCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Update product fields including min_stock."""
     await _call(
         "update_product",
@@ -129,7 +132,7 @@ async def update_product(product_id: str, body: ProductCreate, user: dict = Depe
 
 
 @router.get("/api/products/{product_id}/adjustments")
-async def get_product_adjustments(product_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_product_adjustments(product_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{_safe_id(product_id)}'")
     return {"adjustments": _sort(rows, "created_at")}
 
@@ -137,7 +140,7 @@ async def get_product_adjustments(product_id: str, user: dict = Depends(require_
 @router.post("/api/products/{product_id}/adjustments")
 @limiter.limit("100/minute")
 async def create_adjustment(
-    product_id: str, body: InventoryAdjustmentCreate, user: dict = Depends(require_role("admin", "tech"))
+    product_id: str, body: InventoryAdjustmentCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     await _call(
         "create_inventory_adjustment",
@@ -156,7 +159,7 @@ async def create_adjustment(
 
 
 @router.get("/api/products/low-stock")
-async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def list_low_stock(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """List products below minimum stock threshold for the current tenant."""
     rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}'")
     low_stock = [r for r in rows if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)]
@@ -164,10 +167,10 @@ async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "fro
 
 
 @router.get("/api/products/by-barcode/{barcode}")
-async def lookup_product_by_barcode(barcode: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def lookup_product_by_barcode(barcode: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Find a product by barcode (exact match, tenant-scoped)."""
     rows = await _sql(
-        f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}' AND barcode = '{_sanitize_sql(barcode)}'"
+        f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}' AND barcode = '{_sanitize_sql(barcode)}'",
     )
     if not rows:
         raise HTTPException(404, "Product not found for this barcode")
@@ -176,7 +179,7 @@ async def lookup_product_by_barcode(barcode: str, user: dict = Depends(require_r
 
 @router.post("/api/products/low-stock/notify")
 @limiter.limit("100/minute")
-async def notify_low_stock(user: dict = Depends(require_role("admin"))):
+async def notify_low_stock(user: Annotated[dict, Depends(require_role("admin"))]):
     """Check low stock and send email alert to admin."""
     rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
     low_stock = [r for r in rows if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)]
@@ -192,17 +195,17 @@ async def notify_low_stock(user: dict = Depends(require_role("admin"))):
 
 @router.post("/api/products/transfer")
 @limiter.limit("100/minute")
-async def transfer_stock(body: StockTransferRequest, user: dict = Depends(require_role("admin", "tech"))):
+async def transfer_stock(body: StockTransferRequest, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Transfer stock between two products. Creates inventory adjustments on both."""
     tid = user["tenant_id"]
     uid = user["id"]
 
     # Verify both products exist and belong to this tenant
     src_rows = await _sql(
-        f"SELECT * FROM products WHERE id = '{_safe_id(body.source_product_id)}' AND tenant_id = '{tid}'"
+        f"SELECT * FROM products WHERE id = '{_safe_id(body.source_product_id)}' AND tenant_id = '{tid}'",
     )
     dst_rows = await _sql(
-        f"SELECT * FROM products WHERE id = '{_safe_id(body.destination_product_id)}' AND tenant_id = '{tid}'"
+        f"SELECT * FROM products WHERE id = '{_safe_id(body.destination_product_id)}' AND tenant_id = '{tid}'",
     )
     if not src_rows:
         raise HTTPException(404, "Source product not found")
@@ -221,7 +224,7 @@ async def transfer_stock(body: StockTransferRequest, user: dict = Depends(requir
     await _call("create_inventory_adjustment", [tid, body.source_product_id, -qty, "transferred", ref, body.notes, uid])
     # Positive adjustment on destination
     await _call(
-        "create_inventory_adjustment", [tid, body.destination_product_id, qty, "transferred", ref, body.notes, uid]
+        "create_inventory_adjustment", [tid, body.destination_product_id, qty, "transferred", ref, body.notes, uid],
     )
 
     await _log_audit(user, "transfer", "stock", body.source_product_id, f"qty={qty}→{body.destination_product_id}")
@@ -229,7 +232,7 @@ async def transfer_stock(body: StockTransferRequest, user: dict = Depends(requir
 
 
 @router.get("/api/products/categories")
-async def list_categories(user: dict = Depends(require_role("admin", "tech"))):
+async def list_categories(user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Get distinct product categories for the current tenant."""
     rows, _ = await _paginated(
         user["tenant_id"],

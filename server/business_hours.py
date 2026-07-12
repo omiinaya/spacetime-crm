@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ def _load_settings() -> dict | None:
         with open(SETTINGS_PATH) as f:
             return json.load(f)
     except Exception as e:
-        logger.error("Failed to load business hours settings: %s", e)
+        logger.exception("Failed to load business hours settings: %s", e)
         return None
 
 

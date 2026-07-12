@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _safe_id,
-    _sql,
-    _paginated,
     _call,
-    _sort,
     _log_audit,
+    _paginated,
+    _safe_id,
+    _sort,
+    _sql,
     require_role,
-    logger,
 )
-from models import PurchaseOrderCreate, PurchaseOrderStatusUpdate, POLineItemCreate, POReceiveItem, POApprovalAction
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import POApprovalAction, POLineItemCreate, POReceiveItem, PurchaseOrderCreate, PurchaseOrderStatusUpdate
 
 router = APIRouter()
 
@@ -37,7 +40,7 @@ async def list_purchase_orders(offset: int = 0, limit: int = 50, user: dict = De
 @router.post("/api/purchase-orders")
 @limiter.limit("100/minute")
 async def create_purchase_order(
-    body: PurchaseOrderCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    body: PurchaseOrderCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "create_purchase_order",
@@ -54,14 +57,14 @@ async def create_purchase_order(
 
 @router.delete("/api/purchase-orders/{po_id}")
 @limiter.limit("100/minute")
-async def delete_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_purchase_order(po_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_purchase_order", [po_id])
     await _log_audit(user, "delete", "purchase_order", po_id)
     return {"ok": True}
 
 
 @router.get("/api/purchase-orders/{po_id}")
-async def get_purchase_order(po_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_purchase_order(po_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     rows = await _sql(f"SELECT * FROM purchase_order WHERE id = '{_safe_id(po_id)}'")
     if not rows:
         raise HTTPException(404, "Purchase order not found")
@@ -77,7 +80,7 @@ async def get_purchase_order(po_id: str, user: dict = Depends(require_role("admi
 @router.post("/api/purchase-orders/{po_id}/line-items")
 @limiter.limit("100/minute")
 async def add_po_line_item(
-    po_id: str, body: POLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    po_id: str, body: POLineItemCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "add_po_line_item",
@@ -95,7 +98,7 @@ async def add_po_line_item(
 
 @router.delete("/api/purchase-orders/{po_id}/line-items/{item_id}")
 @limiter.limit("100/minute")
-async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_po_line_item(po_id: str, item_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_po_line_item", [po_id, item_id])
     await _log_audit(user, "delete", "po_line_item", po_id)
     return {"ok": True}
@@ -104,7 +107,7 @@ async def delete_po_line_item(po_id: str, item_id: str, user: dict = Depends(req
 @router.put("/api/purchase-orders/{po_id}/status")
 @limiter.limit("100/minute")
 async def update_po_status(
-    po_id: str, body: PurchaseOrderStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    po_id: str, body: PurchaseOrderStatusUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("update_po_status", [po_id, body.status])
     await _log_audit(user, "update_status", "purchase_order", po_id, f"status={body.status}")
@@ -114,10 +117,10 @@ async def update_po_status(
 @router.post("/api/purchase-orders/{po_id}/receive")
 @limiter.limit("100/minute")
 async def receive_po_items(
-    po_id: str, body: POReceiveItem, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    po_id: str, body: POReceiveItem, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Receive multiple items on a PO at once.
-    Body: { items: [{ id: string, received_quantity: number }] }
+    Body: { items: [{ id: string, received_quantity: number }] }.
     """
     items = body.items
     for item in items:
@@ -128,7 +131,7 @@ async def receive_po_items(
 
 @router.post("/api/purchase-orders/{po_id}/submit-for-approval")
 @limiter.limit("100/minute")
-async def submit_po_for_approval(po_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def submit_po_for_approval(po_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Submit a draft PO for approval."""
     await _call("submit_for_approval", [po_id])
     await _log_audit(user, "submit_approval", "purchase_order", po_id)
@@ -137,7 +140,7 @@ async def submit_po_for_approval(po_id: str, user: dict = Depends(require_role("
 
 @router.post("/api/purchase-orders/{po_id}/approve")
 @limiter.limit("100/minute")
-async def approve_purchase_order(po_id: str, body: POApprovalAction, user: dict = Depends(require_role("admin"))):
+async def approve_purchase_order(po_id: str, body: POApprovalAction, user: Annotated[dict, Depends(require_role("admin"))]):
     """Approve a pending PO."""
     await _call("approve_po", [po_id, body.user_id])
     await _log_audit(user, "approve", "purchase_order", po_id, f"approver={body.user_id}")
@@ -146,7 +149,7 @@ async def approve_purchase_order(po_id: str, body: POApprovalAction, user: dict 
 
 @router.post("/api/purchase-orders/{po_id}/reject")
 @limiter.limit("100/minute")
-async def reject_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
+async def reject_purchase_order(po_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Reject a pending PO, sending it back to draft."""
     await _call("reject_po", [po_id])
     await _log_audit(user, "reject", "purchase_order", po_id)

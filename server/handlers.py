@@ -10,17 +10,15 @@ import logging
 import traceback
 from typing import Any
 
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from config import settings
-
 logger = logging.getLogger(__name__)
 
 
-def register_exception_handlers(app):
+def register_exception_handlers(app) -> None:
     """Register custom JSON exception handlers on the FastAPI app."""
 
     @app.exception_handler(RequestValidationError)
@@ -33,7 +31,7 @@ def register_exception_handlers(app):
                     "field": ".".join(str(loc) for loc in err.get("loc", [])),
                     "message": err.get("msg", "Invalid value"),
                     "type": err.get("type", "value_error"),
-                }
+                },
             )
         return JSONResponse(
             status_code=422,
@@ -50,7 +48,7 @@ def register_exception_handlers(app):
                     "field": ".".join(str(loc) for loc in err.get("loc", [])),
                     "message": err.get("msg", "Invalid value"),
                     "type": err.get("type", "value_error"),
-                }
+                },
             )
         return JSONResponse(
             status_code=422,

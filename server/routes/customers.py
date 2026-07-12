@@ -3,28 +3,28 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING, Annotated
+
 import bcrypt
-import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
+from client import get_http_client
 from helpers import (
     CUSTOMER_SENSITIVE_FIELDS,
+    _call,
+    _fire_webhook,
+    _log_audit,
+    _paginated,
+    _safe_customer,
+    _safe_id,
     _sql,
     _sql_t,
-    _paginated,
-    _call,
-    _sort,
-    _log_audit,
-    _fire_webhook,
-    _safe_id,
-    _safe_customer,
     require_role,
-    get_current_user,
-    logger,
 )
-from client import get_http_client
-from models import CustomerCreate, CustomerUpdate, SetPasswordRequest
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import CustomerCreate, CustomerUpdate, SetPasswordRequest
 
 router = APIRouter()
 
@@ -64,7 +64,7 @@ async def list_customers(
 
 @router.post("/api/customers")
 @limiter.limit("100/minute")
-async def create_customer(body: CustomerCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_customer(body: CustomerCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     await _call(
         "create_customer",
         [
@@ -85,7 +85,7 @@ async def create_customer(body: CustomerCreate, user: dict = Depends(require_rol
                 "name": details,
                 "email": body.email,
             },
-        )
+        ),
     )
     return {"ok": True}
 
@@ -93,7 +93,7 @@ async def create_customer(body: CustomerCreate, user: dict = Depends(require_rol
 @router.put("/api/customers/{customer_id}")
 @limiter.limit("100/minute")
 async def update_customer(
-    customer_id: str, body: CustomerUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    customer_id: str, body: CustomerUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "update_customer",
@@ -122,14 +122,14 @@ async def update_customer(
                 "entity_type": "customer",
                 "id": customer_id,
             },
-        )
+        ),
     )
     return {"ok": True}
 
 
 @router.delete("/api/customers/{customer_id}")
 @limiter.limit("100/minute")
-async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_customer(customer_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_customer", [customer_id])
     await _log_audit(user, "delete", "customer", customer_id)
     asyncio.ensure_future(
@@ -139,7 +139,7 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
                 "entity_type": "customer",
                 "id": customer_id,
             },
-        )
+        ),
     )
     return {"ok": True}
 
@@ -147,7 +147,7 @@ async def delete_customer(customer_id: str, user: dict = Depends(require_role("a
 @router.post("/api/customers/{customer_id}/portal-password")
 @limiter.limit("100/minute")
 async def set_customer_portal_password(
-    customer_id: str, body: SetPasswordRequest, user: dict = Depends(require_role("admin"))
+    customer_id: str, body: SetPasswordRequest, user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Admin sets/resets a customer's portal password."""
     pw = body.password
@@ -163,7 +163,7 @@ async def set_customer_portal_password(
 
 
 @router.get("/api/customers/geolocations")
-async def list_customer_geolocations(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def list_customer_geolocations(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Return all customers with their geolocation data for the map."""
     customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     geos = await _sql_t("SELECT * FROM customer_geolocations", user["tenant_id"])
@@ -190,14 +190,14 @@ async def list_customer_geolocations(user: dict = Depends(require_role("admin", 
                 "latitude": loc["latitude"] if loc else None,
                 "longitude": loc["longitude"] if loc else None,
                 "has_location": loc is not None,
-            }
+            },
         )
     return {"locations": result}
 
 
 @router.post("/api/customers/{customer_id}/geocode")
 @limiter.limit("100/minute")
-async def geocode_customer(customer_id: str, user: dict = Depends(require_role("admin", "tech"))):
+async def geocode_customer(customer_id: str, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Geocode a single customer's address and store the location."""
     customers = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(customer_id)}'")
     if not customers:
@@ -229,11 +229,11 @@ async def geocode_customer(customer_id: str, user: dict = Depends(require_role("
 
 @router.post("/api/customers/geocode-all")
 @limiter.limit("100/minute")
-async def geocode_all_customers(user: dict = Depends(require_role("admin", "tech"))):
+async def geocode_all_customers(user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Geocode all customers that don't have coordinates yet."""
     customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     existing = await _sql_t("SELECT * FROM customer_geolocations", user["tenant_id"])
-    existing_ids = set(e["customer_id"] for e in existing)
+    existing_ids = {e["customer_id"] for e in existing}
     results = {"geocoded": 0, "failed": 0, "skipped": 0}
 
     for c in customers:
@@ -277,7 +277,7 @@ async def geocode_all_customers(user: dict = Depends(require_role("admin", "tech
 
 
 @router.get("/api/customers/duplicates")
-async def find_duplicate_customers(user: dict = Depends(require_role("admin"))):
+async def find_duplicate_customers(user: Annotated[dict, Depends(require_role("admin"))]):
     """Find potential duplicate customers by matching email or phone."""
     rows = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     seen_email: dict[str, list[dict]] = {}

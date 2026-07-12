@@ -3,23 +3,28 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends
 
 from config import settings
 from helpers import (
+    _call,
+    _fire_webhook,
+    _log_audit,
+    _paginated,
     _safe_id,
     _sql,
-    _paginated,
-    _call,
-    _log_audit,
-    _fire_webhook,
     require_role,
-    logger,
 )
-from models import PaymentCreate
-from mail import _customer_email as _mail_customer_email, _notify_payment_received
-from sms import _customer_phone as _sms_customer_phone, _notify_payment_received as _sms_payment_received
+from mail import _customer_email as _mail_customer_email
+from mail import _notify_payment_received
 from rate_limit import limiter
+from sms import _customer_phone as _sms_customer_phone
+from sms import _notify_payment_received as _sms_payment_received
+
+if TYPE_CHECKING:
+    from models import PaymentCreate
 
 router = APIRouter()
 
@@ -47,7 +52,7 @@ async def list_payments(
 
 @router.post("/api/payments")
 @limiter.limit("100/minute")
-async def record_payment(body: PaymentCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def record_payment(body: PaymentCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     invoice_id = body.invoice_id
     await _call(
         "record_payment",
@@ -75,7 +80,7 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
             if new_status != inv.get("status"):
                 await _call("update_invoice_status", [invoice_id, new_status])
 
-            async def _notify():
+            async def _notify() -> None:
                 cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(body.customer_id)}'")
                 email = _mail_customer_email(cust[0]) if cust else None
                 if email:
@@ -97,14 +102,14 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
                 "customer_id": body.customer_id,
                 "amount": body.amount,
             },
-        )
+        ),
     )
     return {"ok": True}
 
 
 @router.delete("/api/payments/{payment_id}")
 @limiter.limit("100/minute")
-async def delete_payment(payment_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_payment(payment_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_payment", [payment_id])
     await _log_audit(user, "delete", "payment", payment_id)
     return {"ok": True}

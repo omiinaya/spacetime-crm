@@ -3,25 +3,27 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends
 
 from helpers import (
-    _sql,
-    _paginated,
     _call,
     _log_audit,
+    _paginated,
     require_role,
-    logger,
 )
-from models import ChecklistTemplateCreate, ChecklistTemplateUpdate
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import ChecklistTemplateCreate, ChecklistTemplateUpdate
 
 router = APIRouter()
 
 
 @router.get("/api/checklist-templates")
 async def list_checklist_templates(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech"))
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech")),
 ):
     """List all checklist templates with pagination."""
     rows, total = await _paginated(
@@ -37,8 +39,8 @@ async def list_checklist_templates(
 
 @router.post("/api/checklist-templates")
 @limiter.limit("100/minute")
-async def create_checklist_template(body: ChecklistTemplateCreate, user: dict = Depends(require_role("admin"))):
-    """Create a checklist template. Items: [{\"label\":\"...\",\"order\":1}]"""
+async def create_checklist_template(body: ChecklistTemplateCreate, user: Annotated[dict, Depends(require_role("admin"))]):
+    r"""Create a checklist template. Items: [{\"label\":\"...\",\"order\":1}]."""
     await _call(
         "create_checklist_template",
         [
@@ -55,7 +57,7 @@ async def create_checklist_template(body: ChecklistTemplateCreate, user: dict = 
 @router.put("/api/checklist-templates/{template_id}")
 @limiter.limit("100/minute")
 async def update_checklist_template(
-    template_id: str, body: ChecklistTemplateUpdate, user: dict = Depends(require_role("admin"))
+    template_id: str, body: ChecklistTemplateUpdate, user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Update a checklist template."""
     await _call(
@@ -73,7 +75,7 @@ async def update_checklist_template(
 
 @router.delete("/api/checklist-templates/{template_id}")
 @limiter.limit("100/minute")
-async def delete_checklist_template(template_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_checklist_template(template_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a checklist template."""
     await _call("delete_checklist_template", [template_id])
     await _log_audit(user, "delete", "checklist_template", template_id)

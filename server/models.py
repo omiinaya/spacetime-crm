@@ -4,8 +4,8 @@ All POST/PUT endpoints should use these models instead of raw `body: dict`.
 This provides type validation, clear error messages (422), and API docs.
 """
 
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional
+from pydantic import BaseModel, Field
+
 from sanitize import SanitizedModel
 
 # Make BaseModel an alias for SanitizedModel so ALL existing models

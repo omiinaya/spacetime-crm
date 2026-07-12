@@ -2,25 +2,28 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends
 
 from helpers import (
-    _sql,
-    _paginated,
     _call,
     _log_audit,
+    _paginated,
+    _sql,
     require_role,
-    logger,
 )
-from models import UserCreate, UserUpdate, UserSettingsUpdate
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import UserCreate, UserSettingsUpdate
 
 router = APIRouter()
 
 
 @router.get("/api/users")
 async def list_users(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List users with pagination."""
     rows, total = await _paginated(
@@ -36,7 +39,7 @@ async def list_users(
 
 @router.post("/api/users")
 @limiter.limit("100/minute")
-async def create_user(body: UserCreate, user: dict = Depends(require_role("admin"))):
+async def create_user(body: UserCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call(
         "create_user",
         [
@@ -50,9 +53,9 @@ async def create_user(body: UserCreate, user: dict = Depends(require_role("admin
 
 
 @router.get("/api/users/settings")
-async def get_user_settings(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_user_settings(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Get the current user's settings (theme, default_ticket_status)."""
-    rows = await _sql(f"SELECT * FROM user_settings WHERE user_id = {{}}", [user["id"]])
+    rows = await _sql("SELECT * FROM user_settings WHERE user_id = {}", [user["id"]])
     if not rows:
         return {"settings": None}
     return {"settings": rows[0]}
@@ -61,7 +64,7 @@ async def get_user_settings(user: dict = Depends(require_role("admin", "tech", "
 @router.put("/api/users/settings")
 @limiter.limit("100/minute")
 async def update_user_settings(
-    body: UserSettingsUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    body: UserSettingsUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Upsert the current user's settings."""
     await _call(

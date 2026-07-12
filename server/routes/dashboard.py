@@ -3,25 +3,22 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 
 from helpers import (
+    _paginated,
     _sql,
     _sql_t,
-    _paginated,
-    _call,
-    _sort,
-    _log_audit,
     require_role,
-    get_current_user,
-    logger,
 )
 
 router = APIRouter()
 
 
 @router.get("/api/stats")
-async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def dashboard_stats(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     all_customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
     all_invoices = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
@@ -51,13 +48,13 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     overdue_invoices_sorted = combined_overdue[:5]
 
     # Today's appointments
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    int(datetime.utcnow().timestamp() * 1000)
     day_start_ms = int(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
     day_end_ms = day_start_ms + 86400000
     today_appts = [
         a
         for a in all_appointments
-        if day_start_ms <= a.get("start_time", 0) < day_end_ms and a.get("status") not in ("cancelled",)
+        if day_start_ms <= a.get("start_time", 0) < day_end_ms and a.get("status") != "cancelled"
     ]
     today_appts_sorted = sorted(today_appts, key=lambda x: x.get("start_time", 0))[:10]
 
@@ -116,7 +113,7 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
 
 
 @router.get("/api/reports")
-async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_reports(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Reporting data for charts."""
     now = datetime.utcnow()
     all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])

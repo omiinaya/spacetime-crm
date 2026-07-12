@@ -1,38 +1,35 @@
 """Auth routes — login, me, set-password, refresh-tenant, 2FA/TOTP."""
 
-from datetime import datetime, timedelta, timezone, UTC
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
+
 import bcrypt
 import jwt
+import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from config import settings
 from helpers import (
-    _sanitize_sql,
-    _safe_id,
-    _sql,
     _call,
-    require_role,
+    _safe_id,
+    _sanitize_sql,
+    _sql,
     get_current_user,
     logger,
 )
+from mail import send_email as _send_email
 from models import (
-    LoginRequest,
-    SetPasswordRequest,
-    ForgotPasswordRequest,
-    ResetPasswordRequest,
-    Setup2FARequest,
     CompleteLoginRequest,
     Disable2FARequest,
-    SetPinRequest,
+    ForgotPasswordRequest,
+    LoginRequest,
     PosLoginRequest,
+    ResetPasswordRequest,
+    SetPasswordRequest,
+    SetPinRequest,
+    Setup2FARequest,
 )
 from rate_limit import limiter
-
-import pyotp
-import base64
-import os
-import json
-from mail import send_email as _send_email
 
 router = APIRouter()
 
@@ -201,7 +198,7 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
 
 
 @router.get("/api/auth/me")
-async def auth_me(user: dict = Depends(get_current_user)):
+async def auth_me(user: Annotated[dict, Depends(get_current_user)]):
     """Return current user info from JWT."""
     tenant_info = {}
     if user.get("tenant_id"):
@@ -223,7 +220,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
     except Exception:
         pass
 
-    result = {
+    return {
         "id": user["id"],
         "name": user["name"],
         "email": user["email"],
@@ -233,12 +230,11 @@ async def auth_me(user: dict = Depends(get_current_user)):
         "totp_enabled": totp_enabled,
         "has_pin": has_pin,
     }
-    return result
 
 
 @router.post("/api/auth/setup-2fa")
 @limiter.limit("20/minute")
-async def setup_2fa(user: dict = Depends(get_current_user)):
+async def setup_2fa(user: Annotated[dict, Depends(get_current_user)]):
     """Generate TOTP secret and return provisioning URI for QR code."""
     # Check if already enabled
     rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user['id'])}'")
@@ -264,7 +260,7 @@ async def setup_2fa(user: dict = Depends(get_current_user)):
 
 @router.post("/api/auth/verify-2fa")
 @limiter.limit("20/minute")
-async def verify_2fa(body: Setup2FARequest, user: dict = Depends(get_current_user)):
+async def verify_2fa(body: Setup2FARequest, user: Annotated[dict, Depends(get_current_user)]):
     """Verify a TOTP code and enable 2FA."""
     rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user['id'])}'")
     if not rows:
@@ -284,7 +280,7 @@ async def verify_2fa(body: Setup2FARequest, user: dict = Depends(get_current_use
 
 @router.post("/api/auth/disable-2fa")
 @limiter.limit("20/minute")
-async def disable_2fa(body: Disable2FARequest, user: dict = Depends(get_current_user)):
+async def disable_2fa(body: Disable2FARequest, user: Annotated[dict, Depends(get_current_user)]):
     """Verify current TOTP code and disable 2FA."""
     rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user['id'])}'")
     if not rows:
@@ -304,7 +300,7 @@ async def disable_2fa(body: Disable2FARequest, user: dict = Depends(get_current_
 
 @router.post("/api/auth/refresh-tenant")
 @limiter.limit("100/minute")
-async def refresh_token_tenant(user: dict = Depends(get_current_user)):
+async def refresh_token_tenant(user: Annotated[dict, Depends(get_current_user)]):
     """Refresh the JWT token with latest tenant_id from DB."""
     tid = ""
     try:
@@ -320,7 +316,7 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
 
 @router.post("/api/auth/set-password")
 @limiter.limit("20/minute")
-async def set_password(body: SetPasswordRequest, user: dict = Depends(get_current_user)):
+async def set_password(body: SetPasswordRequest, user: Annotated[dict, Depends(get_current_user)]):
     """Set/change password for current user."""
     pw = body.password
     if len(pw) < 6:
@@ -332,9 +328,10 @@ async def set_password(body: SetPasswordRequest, user: dict = Depends(get_curren
 
 @router.post("/api/auth/set-pin")
 @limiter.limit("20/minute")
-async def set_pin(body: SetPinRequest, user: dict = Depends(get_current_user)):
+async def set_pin(body: SetPinRequest, user: Annotated[dict, Depends(get_current_user)]):
     """Set, change, or remove the POS PIN for the current user. PIN is stored as bcrypt hash.
-    Pass an empty string to remove the PIN."""
+    Pass an empty string to remove the PIN.
+    """
     pin = body.pin
     if not pin:
         # Remove PIN

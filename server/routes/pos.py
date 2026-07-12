@@ -3,29 +3,31 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from helpers import (
-    _safe_id,
-    _sql,
-    _paginated,
     _call,
     _log_audit,
-    _fire_webhook,
-    require_role,
-    logger,
+    _paginated,
+    _safe_id,
+    _sql,
     jinja_env,
+    require_role,
 )
-from models import POSCreate, POSAddItem
 from pdf import html_to_pdf
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import POSAddItem, POSCreate
 
 router = APIRouter()
 
 
 @router.get("/api/pos/sales")
 async def list_pos_sales(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List counter sales with pagination."""
     rows, total = await _paginated(
@@ -40,10 +42,10 @@ async def list_pos_sales(
 
 
 @router.get("/api/pos/sales/{sale_id}")
-async def get_pos_sale(sale_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_pos_sale(sale_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Get a single counter sale with line items."""
     rows = await _sql(
-        f"SELECT * FROM counter_sale WHERE id = '{_safe_id(sale_id)}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM counter_sale WHERE id = '{_safe_id(sale_id)}' AND tenant_id = '{user['tenant_id']}'",
     )
     if not rows:
         raise HTTPException(404, "Sale not found")
@@ -54,10 +56,10 @@ async def get_pos_sale(sale_id: str, user: dict = Depends(require_role("admin", 
 
 
 @router.get("/api/pos/sales/{sale_id}/receipt-pdf")
-async def get_pos_receipt_pdf(sale_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_pos_receipt_pdf(sale_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Generate a printable PDF receipt for a completed counter sale."""
     rows = await _sql(
-        f"SELECT * FROM counter_sale WHERE id = '{_safe_id(sale_id)}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM counter_sale WHERE id = '{_safe_id(sale_id)}' AND tenant_id = '{user['tenant_id']}'",
     )
     if not rows:
         raise HTTPException(404, "Sale not found")
@@ -115,7 +117,7 @@ async def get_pos_receipt_pdf(sale_id: str, user: dict = Depends(require_role("a
 
 @router.post("/api/pos/create")
 @limiter.limit("100/minute")
-async def create_pos_sale(body: POSCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_pos_sale(body: POSCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Create a new counter sale (completed immediately)."""
     await _call(
         "create_counter_sale",
@@ -136,7 +138,7 @@ async def create_pos_sale(body: POSCreate, user: dict = Depends(require_role("ad
 
 @router.post("/api/pos/items")
 @limiter.limit("100/minute")
-async def add_pos_item(body: POSAddItem, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def add_pos_item(body: POSAddItem, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Add an item to a counter sale (recalculates totals)."""
     await _call(
         "add_counter_sale_item",
@@ -155,7 +157,7 @@ async def add_pos_item(body: POSAddItem, user: dict = Depends(require_role("admi
 
 @router.post("/api/pos/refund/{sale_id}")
 @limiter.limit("100/minute")
-async def refund_pos_sale(sale_id: str, user: dict = Depends(require_role("admin"))):
+async def refund_pos_sale(sale_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Refund/void a counter sale."""
     await _call("refund_counter_sale", [sale_id])
     await _log_audit(user, "refund", "counter_sale", sale_id)
@@ -164,7 +166,7 @@ async def refund_pos_sale(sale_id: str, user: dict = Depends(require_role("admin
 
 @router.delete("/api/pos/sales/{sale_id}")
 @limiter.limit("100/minute")
-async def delete_pos_sale(sale_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_pos_sale(sale_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a counter sale and its line items."""
     await _call("delete_counter_sale", [sale_id])
     await _log_audit(user, "delete", "counter_sale", sale_id)
@@ -173,7 +175,7 @@ async def delete_pos_sale(sale_id: str, user: dict = Depends(require_role("admin
 
 @router.get("/api/pos/receipts")
 async def list_receipts(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List completed sales sorted by receipt number."""
     rows, total = await _paginated(

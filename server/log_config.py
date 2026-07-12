@@ -4,11 +4,11 @@ Provides a standardized JSON log format for production use.
 In dev mode, logs remain human-readable via the console handler.
 """
 
-import os
 import json
 import logging
+import os
 import sys
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info").upper()
 # Enable JSON logging for production (structured logs)
@@ -58,7 +58,7 @@ def configure_logging() -> None:
             logging.Formatter(
                 "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
                 datefmt="%Y-%m-%d %H:%M:%S",
-            )
+            ),
         )
 
     logger.addHandler(handler)

@@ -3,44 +3,55 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pdf import html_to_pdf
 
 from config import settings
 from helpers import (
-    _safe_id,
-    _sql,
-    _paginated,
-    _call,
-    _sort,
-    _log_audit,
-    _fire_webhook,
-    require_role,
-    logger,
-    STATUS_LABELS,
     STATUS_CSS,
+    STATUS_LABELS,
+    _call,
+    _fire_webhook,
+    _log_audit,
+    _paginated,
+    _safe_id,
+    _sort,
+    _sql,
     jinja_env,
-)
-from models import (
-    InvoiceCreate,
-    InvoiceStatusUpdate,
-    InvoiceLineItemCreate,
-    InvoiceTaxRateUpdate,
-    BulkInvoiceStatusUpdate,
-    BulkInvoiceEdit,
+    require_role,
 )
 from mail import (
     _customer_email as _mail_customer_email,
+)
+from mail import (
     _notify_invoice_created,
+)
+from mail import (
     _notify_overdue_reminder as _mail_reminder,
 )
+from pdf import html_to_pdf
+from rate_limit import limiter
 from sms import (
     _customer_phone as _sms_customer_phone,
+)
+from sms import (
     _notify_invoice_created as _sms_invoice_created,
+)
+from sms import (
     _notify_overdue_reminder as _sms_reminder,
 )
-from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import (
+        BulkInvoiceEdit,
+        BulkInvoiceStatusUpdate,
+        InvoiceCreate,
+        InvoiceLineItemCreate,
+        InvoiceStatusUpdate,
+        InvoiceTaxRateUpdate,
+    )
 
 router = APIRouter()
 
@@ -74,7 +85,7 @@ async def list_invoices(
 
 @router.post("/api/invoices")
 @limiter.limit("100/minute")
-async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def create_invoice(body: InvoiceCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     await _call(
         "create_invoice",
         [
@@ -88,7 +99,7 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
         ],
     )
 
-    async def _notify():
+    async def _notify() -> None:
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(body.customer_id)}'")
         email = _mail_customer_email(cust[0]) if cust else None
         if email:
@@ -115,13 +126,13 @@ async def create_invoice(body: InvoiceCreate, user: dict = Depends(require_role(
                 "customer_id": body.customer_id,
                 "ticket_id": body.ticket_id,
             },
-        )
+        ),
     )
     return {"ok": True}
 
 
 @router.get("/api/invoices/summary")
-async def get_invoice_summary(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_invoice_summary(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Get invoice summary: counts and totals by status."""
     rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}'")
     now = int(datetime.now(UTC).timestamp() * 1000)
@@ -152,7 +163,7 @@ async def get_invoice_summary(user: dict = Depends(require_role("admin", "tech",
         "total_count": len(rows),
         "total_revenue": round(sum(float(i.get("total", 0)) for i in rows if i.get("status") == "paid"), 2),
         "total_outstanding": round(
-            sum(float(i.get("total", 0)) for i in rows if i.get("status") in ("sent", "partial", "overdue")), 2
+            sum(float(i.get("total", 0)) for i in rows if i.get("status") in ("sent", "partial", "overdue")), 2,
         ),
         "overdue_count": sent_partial_overdue + summary.get("overdue", {}).get("count", 0),
         "overdue_total": round(sent_partial_overdue_total + summary.get("overdue", {}).get("total", 0), 2),
@@ -161,7 +172,7 @@ async def get_invoice_summary(user: dict = Depends(require_role("admin", "tech",
 
 @router.post("/api/invoices/bulk-status-update")
 @limiter.limit("100/minute")
-async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict = Depends(require_role("admin"))):
+async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Update status of multiple invoices at once."""
     updated = 0
     errors = 0
@@ -181,14 +192,14 @@ async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: dict =
                     "count": updated,
                     "status": body.status,
                 },
-            )
+            ),
         )
     return {"ok": True, "updated": updated, "errors": errors}
 
 
 @router.post("/api/invoices/bulk-edit")
 @limiter.limit("100/minute")
-async def bulk_edit_invoices(body: BulkInvoiceEdit, user: dict = Depends(require_role("admin"))):
+async def bulk_edit_invoices(body: BulkInvoiceEdit, user: Annotated[dict, Depends(require_role("admin"))]):
     """Update terms and/or notes on multiple invoices at once."""
     updated = 0
     errors = 0
@@ -216,11 +227,12 @@ async def bulk_edit_invoices(body: BulkInvoiceEdit, user: dict = Depends(require
 
 
 @router.get("/api/invoices/overdue-count")
-async def get_overdue_count(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_overdue_count(user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     """Get count of overdue invoices and total overdue amount.
-    Detects overdue on-the-fly: invoices past due_date with status sent/partial count as overdue."""
+    Detects overdue on-the-fly: invoices past due_date with status sent/partial count as overdue.
+    """
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {int(datetime.now(UTC).timestamp() * 1000)}))"
+        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {int(datetime.now(UTC).timestamp() * 1000)}))",
     )
     total = sum(float(i.get("total", 0)) for i in rows)
     return {"count": len(rows), "total": round(total, 2)}
@@ -228,13 +240,14 @@ async def get_overdue_count(user: dict = Depends(require_role("admin", "tech", "
 
 @router.post("/api/invoices/trigger-overdue-check")
 @limiter.limit("100/minute")
-async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
+async def trigger_overdue_check(user: Annotated[dict, Depends(require_role("admin"))]):
     """Mark overdue invoices — checks each sent/partial invoice past its due date
-    and updates status to 'overdue' via the STDB reducer, or reports it would mark them."""
+    and updates status to 'overdue' via the STDB reducer, or reports it would mark them.
+    """
     # Detect overdue invoices that need marking
     now = int(datetime.now(UTC).timestamp() * 1000)
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}"
+        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}",
     )
     marked = 0
     for inv in rows:
@@ -248,11 +261,11 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
 
 @router.post("/api/invoices/send-overdue-reminders")
 @limiter.limit("100/minute")
-async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
+async def send_overdue_reminders(user: Annotated[dict, Depends(require_role("admin"))]):
     """Find overdue invoices and send email/SMS reminders to each customer."""
     now = int(datetime.now(UTC).timestamp() * 1000)
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}))"
+        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}))",
     )
     sent = {"email": 0, "sms": 0, "total": 0}
     for inv in rows:
@@ -283,7 +296,7 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
 @router.put("/api/invoices/{invoice_id}/status")
 @limiter.limit("100/minute")
 async def update_invoice_status(
-    invoice_id: str, body: InvoiceStatusUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    invoice_id: str, body: InvoiceStatusUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("update_invoice_status", [invoice_id, body.status])
     new_status = body.status
@@ -296,13 +309,13 @@ async def update_invoice_status(
                 "id": invoice_id,
                 "status": new_status,
             },
-        )
+        ),
     )
     return {"ok": True}
 
 
 @router.get("/api/invoices/{invoice_id}/line-items")
-async def get_invoice_line_items(invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_invoice_line_items(invoice_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     rows = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_safe_id(invoice_id)}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
@@ -310,7 +323,7 @@ async def get_invoice_line_items(invoice_id: str, user: dict = Depends(require_r
 @router.post("/api/invoices/{invoice_id}/line-items")
 @limiter.limit("100/minute")
 async def add_invoice_line_item(
-    invoice_id: str, body: InvoiceLineItemCreate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    invoice_id: str, body: InvoiceLineItemCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "add_invoice_line_item",
@@ -328,7 +341,7 @@ async def add_invoice_line_item(
 
 @router.delete("/api/invoices/{invoice_id}/line-items/{item_id}")
 @limiter.limit("100/minute")
-async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_invoice_line_item(invoice_id: str, item_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_invoice_line_item", [item_id])
     await _log_audit(user, "delete", "line_item", invoice_id)
     return {"ok": True}
@@ -336,7 +349,7 @@ async def delete_invoice_line_item(invoice_id: str, item_id: str, user: dict = D
 
 @router.delete("/api/invoices/{invoice_id}")
 @limiter.limit("100/minute")
-async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_invoice(invoice_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_invoice", [invoice_id])
     await _log_audit(user, "delete", "invoice", invoice_id)
     return {"ok": True}
@@ -345,7 +358,7 @@ async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("adm
 @router.put("/api/invoices/{invoice_id}/tax-rate")
 @limiter.limit("100/minute")
 async def set_invoice_tax_rate(
-    invoice_id: str, body: InvoiceTaxRateUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+    invoice_id: str, body: InvoiceTaxRateUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("set_invoice_tax_rate", [invoice_id, body.tax_rate])
     await _log_audit(user, "update", "invoice_tax", invoice_id, f"rate={body.tax_rate}")
@@ -353,7 +366,7 @@ async def set_invoice_tax_rate(
 
 
 @router.get("/api/invoices/{invoice_id}/pdf")
-async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def invoice_pdf(invoice_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
     invs = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}'")
     if not invs:
         raise HTTPException(404, "Invoice not found")
@@ -382,7 +395,7 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
                     customer.get("city", ""),
                     customer.get("state", ""),
                 ],
-            )
+            ),
         ),
         customer_email=customer.get("email", ""),
         customer_phone=customer.get("phone", ""),
@@ -410,7 +423,7 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
             }
             for p in _sort(
                 await _sql(
-                    f"SELECT amount, method, reference, created_at, notes FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'"
+                    f"SELECT amount, method, reference, created_at, notes FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'",
                 ),
                 key="created_at",
             )
@@ -442,15 +455,15 @@ async def invoice_pdf(invoice_id: str, user: dict = Depends(require_role("admin"
 @limiter.limit("100/minute")
 async def send_invoice_email(
     body: dict,
-    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
-    """Send a single invoice by email. Body: {"invoice_id": "..."}"""
+    """Send a single invoice by email. Body: {"invoice_id": "..."}."""
     invoice_id = body.get("invoice_id", "")
     if not invoice_id:
         raise HTTPException(400, "invoice_id required")
 
     invs = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND tenant_id = '{user['tenant_id']}'",
     )
     if not invs:
         raise HTTPException(404, "Invoice not found")
@@ -480,9 +493,9 @@ async def send_invoice_email(
 @limiter.limit("100/minute")
 async def send_batch_invoice_email(
     body: dict,
-    user: dict = Depends(require_role("admin")),
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
-    """Send multiple invoices by email. Body: {"invoice_ids": ["id1", "id2", ...]}"""
+    """Send multiple invoices by email. Body: {"invoice_ids": ["id1", "id2", ...]}."""
     invoice_ids = body.get("invoice_ids", [])
     if not invoice_ids:
         raise HTTPException(400, "invoice_ids array required")
@@ -531,11 +544,11 @@ async def send_batch_invoice_email(
 
 
 @router.get("/api/invoices/email-queue-status")
-async def get_email_queue_status(user: dict = Depends(require_role("admin", "tech"))):
+async def get_email_queue_status(user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Get recent invoice email sends from audit log."""
     rows = await _sql(
         f"SELECT * FROM audit_log WHERE tenant_id = '{user['tenant_id']}' "
-        f"AND (action = 'send_email' OR action = 'send_batch_email')"
+        f"AND (action = 'send_email' OR action = 'send_batch_email')",
     )
     # Manual sort — STDB doesn't support ORDER BY
     rows.sort(key=lambda r: r.get("created_at", 0), reverse=True)

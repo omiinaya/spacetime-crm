@@ -1,7 +1,7 @@
 """Stripe payment processing for SpacetimeCRM."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import stripe as stripe_lib
 from stripe import StripeError
@@ -53,10 +53,10 @@ async def create_checkout_session(
                             "name": f"Invoice #{invoice_number}",
                             "description": line_items_desc or f"Payment for Invoice #{invoice_number}",
                         },
-                        "unit_amount": int(round(amount * 100)),  # cents
+                        "unit_amount": round(amount * 100),  # cents
                     },
                     "quantity": 1,
-                }
+                },
             ],
             metadata={
                 "invoice_id": invoice_id,
@@ -69,7 +69,7 @@ async def create_checkout_session(
         logger.info("Stripe checkout session created: %s", session.id)
         return {"session_id": session.id, "url": session.url}
     except StripeError as e:
-        logger.error("Stripe checkout session failed: %s", e)
+        logger.exception("Stripe checkout session failed: %s", e)
         return None
 
 
@@ -88,10 +88,10 @@ async def verify_webhook(payload: bytes, sig_header: str) -> dict[str, Any] | No
         event = stripe_lib.Webhook.construct_event(payload, sig_header, settings.stripe_webhook_secret)
         return event.to_dict_recursive()
     except StripeError as e:
-        logger.error("Stripe webhook signature verification failed: %s", e)
+        logger.exception("Stripe webhook signature verification failed: %s", e)
         return None
     except ValueError as e:
-        logger.error("Stripe webhook payload error: %s", e)
+        logger.exception("Stripe webhook payload error: %s", e)
         return None
 
 
@@ -114,7 +114,7 @@ async def create_setup_intent(customer_id: str) -> dict[str, Any] | None:
         logger.info("Stripe SetupIntent created for customer %s", customer_id)
         return {"client_secret": intent.client_secret, "id": intent.id}
     except StripeError as e:
-        logger.error("Stripe SetupIntent failed: %s", e)
+        logger.exception("Stripe SetupIntent failed: %s", e)
         return None
 
 
@@ -137,7 +137,7 @@ async def create_payment_intent(
 
     try:
         intent = stripe_lib.PaymentIntent.create(
-            amount=int(round(amount * 100)),
+            amount=round(amount * 100),
             currency="usd",
             payment_method=payment_method_id,
             receipt_email=customer_email,
@@ -160,5 +160,5 @@ async def create_payment_intent(
             "amount": amount,
         }
     except StripeError as e:
-        logger.error("Stripe PaymentIntent failed: %s", e)
+        logger.exception("Stripe PaymentIntent failed: %s", e)
         return {}

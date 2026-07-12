@@ -4,21 +4,24 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Annotated, Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sql,
-    _sql_t,
     _call,
     _log_audit,
-    require_role,
     _safe_id,
+    _sql,
+    _sql_t,
     logger,
+    require_role,
 )
-from models import ScheduledReportCreate, ScheduledReportUpdate
 from mail import send_email
 from rate_limit import limiter
+
+if TYPE_CHECKING:
+    from models import ScheduledReportCreate, ScheduledReportUpdate
 
 router = APIRouter()
 
@@ -41,7 +44,7 @@ async def list_schedules(
 
 @router.post("/api/report-schedules")
 @limiter.limit("100/minute")
-async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))):
+async def create_schedule(body: ScheduledReportCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Create a new scheduled report."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     next_run_at = _calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
@@ -66,7 +69,7 @@ async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(requ
 
 @router.put("/api/report-schedules/{schedule_id}")
 @limiter.limit("100/minute")
-async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: dict = Depends(require_role("admin"))):
+async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Update an existing scheduled report."""
     _safe_id(schedule_id)
     existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{_safe_id(schedule_id)}'")
@@ -106,7 +109,7 @@ async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: d
 
 @router.delete("/api/report-schedules/{schedule_id}")
 @limiter.limit("100/minute")
-async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_schedule(schedule_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a scheduled report."""
     _safe_id(schedule_id)
     await _call("delete_scheduled_report", [schedule_id])
@@ -119,19 +122,18 @@ async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("a
 
 @router.post("/api/report-schedules/{schedule_id}/run-now")
 @limiter.limit("100/minute")
-async def run_schedule_now(schedule_id: str, user: dict = Depends(require_role("admin", "tech"))):
+async def run_schedule_now(schedule_id: str, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Generate and deliver a scheduled report immediately."""
     _safe_id(schedule_id)
     schedules = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{_safe_id(schedule_id)}'")
     if not schedules:
         raise HTTPException(404, "Schedule not found")
 
-    result = await _generate_and_deliver(schedules[0], user)
-    return result
+    return await _generate_and_deliver(schedules[0], user)
 
 
 @router.get("/api/report-schedules/check-due")
-async def check_due_schedules(user: dict = Depends(require_role("admin"))):
+async def check_due_schedules(user: Annotated[dict, Depends(require_role("admin"))]):
     """Find all enabled schedules past their next_run_at. Call from cron."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     all_rows = await _sql_t("SELECT * FROM scheduled_reports", user["tenant_id"])
@@ -264,7 +266,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "chart_label": "Revenue by Month",
         }
 
-    elif report_type == "tickets":
+    if report_type == "tickets":
         tickets = await _sql_t("SELECT * FROM ticket", tenant_id)
         status_filter = filters.get("status", "")
         if status_filter:
@@ -333,7 +335,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "chart2_label": "Tech Productivity (Closed)",
         }
 
-    elif report_type == "invoices":
+    if report_type == "invoices":
         invoices = await _sql_t("SELECT * FROM invoices", tenant_id)
         status_filter = filters.get("status", "")
         if status_filter:
@@ -378,7 +380,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "chart_label": "Invoices by Status",
         }
 
-    elif report_type == "appointments":
+    if report_type == "appointments":
         appointments = await _sql_t("SELECT * FROM appointment", tenant_id)
 
         appt_by_month = []
@@ -391,7 +393,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
                 {
                     "label": ms.strftime("%b %y"),
                     "value": sum(1 for a in appointments if ms_ts <= a.get("start_time", 0) < ms_end_ts),
-                }
+                },
             )
 
         status_counts: dict[str, int] = {}
@@ -411,7 +413,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "chart_label": "Appointments by Month",
         }
 
-    elif report_type == "tech_productivity":
+    if report_type == "tech_productivity":
         tickets = await _sql_t("SELECT * FROM ticket", tenant_id)
         all_users = await _sql("SELECT id, name FROM user")
         user_name_map = {u["id"]: u.get("name", "Unknown") for u in all_users}
@@ -459,7 +461,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "chart_label": "Tickets Closed by Tech",
         }
 
-    elif report_type == "customers":
+    if report_type == "customers":
         customers = await _sql_t("SELECT * FROM customer", tenant_id)
         invoices = await _sql_t("SELECT * FROM invoices", tenant_id)
 
@@ -484,7 +486,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
                 {"label": "Total Customers", "value": str(len(customers))},
                 {
                     "label": "Active (with invoices)",
-                    "value": str(len(set(inv.get("customer_id", "") for inv in invoices))),
+                    "value": str(len({inv.get("customer_id", "") for inv in invoices})),
                 },
                 {
                     "label": "Avg Revenue/Customer",

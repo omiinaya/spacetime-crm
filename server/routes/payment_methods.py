@@ -2,20 +2,22 @@
 
 from __future__ import annotations
 
-import asyncio
+from typing import TYPE_CHECKING, Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sql,
     _call,
-    _sort,
     _log_audit,
+    _sort,
+    _sql,
     require_role,
-    logger,
 )
-from models import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
-from stripe_payments import create_setup_intent, is_configured
 from rate_limit import limiter
+from stripe_payments import create_setup_intent, is_configured
+
+if TYPE_CHECKING:
+    from models import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
 
 router = APIRouter()
 
@@ -28,7 +30,7 @@ async def list_payment_methods(
     """List saved payment methods, optionally filtered by customer."""
     if customer_id:
         rows = await _sql(
-            f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}' AND customer_id = '{customer_id}'"
+            f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}' AND customer_id = '{customer_id}'",
         )
     else:
         rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}'")
@@ -39,7 +41,7 @@ async def list_payment_methods(
 @limiter.limit("100/minute")
 async def create_payment_setup_intent(
     body: SetDefaultPaymentMethodRequest,
-    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Create a Stripe SetupIntent for securely collecting a payment method."""
     if not is_configured():
@@ -54,7 +56,7 @@ async def create_payment_setup_intent(
 @limiter.limit("100/minute")
 async def save_payment_method(
     body: SavePaymentMethodRequest,
-    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Save a payment method collected via Stripe SetupIntent."""
     await _call(
@@ -78,7 +80,7 @@ async def save_payment_method(
 async def set_default_payment_method(
     method_id: str,
     body: SetDefaultPaymentMethodRequest,
-    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Set a payment method as the default for a customer."""
     await _call("set_default_payment_method", [method_id, body.customer_id])
@@ -90,7 +92,7 @@ async def set_default_payment_method(
 @limiter.limit("100/minute")
 async def delete_payment_method(
     method_id: str,
-    user: dict = Depends(require_role("admin")),
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Delete a saved payment method."""
     await _call("delete_payment_method", [method_id])

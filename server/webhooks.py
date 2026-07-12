@@ -7,10 +7,11 @@ import hashlib
 import hmac
 import json
 import logging
-from typing import Any, Optional
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
+
 from client import get_http_client
 
 logger = logging.getLogger(__name__)
@@ -131,6 +132,7 @@ async def fire_event(
 
     Returns:
         List of delivery result dicts.
+
     """
     results: list[dict[str, Any]] = []
 

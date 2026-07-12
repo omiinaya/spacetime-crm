@@ -1,6 +1,8 @@
 """Customer portal routes + Stripe checkout session creation."""
 
-from datetime import datetime, timezone, timedelta, UTC
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
+
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -8,27 +10,25 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from config import settings
 from helpers import (
-    _sanitize_sql,
-    _safe_id,
-    _sql,
     _call,
-    _sort,
-    _log_audit,
-    _fire_webhook,
     _safe_customer,
-    logger,
+    _safe_id,
+    _sanitize_sql,
+    _sort,
+    _sql,
     security,
 )
-from rate_limit import limiter
 from models import (
+    PortalCheckoutSessionCreate,
     PortalLoginRequest,
     PortalNoteCreate,
     PortalPaymentCreate,
-    PortalSetPassword,
-    PortalCheckoutSessionCreate,
     PortalPayWithSavedCard,
+    PortalSetPassword,
 )
-from stripe_payments import create_checkout_session, create_payment_intent, is_configured as stripe_configured
+from rate_limit import limiter
+from stripe_payments import create_checkout_session, create_payment_intent
+from stripe_payments import is_configured as stripe_configured
 
 router = APIRouter()
 
@@ -112,7 +112,7 @@ async def portal_login(request: Request, body: PortalLoginRequest):
 
 
 @router.get("/api/portal/me")
-async def portal_me(customer: dict = Depends(get_current_customer)):
+async def portal_me(customer: Annotated[dict, Depends(get_current_customer)]):
     """Return current customer info (safe fields only)."""
     return {
         "id": customer["id"],
@@ -131,7 +131,7 @@ async def portal_me(customer: dict = Depends(get_current_customer)):
 
 
 @router.get("/api/portal/stats")
-async def portal_stats(customer: dict = Depends(get_current_customer)):
+async def portal_stats(customer: Annotated[dict, Depends(get_current_customer)]):
     """Dashboard stats for the customer."""
     cid = customer["id"]
     tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{_safe_id(cid)}'")
@@ -156,7 +156,7 @@ async def portal_stats(customer: dict = Depends(get_current_customer)):
 
 
 @router.get("/api/portal/tickets")
-async def portal_tickets(customer: dict = Depends(get_current_customer)):
+async def portal_tickets(customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer's tickets."""
     rows = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{customer['id']}'")
     users = await _sql("SELECT * FROM user")
@@ -167,7 +167,7 @@ async def portal_tickets(customer: dict = Depends(get_current_customer)):
 
 
 @router.get("/api/portal/tickets/{ticket_id}")
-async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_current_customer)):
+async def portal_ticket_detail(ticket_id: str, customer: Annotated[dict, Depends(get_current_customer)]):
     """Single ticket detail with notes (customer-owned only)."""
     rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
@@ -183,7 +183,7 @@ async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_curr
 
 @router.post("/api/portal/tickets/{ticket_id}/notes")
 @limiter.limit("30/minute")
-async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: dict = Depends(get_current_customer)):
+async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer adds a note to their ticket."""
     rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
@@ -204,17 +204,17 @@ async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: dict
 
 
 @router.get("/api/portal/invoices")
-async def portal_invoices(customer: dict = Depends(get_current_customer)):
+async def portal_invoices(customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer's invoices."""
     rows = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{customer['id']}'")
     return {"invoices": _sort(rows, "created_at")}
 
 
 @router.get("/api/portal/invoices/{invoice_id}")
-async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_current_customer)):
+async def portal_invoice_detail(invoice_id: str, customer: Annotated[dict, Depends(get_current_customer)]):
     """Single invoice detail with line items (customer-owned only)."""
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'",
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -234,14 +234,14 @@ async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_cu
 
 @router.post("/api/portal/payments")
 @limiter.limit("30/minute")
-async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depends(get_current_customer)):
+async def portal_make_payment(body: PortalPaymentCreate, customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer makes a payment on an invoice."""
     invoice_id = body.invoice_id
     amount = body.amount
     method = body.method
 
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'",
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -275,7 +275,7 @@ async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depend
 
 
 @router.get("/api/portal/appointments")
-async def portal_appointments(customer: dict = Depends(get_current_customer)):
+async def portal_appointments(customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer's appointments."""
     now_ms = int(datetime.now(UTC).timestamp() * 1000)
     rows = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{customer['id']}'")
@@ -293,7 +293,7 @@ async def portal_appointments(customer: dict = Depends(get_current_customer)):
 
 @router.post("/api/portal/customer/set-password")
 @limiter.limit("20/minute")
-async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(get_current_customer)):
+async def portal_set_password(body: PortalSetPassword, customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer sets/changes their portal password."""
     pw = body.password
     if len(pw) < 6:
@@ -309,7 +309,7 @@ async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(
 @router.post("/api/portal/payments/create-checkout-session")
 @limiter.limit("30/minute")
 async def portal_create_checkout_session(
-    body: PortalCheckoutSessionCreate, customer: dict = Depends(get_current_customer)
+    body: PortalCheckoutSessionCreate, customer: Annotated[dict, Depends(get_current_customer)],
 ):
     """Create a Stripe Checkout Session for an invoice payment."""
     if not stripe_configured():
@@ -320,7 +320,7 @@ async def portal_create_checkout_session(
         raise HTTPException(400, "invoice_id is required")
 
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'",
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -359,7 +359,7 @@ async def portal_create_checkout_session(
 
 
 @router.get("/api/portal/payment-methods")
-async def portal_payment_methods(customer: dict = Depends(get_current_customer)):
+async def portal_payment_methods(customer: Annotated[dict, Depends(get_current_customer)]):
     """List the customer's saved payment methods."""
     rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE customer_id = '{customer['id']}'")
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
@@ -372,7 +372,7 @@ async def portal_payment_methods(customer: dict = Depends(get_current_customer))
 @limiter.limit("30/minute")
 async def portal_pay_with_saved_card(
     body: PortalPayWithSavedCard,
-    customer: dict = Depends(get_current_customer),
+    customer: Annotated[dict, Depends(get_current_customer)],
 ):
     """Pay an invoice using a saved payment method via Stripe PaymentIntent."""
     invoice_id = body.invoice_id
@@ -380,7 +380,7 @@ async def portal_pay_with_saved_card(
 
     # Verify invoice belongs to customer
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'",
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -391,7 +391,7 @@ async def portal_pay_with_saved_card(
 
     # Verify payment method belongs to customer
     pm_rows = await _sql(
-        f"SELECT * FROM saved_payment_methods WHERE stripe_payment_method_id = '{payment_method_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM saved_payment_methods WHERE stripe_payment_method_id = '{payment_method_id}' AND customer_id = '{customer['id']}'",
     )
     if not pm_rows:
         raise HTTPException(404, "Payment method not found")
