@@ -15,7 +15,7 @@ def _create_webhook(test_admin_headers: dict, session_suffix: str = "", suffix: 
     url = f"https://example-{session_suffix}-{suf}.com/webhook"
     resp = httpx.post(
         f"{SERVER_URL}/api/webhook-subscriptions",
-        json={"url": url, "events": "customer.created,ticket.created", "secret": "test-secret"},
+        json={"url": url, "events": "customer.created,ticket.created", "secret": "dummy-test-secret"},
         headers=test_admin_headers,
         timeout=10,
     )
@@ -36,7 +36,7 @@ class TestWebhookCRUD:
         url = f"https://hooks-{session_suffix}-{unique_suffix()}.example.com/crm"
         resp = httpx.post(
             f"{SERVER_URL}/api/webhook-subscriptions",
-            json={"url": url, "events": "customer.created,invoice.paid", "secret": "whsec_abc123"},
+            json={"url": url, "events": "customer.created,invoice.paid", "secret": "dummy-whsec"},
             headers=test_admin_headers,
             timeout=10,
         )
@@ -75,7 +75,7 @@ class TestWebhookCRUD:
             json={
                 "url": "https://updated.example.com/hook",
                 "events": "ticket.updated",
-                "secret": "new-secret",
+                "secret": "dummy-new-secret",
                 "active": False,
             },
             headers=test_admin_headers,

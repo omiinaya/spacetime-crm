@@ -59,13 +59,13 @@ class TestSettings:
             assert s.cors_origin == "http://example.com"
 
     def test_stripe_secret_env(self) -> None:
-        env = {"STRIPE_SECRET_KEY": "sk_test_123", "STRIPE_WEBHOOK_SECRET": "whsec_456"}
+        env = {"STRIPE_SECRET_KEY": "sk_test_placeholder", "STRIPE_WEBHOOK_SECRET": "whsec_placeholder"}
         with patch.dict(os.environ, env, clear=True):
             from config import Settings
 
             s = Settings(_env_file=None)
-            assert s.stripe_secret_key == "sk_test_123"
-            assert s.stripe_webhook_secret == "whsec_456"
+            assert s.stripe_secret_key == "sk_test_placeholder"
+            assert s.stripe_webhook_secret == "whsec_placeholder"
 
     def test_app_url_env(self) -> None:
         with patch.dict(os.environ, {"APP_URL": "https://myapp.example.com"}, clear=True):
