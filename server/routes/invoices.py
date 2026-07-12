@@ -12,7 +12,7 @@ from config import settings
 from helpers import (
 
 # FIXME: S608 - Possible SQL injection via f-string queries
-# FIXME: ARG001 - Unused function arguments
+
 
     STATUS_CSS,
     STATUS_LABELS,

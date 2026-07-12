@@ -28,7 +28,7 @@ def _load_settings() -> dict | None:
         with open(SETTINGS_PATH) as f:
             return json.load(f)
     except Exception as e:
-        logger.exception("Failed to load SMS settings: %s", e)
+        logger.exception("Failed to load SMS settings")
         return None
 
 
@@ -196,7 +196,7 @@ def _notify_payment_received(phone: str, invoice_number: int, amount: float) -> 
 
 def _notify_appointment_created(phone: str, title: str, start_time: int) -> None:
     """Send appointment reminder SMS."""
-    dt = datetime.fromtimestamp(start_time / 1000)
+    dt = datetime.fromtimestamp(start_time / 1000, tz=UTC)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     body = f"Appointment scheduled: {title} on {date_str}"
     asyncio.ensure_future(send_sms(phone, body))
@@ -204,7 +204,7 @@ def _notify_appointment_created(phone: str, title: str, start_time: int) -> None
 
 def _notify_appointment_reminder(phone: str, title: str, start_time: int) -> None:
     """Send appointment reminder SMS (24h before)."""
-    dt = datetime.fromtimestamp(start_time / 1000)
+    dt = datetime.fromtimestamp(start_time / 1000, tz=UTC)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     body = f"Reminder: {title} tomorrow at {date_str}. See you then!"
     asyncio.ensure_future(send_sms(phone, body))

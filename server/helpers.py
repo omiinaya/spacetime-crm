@@ -165,6 +165,7 @@ async def _call(reducer: str, args: list[Any] | None = None) -> Any:
     try:
         return resp.json()
     except Exception:
+        logger.exception("Error in STDB call")
         return {"ok": True}
 
 
@@ -204,6 +205,7 @@ async def _get_webhook_subscriptions() -> list[dict[str, Any]]:
     try:
         return await _sql("SELECT * FROM webhook_subscriptions")
     except Exception:
+        logger.exception("Error in STDB call")
         return []
 
 

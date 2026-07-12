@@ -208,7 +208,7 @@ def _notify_invoice_created(customer_email: str, invoice_number: int, total: flo
 
 def _notify_appointment_created(customer_email: str, title: str, start_time: int, link: str) -> None:
     """Send appointment notification."""
-    dt = datetime.fromtimestamp(start_time / 1000)
+    dt = datetime.fromtimestamp(start_time / 1000, tz=UTC)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     html = jinja_env.get_template("email/appointment_created.html").render(
         title=title,
@@ -260,7 +260,7 @@ def _notify_low_stock(admin_email: str, products: list[dict]) -> None:
 
 def _notify_appointment_reminder(customer_email: str, title: str, start_time: int, link: str) -> None:
     """Send appointment reminder email (24h before)."""
-    dt = datetime.fromtimestamp(start_time / 1000)
+    dt = datetime.fromtimestamp(start_time / 1000, tz=UTC)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     html = jinja_env.get_template("email/appointment_reminder.html").render(
         title=title,
