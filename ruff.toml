@@ -1,7 +1,7 @@
 target-version = "py312"
 line-length = 120
 
-# Enable recommended rules
+[lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -15,7 +15,6 @@ select = [
     "C4",  # flake8-comprehensions
 ]
 
-# Ignore some rules that may be too strict for now
 ignore = [
     "B008",  # Do not perform function calls in argument defaults
     "B904",  # Within an except clause, raise exceptions with raise ... from err
@@ -23,5 +22,4 @@ ignore = [
     "SIM117", # Merge with-statements (readability)
 ]
 
-# Per-file ignores
 per-file-ignores = {}
