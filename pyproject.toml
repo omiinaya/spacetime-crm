@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spacetime-crm"
+version = "0.1.0"
+description = "RepairShopr-inspired CRM built on SpacetimeDB — customers, tickets, invoicing, appointments, inventory, estimates, and purchase orders."
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "SpacetimeCRM Contributors"},
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "SIM", "ARG", "C4",
+]
+ignore = [
+    "B008", "B904", "SIM108", "SIM117",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["server/tests"]
