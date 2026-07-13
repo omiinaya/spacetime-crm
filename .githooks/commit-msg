@@ -1,0 +1,12 @@
+#!/bin/sh
+# commit-msg hook — validate commit message with commitlint
+commit_msg_file="$1"
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_root/web" || exit 1
+if ! npx commitlint --edit "$commit_msg_file"; then
+  echo ""
+  echo "❌ Commit message does not follow conventional commits."
+  echo "   Please use format: <type>: <description> (lowercase)"
+  echo "   Types: feat, fix, docs, style, refactor, perf, test, chore, revert, ci"
+  exit 1
+fi
