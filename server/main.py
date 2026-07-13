@@ -70,6 +70,6 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=settings.server_port,
-        reload=True,
+        reload=os.getenv("RELOAD", "true").lower() == "true",
         log_config=get_uvicorn_log_config(),
     )

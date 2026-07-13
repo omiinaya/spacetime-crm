@@ -43,8 +43,6 @@ sleep 2
 
 # ── Start Python server ────────────────────────────────────
 echo "🚀 Starting backend on port ${SERVER_PORT:-8723}..."
-if [ "${RELOAD:-false}" = "true" ]; then
-    exec python3 main.py
-else
-    exec python3 -m uvicorn main:app --host 0.0.0.0 --port "${SERVER_PORT:-8723}"
-fi
+# Always use python3 main.py so structured logging config is applied
+# RELOAD env var is read by main.py itself
+exec python3 main.py
