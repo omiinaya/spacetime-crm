@@ -71,5 +71,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=settings.server_port,
         reload=True,
-        log_config=None,  # Use our own logging config from log_config.py
+        log_config=get_uvicorn_log_config(),
     )

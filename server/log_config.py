@@ -61,3 +61,47 @@ def configure_logging() -> None:
     logger.addHandler(handler)
 
 
+def get_uvicorn_log_config() -> dict:
+    """Return a uvicorn-compatible logging config dict.
+
+    When STRUCTURED_LOGGING is true, both uvicorn.access and uvicorn.error
+    loggers use the JSON formatter. Otherwise, standard text format.
+    """
+    formatter_name = "json" if STRUCTURED else "text"
+    text_fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    datefmt = "%Y-%m-%d %H:%M:%S"
+
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "json": {
+                "()": "server.log_config.JsonFormatter",
+            },
+            "text": {
+                "format": text_fmt,
+                "datefmt": datefmt,
+            },
+        },
+        "handlers": {
+            "default": {
+                "class": "logging.StreamHandler",
+                "formatter": formatter_name,
+                "stream": "ext://sys.stderr",
+            },
+            "access": {
+                "class": "logging.StreamHandler",
+                "formatter": formatter_name,
+                "stream": "ext://sys.stdout",
+            },
+        },
+        "loggers": {
+            "uvicorn": {"handlers": ["default"], "level": LOG_LEVEL, "propagate": False},
+            "uvicorn.error": {"handlers": ["default"], "level": LOG_LEVEL, "propagate": False},
+            "uvicorn.access": {"handlers": ["access"], "level": LOG_LEVEL, "propagate": False},
+        },
+        "root": {
+            "handlers": ["default"],
+            "level": LOG_LEVEL,
+        },
+    }
