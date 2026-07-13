@@ -126,7 +126,7 @@ export default function PaymentsPage() {
         </Card>
       )}
 
-      {empty ? (
+      {payments.length === 0 ? (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
         <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -138,6 +138,7 @@ export default function PaymentsPage() {
       <p className="text-sm text-muted-foreground mb-4 max-w-sm">Payments will appear here once recorded</p>
     </div>
   ) : (
+    <>
     <div className="space-y-3">
         {payments.map((p) => (
           <Card key={p.id}>
@@ -153,7 +154,6 @@ export default function PaymentsPage() {
         ))}
       </div>
 
-    </div>
       <Pagination
         page={pag.page}
         totalPages={pag.totalPages}
@@ -165,5 +165,7 @@ export default function PaymentsPage() {
         onGoToPage={pag.goToPage}
       />
     </>
+  )}
+</>
   );
 }
