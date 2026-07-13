@@ -66,6 +66,8 @@ def get_uvicorn_log_config() -> dict:
 
     When STRUCTURED_LOGGING is true, both uvicorn.access and uvicorn.error
     loggers use the JSON formatter. Otherwise, standard text format.
+    This config is passed to ``uvicorn.run(log_config=...)`` so that
+    uvicorn's own loggers produce the same format as the app loggers.
     """
     formatter_name = "json" if STRUCTURED else "text"
     text_fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -76,7 +78,7 @@ def get_uvicorn_log_config() -> dict:
         "disable_existing_loggers": False,
         "formatters": {
             "json": {
-                "()": "server.log_config.JsonFormatter",
+                "()": "log_config.JsonFormatter",
             },
             "text": {
                 "format": text_fmt,
