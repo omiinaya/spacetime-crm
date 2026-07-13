@@ -8,13 +8,34 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.yml]
+[*.py]
+indent_size = 4
+
+[*.rs]
+indent_size = 4
+
+[*.{ts,tsx,js,jsx}]
 indent_size = 2
 
-[*.yaml]
+[*.html]
+indent_size = 2
+
+[*.css]
+indent_size = 2
+
+[*.{yml,yaml}]
 indent_size = 2
 
 [*.json]
+indent_size = 2
+
+[*.toml]
+indent_size = 2
+
+[*.md]
+indent_size = 2
+
+[*.sh]
 indent_size = 2
 
 [Makefile]
