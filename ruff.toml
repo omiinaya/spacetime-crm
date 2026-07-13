@@ -1,0 +1,27 @@
+target-version = "py312"
+line-length = 120
+
+# Enable recommended rules
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "ARG", # flake8-unused-arguments
+    "C4",  # flake8-comprehensions
+]
+
+# Ignore some rules that may be too strict for now
+ignore = [
+    "B008",  # Do not perform function calls in argument defaults
+    "B904",  # Within an except clause, raise exceptions with raise ... from err
+    "SIM108", # Use ternary operator (may reduce readability)
+    "SIM117", # Merge with-statements (readability)
+]
+
+# Per-file ignores
+per-file-ignores = {}
