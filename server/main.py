@@ -1,6 +1,7 @@
 """SpacetimeCRM — FastAPI application entry point."""
 from __future__ import annotations
 
+import os
 import secrets
 from pathlib import Path
 
