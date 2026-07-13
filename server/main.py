@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from config import settings
-from log_config import configure_logging
+from log_config import configure_logging, get_uvicorn_log_config
 from helpers import logger
 
 # Generate a default JWT secret on startup if none configured
