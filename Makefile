@@ -148,9 +148,13 @@ seed: ## Seed demo data
 
 backup: ## Backup all STDB data
 	python3 scripts/backup.py
-
 restore: ## Restore from backup (usage: make restore FILE=backups/xxx.gz)
+	@if [ -z "$(FILE)" ]; then echo "❌ Usage: make restore FILE=backups/xxx.gz"; exit 1; fi
 	python3 scripts/restore.py $(FILE)
+
+dry-restore: ## Dry-run restore validation (no changes) (usage: make dry-restore FILE=backups/xxx.gz)
+	@if [ -z "$(FILE)" ]; then echo "❌ Usage: make dry-restore FILE=backups/xxx.gz"; exit 1; fi
+	python3 scripts/restore.py --dry-run $(FILE)
 
 # ── Clean ─────────────────────────────────────────────────────────────
 

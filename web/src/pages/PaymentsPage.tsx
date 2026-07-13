@@ -138,7 +138,6 @@ export default function PaymentsPage() {
       <p className="text-sm text-muted-foreground mb-4 max-w-sm">Payments will appear here once recorded</p>
     </div>
   ) : (
-    <>
     <div className="space-y-3">
         {payments.map((p) => (
           <Card key={p.id}>
@@ -154,7 +153,7 @@ export default function PaymentsPage() {
         ))}
       </div>
 
-
+    </div>
       <Pagination
         page={pag.page}
         totalPages={pag.totalPages}

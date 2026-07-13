@@ -1,0 +1,91 @@
+name: Backup & Restore Round-Trip
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/backup.py'
+      - 'scripts/restore.py'
+      - 'Makefile'
+
+env:
+  STDB_PORT: 3001
+  DB_NAME: spacetime-crm
+
+jobs:
+  backup-restore-roundtrip:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SpacetimeDB CLI
+        run: |
+          curl -fsSL https://github.com/clockworklabs/SpacetimeDB/releases/latest/download/spacetime-linux-x86_64.tar.gz | tar xz
+          sudo mv spacetime /usr/local/bin/
+          spacetime version
+
+      - name: Install Python dependencies
+        run: pip install httpx
+
+      - name: Start SpacetimeDB
+        run: |
+          spacetime start -l ${{ env.STDB_PORT }} &
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:${{ env.STDB_PORT }}/ > /dev/null 2>&1; then
+              echo "STDB ready on :${{ env.STDB_PORT }}"
+              break
+            fi
+            echo "Waiting for STDB... ($i/15)"
+            sleep 2
+          done
+
+      - name: Build and publish STDB module
+        run: |
+          cd server/spacetimedb
+          cargo build --release --target wasm32-unknown-unknown
+          spacetime publish --server http://localhost:${{ env.STDB_PORT }} --yes ${{ env.DB_NAME }}
+
+      - name: Seed demo data
+        run: python3 scripts/seed-demo.py
+
+      - name: Create backup
+        run: |
+          python3 scripts/backup.py
+          echo "Backup files:"
+          ls -la backups/
+          echo "FILE=$(ls backups/*.json.gz | head -1)" >> $GITHUB_ENV
+
+      - name: Verify backup file
+        run: |
+          python3 -c "
+import gzip, json
+with gzip.open('${{ env.FILE }}', 'rt') as f:
+    data = json.load(f)
+meta = data.get('meta', {})
+print(f'DB: {meta.get(\"db\")}')
+print(f'Rows: {meta.get(\"total_rows\")}')
+print(f'Tables: {meta.get(\"tables_count\")}')
+assert meta.get('total_rows', 0) > 0, 'No rows in backup'
+print('Backup file valid')
+          "
+
+      - name: Dry-run restore validation
+        run: python3 scripts/restore.py --dry-run "${{ env.FILE }}"
+
+      - name: Perform actual restore round-trip
+        run: python3 scripts/restore.py "${{ env.FILE }}"
+
+      - name: Verify restored data
+        run: |
+          python3 -c "
+import httpx
+client = httpx.Client(timeout=10)
+resp = client.get('http://localhost:${{ env.STDB_PORT }}/v1/database/${{ env.DB_NAME }}/sql', params={'q': 'SELECT COUNT(*) as cnt FROM customer'})
+print(f'Status: {resp.status_code}, Response: {resp.text[:200]}')
+print('Restore round-trip complete')
+          "
