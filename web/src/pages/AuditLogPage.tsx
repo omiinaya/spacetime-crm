@@ -16,6 +16,7 @@ import { api } from "../lib/api";
 import { History, Filter, RefreshCw } from "lucide-react";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { toast } from "sonner";
 
 const ENTITY_OPTIONS = ["", "customer", "ticket", "invoice", "payment", "appointment", "product", "estimate", "purchase_order", "user", "tax_rate", "line_item", "adjustment"];
 const ACTION_OPTIONS = ["", "create", "update", "delete", "assign", "update_status", "convert", "receive"];
@@ -51,6 +52,10 @@ export default function AuditLogPage() {
     queryKey: ["audit-log", { entity: entityFilter || undefined, action: actionFilter || undefined }],
     queryFn: () => api.auditLog.list(200, entityFilter || undefined, actionFilter || undefined),
   });
+
+  useEffect(() => {
+    if (error) toast.error("Failed to load audit log");
+  }, [error]);
 
   const entries = data?.entries ?? [];
 
@@ -98,6 +103,8 @@ export default function AuditLogPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-slate-400">Loading...</div>
+        ) : error ? (
+          <div className="p-8 text-center text-red-400">Failed to load audit log entries.</div>
         ) : entries.length === 0 ? (
           <div className="p-8 text-center text-slate-400">No audit log entries yet.</div>
         ) : (

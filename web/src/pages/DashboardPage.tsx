@@ -9,6 +9,7 @@ import { api, DashboardStats, ReportsData, Invoice } from "../lib/api";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { toast } from "sonner";
 import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -66,7 +67,7 @@ export default function DashboardPage({
   });
 
   useEffect(() => {
-    api.reports.get().then(setReports).catch(() => {});
+    api.reports.get().then(setReports).catch(() => { toast.error("Failed to load reports"); });
   }, []);
 
   const summaryCards: { label: string; value: string | number; icon: React.ElementType; color: string; link: PageId }[] = [

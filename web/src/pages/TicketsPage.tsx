@@ -106,7 +106,7 @@ export default function TicketsPage() {
       } else {
         setTimerSeconds(0);
       }
-    } catch { setTimers([]); }
+    } catch { setTimers([]); toast.error("Failed to load timers"); }
   };
 
   // Tick every second for running timer display
@@ -179,14 +179,14 @@ export default function TicketsPage() {
     try {
       const res = await api.checklist.ticket.list(ticketId);
       setChecklist(res.items);
-    } catch { setChecklist([]); }
+    } catch { setChecklist([]); toast.error("Failed to load checklist"); }
   };
 
   const loadTemplates = async () => {
     try {
       const res = await api.checklist.templates.list();
       setChecklistTemplates(res.templates);
-    } catch { setChecklistTemplates([]); }
+    } catch { setChecklistTemplates([]); toast.error("Failed to load checklist templates"); }
   };
 
   const handleApplyTemplate = async (templateId: string) => {
