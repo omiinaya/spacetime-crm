@@ -70,11 +70,7 @@ def sql_query(client: httpx.Client, query: str) -> list[dict]:
         for table_result in data:
             rows = table_result.get("rows", [])
             schema = table_result.get("schema", {})
-            cols = [
-                e["name"]["some"]
-                for e in schema.get("elements", [])
-                if "some" in e.get("name", {})
-            ]
+            cols = [e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})]
             for row in rows:
                 result.append(dict(zip(cols, row)))
     return result

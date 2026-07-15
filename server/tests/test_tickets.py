@@ -30,7 +30,11 @@ def _create_ticket(test_admin_headers: dict, session_suffix: str = "", suffix: s
     suf = suffix or unique_suffix()
     email = f"tkt-cust-{session_suffix}-{suf}@example.com"
     cust = create_customer(
-        test_admin_headers, session_suffix=session_suffix, first_name="Ticket", last_name=f"Test{suf}", email=email,
+        test_admin_headers,
+        session_suffix=session_suffix,
+        first_name="Ticket",
+        last_name=f"Test{suf}",
+        email=email,
     )
     cid = cust.get("id")
     assert cid, f"Failed to create customer: {cust}"
@@ -118,7 +122,10 @@ class TestInvoiceFlow:
     def test_create_invoice(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Create a basic invoice."""
         customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, first_name="Invoice", last_name="Test",
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Invoice",
+            last_name="Test",
         )
         cid = customer.get("id")
         assert cid

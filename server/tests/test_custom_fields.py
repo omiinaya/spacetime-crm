@@ -90,13 +90,17 @@ class TestCustomFieldDefinitions:
         data = _create_field(test_admin_headers, session_suffix, "delete")
         field_id = data["id"]
         resp = httpx.delete(
-            f"{SERVER_URL}/api/custom-field-definitions/{field_id}", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/custom-field-definitions/{field_id}",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
     def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/custom-field-definitions/nonexistent-999", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/custom-field-definitions/nonexistent-999",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code < 500
 

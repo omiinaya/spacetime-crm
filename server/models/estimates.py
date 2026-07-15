@@ -35,5 +35,3 @@ class EstimateLineItemCreate(BaseModel):
     description: str = Field(default="", max_length=500)
     quantity: float = Field(default=1, ge=0)
     unit_price: float = Field(default=0, ge=0)
-
-

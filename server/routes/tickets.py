@@ -10,11 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from config import settings
 from helpers import (
-
-# FIXME: S608 - Possible SQL injection via f-string queries
-# FIXME: FAST002 - FastAPI dependency without Annotated
-# FIXME: B008 - require_role/Depends in argument defaults
-
+    # FIXME: S608 - Possible SQL injection via f-string queries
+    # FIXME: FAST002 - FastAPI dependency without Annotated
+    # FIXME: B008 - require_role/Depends in argument defaults
     _call,
     _fire_webhook,
     _log_audit,
@@ -34,6 +32,7 @@ from sms import _notify_ticket_status_change as _sms_ticket_status
 from models.checklist import ChecklistApply, ChecklistToggle
 
 from models.tickets import TicketAssign, TicketCreate, TicketNoteCreate, TicketStatusUpdate, TicketTimerStart
+
 router = APIRouter()
 
 
@@ -66,7 +65,9 @@ async def list_tickets(
 
 @router.post("/api/tickets")
 @limiter.limit("100/minute")
-async def create_ticket(body: TicketCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def create_ticket(
+    body: TicketCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     await _call(
         "create_ticket",
         [
@@ -99,7 +100,8 @@ async def create_ticket(body: TicketCreate, user: Annotated[dict, Depends(requir
         tid = user["tenant_id"]
         # Find the most recently created ticket for this tenant
         recent = _sort(
-            await _sql(f"SELECT id, status, created_at FROM ticket WHERE tenant_id = '{tid}'"), key="created_at"  # nosec - tenant_id from JWT or internal whitelist
+            await _sql(f"SELECT id, status, created_at FROM ticket WHERE tenant_id = '{tid}'"),
+            key="created_at",  # nosec - tenant_id from JWT or internal whitelist
         )
         if recent:
             new_id = recent[0]["id"]
@@ -130,7 +132,9 @@ async def create_ticket(body: TicketCreate, user: Annotated[dict, Depends(requir
 @router.put("/api/tickets/{ticket_id}/status")
 @limiter.limit("100/minute")
 async def update_ticket_status(
-    ticket_id: str, body: TicketStatusUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    ticket_id: str,
+    body: TicketStatusUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     status = body.status
     await _call("update_ticket_status", [ticket_id, status])
@@ -166,7 +170,9 @@ async def update_ticket_status(
 @router.put("/api/tickets/{ticket_id}/assign")
 @limiter.limit("100/minute")
 async def assign_ticket(
-    ticket_id: str, body: TicketAssign, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    ticket_id: str,
+    body: TicketAssign,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("assign_ticket", [ticket_id, body.assigned_user_id])
     await _log_audit(user, "assign", "ticket", ticket_id, f"user={body.assigned_user_id}")
@@ -182,7 +188,9 @@ async def get_ticket_notes(ticket_id: str, user: Annotated[dict, Depends(require
 @router.post("/api/tickets/{ticket_id}/notes")
 @limiter.limit("100/minute")
 async def add_ticket_note(
-    ticket_id: str, body: TicketNoteCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    ticket_id: str,
+    body: TicketNoteCreate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "add_ticket_note",
@@ -211,7 +219,9 @@ async def delete_ticket(ticket_id: str, user: Annotated[dict, Depends(require_ro
 @router.post("/api/tickets/{ticket_id}/timers/start")
 @limiter.limit("100/minute")
 async def start_ticket_timer(
-    ticket_id: str, body: TicketTimerStart, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    ticket_id: str,
+    body: TicketTimerStart,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("start_ticket_timer", [ticket_id, body.user_id])
     rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{_safe_id(ticket_id)}'")
@@ -220,7 +230,9 @@ async def start_ticket_timer(
 
 @router.get("/api/timers")
 async def list_all_timers(
-    user_id: str = "", running: str = "", user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    user_id: str = "",
+    running: str = "",
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     query = "SELECT * FROM ticket_timer"
     filters = []
@@ -253,7 +265,9 @@ async def delete_ticket_timer(timer_id: str, user: Annotated[dict, Depends(requi
 
 
 @router.get("/api/tickets/{ticket_id}/checklist")
-async def get_ticket_checklist(ticket_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def get_ticket_checklist(
+    ticket_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     """Get checklist items for a ticket."""
     rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{_safe_id(ticket_id)}'")
     return {"items": _sort(rows, "sort_order")}
@@ -262,7 +276,9 @@ async def get_ticket_checklist(ticket_id: str, user: Annotated[dict, Depends(req
 @router.post("/api/tickets/{ticket_id}/checklist/apply")
 @limiter.limit("100/minute")
 async def apply_checklist_to_ticket(
-    ticket_id: str, body: ChecklistApply, user: Annotated[dict, Depends(require_role("admin", "tech"))],
+    ticket_id: str,
+    body: ChecklistApply,
+    user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     """Apply a checklist template to a ticket."""
     await _call("apply_checklist_template", [ticket_id, body.template_id])
@@ -273,7 +289,10 @@ async def apply_checklist_to_ticket(
 @router.put("/api/tickets/{ticket_id}/checklist/{item_id}")
 @limiter.limit("100/minute")
 async def update_checklist_item(
-    ticket_id: str, item_id: str, body: ChecklistToggle, user: Annotated[dict, Depends(require_role("admin", "tech"))],
+    ticket_id: str,
+    item_id: str,
+    body: ChecklistToggle,
+    user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     """Toggle a checklist item completed/uncompleted."""
     await _call("update_checklist_item", [item_id, body.completed])

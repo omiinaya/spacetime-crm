@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends
 
 from helpers import (
-
     _call,
     _log_audit,
     _paginated,
@@ -26,7 +25,9 @@ router = APIRouter()
 
 @router.get("/api/custom-field-definitions")
 async def list_custom_field_definitions(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    offset: int = 0,
+    limit: int = 50,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List custom field definitions with pagination."""
     rows, total = await _paginated(
@@ -43,7 +44,8 @@ async def list_custom_field_definitions(
 @router.post("/api/custom-field-definitions")
 @limiter.limit("100/minute")
 async def create_custom_field_definition(
-    body: CustomFieldDefinitionCreate, user: Annotated[dict, Depends(require_role("admin"))],
+    body: CustomFieldDefinitionCreate,
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Create a custom field definition."""
     field_id = secrets.token_hex(12)
@@ -68,7 +70,9 @@ async def create_custom_field_definition(
 @router.put("/api/custom-field-definitions/{field_id}")
 @limiter.limit("100/minute")
 async def update_custom_field_definition(
-    field_id: str, body: CustomFieldDefinitionCreate, user: Annotated[dict, Depends(require_role("admin"))],
+    field_id: str,
+    body: CustomFieldDefinitionCreate,
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Update a custom field definition."""
     await _call(
@@ -97,7 +101,9 @@ async def delete_custom_field_definition(field_id: str, user: Annotated[dict, De
 
 
 @router.get("/api/custom-field-values/{entity_id}")
-async def get_custom_field_values(entity_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def get_custom_field_values(
+    entity_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     """Get all custom field values for an entity."""
     rows = await _sql(f"SELECT * FROM custom_field_values WHERE entity_id = '{_safe_id(entity_id)}'")
     return {"values": rows}
@@ -106,7 +112,9 @@ async def get_custom_field_values(entity_id: str, user: Annotated[dict, Depends(
 @router.put("/api/custom-field-values/{entity_id}")
 @limiter.limit("100/minute")
 async def set_custom_field_values(
-    entity_id: str, body: CustomFieldValuesUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    entity_id: str,
+    body: CustomFieldValuesUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Set custom field values for an entity. Body: { values: { field_id: value, ... } }."""
     values = body.values

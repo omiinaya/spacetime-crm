@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-
     _call,
     _log_audit,
     _paginated,
@@ -90,7 +89,9 @@ async def delete_tenant(tenant_id: str, user: Annotated[dict, Depends(require_ro
 
 @router.post("/api/tenants/{tenant_id}/members")
 @limiter.limit("100/minute")
-async def add_tenant_member(tenant_id: str, body: TenantMemberAdd, user: Annotated[dict, Depends(require_role("admin"))]):
+async def add_tenant_member(
+    tenant_id: str, body: TenantMemberAdd, user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Add a member to a tenant."""
     username = body.username.strip()
     role = body.role.strip()
@@ -113,7 +114,10 @@ async def remove_tenant_member(tenant_id: str, member_id: str, user: Annotated[d
 @router.put("/api/tenants/{tenant_id}/members/{member_id}")
 @limiter.limit("100/minute")
 async def update_tenant_member_role(
-    tenant_id: str, member_id: str, body: TenantMemberRoleUpdate, user: Annotated[dict, Depends(require_role("admin"))],
+    tenant_id: str,
+    member_id: str,
+    body: TenantMemberRoleUpdate,
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Update member role within a tenant."""
     role = body.role.strip()

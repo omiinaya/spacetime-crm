@@ -6,8 +6,10 @@ from unittest.mock import AsyncMock
 def admin_headers():
     import jwt
     from config import settings
-    token = jwt.encode({"sub": "user-1", "tenant_id": "t1", "role": "admin"},
-                       settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+    token = jwt.encode(
+        {"sub": "user-1", "tenant_id": "t1", "role": "admin"}, settings.jwt_secret, algorithm=settings.jwt_algorithm
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -66,10 +68,12 @@ class TestCustomers:
         assert resp.json()["ok"] is True
 
     def test_geolocations(self, client, monkeypatch) -> None:
-        mock_sql = AsyncMock(side_effect=[
-            [{"id": "c1", "latitude": 40.7128, "longitude": -74.0060}],
-            [{"customer_id": "c1", "latitude": 40.7128, "longitude": -74.0060}],
-        ])
+        mock_sql = AsyncMock(
+            side_effect=[
+                [{"id": "c1", "latitude": 40.7128, "longitude": -74.0060}],
+                [{"customer_id": "c1", "latitude": 40.7128, "longitude": -74.0060}],
+            ]
+        )
         monkeypatch.setattr("routes.customers._sql_t", mock_sql)
         resp = client.get("/api/customers/geolocations", headers=admin_headers())
         assert resp.status_code == 200
@@ -77,15 +81,18 @@ class TestCustomers:
         assert len(data["locations"]) > 0
 
     def test_geocode_customer(self, client, monkeypatch) -> None:
-        mock_sql = AsyncMock(side_effect=[
-            [{"id": "c1", "address_line1": "123 Main St", "city": "New York", "state": "NY", "zip": "10001"}],
-            [{"id": "c1", "latitude": 40.7128, "longitude": -74.0060}],
-        ])
+        mock_sql = AsyncMock(
+            side_effect=[
+                [{"id": "c1", "address_line1": "123 Main St", "city": "New York", "state": "NY", "zip": "10001"}],
+                [{"id": "c1", "latitude": 40.7128, "longitude": -74.0060}],
+            ]
+        )
         monkeypatch.setattr("routes.customers._sql", mock_sql)
         mock_call = AsyncMock(return_value={})
         monkeypatch.setattr("routes.customers._call", mock_call)
         monkeypatch.setattr("routes.customers._log_audit", AsyncMock())
         from unittest.mock import AsyncMock as AMock
+
         mock_client = AMock()
         mock_resp = AMock()
         mock_resp.status_code = 200
@@ -96,7 +103,11 @@ class TestCustomers:
         assert resp.status_code == 200
 
     def test_duplicates(self, client, monkeypatch) -> None:
-        mock_sql = AsyncMock(return_value=[{"id": "c1", "first_name": "John", "last_name": "Doe", "email": "john@example.com", "_count": 2}])
+        mock_sql = AsyncMock(
+            return_value=[
+                {"id": "c1", "first_name": "John", "last_name": "Doe", "email": "john@example.com", "_count": 2}
+            ]
+        )
         monkeypatch.setattr("routes.customers._sql", mock_sql)
         resp = client.get("/api/customers/duplicates", headers=admin_headers())
         assert resp.status_code == 200

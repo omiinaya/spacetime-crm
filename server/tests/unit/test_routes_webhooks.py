@@ -7,17 +7,21 @@ def admin_headers():
     import jwt
 
     from config import settings
-    token = jwt.encode({"sub": "user-1", "tenant_id": "t1", "role": "admin"},
-                       settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+    token = jwt.encode(
+        {"sub": "user-1", "tenant_id": "t1", "role": "admin"}, settings.jwt_secret, algorithm=settings.jwt_algorithm
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
 class TestWebhooks:
     def test_list_subscriptions(self, client, monkeypatch) -> None:
-        mock_ws = AsyncMock(side_effect=[
-            [{"id": "ws1", "url": "http://example.com/hook"}],  # subscription
-            [],                                                 # events
-        ])
+        mock_ws = AsyncMock(
+            side_effect=[
+                [{"id": "ws1", "url": "http://example.com/hook"}],  # subscription
+                [],  # events
+            ]
+        )
         monkeypatch.setattr("routes.webhooks._get_webhook_subscriptions", mock_ws)
         resp = client.get("/api/webhook-subscriptions", headers=admin_headers())
         assert resp.status_code == 200

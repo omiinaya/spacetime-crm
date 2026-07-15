@@ -270,7 +270,9 @@ class TestPortalSettings:
         assert_ok(resp)
 
         resp = httpx.post(
-            f"{SERVER_URL}/api/portal/login", json={"email": portal_email, "password": "NewPortalPass456!"}, timeout=10,
+            f"{SERVER_URL}/api/portal/login",
+            json={"email": portal_email, "password": "NewPortalPass456!"},
+            timeout=10,
         )
         assert resp.status_code == 200, f"New password login: {resp.text[:200]}"
 

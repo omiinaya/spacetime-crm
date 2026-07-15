@@ -9,7 +9,9 @@ from .conftest import SERVER_URL, _track_entity, assert_ok, create_customer, uni
 def _customer_id(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     suf = suffix or unique_suffix()
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, email=f"pm-{session_suffix}-{suf}@example.com",
+        test_admin_headers,
+        session_suffix=session_suffix,
+        email=f"pm-{session_suffix}-{suf}@example.com",
     )
     return c.get("id", "")
 
@@ -25,7 +27,10 @@ class TestPaymentMethods:
     def test_list_filtered_by_customer(self, test_admin_headers: dict, session_suffix: str) -> None:
         cid = _customer_id(test_admin_headers, session_suffix, "lst-cust")
         resp = httpx.get(
-            f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/payment-methods",
+            params={"customer_id": cid},
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert "payment_methods" in data
@@ -49,7 +54,10 @@ class TestPaymentMethods:
 
         # Verify it appears in list
         r2 = httpx.get(
-            f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/payment-methods",
+            params={"customer_id": cid},
+            headers=test_admin_headers,
+            timeout=10,
         )
         r2_data = r2.json()
         methods = [m for m in r2_data["payment_methods"] if m.get("stripe_payment_method_id") == "pm_test_12345"]
@@ -107,7 +115,10 @@ class TestPaymentMethods:
         )
 
         r = httpx.get(
-            f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/payment-methods",
+            params={"customer_id": cid},
+            headers=test_admin_headers,
+            timeout=10,
         )
         methods = r.json().get("payment_methods", [])
         if not methods:
@@ -153,7 +164,10 @@ class TestPaymentMethods:
         )
 
         r = httpx.get(
-            f"{SERVER_URL}/api/payment-methods", params={"customer_id": cid}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/payment-methods",
+            params={"customer_id": cid},
+            headers=test_admin_headers,
+            timeout=10,
         )
         methods = r.json().get("payment_methods", [])
         if not methods:

@@ -8,7 +8,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from helpers import (
-
     _paginated,
     _sql,
     _sql_t,

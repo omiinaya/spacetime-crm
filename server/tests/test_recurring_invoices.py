@@ -16,7 +16,9 @@ def _customer_id(test_admin_headers: dict, session_suffix: str = "", suffix: str
     """Create a customer and return ID."""
     suf = suffix or unique_suffix()
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, email=f"rec-{session_suffix}-{suf}@example.com",
+        test_admin_headers,
+        session_suffix=session_suffix,
+        email=f"rec-{session_suffix}-{suf}@example.com",
     )
     return c.get("id", "")
 
@@ -154,7 +156,9 @@ class TestRecurringInvoiceCRUD:
 
     def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/recurring-invoices/nonexistent-999", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/recurring-invoices/nonexistent-999",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code < 500
 

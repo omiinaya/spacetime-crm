@@ -100,7 +100,9 @@ class TestWebhookCRUD:
 
     def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code < 500
 
@@ -112,14 +114,18 @@ class TestWebhookTest:
         """Test endpoint should attempt delivery (may fail, that's ok)."""
         sub_id = _create_webhook(test_admin_headers, session_suffix, "test")
         resp = httpx.post(
-            f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}/test", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/webhook-subscriptions/{sub_id}/test",
+            headers=test_admin_headers,
+            timeout=10,
         )
         # The delivery attempt might fail or succeed depending on network
         assert resp.status_code < 500, f"Test endpoint returned {resp.status_code}: {resp.text[:200]}"
 
     def test_test_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999/test", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/webhook-subscriptions/nonexistent-999/test",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 404
 
@@ -147,6 +153,8 @@ class TestWebhookErrors:
 
     def test_unauthorized_create(self, client: httpx.Client) -> None:
         resp = client.post(
-            "/api/webhook-subscriptions", json={"url": "https://example.com", "events": "customer.created"}, timeout=10,
+            "/api/webhook-subscriptions",
+            json={"url": "https://example.com", "events": "customer.created"},
+            timeout=10,
         )
         assert resp.status_code in (401, 403)

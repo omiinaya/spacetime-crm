@@ -1,13 +1,14 @@
 """Unit tests for settings routes."""
 
 
-
 def admin_headers():
     import jwt
 
     from config import settings
-    token = jwt.encode({"sub": "user-1", "tenant_id": "t1", "role": "admin"},
-                       settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+    token = jwt.encode(
+        {"sub": "user-1", "tenant_id": "t1", "role": "admin"}, settings.jwt_secret, algorithm=settings.jwt_algorithm
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -20,8 +21,16 @@ class TestSettings:
 
     def test_update_mail_settings(self, client, monkeypatch) -> None:
         monkeypatch.setattr("routes.settings._mail_update", lambda d: None)
-        body = {"smtp_host": "smtp.new.com", "smtp_port": 587, "smtp_user": "", "smtp_password": "",
-                "smtp_from_email": "", "smtp_from_name": "", "smtp_tls": True, "enabled": True}
+        body = {
+            "smtp_host": "smtp.new.com",
+            "smtp_port": 587,
+            "smtp_user": "",
+            "smtp_password": "",
+            "smtp_from_email": "",
+            "smtp_from_name": "",
+            "smtp_tls": True,
+            "enabled": True,
+        }
         resp = client.post("/api/settings/mail", json=body, headers=admin_headers())
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
@@ -39,7 +48,12 @@ class TestSettings:
 
     def test_update_sms_settings(self, client, monkeypatch) -> None:
         monkeypatch.setattr("routes.settings._sms_update", lambda d: None)
-        body = {"twilio_account_sid": "sid", "twilio_auth_token": "tok", "twilio_from_number": "+1555", "enabled": False}
+        body = {
+            "twilio_account_sid": "sid",
+            "twilio_auth_token": "tok",
+            "twilio_from_number": "+1555",
+            "enabled": False,
+        }
         resp = client.post("/api/settings/sms", json=body, headers=admin_headers())
         assert resp.status_code == 200
 

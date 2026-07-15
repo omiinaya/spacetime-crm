@@ -15,11 +15,29 @@ BaseModel = SanitizedModel
 from models.auth import LoginRequest, SetPasswordRequest
 from models.customers import CustomerCreate, CustomerUpdate
 from models.tickets import TicketCreate, TicketTimerStart, TicketStatusUpdate, TicketAssign, TicketNoteCreate
-from models.invoices import InvoiceCreate, InvoiceStatusUpdate, InvoiceLineItemCreate, InvoiceTaxRateUpdate, BulkInvoiceStatusUpdate, BulkInvoiceEdit
+from models.invoices import (
+    InvoiceCreate,
+    InvoiceStatusUpdate,
+    InvoiceLineItemCreate,
+    InvoiceTaxRateUpdate,
+    BulkInvoiceStatusUpdate,
+    BulkInvoiceEdit,
+)
 from models.payments import PaymentCreate
-from models.appointments import AppointmentCreate, AppointmentStatusUpdate, AppointmentRecurrence, GenerateNextOccurrence
+from models.appointments import (
+    AppointmentCreate,
+    AppointmentStatusUpdate,
+    AppointmentRecurrence,
+    GenerateNextOccurrence,
+)
 from models.products import ProductCreate, ProductQuantityUpdate
-from models.purchase_orders import PurchaseOrderCreate, PurchaseOrderStatusUpdate, POLineItemCreate, POReceiveItem, POApprovalAction
+from models.purchase_orders import (
+    PurchaseOrderCreate,
+    PurchaseOrderStatusUpdate,
+    POLineItemCreate,
+    POReceiveItem,
+    POApprovalAction,
+)
 from models.scheduled_reports import ScheduledReportCreate, ScheduledReportUpdate
 from models.estimates import EstimateCreate, EstimateStatusUpdate, EstimateLineItemCreate
 from models.tax_rates import TaxRateCreate, TaxRateUpdate
@@ -30,7 +48,16 @@ from models.checklist import ChecklistTemplateCreate, ChecklistTemplateUpdate, C
 from models.webhook import WebhookSubscriptionCreate, WebhookSubscriptionUpdate
 from models.user import UserCreate, UserUpdate, UserSettingsUpdate
 from models.mail_sms_settings import MailSettingsUpdate, SMSSettingsUpdate
-from models.portal import PortalLoginRequest, PortalNoteCreate, PortalPaymentCreate, PortalSetPassword, PortalCheckoutSessionCreate, ForgotPasswordRequest, ResetPasswordRequest, TenantMigrate
+from models.portal import (
+    PortalLoginRequest,
+    PortalNoteCreate,
+    PortalPaymentCreate,
+    PortalSetPassword,
+    PortalCheckoutSessionCreate,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    TenantMigrate,
+)
 from models.recurring_invoices import RecurringInvoiceLineItem, RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
 from models.payment_methods import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest, PortalPayWithSavedCard
 from models.pos_counter_sale import POSCreate, POSAddItem

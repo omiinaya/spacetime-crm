@@ -29,5 +29,3 @@ class CustomFieldDefinitionCreate(BaseModel):
 
 class CustomFieldValuesUpdate(BaseModel):
     values: dict[str, str | int | float | bool | list[str]] = {}
-
-

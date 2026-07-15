@@ -431,7 +431,11 @@ async def test_log_audit_success() -> None:
     client = get_http_client()
     client.post = AsyncMock(return_value=MagicMock(status_code=200, json=dict))
     await _log_audit(
-        {"tenant_id": "t1", "id": "u1", "name": "Alice"}, "create", "invoice", "inv-123", "Created invoice",
+        {"tenant_id": "t1", "id": "u1", "name": "Alice"},
+        "create",
+        "invoice",
+        "inv-123",
+        "Created invoice",
     )
     client.post.assert_called_once()
 

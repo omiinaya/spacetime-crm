@@ -32,5 +32,3 @@ class ProductCreate(BaseModel):
 
 class ProductQuantityUpdate(BaseModel):
     quantity_on_hand: float = Field(..., ge=0)
-
-

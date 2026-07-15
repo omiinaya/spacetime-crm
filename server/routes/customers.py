@@ -10,10 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from client import get_http_client
 from helpers import (
-
-# FIXME: S608 - Possible SQL injection via f-string queries
-# FIXME: RUF006 - asyncio.ensure_future without storing reference
-
+    # FIXME: S608 - Possible SQL injection via f-string queries
+    # FIXME: RUF006 - asyncio.ensure_future without storing reference
     CUSTOMER_SENSITIVE_FIELDS,
     _call,
     _fire_webhook,
@@ -69,7 +67,9 @@ async def list_customers(
 
 @router.post("/api/customers")
 @limiter.limit("100/minute")
-async def create_customer(body: CustomerCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def create_customer(
+    body: CustomerCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     await _call(
         "create_customer",
         [
@@ -98,7 +98,9 @@ async def create_customer(body: CustomerCreate, user: Annotated[dict, Depends(re
 @router.put("/api/customers/{customer_id}")
 @limiter.limit("100/minute")
 async def update_customer(
-    customer_id: str, body: CustomerUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    customer_id: str,
+    body: CustomerUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "update_customer",
@@ -152,7 +154,9 @@ async def delete_customer(customer_id: str, user: Annotated[dict, Depends(requir
 @router.post("/api/customers/{customer_id}/portal-password")
 @limiter.limit("100/minute")
 async def set_customer_portal_password(
-    customer_id: str, body: SetPasswordRequest, user: Annotated[dict, Depends(require_role("admin"))],
+    customer_id: str,
+    body: SetPasswordRequest,
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Admin sets/resets a customer's portal password."""
     pw = body.password

@@ -36,5 +36,3 @@ class SetPinRequest(BaseModel):
 class PosLoginRequest(BaseModel):
     user_id: str = Field(..., min_length=1, max_length=100)
     pin: str = Field(..., min_length=4, max_length=10, pattern=r"^\d{4,10}$")
-
-

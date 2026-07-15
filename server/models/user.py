@@ -32,5 +32,3 @@ class UserUpdate(BaseModel):
 class UserSettingsUpdate(BaseModel):
     theme: str = Field(default="light", pattern=r"^(light|dark)$")
     default_ticket_status: str = Field(default="new", max_length=50)
-
-

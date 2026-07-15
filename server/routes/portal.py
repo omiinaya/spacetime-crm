@@ -10,9 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 
 from config import settings
 from helpers import (
-
-# FIXME: S608 - Possible SQL injection via f-string queries
-
+    # FIXME: S608 - Possible SQL injection via f-string queries
     _call,
     _safe_customer,
     _safe_id,
@@ -21,7 +19,13 @@ from helpers import (
     _sql,
     security,
 )
-from models.portal import PortalCheckoutSessionCreate, PortalLoginRequest, PortalNoteCreate, PortalPaymentCreate, PortalSetPassword
+from models.portal import (
+    PortalCheckoutSessionCreate,
+    PortalLoginRequest,
+    PortalNoteCreate,
+    PortalPaymentCreate,
+    PortalSetPassword,
+)
 
 from models.payment_methods import PortalPayWithSavedCard
 from rate_limit import limiter
@@ -181,7 +185,9 @@ async def portal_ticket_detail(ticket_id: str, customer: Annotated[dict, Depends
 
 @router.post("/api/portal/tickets/{ticket_id}/notes")
 @limiter.limit("30/minute")
-async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: Annotated[dict, Depends(get_current_customer)]):
+async def portal_add_note(
+    ticket_id: str, body: PortalNoteCreate, customer: Annotated[dict, Depends(get_current_customer)]
+):
     """Customer adds a note to their ticket."""
     rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
@@ -307,7 +313,8 @@ async def portal_set_password(body: PortalSetPassword, customer: Annotated[dict,
 @router.post("/api/portal/payments/create-checkout-session")
 @limiter.limit("30/minute")
 async def portal_create_checkout_session(
-    body: PortalCheckoutSessionCreate, customer: Annotated[dict, Depends(get_current_customer)],
+    body: PortalCheckoutSessionCreate,
+    customer: Annotated[dict, Depends(get_current_customer)],
 ):
     """Create a Stripe Checkout Session for an invoice payment."""
     if not stripe_configured():

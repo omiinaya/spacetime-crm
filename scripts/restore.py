@@ -38,9 +38,7 @@ DB_NAME = "spacetime-crm"
 STDB_SERVER = f"http://{STDB_HOST}:{STDB_PORT}"
 CALL_URL = f"{STDB_SERVER}/v1/database/{DB_NAME}/call"
 MODULE_DIR = Path(__file__).resolve().parent.parent / "server" / "spacetimedb"
-WASM_FILE = (
-    MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
-)
+WASM_FILE = MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
 
 
 def file_exists_valid(path: Path) -> tuple[bool, str]:
@@ -101,13 +99,9 @@ def run_spacetime(args: list[str]) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Restore STDB tables from a backup JSON.gz file."
-    )
+    parser = argparse.ArgumentParser(description="Restore STDB tables from a backup JSON.gz file.")
     parser.add_argument("file", help="Path to backup .json.gz file")
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Validate only — don't delete or restore"
-    )
+    parser.add_argument("--dry-run", action="store_true", help="Validate only — don't delete or restore")
     parser.add_argument(
         "--checksum-algo",
         choices=["sha256"],
@@ -124,9 +118,7 @@ def main():
     if not ok:
         print(f"❌ {err}")
         sys.exit(1)
-    print(
-        f"  ✅ Backup file valid: {backup_file.name} ({backup_file.stat().st_size} bytes)"
-    )
+    print(f"  ✅ Backup file valid: {backup_file.name} ({backup_file.stat().st_size} bytes)")
 
     if args.checksum_algo:
         checksum = compute_checksum(backup_file)
@@ -142,9 +134,7 @@ def main():
     if not args.dry_run:
         if not WASM_FILE.exists():
             print(f"❌ STDB module wasm not found at: {WASM_FILE}")
-            print(
-                "   Build it first: cd server/spacetimedb && cargo build --release --target wasm32-unknown-unknown"
-            )
+            print("   Build it first: cd server/spacetimedb && cargo build --release --target wasm32-unknown-unknown")
             sys.exit(1)
         print(f"  ✅ WASM module exists: {WASM_FILE}")
     else:
@@ -253,11 +243,7 @@ def main():
         status = "✅" if table_ok else "⚠️"
         print(
             f"  {status} {table_name}: {len(rows)} rows restored"
-            + (
-                f" ({import_reducer})"
-                if import_reducer
-                else " [no import reducer — skipped]"
-            )
+            + (f" ({import_reducer})" if import_reducer else " [no import reducer — skipped]")
         )
 
     if skipped:

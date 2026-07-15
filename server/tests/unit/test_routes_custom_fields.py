@@ -7,8 +7,10 @@ def auth_headers(role="admin"):
     import jwt
 
     from config import settings
-    token = jwt.encode({"sub": "u1", "tenant_id": "t1", "role": role},
-                       settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+    token = jwt.encode(
+        {"sub": "u1", "tenant_id": "t1", "role": role}, settings.jwt_secret, algorithm=settings.jwt_algorithm
+    )
     return {"Authorization": f"Bearer {token}"}
 
 

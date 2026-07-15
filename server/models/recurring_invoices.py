@@ -43,5 +43,3 @@ class RecurringInvoiceRuleUpdate(BaseModel):
     next_generation_date: int = Field(default=0, ge=0)
     status: str = Field(default="active", pattern=r"^(active|paused|cancelled)$")
     currency: str = Field(default="USD", max_length=3)
-
-

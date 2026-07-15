@@ -1,5 +1,7 @@
 """Tests for routes/payment_methods.py."""
+
 import pytest
+
 
 class TestPaymentMethods:
     def test_list_methods(self, client, auth_headers, configure_stdb):

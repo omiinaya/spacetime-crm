@@ -7,17 +7,21 @@ def admin_headers():
     import jwt
 
     from config import settings
-    token = jwt.encode({"sub": "user-1", "tenant_id": "t1", "role": "admin"},
-                       settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+    token = jwt.encode(
+        {"sub": "user-1", "tenant_id": "t1", "role": "admin"}, settings.jwt_secret, algorithm=settings.jwt_algorithm
+    )
     return {"Authorization": f"Bearer {token}"}
 
 
 class TestRecurringInvoices:
     def test_list_rules(self, client, monkeypatch) -> None:
-        mock_sql = AsyncMock(side_effect=[
-            [{"id": "r1", "name": "Monthly rent", "customer_id": "c1"}],  # main rules
-            [{"first_name": "John", "last_name": "Doe"}],                  # customer lookup
-        ])
+        mock_sql = AsyncMock(
+            side_effect=[
+                [{"id": "r1", "name": "Monthly rent", "customer_id": "c1"}],  # main rules
+                [{"first_name": "John", "last_name": "Doe"}],  # customer lookup
+            ]
+        )
         monkeypatch.setattr("routes.recurring_invoices._sql", mock_sql)
         resp = client.get("/api/recurring-invoices", headers=admin_headers())
         assert resp.status_code == 200

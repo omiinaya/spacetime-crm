@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends
 
 from config import settings
 from helpers import (
-
     _call,
     _fire_webhook,
     _log_audit,
@@ -53,7 +52,9 @@ async def list_payments(
 
 @router.post("/api/payments")
 @limiter.limit("100/minute")
-async def record_payment(body: PaymentCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def record_payment(
+    body: PaymentCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     invoice_id = body.invoice_id
     await _call(
         "record_payment",

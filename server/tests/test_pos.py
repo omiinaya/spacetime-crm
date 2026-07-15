@@ -127,7 +127,9 @@ class TestPOSItems:
         assert sale["items_count"] >= 1
         assert sale["subtotal"] >= 39.98  # 2 * 19.99
 
-    def test_multiple_items_update_totals(self, test_admin_headers: dict, test_product_id: str, session_suffix: str) -> None:
+    def test_multiple_items_update_totals(
+        self, test_admin_headers: dict, test_product_id: str, session_suffix: str
+    ) -> None:
         sale_id = _create_sale(test_admin_headers, session_suffix, "multi")
         # Add first item
         httpx.post(
@@ -219,7 +221,9 @@ class TestPOSReceiptPdf:
     def test_receipt_pdf_nonexistent(self, test_admin_headers: dict) -> None:
         """Getting receipt PDF for a nonexistent sale returns 404."""
         resp = httpx.get(
-            f"{SERVER_URL}/api/pos/sales/nonexistent-999/receipt-pdf", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/pos/sales/nonexistent-999/receipt-pdf",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 404
 

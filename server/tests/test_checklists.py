@@ -114,7 +114,9 @@ class TestChecklistCRUD:
 
     def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/checklist-templates/nonexistent-999", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/checklist-templates/nonexistent-999",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code < 500
 

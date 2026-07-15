@@ -10,10 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from config import settings
 from helpers import (
-
-# FIXME: S608 - Possible SQL injection via f-string queries
-
-
+    # FIXME: S608 - Possible SQL injection via f-string queries
     STATUS_CSS,
     STATUS_LABELS,
     _call,
@@ -47,7 +44,14 @@ from sms import (
     _notify_overdue_reminder as _sms_reminder,
 )
 
-from models.invoices import BulkInvoiceEdit, BulkInvoiceStatusUpdate, InvoiceCreate, InvoiceLineItemCreate, InvoiceStatusUpdate, InvoiceTaxRateUpdate
+from models.invoices import (
+    BulkInvoiceEdit,
+    BulkInvoiceStatusUpdate,
+    InvoiceCreate,
+    InvoiceLineItemCreate,
+    InvoiceStatusUpdate,
+    InvoiceTaxRateUpdate,
+)
 
 
 router = APIRouter()
@@ -82,7 +86,9 @@ async def list_invoices(
 
 @router.post("/api/invoices")
 @limiter.limit("100/minute")
-async def create_invoice(body: InvoiceCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def create_invoice(
+    body: InvoiceCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     await _call(
         "create_invoice",
         [
@@ -160,7 +166,8 @@ async def get_invoice_summary(user: Annotated[dict, Depends(require_role("admin"
         "total_count": len(rows),
         "total_revenue": round(sum(float(i.get("total", 0)) for i in rows if i.get("status") == "paid"), 2),
         "total_outstanding": round(
-            sum(float(i.get("total", 0)) for i in rows if i.get("status") in ("sent", "partial", "overdue")), 2,
+            sum(float(i.get("total", 0)) for i in rows if i.get("status") in ("sent", "partial", "overdue")),
+            2,
         ),
         "overdue_count": sent_partial_overdue + summary.get("overdue", {}).get("count", 0),
         "overdue_total": round(sent_partial_overdue_total + summary.get("overdue", {}).get("total", 0), 2),
@@ -169,7 +176,9 @@ async def get_invoice_summary(user: Annotated[dict, Depends(require_role("admin"
 
 @router.post("/api/invoices/bulk-status-update")
 @limiter.limit("100/minute")
-async def bulk_update_invoice_status(body: BulkInvoiceStatusUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
+async def bulk_update_invoice_status(
+    body: BulkInvoiceStatusUpdate, user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Update status of multiple invoices at once."""
     updated = 0
     errors = 0
@@ -294,7 +303,9 @@ async def send_overdue_reminders(user: Annotated[dict, Depends(require_role("adm
 @router.put("/api/invoices/{invoice_id}/status")
 @limiter.limit("100/minute")
 async def update_invoice_status(
-    invoice_id: str, body: InvoiceStatusUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    invoice_id: str,
+    body: InvoiceStatusUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("update_invoice_status", [invoice_id, body.status])
     new_status = body.status
@@ -313,7 +324,9 @@ async def update_invoice_status(
 
 
 @router.get("/api/invoices/{invoice_id}/line-items")
-async def get_invoice_line_items(invoice_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def get_invoice_line_items(
+    invoice_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     rows = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_safe_id(invoice_id)}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
@@ -321,7 +334,9 @@ async def get_invoice_line_items(invoice_id: str, user: Annotated[dict, Depends(
 @router.post("/api/invoices/{invoice_id}/line-items")
 @limiter.limit("100/minute")
 async def add_invoice_line_item(
-    invoice_id: str, body: InvoiceLineItemCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    invoice_id: str,
+    body: InvoiceLineItemCreate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "add_invoice_line_item",
@@ -339,7 +354,9 @@ async def add_invoice_line_item(
 
 @router.delete("/api/invoices/{invoice_id}/line-items/{item_id}")
 @limiter.limit("100/minute")
-async def delete_invoice_line_item(invoice_id: str, item_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
+async def delete_invoice_line_item(
+    invoice_id: str, item_id: str, user: Annotated[dict, Depends(require_role("admin"))]
+):
     await _call("delete_invoice_line_item", [item_id])
     await _log_audit(user, "delete", "line_item", invoice_id)
     return {"ok": True}
@@ -356,7 +373,9 @@ async def delete_invoice(invoice_id: str, user: Annotated[dict, Depends(require_
 @router.put("/api/invoices/{invoice_id}/tax-rate")
 @limiter.limit("100/minute")
 async def set_invoice_tax_rate(
-    invoice_id: str, body: InvoiceTaxRateUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    invoice_id: str,
+    body: InvoiceTaxRateUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("set_invoice_tax_rate", [invoice_id, body.tax_rate])
     await _log_audit(user, "update", "invoice_tax", invoice_id, f"rate={body.tax_rate}")
@@ -501,7 +520,9 @@ async def send_batch_invoice_email(
     results = {"sent": 0, "failed": 0, "skipped": 0, "details": []}
 
     for invoice_id in invoice_ids:
-        invs = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND tenant_id = '{user['tenant_id']}'")
+        invs = await _sql(
+            f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND tenant_id = '{user['tenant_id']}'"
+        )
         if not invs:
             results["skipped"] += 1
             results["details"].append({"id": invoice_id, "status": "not_found"})

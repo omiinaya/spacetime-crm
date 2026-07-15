@@ -51,5 +51,3 @@ class BulkInvoiceEdit(BaseModel):
     invoice_ids: list[str] = Field(..., min_length=1, max_length=500)
     terms: str = Field(default="", max_length=2000)
     notes: str = Field(default="", max_length=2000)
-
-

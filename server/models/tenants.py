@@ -35,5 +35,3 @@ class TenantMemberAdd(BaseModel):
 
 class TenantMemberRoleUpdate(BaseModel):
     role: str = Field(..., min_length=1, max_length=50)
-
-

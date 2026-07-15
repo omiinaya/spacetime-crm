@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends
 
 from helpers import (
-
     _call,
     _log_audit,
     _paginated,
@@ -22,7 +21,9 @@ router = APIRouter()
 
 @router.get("/api/tax-rates")
 async def list_tax_rates(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    offset: int = 0,
+    limit: int = 50,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List tax rates with pagination."""
     rows, total = await _paginated(

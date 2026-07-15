@@ -41,6 +41,7 @@ class TestInitStripe:
     def test_init_sets_api_key(self):
         settings.stripe_secret_key = "sk_test_abc"
         import stripe as stripe_lib
+
         stripe_lib.api_key = None
         init_stripe()
         assert stripe_lib.api_key == "sk_test_abc"
@@ -67,6 +68,7 @@ class TestCreateCheckoutSession:
     async def test_stripe_error(self, monkeypatch):
         settings.stripe_secret_key = "sk_test_123"
         from stripe import StripeError
+
         mock_stripe = MagicMock()
         mock_stripe.checkout.Session.create.side_effect = StripeError("fail")
         monkeypatch.setattr("stripe_payments.stripe_lib", mock_stripe)
@@ -95,6 +97,7 @@ class TestCreateSetupIntent:
     async def test_stripe_error(self, monkeypatch):
         settings.stripe_secret_key = "sk_test_123"
         from stripe import StripeError
+
         mock_stripe = MagicMock()
         mock_stripe.SetupIntent.create.side_effect = StripeError("fail")
         monkeypatch.setattr("stripe_payments.stripe_lib", mock_stripe)
@@ -123,6 +126,7 @@ class TestCreatePaymentIntent:
     async def test_stripe_error(self, monkeypatch):
         settings.stripe_secret_key = "sk_test_123"
         from stripe import StripeError
+
         mock_stripe = MagicMock()
         mock_stripe.PaymentIntent.create.side_effect = StripeError("fail")
         monkeypatch.setattr("stripe_payments.stripe_lib", mock_stripe)

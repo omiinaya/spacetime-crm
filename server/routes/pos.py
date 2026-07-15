@@ -8,10 +8,8 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from helpers import (
-
-# FIXME: S608 - Possible SQL injection via f-string queries
-# FIXME: D103 - Missing docstrings
-
+    # FIXME: S608 - Possible SQL injection via f-string queries
+    # FIXME: D103 - Missing docstrings
     _call,
     _log_audit,
     _paginated,
@@ -30,7 +28,9 @@ router = APIRouter()
 
 @router.get("/api/pos/sales")
 async def list_pos_sales(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    offset: int = 0,
+    limit: int = 50,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List counter sales with pagination."""
     rows, total = await _paginated(
@@ -59,7 +59,9 @@ async def get_pos_sale(sale_id: str, user: Annotated[dict, Depends(require_role(
 
 
 @router.get("/api/pos/sales/{sale_id}/receipt-pdf")
-async def get_pos_receipt_pdf(sale_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def get_pos_receipt_pdf(
+    sale_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     """Generate a printable PDF receipt for a completed counter sale."""
     rows = await _sql(
         f"SELECT * FROM counter_sale WHERE id = '{_safe_id(sale_id)}' AND tenant_id = '{user['tenant_id']}'",
@@ -178,7 +180,9 @@ async def delete_pos_sale(sale_id: str, user: Annotated[dict, Depends(require_ro
 
 @router.get("/api/pos/receipts")
 async def list_receipts(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    offset: int = 0,
+    limit: int = 50,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List completed sales sorted by receipt number."""
     rows, total = await _paginated(

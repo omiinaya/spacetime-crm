@@ -8,7 +8,6 @@ from business_hours import DEFAULT_HOURS
 from business_hours import get_settings as _bh_get
 from business_hours import update_settings as _bh_update
 from helpers import (
-
     require_role,
 )
 from mail import get_settings as _mail_get
@@ -21,6 +20,7 @@ from models.business_hours import BusinessHoursUpdate
 
 from models.mail_sms_settings import MailSettingsUpdate, SMSSettingsUpdate
 from rate_limit import limiter
+
 router = APIRouter()
 
 
@@ -35,7 +35,9 @@ async def mail_settings_get(user: Annotated[dict, Depends(require_role("admin"))
 
 @router.post("/api/settings/mail")
 @limiter.limit("30/minute")
-async def mail_settings_save(request: Request, body: MailSettingsUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
+async def mail_settings_save(
+    request: Request, body: MailSettingsUpdate, user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Save mail settings."""
     data = {
         "host": body.smtp_host,
@@ -68,7 +70,9 @@ async def sms_settings_get(user: Annotated[dict, Depends(require_role("admin"))]
 
 @router.post("/api/settings/sms")
 @limiter.limit("30/minute")
-async def sms_settings_save(request: Request, body: SMSSettingsUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
+async def sms_settings_save(
+    request: Request, body: SMSSettingsUpdate, user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Save SMS settings."""
     _sms_update(body.model_dump())
     return {"ok": True}
@@ -95,7 +99,9 @@ async def business_hours_get(user: Annotated[dict, Depends(require_role("admin",
 
 @router.post("/api/settings/business-hours")
 @limiter.limit("30/minute")
-async def business_hours_save(request: Request, body: BusinessHoursUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
+async def business_hours_save(
+    request: Request, body: BusinessHoursUpdate, user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Save business hours."""
     data = body.model_dump()
     result = _bh_update(data)

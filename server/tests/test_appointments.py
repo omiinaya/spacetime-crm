@@ -25,7 +25,11 @@ def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suff
     title = overrides.get("title", f"Appt-{session_suffix}-{suf}")
     email = f"appt-cust-{session_suffix}-{suf}@example.com"
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Test{suf}", email=email,
+        test_admin_headers,
+        session_suffix=session_suffix,
+        first_name="Appt",
+        last_name=f"Test{suf}",
+        email=email,
     )
     cid = c.get("id")
     assert cid

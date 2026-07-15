@@ -5,7 +5,6 @@ never affects the global admin. All test users are created within the
 isolated tenant scope and cleaned up at module end.
 """
 
-
 import contextlib
 
 import httpx

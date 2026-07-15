@@ -30,5 +30,3 @@ class StockTransferRequest(BaseModel):
     quantity: float = Field(..., gt=0)
     reference_id: str = Field(default="", max_length=255)
     notes: str = Field(default="", max_length=2000)
-
-

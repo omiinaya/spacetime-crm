@@ -53,5 +53,3 @@ class ResetPasswordRequest(BaseModel):
 class TenantMigrate(BaseModel):
     name: str = Field(default="Default", max_length=255)
     slug: str = Field(default="", max_length=255)
-
-

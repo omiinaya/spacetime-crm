@@ -23,5 +23,3 @@ class LoginRequest(BaseModel):
 
 class SetPasswordRequest(BaseModel):
     password: str = Field(..., min_length=4, max_length=255)
-
-

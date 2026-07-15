@@ -138,10 +138,8 @@ class TestSendBatchNotifications:
     @pytest.mark.asyncio
     async def test_batch_sends_to_valid_invoices(self):
         invoices_data = [
-            {"id": "inv1", "invoice_number": "001", "total": "100",
-             "customer_email": "a@b.com", "customer_phone": ""},
-            {"id": "inv2", "invoice_number": "002", "total": "200",
-             "customer_email": "c@d.com", "customer_phone": ""},
+            {"id": "inv1", "invoice_number": "001", "total": "100", "customer_email": "a@b.com", "customer_phone": ""},
+            {"id": "inv2", "invoice_number": "002", "total": "200", "customer_email": "c@d.com", "customer_phone": ""},
         ]
         result = await send_batch_notifications(
             invoices=invoices_data,
@@ -153,8 +151,7 @@ class TestSendBatchNotifications:
     @pytest.mark.asyncio
     async def test_batch_skips_no_email(self):
         invoices_data = [
-            {"id": "inv1", "invoice_number": "001", "total": "100",
-             "customer_email": None, "customer_phone": ""},
+            {"id": "inv1", "invoice_number": "001", "total": "100", "customer_email": None, "customer_phone": ""},
         ]
         result = await send_batch_notifications(invoices=invoices_data)
         assert result["skipped"] == 1

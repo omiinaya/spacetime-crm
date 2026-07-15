@@ -10,7 +10,11 @@ def _create_test_customer(test_admin_headers: dict, session_suffix: str = "", su
     suf = suffix or unique_suffix()
     email = f"inv-cust-{session_suffix}-{suf}@example.com"
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, first_name="Invoice", last_name=f"Test{suf}", email=email,
+        test_admin_headers,
+        session_suffix=session_suffix,
+        first_name="Invoice",
+        last_name=f"Test{suf}",
+        email=email,
     )
     cid = c.get("id")
     assert cid, f"Failed to create customer: {c}"
@@ -19,7 +23,10 @@ def _create_test_customer(test_admin_headers: dict, session_suffix: str = "", su
 
 
 def _create_invoice(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides,
+    test_admin_headers: dict,
+    session_suffix: str = "",
+    suffix: str = "",
+    **overrides,
 ) -> tuple[str, str]:
     """Create a customer + invoice and return the (invoice_id, customer_id).
 
@@ -44,7 +51,10 @@ def _create_invoice(
 
     # Find invoice by customer_id (unique to this test call)
     r = httpx.get(
-        f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10,
+        f"{SERVER_URL}/api/invoices",
+        params={"customer_id": cid, "limit": 1},
+        headers=test_admin_headers,
+        timeout=10,
     )
     invs = r.json().get("invoices", [])
     assert len(invs) >= 1, f"No invoice found for customer {cid}"
@@ -347,7 +357,9 @@ class TestInvoiceErrors:
     def test_bulk_status_unauthorized(self, client: httpx.Client) -> None:
         """Bulk status update requires auth."""
         resp = client.post(
-            "/api/invoices/bulk-status-update", json={"invoice_ids": ["fake"], "status": "sent"}, timeout=10,
+            "/api/invoices/bulk-status-update",
+            json={"invoice_ids": ["fake"], "status": "sent"},
+            timeout=10,
         )
         assert resp.status_code in (401, 403)
 

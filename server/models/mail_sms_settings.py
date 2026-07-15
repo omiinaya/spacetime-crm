@@ -32,5 +32,3 @@ class SMSSettingsUpdate(BaseModel):
     twilio_auth_token: str = Field(default="", max_length=500)
     twilio_from_number: str = Field(default="", max_length=20)
     enabled: bool = False
-
-

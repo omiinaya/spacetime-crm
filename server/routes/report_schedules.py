@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-
     _call,
     _log_audit,
     _safe_id,
@@ -70,7 +69,9 @@ async def create_schedule(body: ScheduledReportCreate, user: Annotated[dict, Dep
 
 @router.put("/api/report-schedules/{schedule_id}")
 @limiter.limit("100/minute")
-async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
+async def update_schedule(
+    schedule_id: str, body: ScheduledReportUpdate, user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Update an existing scheduled report."""
     _safe_id(schedule_id)
     existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{_safe_id(schedule_id)}'")
@@ -220,9 +221,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
         total_paid = sum(float(p.get("amount", 0)) for p in payments)
         total_sent = sum(1 for inv in invoices if inv.get("status") not in ("draft", "cancelled"))
         total_paid_count = sum(1 for inv in invoices if inv.get("status") == "paid")
-        outstanding = sum(
-            float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue")
-        )
+        outstanding = sum(float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue"))
 
         return {
             "metrics": [
@@ -281,10 +280,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
                 {"label": "Low Stock Items", "value": len(low_stock)},
             ],
             "chart_label": "Low Stock Items",
-            "chart": [
-                {"label": p.get("name", p.get("sku", "?")), "value": p.get("quantity", 0)}
-                for p in low_stock
-            ],
+            "chart": [{"label": p.get("name", p.get("sku", "?")), "value": p.get("quantity", 0)} for p in low_stock],
         }
 
     elif report_type == "tickets":

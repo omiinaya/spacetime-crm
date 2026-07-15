@@ -34,5 +34,3 @@ class ChecklistApply(BaseModel):
 
 class ChecklistToggle(BaseModel):
     completed: bool = False
-
-

@@ -15,7 +15,11 @@ def _create_test_invoice(test_admin_headers: dict, session_suffix: str = "", suf
     suf = suffix or unique_suffix()
     email = f"pay-cust-{session_suffix}-{suf}@example.com"
     c = create_customer(
-        test_admin_headers, session_suffix=session_suffix, first_name="Pay", last_name=f"Test{suf}", email=email,
+        test_admin_headers,
+        session_suffix=session_suffix,
+        first_name="Pay",
+        last_name=f"Test{suf}",
+        email=email,
     )
     cid = c.get("id")
     assert cid
@@ -28,7 +32,10 @@ def _create_test_invoice(test_admin_headers: dict, session_suffix: str = "", suf
     )
     # Find invoice by customer_id (unique per test call)
     r = httpx.get(
-        f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10,
+        f"{SERVER_URL}/api/invoices",
+        params={"customer_id": cid, "limit": 1},
+        headers=test_admin_headers,
+        timeout=10,
     )
     invs = r.json().get("invoices", [])
     assert len(invs) >= 1, f"No invoice found for customer {cid}"
@@ -153,7 +160,10 @@ class TestPaymentCRUD:
 
         # Get its ID
         r = httpx.get(
-            f"{SERVER_URL}/api/payments", params={"invoice_id": inv_id}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/payments",
+            params={"invoice_id": inv_id},
+            headers=test_admin_headers,
+            timeout=10,
         )
         payments = r.json().get("payments", [])
         if not payments:

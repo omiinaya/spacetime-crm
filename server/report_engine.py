@@ -39,11 +39,11 @@ def calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
                 month = 1
                 year += 1
             try:
-                next_dt = dt.replace(year=year, month=month, day=target_day,
-                                     hour=hour, minute=minute, second=0, microsecond=0)
+                next_dt = dt.replace(
+                    year=year, month=month, day=target_day, hour=hour, minute=minute, second=0, microsecond=0
+                )
             except ValueError:
-                next_dt = dt.replace(year=year, month=month, day=28,
-                                     hour=hour, minute=minute, second=0, microsecond=0)
+                next_dt = dt.replace(year=year, month=month, day=28, hour=hour, minute=minute, second=0, microsecond=0)
     else:
         next_dt = dt.replace(hour=hour, minute=minute, second=0, microsecond=0) + timedelta(days=1)
 

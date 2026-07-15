@@ -31,7 +31,9 @@ async def list_recurring_rules(user: Annotated[dict, Depends(require_role("admin
     # Enrich with customer name
     result = _sort(rows, "created_at", desc=True)
     for r in result:
-        cust = await _sql(f"SELECT first_name, last_name FROM customer WHERE id = '{_safe_id(r.get('customer_id', ''))}'")
+        cust = await _sql(
+            f"SELECT first_name, last_name FROM customer WHERE id = '{_safe_id(r.get('customer_id', ''))}'"
+        )
         if cust:
             c = cust[0]
             r["customer_name"] = f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()

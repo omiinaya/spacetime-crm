@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from helpers import (
-
     _call,
     _get_webhook_subscriptions,
     _log_audit,
@@ -95,7 +94,9 @@ async def list_webhook_subscriptions(offset: int = 0, limit: int = 50, user: dic
 
 @router.post("/api/webhook-subscriptions")
 @limiter.limit("100/minute")
-async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: Annotated[dict, Depends(require_role("admin"))]):
+async def create_webhook_subscription(
+    body: WebhookSubscriptionCreate, user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Create a new webhook subscription."""
     url = body.url.strip()
     events = body.events.strip()
@@ -120,7 +121,9 @@ async def create_webhook_subscription(body: WebhookSubscriptionCreate, user: Ann
 @router.put("/api/webhook-subscriptions/{sub_id}")
 @limiter.limit("100/minute")
 async def update_webhook_subscription(
-    sub_id: str, body: WebhookSubscriptionUpdate, user: Annotated[dict, Depends(require_role("admin"))],
+    sub_id: str,
+    body: WebhookSubscriptionUpdate,
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Update a webhook subscription."""
     url = body.url.strip()

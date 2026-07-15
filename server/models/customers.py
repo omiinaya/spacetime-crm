@@ -46,5 +46,3 @@ class CustomerUpdate(BaseModel):
     zip: str = Field(default="", max_length=20)
     notes: str = Field(default="", max_length=2000)
     tags: str = Field(default="", max_length=500)
-
-

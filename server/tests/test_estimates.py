@@ -64,7 +64,10 @@ class TestEstimateCRUD:
 
     def test_list_estimates_filter_by_status(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/estimates", params={"status": "draft"}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/estimates",
+            params={"status": "draft"},
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         for est in data["estimates"]:
@@ -152,7 +155,9 @@ class TestEstimateConversion:
 
     def test_convert_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/estimates/nonexistent-id-99999/convert", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/estimates/nonexistent-id-99999/convert",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 404
 
@@ -160,7 +165,10 @@ class TestEstimateConversion:
 class TestEstimateErrors:
     def test_create_missing_customer(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/estimates", json={"notes": "No customer"}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/estimates",
+            json={"notes": "No customer"},
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 422
 

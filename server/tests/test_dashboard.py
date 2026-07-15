@@ -41,7 +41,10 @@ class TestDashboard:
 
     def test_audit_log_filtered_by_entity(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/audit-log", params={"entity": "customer"}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/audit-log",
+            params={"entity": "customer"},
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         for entry in data["entries"]:
@@ -50,7 +53,10 @@ class TestDashboard:
 
     def test_audit_log_filtered_by_action(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/audit-log", params={"action": "create"}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/audit-log",
+            params={"action": "create"},
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         for entry in data["entries"]:

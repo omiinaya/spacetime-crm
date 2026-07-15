@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends
 
 from helpers import (
-
     _call,
     _log_audit,
     _paginated,
@@ -23,7 +22,9 @@ router = APIRouter()
 
 @router.get("/api/checklist-templates")
 async def list_checklist_templates(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech")),
+    offset: int = 0,
+    limit: int = 50,
+    user: dict = Depends(require_role("admin", "tech")),
 ):
     """List all checklist templates with pagination."""
     rows, total = await _paginated(
@@ -39,7 +40,9 @@ async def list_checklist_templates(
 
 @router.post("/api/checklist-templates")
 @limiter.limit("100/minute")
-async def create_checklist_template(body: ChecklistTemplateCreate, user: Annotated[dict, Depends(require_role("admin"))]):
+async def create_checklist_template(
+    body: ChecklistTemplateCreate, user: Annotated[dict, Depends(require_role("admin"))]
+):
     r"""Create a checklist template. Items: [{\"label\":\"...\",\"order\":1}]."""
     await _call(
         "create_checklist_template",
@@ -57,7 +60,9 @@ async def create_checklist_template(body: ChecklistTemplateCreate, user: Annotat
 @router.put("/api/checklist-templates/{template_id}")
 @limiter.limit("100/minute")
 async def update_checklist_template(
-    template_id: str, body: ChecklistTemplateUpdate, user: Annotated[dict, Depends(require_role("admin"))],
+    template_id: str,
+    body: ChecklistTemplateUpdate,
+    user: Annotated[dict, Depends(require_role("admin"))],
 ):
     """Update a checklist template."""
     await _call(

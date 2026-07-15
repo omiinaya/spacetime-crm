@@ -9,11 +9,9 @@ from fastapi import APIRouter, Depends
 
 from config import settings
 from helpers import (
-
-# FIXME: S608 - Possible SQL injection via f-string queries
-# FIXME: RUF006 - asyncio.ensure_future without storing reference
-# FIXME: D103 - Missing docstrings
-
+    # FIXME: S608 - Possible SQL injection via f-string queries
+    # FIXME: RUF006 - asyncio.ensure_future without storing reference
+    # FIXME: D103 - Missing docstrings
     _call,
     _fire_webhook,
     _log_audit,
@@ -46,7 +44,12 @@ from sms import (
     _notify_appointment_reminder as _sms,
 )
 
-from models.appointments import AppointmentCreate, AppointmentRecurrence, AppointmentStatusUpdate, GenerateNextOccurrence
+from models.appointments import (
+    AppointmentCreate,
+    AppointmentRecurrence,
+    AppointmentStatusUpdate,
+    GenerateNextOccurrence,
+)
 
 
 router = APIRouter()
@@ -61,7 +64,9 @@ _RECURRENCE_INTERVALS: dict[str, int] = {
 
 @router.get("/api/appointments")
 async def list_appointments(
-    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk")),
+    offset: int = 0,
+    limit: int = 50,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List appointments with pagination."""
     rows, total = await _paginated(
@@ -100,7 +105,8 @@ async def list_recurring_series(user: Annotated[dict, Depends(require_role("admi
 @router.post("/api/appointments")
 @limiter.limit("100/minute")
 async def create_appointment(
-    body: AppointmentCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    body: AppointmentCreate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "create_appointment",
@@ -149,7 +155,9 @@ async def create_appointment(
 @router.put("/api/appointments/{appt_id}/recurrence")
 @limiter.limit("100/minute")
 async def set_appointment_recurrence(
-    appt_id: str, body: AppointmentRecurrence, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    appt_id: str,
+    body: AppointmentRecurrence,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Set or update the recurrence rule on an appointment (makes it a series parent)."""
     await _call("set_recurrence", [appt_id, body.recurrence_rule])
@@ -160,7 +168,8 @@ async def set_appointment_recurrence(
 @router.post("/api/appointments/generate-next")
 @limiter.limit("100/minute")
 async def generate_next_occurrence(
-    body: GenerateNextOccurrence, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    body: GenerateNextOccurrence,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     """Generate the next occurrence of a recurring appointment series."""
     # Find the parent series
@@ -260,7 +269,10 @@ async def send_appointment_reminders(user: Annotated[dict, Depends(require_role(
             sent["skipped"] += 1
 
     await _log_audit(
-        user, "send_reminders", "appointment", f"{sent['email']} email, {sent['sms']} SMS, {sent['skipped']} skipped",
+        user,
+        "send_reminders",
+        "appointment",
+        f"{sent['email']} email, {sent['sms']} SMS, {sent['skipped']} skipped",
     )
     return {"ok": True, "sent": sent}
 
@@ -268,7 +280,9 @@ async def send_appointment_reminders(user: Annotated[dict, Depends(require_role(
 @router.put("/api/appointments/{appt_id}/status")
 @limiter.limit("100/minute")
 async def update_appointment_status(
-    appt_id: str, body: AppointmentStatusUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    appt_id: str,
+    body: AppointmentStatusUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("update_appointment_status", [appt_id, body.status])
     await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.status}")

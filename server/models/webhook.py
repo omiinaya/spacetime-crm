@@ -27,5 +27,3 @@ class WebhookSubscriptionUpdate(BaseModel):
     events: str = Field(..., min_length=1)
     secret: str = Field(default="", max_length=500)
     active: bool = True
-
-

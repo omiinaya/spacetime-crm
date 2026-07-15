@@ -121,12 +121,14 @@ async def send_batch_notifications(
                 send_sms_func=send_sms_func,
             )
             results["sent"] += 1
-            results["details"].append({
-                "id": invoice_id,
-                "status": "sent",
-                "to": customer_email or customer_phone,
-                "channels": notif_result,
-            })
+            results["details"].append(
+                {
+                    "id": invoice_id,
+                    "status": "sent",
+                    "to": customer_email or customer_phone,
+                    "channels": notif_result,
+                }
+            )
         except Exception as e:
             results["failed"] += 1
             results["details"].append({"id": invoice_id, "status": "error", "error": str(e)})
@@ -142,9 +144,7 @@ def get_due_invoices(invoices: list[dict], now_ms: int) -> list[dict]:
     return [
         inv
         for inv in invoices
-        if inv.get("status") in ("sent", "partial")
-        and inv.get("due_date", 0) > 0
-        and inv.get("due_date", 0) < now_ms
+        if inv.get("status") in ("sent", "partial") and inv.get("due_date", 0) > 0 and inv.get("due_date", 0) < now_ms
     ]
 
 

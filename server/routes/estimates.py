@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-
     _call,
     _fire_webhook,
     _log_audit,
@@ -50,7 +49,9 @@ async def list_estimates(
 
 @router.post("/api/estimates")
 @limiter.limit("100/minute")
-async def create_estimate(body: EstimateCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def create_estimate(
+    body: EstimateCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     await _call(
         "create_estimate",
         [
@@ -79,7 +80,9 @@ async def create_estimate(body: EstimateCreate, user: Annotated[dict, Depends(re
 @router.put("/api/estimates/{estimate_id}/status")
 @limiter.limit("100/minute")
 async def update_estimate_status(
-    estimate_id: str, body: EstimateStatusUpdate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    estimate_id: str,
+    body: EstimateStatusUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call("update_estimate_status", [estimate_id, body.status])
     await _log_audit(user, "update_status", "estimate", estimate_id, f"status={body.status}")
@@ -87,7 +90,9 @@ async def update_estimate_status(
 
 
 @router.get("/api/estimates/{estimate_id}/line-items")
-async def get_estimate_line_items(estimate_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def get_estimate_line_items(
+    estimate_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     rows = await _sql(f"SELECT * FROM estimate_line_items WHERE estimate_id = '{_safe_id(estimate_id)}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
@@ -95,7 +100,9 @@ async def get_estimate_line_items(estimate_id: str, user: Annotated[dict, Depend
 @router.post("/api/estimates/{estimate_id}/line-items")
 @limiter.limit("100/minute")
 async def add_estimate_line_item(
-    estimate_id: str, body: EstimateLineItemCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
+    estimate_id: str,
+    body: EstimateLineItemCreate,
+    user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
     await _call(
         "add_estimate_line_item",
@@ -121,7 +128,9 @@ async def delete_estimate(estimate_id: str, user: Annotated[dict, Depends(requir
 
 @router.post("/api/estimates/{estimate_id}/convert")
 @limiter.limit("100/minute")
-async def convert_estimate(estimate_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def convert_estimate(
+    estimate_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     """Convert an approved estimate to an invoice (atomic reducer)."""
     est_rows = await _sql(f"SELECT * FROM estimates WHERE id = '{_safe_id(estimate_id)}'")
     if not est_rows:

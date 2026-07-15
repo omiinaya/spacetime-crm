@@ -33,5 +33,3 @@ class POSAddItem(BaseModel):
     sku: str = Field(default="", max_length=100)
     quantity: float = Field(..., gt=0)
     unit_price: float = Field(..., ge=0)
-
-

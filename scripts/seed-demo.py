@@ -10,9 +10,7 @@ ADMIN_EMAIL = "admin@crm.local"
 ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "change-me-in-production")
 
 # Login
-resp = httpx.post(
-    f"{BASE}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PW}
-)
+resp = httpx.post(f"{BASE}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PW})
 resp.raise_for_status()
 TOKEN = resp.json()["token"]
 H = {"Authorization": f"Bearer {TOKEN}"}
@@ -107,9 +105,7 @@ for fname, lname, email, phone, company, addr, city, state, zip_code in customer
         print(f"  ✅ Customer: {fname} {lname}")
 
 # Set portal password for Alice
-r = C.post(
-    f"/api/customers/{cust_ids[0]}/portal-password", json={"password": "alice123"}
-)
+r = C.post(f"/api/customers/{cust_ids[0]}/portal-password", json={"password": "alice123"})
 print(f"  ✅ Portal password set for Alice: {ok(r)}")
 
 # ── Products ──
@@ -273,11 +269,7 @@ for table in [
     "appointments",
 ]:
     r = C.get(f"/api/{table}")
-    count = len(
-        r.json().get(
-            table if table != "products" else table, r.json().get(table.rstrip("s"), [])
-        )
-    )
+    count = len(r.json().get(table if table != "products" else table, r.json().get(table.rstrip("s"), [])))
     print(f"  {table}: {count}")
 
 print("\n✅ Demo data seeded!")

@@ -245,7 +245,10 @@ class TestBarcodeLookup:
         httpx.post(f"{SERVER_URL}/api/products", json=product, headers=test_admin_headers, timeout=10)
         # Track for session cleanup
         r_search = httpx.get(
-            f"{SERVER_URL}/api/products", params={"search": sku}, headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/products",
+            params={"search": sku},
+            headers=test_admin_headers,
+            timeout=10,
         )
         prods = r_search.json().get("products", [])
         if prods:
@@ -257,6 +260,8 @@ class TestBarcodeLookup:
 
     def test_lookup_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.get(
-            f"{SERVER_URL}/api/products/by-barcode/nonexistent-999", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/products/by-barcode/nonexistent-999",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 404

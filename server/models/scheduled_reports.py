@@ -33,5 +33,3 @@ class ScheduledReportUpdate(BaseModel):
     recipients: list[str] = Field(..., min_length=1)
     filters: dict = Field(default_factory=dict)
     enabled: bool = True
-
-

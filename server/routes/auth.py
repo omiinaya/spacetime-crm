@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from config import settings
 from helpers import (
-
     _call,
     _safe_id,
     _sanitize_sql,

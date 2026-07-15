@@ -384,12 +384,16 @@ class TestSchemaCoverage:
                 except SyntaxError:
                     continue
             for node in ast.walk(tree):
-                if isinstance(node, ast.Call) and (
-                    isinstance(node.func, ast.Attribute)
-                    and isinstance(node.func.value, ast.Name)
-                    and node.func.value.id in ("router", "app")
-                    and node.func.attr in ("get", "post", "put", "patch", "delete")
-                ) and node.args:
+                if (
+                    isinstance(node, ast.Call)
+                    and (
+                        isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in ("router", "app")
+                        and node.func.attr in ("get", "post", "put", "patch", "delete")
+                    )
+                    and node.args
+                ):
                     path_literal = node.args[0]
                     if isinstance(path_literal, ast.Constant) and isinstance(path_literal.value, str):
                         registered.add(path_literal.value)

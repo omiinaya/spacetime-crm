@@ -32,5 +32,3 @@ class SetDefaultPaymentMethodRequest(BaseModel):
 class PortalPayWithSavedCard(BaseModel):
     invoice_id: str = Field(..., min_length=1)
     payment_method_id: str = Field(..., min_length=1)
-
-

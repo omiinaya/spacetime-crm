@@ -7,10 +7,8 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-
-# FIXME: S608 - Possible SQL injection via f-string queries
-# FIXME: D103 - Missing docstrings
-
+    # FIXME: S608 - Possible SQL injection via f-string queries
+    # FIXME: D103 - Missing docstrings
     _call,
     _log_audit,
     _paginated,
@@ -95,7 +93,9 @@ async def create_product(body: ProductCreate, user: Annotated[dict, Depends(requ
 @router.put("/api/products/{product_id}/quantity")
 @limiter.limit("100/minute")
 async def update_product_quantity(
-    product_id: str, body: ProductQuantityUpdate, user: Annotated[dict, Depends(require_role("admin", "tech"))],
+    product_id: str,
+    body: ProductQuantityUpdate,
+    user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     await _call("update_product_quantity", [product_id, body.quantity_on_hand])
     await _log_audit(user, "update", "product_qty", product_id, f"qty={body.quantity_on_hand}")
@@ -112,7 +112,9 @@ async def delete_product(product_id: str, user: Annotated[dict, Depends(require_
 
 @router.put("/api/products/{product_id}")
 @limiter.limit("100/minute")
-async def update_product(product_id: str, body: ProductCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
+async def update_product(
+    product_id: str, body: ProductCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))]
+):
     """Update product fields including min_stock."""
     await _call(
         "update_product",
@@ -137,7 +139,9 @@ async def update_product(product_id: str, body: ProductCreate, user: Annotated[d
 
 
 @router.get("/api/products/{product_id}/adjustments")
-async def get_product_adjustments(product_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def get_product_adjustments(
+    product_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{_safe_id(product_id)}'")
     return {"adjustments": _sort(rows, "created_at")}
 
@@ -145,7 +149,9 @@ async def get_product_adjustments(product_id: str, user: Annotated[dict, Depends
 @router.post("/api/products/{product_id}/adjustments")
 @limiter.limit("100/minute")
 async def create_adjustment(
-    product_id: str, body: InventoryAdjustmentCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))],
+    product_id: str,
+    body: InventoryAdjustmentCreate,
+    user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):
     await _call(
         "create_inventory_adjustment",
@@ -172,7 +178,9 @@ async def list_low_stock(user: Annotated[dict, Depends(require_role("admin", "te
 
 
 @router.get("/api/products/by-barcode/{barcode}")
-async def lookup_product_by_barcode(barcode: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]):
+async def lookup_product_by_barcode(
+    barcode: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
+):
     """Find a product by barcode (exact match, tenant-scoped)."""
     rows = await _sql(
         f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}' AND barcode = '{_sanitize_sql(barcode)}'",
@@ -229,7 +237,8 @@ async def transfer_stock(body: StockTransferRequest, user: Annotated[dict, Depen
     await _call("create_inventory_adjustment", [tid, body.source_product_id, -qty, "transferred", ref, body.notes, uid])
     # Positive adjustment on destination
     await _call(
-        "create_inventory_adjustment", [tid, body.destination_product_id, qty, "transferred", ref, body.notes, uid],
+        "create_inventory_adjustment",
+        [tid, body.destination_product_id, qty, "transferred", ref, body.notes, uid],
     )
 
     await _log_audit(user, "transfer", "stock", body.source_product_id, f"qty={qty}→{body.destination_product_id}")

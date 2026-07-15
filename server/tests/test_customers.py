@@ -58,7 +58,10 @@ class TestCustomerCRUD:
     def test_update_customer(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Update customer fields."""
         customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, first_name="Update", last_name="Test",
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Update",
+            last_name="Test",
         )
         cid = customer.get("id")
         assert cid, f"No customer ID returned: {customer}"
@@ -86,7 +89,10 @@ class TestCustomerCRUD:
     def test_delete_customer(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Delete a customer (admin only)."""
         customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, first_name="Delete", last_name="Me",
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Delete",
+            last_name="Me",
         )
         cid = customer.get("id")
         assert cid
@@ -171,7 +177,9 @@ class TestSensitiveFieldExclusion:
             for field in self.SENSITIVE_FIELDS:
                 assert field not in c, f"Sensitive field '{field}' leaked in customer list response: {c}"
 
-    def test_customer_geolocations_excludes_sensitive_fields(self, test_admin_headers: dict, session_suffix: str) -> None:
+    def test_customer_geolocations_excludes_sensitive_fields(
+        self, test_admin_headers: dict, session_suffix: str
+    ) -> None:
         """Customer geolocations endpoint does not return sensitive fields."""
         from .conftest import unique_suffix
 
@@ -220,7 +228,10 @@ class TestTenantIsolation:
     def test_customer_has_tenant_id(self, test_admin_headers: dict, session_suffix: str) -> None:
         """Created customer has a non-empty tenant_id."""
         customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, first_name="Tenant", last_name="Check",
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Tenant",
+            last_name="Check",
         )
         assert customer.get("tenant_id"), f"Missing tenant_id: {customer}"
         assert len(customer["tenant_id"]) > 5, f"tenant_id too short: {customer}"

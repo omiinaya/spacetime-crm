@@ -24,5 +24,3 @@ class PaymentCreate(BaseModel):
     reference: str = Field(default="", max_length=255)
     notes: str = Field(default="", max_length=2000)
     currency: str = Field(default="USD", max_length=3)
-
-

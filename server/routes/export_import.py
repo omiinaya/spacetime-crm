@@ -10,7 +10,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 
 from helpers import (
-
     _call,
     _sql,
     require_role,
@@ -65,7 +64,9 @@ async def export_csv(entity: str, user: Annotated[dict, Depends(require_role("ad
 
 @router.post("/api/import/customers")
 @limiter.limit("100/minute")
-async def import_customers_csv(file: Annotated[UploadFile, File()], user: Annotated[dict, Depends(require_role("admin"))]):
+async def import_customers_csv(
+    file: Annotated[UploadFile, File()], user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Import customers from CSV.
     Required: first_name, last_name. Optional: email, phone, etc.
     If id column provided, uses import_customer reducer to preserve IDs.
@@ -135,7 +136,9 @@ async def import_customers_csv(file: Annotated[UploadFile, File()], user: Annota
 
 @router.post("/api/import/products")
 @limiter.limit("100/minute")
-async def import_products_csv(file: Annotated[UploadFile, File()], user: Annotated[dict, Depends(require_role("admin"))]):
+async def import_products_csv(
+    file: Annotated[UploadFile, File()], user: Annotated[dict, Depends(require_role("admin"))]
+):
     """Import products from CSV.
     Required: name. Optional: sku, barcode, description, category, price, cost,
     quantity_on_hand, quantity_committed, min_stock, location, active.

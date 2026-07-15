@@ -1,7 +1,6 @@
 from pydantic_settings import BaseSettings
 
 
-
 class Settings(BaseSettings):
     stdb_host: str = "localhost"
     stdb_port: int = 3001

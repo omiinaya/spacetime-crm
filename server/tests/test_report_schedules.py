@@ -135,7 +135,9 @@ class TestReportScheduleCRUD:
 
     def test_delete_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.delete(
-            f"{SERVER_URL}/api/report-schedules/nonexistent-999", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/report-schedules/nonexistent-999",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code < 500
 
@@ -151,7 +153,9 @@ class TestReportScheduleRun:
 
     def test_run_now_nonexistent(self, test_admin_headers: dict) -> None:
         resp = httpx.post(
-            f"{SERVER_URL}/api/report-schedules/nonexistent-999/run-now", headers=test_admin_headers, timeout=10,
+            f"{SERVER_URL}/api/report-schedules/nonexistent-999/run-now",
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 404
 
