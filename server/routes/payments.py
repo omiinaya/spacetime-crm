@@ -51,7 +51,6 @@ async def list_payments(
 
 
 @router.post("/api/payments")
-@limiter.limit("100/minute")
 async def record_payment(
     body: PaymentCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
 ):
@@ -110,7 +109,6 @@ async def record_payment(
 
 
 @router.delete("/api/payments/{payment_id}")
-@limiter.limit("100/minute")
 async def delete_payment(payment_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_payment", [payment_id])
     await _log_audit(user, "delete", "payment", payment_id)

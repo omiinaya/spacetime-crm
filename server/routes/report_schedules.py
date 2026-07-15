@@ -43,7 +43,6 @@ async def list_schedules(
 
 
 @router.post("/api/report-schedules")
-@limiter.limit("100/minute")
 async def create_schedule(body: ScheduledReportCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Create a new scheduled report."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
@@ -68,7 +67,6 @@ async def create_schedule(body: ScheduledReportCreate, user: Annotated[dict, Dep
 
 
 @router.put("/api/report-schedules/{schedule_id}")
-@limiter.limit("100/minute")
 async def update_schedule(
     schedule_id: str, body: ScheduledReportUpdate, user: Annotated[dict, Depends(require_role("admin"))]
 ):
@@ -110,7 +108,6 @@ async def update_schedule(
 
 
 @router.delete("/api/report-schedules/{schedule_id}")
-@limiter.limit("100/minute")
 async def delete_schedule(schedule_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a scheduled report."""
     _safe_id(schedule_id)
@@ -123,7 +120,6 @@ async def delete_schedule(schedule_id: str, user: Annotated[dict, Depends(requir
 
 
 @router.post("/api/report-schedules/{schedule_id}/run-now")
-@limiter.limit("100/minute")
 async def run_schedule_now(schedule_id: str, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Generate and deliver a scheduled report immediately."""
     _safe_id(schedule_id)

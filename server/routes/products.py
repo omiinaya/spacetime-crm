@@ -68,7 +68,6 @@ async def list_products(
 
 
 @router.post("/api/products")
-@limiter.limit("100/minute")
 async def create_product(body: ProductCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     await _call(
         "create_product",
@@ -91,7 +90,6 @@ async def create_product(body: ProductCreate, user: Annotated[dict, Depends(requ
 
 
 @router.put("/api/products/{product_id}/quantity")
-@limiter.limit("100/minute")
 async def update_product_quantity(
     product_id: str,
     body: ProductQuantityUpdate,
@@ -103,7 +101,6 @@ async def update_product_quantity(
 
 
 @router.delete("/api/products/{product_id}")
-@limiter.limit("100/minute")
 async def delete_product(product_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_product", [product_id])
     await _log_audit(user, "delete", "product", product_id)
@@ -111,7 +108,6 @@ async def delete_product(product_id: str, user: Annotated[dict, Depends(require_
 
 
 @router.put("/api/products/{product_id}")
-@limiter.limit("100/minute")
 async def update_product(
     product_id: str, body: ProductCreate, user: Annotated[dict, Depends(require_role("admin", "tech"))]
 ):
@@ -147,7 +143,6 @@ async def get_product_adjustments(
 
 
 @router.post("/api/products/{product_id}/adjustments")
-@limiter.limit("100/minute")
 async def create_adjustment(
     product_id: str,
     body: InventoryAdjustmentCreate,
@@ -191,7 +186,6 @@ async def lookup_product_by_barcode(
 
 
 @router.post("/api/products/low-stock/notify")
-@limiter.limit("100/minute")
 async def notify_low_stock(user: Annotated[dict, Depends(require_role("admin"))]):
     """Check low stock and send email alert to admin."""
     rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")  # nosec - tenant_id from JWT or internal whitelist
@@ -207,7 +201,6 @@ async def notify_low_stock(user: Annotated[dict, Depends(require_role("admin"))]
 
 
 @router.post("/api/products/transfer")
-@limiter.limit("100/minute")
 async def transfer_stock(body: StockTransferRequest, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Transfer stock between two products. Creates inventory adjustments on both."""
     tid = user["tenant_id"]

@@ -43,7 +43,6 @@ async def list_recurring_rules(user: Annotated[dict, Depends(require_role("admin
 
 
 @router.post("/api/recurring-invoices")
-@limiter.limit("100/minute")
 async def create_recurring_rule(
     body: RecurringInvoiceRuleCreate,
     user: Annotated[dict, Depends(require_role("admin", "tech"))],
@@ -80,7 +79,6 @@ async def create_recurring_rule(
 
 
 @router.put("/api/recurring-invoices/{rule_id}")
-@limiter.limit("100/minute")
 async def update_recurring_rule(
     rule_id: str,
     body: RecurringInvoiceRuleUpdate,
@@ -107,7 +105,6 @@ async def update_recurring_rule(
 
 
 @router.delete("/api/recurring-invoices/{rule_id}")
-@limiter.limit("100/minute")
 async def delete_recurring_rule(
     rule_id: str,
     user: Annotated[dict, Depends(require_role("admin"))],
@@ -119,7 +116,6 @@ async def delete_recurring_rule(
 
 
 @router.post("/api/recurring-invoices/generate")
-@limiter.limit("100/minute")
 async def generate_recurring_invoices(
     user: Annotated[dict, Depends(require_role("admin", "tech"))],
 ):

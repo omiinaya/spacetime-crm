@@ -39,7 +39,6 @@ async def list_users(
 
 
 @router.post("/api/users")
-@limiter.limit("100/minute")
 async def create_user(body: UserCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call(
         "create_user",
@@ -63,7 +62,6 @@ async def get_user_settings(user: Annotated[dict, Depends(require_role("admin", 
 
 
 @router.put("/api/users/settings")
-@limiter.limit("100/minute")
 async def update_user_settings(
     body: UserSettingsUpdate,
     user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],

@@ -38,7 +38,6 @@ async def list_tax_rates(
 
 
 @router.post("/api/tax-rates")
-@limiter.limit("100/minute")
 async def create_tax_rate(body: TaxRateCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call(
         "create_tax_rate",
@@ -54,7 +53,6 @@ async def create_tax_rate(body: TaxRateCreate, user: Annotated[dict, Depends(req
 
 
 @router.put("/api/tax-rates/{tax_id}")
-@limiter.limit("100/minute")
 async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call(
         "update_tax_rate",
@@ -70,7 +68,6 @@ async def update_tax_rate(tax_id: str, body: TaxRateUpdate, user: Annotated[dict
 
 
 @router.delete("/api/tax-rates/{tax_id}")
-@limiter.limit("100/minute")
 async def delete_tax_rate(tax_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_tax_rate", [tax_id])
     await _log_audit(user, "delete", "tax_rate", tax_id)

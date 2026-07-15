@@ -70,7 +70,6 @@ async def get_current_customer(credentials: HTTPAuthorizationCredentials = Depen
 
 
 @router.post("/api/portal/login")
-@limiter.limit("10/minute")
 async def portal_login(request: Request, body: PortalLoginRequest):
     """Customer portal login with email + portal password."""
     email = body.email
@@ -184,7 +183,6 @@ async def portal_ticket_detail(ticket_id: str, customer: Annotated[dict, Depends
 
 
 @router.post("/api/portal/tickets/{ticket_id}/notes")
-@limiter.limit("30/minute")
 async def portal_add_note(
     ticket_id: str, body: PortalNoteCreate, customer: Annotated[dict, Depends(get_current_customer)]
 ):
@@ -237,7 +235,6 @@ async def portal_invoice_detail(invoice_id: str, customer: Annotated[dict, Depen
 
 
 @router.post("/api/portal/payments")
-@limiter.limit("30/minute")
 async def portal_make_payment(body: PortalPaymentCreate, customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer makes a payment on an invoice."""
     invoice_id = body.invoice_id
@@ -296,7 +293,6 @@ async def portal_appointments(customer: Annotated[dict, Depends(get_current_cust
 
 
 @router.post("/api/portal/customer/set-password")
-@limiter.limit("20/minute")
 async def portal_set_password(body: PortalSetPassword, customer: Annotated[dict, Depends(get_current_customer)]):
     """Customer sets/changes their portal password."""
     pw = body.password
@@ -311,7 +307,6 @@ async def portal_set_password(body: PortalSetPassword, customer: Annotated[dict,
 
 
 @router.post("/api/portal/payments/create-checkout-session")
-@limiter.limit("30/minute")
 async def portal_create_checkout_session(
     body: PortalCheckoutSessionCreate,
     customer: Annotated[dict, Depends(get_current_customer)],
@@ -374,7 +369,6 @@ async def portal_payment_methods(customer: Annotated[dict, Depends(get_current_c
 
 
 @router.post("/api/portal/payments/pay-with-saved-card")
-@limiter.limit("30/minute")
 async def portal_pay_with_saved_card(
     body: PortalPayWithSavedCard,
     customer: Annotated[dict, Depends(get_current_customer)],

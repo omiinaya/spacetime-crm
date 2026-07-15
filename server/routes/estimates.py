@@ -48,7 +48,6 @@ async def list_estimates(
 
 
 @router.post("/api/estimates")
-@limiter.limit("100/minute")
 async def create_estimate(
     body: EstimateCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
 ):
@@ -78,7 +77,6 @@ async def create_estimate(
 
 
 @router.put("/api/estimates/{estimate_id}/status")
-@limiter.limit("100/minute")
 async def update_estimate_status(
     estimate_id: str,
     body: EstimateStatusUpdate,
@@ -98,7 +96,6 @@ async def get_estimate_line_items(
 
 
 @router.post("/api/estimates/{estimate_id}/line-items")
-@limiter.limit("100/minute")
 async def add_estimate_line_item(
     estimate_id: str,
     body: EstimateLineItemCreate,
@@ -119,7 +116,6 @@ async def add_estimate_line_item(
 
 
 @router.delete("/api/estimates/{estimate_id}")
-@limiter.limit("100/minute")
 async def delete_estimate(estimate_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_estimate", [estimate_id])
     await _log_audit(user, "delete", "estimate", estimate_id)
@@ -127,7 +123,6 @@ async def delete_estimate(estimate_id: str, user: Annotated[dict, Depends(requir
 
 
 @router.post("/api/estimates/{estimate_id}/convert")
-@limiter.limit("100/minute")
 async def convert_estimate(
     estimate_id: str, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
 ):

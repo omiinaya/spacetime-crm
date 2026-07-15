@@ -63,7 +63,6 @@ async def export_csv(entity: str, user: Annotated[dict, Depends(require_role("ad
 
 
 @router.post("/api/import/customers")
-@limiter.limit("100/minute")
 async def import_customers_csv(
     file: Annotated[UploadFile, File()], user: Annotated[dict, Depends(require_role("admin"))]
 ):
@@ -135,7 +134,6 @@ async def import_customers_csv(
 
 
 @router.post("/api/import/products")
-@limiter.limit("100/minute")
 async def import_products_csv(
     file: Annotated[UploadFile, File()], user: Annotated[dict, Depends(require_role("admin"))]
 ):

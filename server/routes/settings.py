@@ -34,7 +34,6 @@ async def mail_settings_get(user: Annotated[dict, Depends(require_role("admin"))
 
 
 @router.post("/api/settings/mail")
-@limiter.limit("30/minute")
 async def mail_settings_save(
     request: Request, body: MailSettingsUpdate, user: Annotated[dict, Depends(require_role("admin"))]
 ):
@@ -53,7 +52,6 @@ async def mail_settings_save(
 
 
 @router.post("/api/settings/mail/test")
-@limiter.limit("10/minute")
 async def mail_settings_test(request: Request, user: Annotated[dict, Depends(require_role("admin"))]):
     """Test SMTP connection with current settings."""
     return _mail_test()
@@ -69,7 +67,6 @@ async def sms_settings_get(user: Annotated[dict, Depends(require_role("admin"))]
 
 
 @router.post("/api/settings/sms")
-@limiter.limit("30/minute")
 async def sms_settings_save(
     request: Request, body: SMSSettingsUpdate, user: Annotated[dict, Depends(require_role("admin"))]
 ):
@@ -79,7 +76,6 @@ async def sms_settings_save(
 
 
 @router.post("/api/settings/sms/test")
-@limiter.limit("10/minute")
 async def sms_settings_test(request: Request, user: Annotated[dict, Depends(require_role("admin"))]):
     """Test SMS connection with current settings."""
     return _sms_test()
@@ -98,7 +94,6 @@ async def business_hours_get(user: Annotated[dict, Depends(require_role("admin",
 
 
 @router.post("/api/settings/business-hours")
-@limiter.limit("30/minute")
 async def business_hours_save(
     request: Request, body: BusinessHoursUpdate, user: Annotated[dict, Depends(require_role("admin"))]
 ):

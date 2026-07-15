@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from config import settings
 from helpers import (
@@ -103,8 +103,8 @@ async def list_recurring_series(user: Annotated[dict, Depends(require_role("admi
 
 
 @router.post("/api/appointments")
-@limiter.limit("100/minute")
 async def create_appointment(
+    request: Request,
     body: AppointmentCreate,
     user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
@@ -153,8 +153,8 @@ async def create_appointment(
 
 
 @router.put("/api/appointments/{appt_id}/recurrence")
-@limiter.limit("100/minute")
 async def set_appointment_recurrence(
+    request: Request,
     appt_id: str,
     body: AppointmentRecurrence,
     user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
@@ -166,8 +166,8 @@ async def set_appointment_recurrence(
 
 
 @router.post("/api/appointments/generate-next")
-@limiter.limit("100/minute")
 async def generate_next_occurrence(
+    request: Request,
     body: GenerateNextOccurrence,
     user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
 ):
@@ -231,8 +231,10 @@ async def get_appointments_due_soon(user: Annotated[dict, Depends(require_role("
 
 
 @router.post("/api/appointments/send-reminders")
-@limiter.limit("100/minute")
-async def send_appointment_reminders(user: Annotated[dict, Depends(require_role("admin"))]):
+async def send_appointment_reminders(
+    request: Request,
+    user: Annotated[dict, Depends(require_role("admin"))],
+):
     """Send reminder notifications for appointments starting in the next 24 hours."""
     now_ms = int(__import__("time").time() * 1000)
     in_24h = now_ms + 86_400_000
@@ -278,8 +280,8 @@ async def send_appointment_reminders(user: Annotated[dict, Depends(require_role(
 
 
 @router.put("/api/appointments/{appt_id}/status")
-@limiter.limit("100/minute")
 async def update_appointment_status(
+    request: Request,
     appt_id: str,
     body: AppointmentStatusUpdate,
     user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))],
@@ -290,8 +292,11 @@ async def update_appointment_status(
 
 
 @router.delete("/api/appointments/{appt_id}")
-@limiter.limit("100/minute")
-async def delete_appointment(appt_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
+async def delete_appointment(
+    request: Request,
+    appt_id: str,
+    user: Annotated[dict, Depends(require_role("admin"))],
+):
     await _call("delete_appointment", [appt_id])
     await _log_audit(user, "delete", "appointment", appt_id)
     return {"ok": True}

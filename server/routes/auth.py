@@ -83,7 +83,6 @@ def _decode_temp_token(token: str) -> dict:
 
 
 @router.post("/api/auth/login")
-@limiter.limit("30/minute")
 async def login(request: Request, login_data: LoginRequest):
     """Login with email + password. Returns JWT or 2FA challenge."""
     email = login_data.email
@@ -147,7 +146,6 @@ async def login(request: Request, login_data: LoginRequest):
 
 
 @router.post("/api/auth/complete-login")
-@limiter.limit("30/minute")
 async def complete_login(request: Request, body: CompleteLoginRequest):
     """Complete 2FA challenge and receive full JWT token."""
     payload = _decode_temp_token(body.temp_token)
@@ -231,7 +229,6 @@ async def auth_me(user: Annotated[dict, Depends(get_current_user)]):
 
 
 @router.post("/api/auth/setup-2fa")
-@limiter.limit("20/minute")
 async def setup_2fa(user: Annotated[dict, Depends(get_current_user)]):
     """Generate TOTP secret and return provisioning URI for QR code."""
     # Check if already enabled
@@ -257,7 +254,6 @@ async def setup_2fa(user: Annotated[dict, Depends(get_current_user)]):
 
 
 @router.post("/api/auth/verify-2fa")
-@limiter.limit("20/minute")
 async def verify_2fa(body: Setup2FARequest, user: Annotated[dict, Depends(get_current_user)]):
     """Verify a TOTP code and enable 2FA."""
     rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user['id'])}'")
@@ -277,7 +273,6 @@ async def verify_2fa(body: Setup2FARequest, user: Annotated[dict, Depends(get_cu
 
 
 @router.post("/api/auth/disable-2fa")
-@limiter.limit("20/minute")
 async def disable_2fa(body: Disable2FARequest, user: Annotated[dict, Depends(get_current_user)]):
     """Verify current TOTP code and disable 2FA."""
     rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user['id'])}'")
@@ -297,7 +292,6 @@ async def disable_2fa(body: Disable2FARequest, user: Annotated[dict, Depends(get
 
 
 @router.post("/api/auth/refresh-tenant")
-@limiter.limit("100/minute")
 async def refresh_token_tenant(user: Annotated[dict, Depends(get_current_user)]):
     """Refresh the JWT token with latest tenant_id from DB."""
     tid = ""
@@ -314,7 +308,6 @@ async def refresh_token_tenant(user: Annotated[dict, Depends(get_current_user)])
 
 
 @router.post("/api/auth/set-password")
-@limiter.limit("20/minute")
 async def set_password(body: SetPasswordRequest, user: Annotated[dict, Depends(get_current_user)]):
     """Set/change password for current user."""
     pw = body.password
@@ -326,7 +319,6 @@ async def set_password(body: SetPasswordRequest, user: Annotated[dict, Depends(g
 
 
 @router.post("/api/auth/set-pin")
-@limiter.limit("20/minute")
 async def set_pin(body: SetPinRequest, user: Annotated[dict, Depends(get_current_user)]):
     """Set, change, or remove the POS PIN for the current user. PIN is stored as bcrypt hash.
     Pass an empty string to remove the PIN.
@@ -344,7 +336,6 @@ async def set_pin(body: SetPinRequest, user: Annotated[dict, Depends(get_current
 
 
 @router.post("/api/auth/pos-login")
-@limiter.limit("30/minute")
 async def pos_login(request: Request, body: PosLoginRequest):
     """Quick PIN-based login for POS terminal. Returns full JWT (no 2FA challenge)."""
     user_id = body.user_id
@@ -392,7 +383,6 @@ async def pos_login(request: Request, body: PosLoginRequest):
 
 
 @router.post("/api/auth/forgot-password")
-@limiter.limit("10/minute")
 async def forgot_password(request: Request, body: ForgotPasswordRequest):
     """Send a password-reset email if the email exists.
 
@@ -450,7 +440,6 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 
 
 @router.post("/api/auth/reset-password")
-@limiter.limit("10/minute")
 async def reset_password(request: Request, body: ResetPasswordRequest):
     """Reset password using a valid reset token."""
     token = body.token.strip()

@@ -66,7 +66,6 @@ async def list_customers(
 
 
 @router.post("/api/customers")
-@limiter.limit("100/minute")
 async def create_customer(
     body: CustomerCreate, user: Annotated[dict, Depends(require_role("admin", "tech", "front_desk"))]
 ):
@@ -96,7 +95,6 @@ async def create_customer(
 
 
 @router.put("/api/customers/{customer_id}")
-@limiter.limit("100/minute")
 async def update_customer(
     customer_id: str,
     body: CustomerUpdate,
@@ -135,7 +133,6 @@ async def update_customer(
 
 
 @router.delete("/api/customers/{customer_id}")
-@limiter.limit("100/minute")
 async def delete_customer(customer_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     await _call("delete_customer", [customer_id])
     await _log_audit(user, "delete", "customer", customer_id)
@@ -152,7 +149,6 @@ async def delete_customer(customer_id: str, user: Annotated[dict, Depends(requir
 
 
 @router.post("/api/customers/{customer_id}/portal-password")
-@limiter.limit("100/minute")
 async def set_customer_portal_password(
     customer_id: str,
     body: SetPasswordRequest,
@@ -205,7 +201,6 @@ async def list_customer_geolocations(user: Annotated[dict, Depends(require_role(
 
 
 @router.post("/api/customers/{customer_id}/geocode")
-@limiter.limit("100/minute")
 async def geocode_customer(customer_id: str, user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Geocode a single customer's address and store the location."""
     customers = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(customer_id)}'")
@@ -237,7 +232,6 @@ async def geocode_customer(customer_id: str, user: Annotated[dict, Depends(requi
 
 
 @router.post("/api/customers/geocode-all")
-@limiter.limit("100/minute")
 async def geocode_all_customers(user: Annotated[dict, Depends(require_role("admin", "tech"))]):
     """Geocode all customers that don't have coordinates yet."""
     customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])

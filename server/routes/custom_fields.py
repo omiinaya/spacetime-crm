@@ -42,7 +42,6 @@ async def list_custom_field_definitions(
 
 
 @router.post("/api/custom-field-definitions")
-@limiter.limit("100/minute")
 async def create_custom_field_definition(
     body: CustomFieldDefinitionCreate,
     user: Annotated[dict, Depends(require_role("admin"))],
@@ -68,7 +67,6 @@ async def create_custom_field_definition(
 
 
 @router.put("/api/custom-field-definitions/{field_id}")
-@limiter.limit("100/minute")
 async def update_custom_field_definition(
     field_id: str,
     body: CustomFieldDefinitionCreate,
@@ -92,7 +90,6 @@ async def update_custom_field_definition(
 
 
 @router.delete("/api/custom-field-definitions/{field_id}")
-@limiter.limit("100/minute")
 async def delete_custom_field_definition(field_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a custom field definition."""
     await _call("delete_custom_field_definition", [field_id])
@@ -110,7 +107,6 @@ async def get_custom_field_values(
 
 
 @router.put("/api/custom-field-values/{entity_id}")
-@limiter.limit("100/minute")
 async def set_custom_field_values(
     entity_id: str,
     body: CustomFieldValuesUpdate,

@@ -36,7 +36,6 @@ async def list_tenants(offset: int = 0, limit: int = 50, user: dict = Depends(re
 
 
 @router.post("/api/tenants")
-@limiter.limit("100/minute")
 async def create_tenant(body: TenantCreate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Create a new tenant."""
     name = body.name.strip()
@@ -64,7 +63,6 @@ async def get_tenant(tenant_id: str, user: Annotated[dict, Depends(require_role(
 
 
 @router.put("/api/tenants/{tenant_id}")
-@limiter.limit("100/minute")
 async def update_tenant(tenant_id: str, body: TenantUpdate, user: Annotated[dict, Depends(require_role("admin"))]):
     """Update tenant settings."""
     name = body.name
@@ -79,7 +77,6 @@ async def update_tenant(tenant_id: str, body: TenantUpdate, user: Annotated[dict
 
 
 @router.delete("/api/tenants/{tenant_id}")
-@limiter.limit("100/minute")
 async def delete_tenant(tenant_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a tenant and all its data."""
     await _call("delete_tenant", [tenant_id])
@@ -88,7 +85,6 @@ async def delete_tenant(tenant_id: str, user: Annotated[dict, Depends(require_ro
 
 
 @router.post("/api/tenants/{tenant_id}/members")
-@limiter.limit("100/minute")
 async def add_tenant_member(
     tenant_id: str, body: TenantMemberAdd, user: Annotated[dict, Depends(require_role("admin"))]
 ):
@@ -103,7 +99,6 @@ async def add_tenant_member(
 
 
 @router.delete("/api/tenants/{tenant_id}/members/{member_id}")
-@limiter.limit("100/minute")
 async def remove_tenant_member(tenant_id: str, member_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Remove a member from a tenant."""
     await _call("remove_tenant_member", [member_id])
@@ -112,7 +107,6 @@ async def remove_tenant_member(tenant_id: str, member_id: str, user: Annotated[d
 
 
 @router.put("/api/tenants/{tenant_id}/members/{member_id}")
-@limiter.limit("100/minute")
 async def update_tenant_member_role(
     tenant_id: str,
     member_id: str,
@@ -127,7 +121,6 @@ async def update_tenant_member_role(
 
 
 @router.post("/api/tenants/migrate")
-@limiter.limit("20/minute")
 async def migrate_to_tenant(body: TenantMigrate, user: Annotated[dict, Depends(require_role("admin"))]):
     """One-time migration: create a default tenant and assign all existing users to it."""
     existing = await _sql("SELECT * FROM tenants")

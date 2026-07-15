@@ -39,7 +39,6 @@ async def list_checklist_templates(
 
 
 @router.post("/api/checklist-templates")
-@limiter.limit("100/minute")
 async def create_checklist_template(
     body: ChecklistTemplateCreate, user: Annotated[dict, Depends(require_role("admin"))]
 ):
@@ -58,7 +57,6 @@ async def create_checklist_template(
 
 
 @router.put("/api/checklist-templates/{template_id}")
-@limiter.limit("100/minute")
 async def update_checklist_template(
     template_id: str,
     body: ChecklistTemplateUpdate,
@@ -79,7 +77,6 @@ async def update_checklist_template(
 
 
 @router.delete("/api/checklist-templates/{template_id}")
-@limiter.limit("100/minute")
 async def delete_checklist_template(template_id: str, user: Annotated[dict, Depends(require_role("admin"))]):
     """Delete a checklist template."""
     await _call("delete_checklist_template", [template_id])
