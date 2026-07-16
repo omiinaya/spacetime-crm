@@ -37,7 +37,7 @@ describe('Input', () => {
   });
 
   it('forwards ref', () => {
-    const ref = { current: null as any };
+    const ref = { current: null as HTMLInputElement | null };
     render(<Input ref={ref} placeholder="ref" />);
     expect(ref.current).toBeInstanceOf(HTMLInputElement);
   });

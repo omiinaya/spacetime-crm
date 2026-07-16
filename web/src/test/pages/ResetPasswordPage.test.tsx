@@ -14,8 +14,8 @@ const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
 
 vi.mock('sonner', () => ({
   toast: {
-    error: (...args: any[]) => mockToastError(...args),
-    success: (...args: any[]) => mockToastSuccess(...args),
+    error: (msg: string) => mockToastError(msg),
+    success: (msg: string) => mockToastSuccess(msg),
   },
   Toaster: () => null,
 }));
@@ -44,7 +44,7 @@ it('shows invalid link state when no token in URL', () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   render(<ResetPasswordPage />);
@@ -67,7 +67,7 @@ it('renders the reset password form when token is present', async () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   render(<ResetPasswordPage />);
@@ -94,7 +94,7 @@ it("shows error when passwords don't match", async () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   const user = userEvent.setup();
@@ -119,7 +119,7 @@ it('shows error when password is too short', async () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   const user = userEvent.setup();
@@ -146,7 +146,7 @@ it('submits password and token to the API', async () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   const fetchSpy = vi.spyOn(window, 'fetch').mockResolvedValueOnce(
@@ -187,7 +187,7 @@ it('shows success toast after successful reset', async () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   vi.spyOn(window, 'fetch').mockResolvedValueOnce(
@@ -223,7 +223,7 @@ it('shows toast.error when API returns an error', async () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   vi.spyOn(window, 'fetch').mockResolvedValueOnce(
@@ -257,7 +257,7 @@ it("shows 'Resetting…' while request is in flight", async () => {
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
       }
-    } as any,
+    } as unknown as typeof URLSearchParams,
   );
 
   vi.spyOn(window, 'fetch').mockReturnValueOnce(new Promise(() => {}));

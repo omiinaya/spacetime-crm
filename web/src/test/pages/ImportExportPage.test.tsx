@@ -15,7 +15,7 @@ const { mockExportCsv, mockImportCustomers, mockImportProducts } = vi.hoisted(()
 // Mock api module so we can control export/import in each test
 vi.mock('@/lib/api', () => ({
   api: {
-    export: { csv: (...args: any[]) => mockExportCsv(...args) },
+    export: { csv: (entity: string) => mockExportCsv(entity) },
     import: {
       customers: (file: File) => mockImportCustomers(file),
       products: (file: File) => mockImportProducts(file),

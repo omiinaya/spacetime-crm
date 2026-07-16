@@ -75,7 +75,7 @@ describe('Button', () => {
   });
 
   it('forwards ref', () => {
-    const ref = { current: null as any };
+    const ref = { current: null as HTMLButtonElement | null };
     render(<Button ref={ref}>Ref</Button>);
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });

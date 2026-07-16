@@ -14,8 +14,8 @@ const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
 
 vi.mock('sonner', () => ({
   toast: {
-    error: (...args: any[]) => mockToastError(...args),
-    success: (...args: any[]) => mockToastSuccess(...args),
+    error: (msg: string) => mockToastError(msg),
+    success: (msg: string) => mockToastSuccess(msg),
   },
   Toaster: () => null,
 }));

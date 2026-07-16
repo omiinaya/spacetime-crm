@@ -56,7 +56,7 @@ describe('hasRole', () => {
   });
 
   it('handles missing role field', () => {
-    expect(hasRole({} as any, 'admin')).toBe(false);
+    expect(hasRole({} as { role?: string }, 'admin')).toBe(false);
   });
 });
 
