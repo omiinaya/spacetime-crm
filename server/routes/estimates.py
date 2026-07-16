@@ -36,6 +36,8 @@ async def create_estimate(body: EstimateCreate, user: dict = Depends(require_rol
         body.notes,
         body.expires_at,
         body.currency,
+        body.tax_rate,
+        body.discount_amount,
     ])
     await _log_audit(user, "create", "estimate", f"cust={body.customer_id}")
     asyncio.ensure_future(_fire_webhook("estimate.created", {

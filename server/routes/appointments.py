@@ -63,6 +63,7 @@ async def create_appointment(body: AppointmentCreate, user: dict = Depends(requi
         body.all_day,
         body.series_id,
         body.recurrence_rule,
+        body.color,
     ])
 
     async def _notify():
