@@ -1,14 +1,10 @@
-# ── SpacetimeCRM Production Docker Compose ───────────────────
-# Production overrides for docker-compose.yml
+# Override for production deployment.
 #
-# Usage:
-#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
-#
-# This adds:
-#   - Resource limits for all services
-#   - Restart policies with backoff
-#   - Log rotation
+# Extends docker-compose.yml with:
+#   - Resource limits for SpacetimeDB and backend
+#   - Log rotation via json-file driver
 #   - nginx service with TLS reverse proxy
+#   - Structured JSON logging enabled
 #   - Named volumes for STDB data persistence
 #
 # Requires:
@@ -51,6 +47,7 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - WORKERS=${WORKERS:-4}
+      - STRUCTURED_LOGGING=true
       # CORS must match the nginx proxy URL
       - CORS_ORIGIN=https://${CRM_DOMAIN:-spacetime-crm.local}
       - APP_URL=https://${CRM_DOMAIN:-spacetime-crm.local}

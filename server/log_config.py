@@ -1,4 +1,5 @@
-"""Structured JSON logging configuration for SpacetimeCRM.
+"""
+Structured logging configuration for SpacetimeCRM.
 
 Provides a standardized JSON log format for production use.
 In dev mode, logs remain human-readable via the console handler.
@@ -16,7 +17,7 @@ STRUCTURED = os.getenv("STRUCTURED_LOGGING", "false").lower() in ("true", "1", "
 
 
 class JsonFormatter(logging.Formatter):
-    """Format log records as JSON lines."""
+    """Format log records as JSON lines for log aggregation systems."""
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
@@ -27,6 +28,7 @@ class JsonFormatter(logging.Formatter):
             "module": record.module,
             "function": record.funcName,
             "line": record.lineno,
+            "service": "spacetime-crm",
         }
         if hasattr(record, "extra_fields"):
             log_entry.update(record.extra_fields)
@@ -48,7 +50,10 @@ def configure_logging() -> None:
     # Remove existing handlers to avoid duplicates
     logger.handlers.clear()
 
-    handler = logging.StreamHandler(sys.stderr)
+    # Use stdout for structured logs (better suited for container log aggregation),
+    # stderr for plain text logs (local development).
+    stream = sys.stdout if STRUCTURED else sys.stderr
+    handler = logging.StreamHandler(stream)
     handler.setLevel(logger.level)
 
     if STRUCTURED:

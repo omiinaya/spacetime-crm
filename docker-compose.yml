@@ -33,6 +33,8 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8723}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRE_HOURS=${JWT_EXPIRE_HOURS:-24}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - STRUCTURED_LOGGING=${STRUCTURED_LOGGING:-false}
     depends_on:
       spacetime:
         condition: service_healthy
