@@ -23,7 +23,7 @@ pub struct Appointment {
 }
 
 #[spacetimedb::reducer]
-pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, title: String, description: String, start_time: u64, end_time: u64, all_day: bool, series_id: String, recurrence_rule: String) {
+pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, title: String, description: String, start_time: u64, end_time: u64, all_day: bool, series_id: String, recurrence_rule: String, color: String) {
     let id = super::make_id("appt", ctx);
     let now = super::now_ms(ctx);
     ctx.db.appointment().insert(Appointment {
@@ -37,7 +37,7 @@ pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: 
         end_time,
         all_day,
         status: "scheduled".to_string(),
-        color: String::new(),
+        color,
         series_id,
         recurrence_rule,
         created_at: now,

@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn test_create_purchase_order() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "tenant_po".into(), "vendor_1".into(), "notes".into(), "USD".into());
+        create_purchase_order(&ctx, "tenant_po".into(), "vendor_1".into(), "notes".into(), "USD".into(), 0.0);
         let pos: Vec<PurchaseOrder> = ctx.db.purchase_order().iter().collect();
         assert_eq!(pos.len(), 1);
         let po = &pos[0];
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_update_po_status() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "v1".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "v1".into(), "".into(), "USD".into(), 0.0);
         let po = ctx.db.purchase_order().iter().next().unwrap();
         let poid = po.id.clone();
         assert_eq!(po.status, "draft");
