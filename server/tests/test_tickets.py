@@ -307,3 +307,50 @@ class TestTicketSLA:
             timeout=10,
         )
         assert resp.status_code in (401, 403)
+
+
+class TestTicketErrors:
+    """Ticket endpoint error handling."""
+
+    def test_create_missing_customer_id(self, test_admin_headers: dict) -> None:
+        """Creating ticket without customer_id returns 422."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets",
+            json={"title": "No customer"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
+
+    def test_create_missing_title(self, test_admin_headers: dict) -> None:
+        """Creating ticket without title returns 422."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets",
+            json={"customer_id": "test-cust"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
+
+    def test_add_note_missing_content(self, test_admin_headers: dict, session_suffix: str) -> None:
+        """Adding note without content returns 422."""
+        # Create a ticket first
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets",
+            json={"customer_id": "test-cust", "title": "Note test"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        data = resp.json()
+        ticket_id = data.get("id", "")
+        if not ticket_id and "ticket" in data:
+            ticket_id = data["ticket"].get("id", "")
+        if ticket_id:
+            _track_entity("ticket", ticket_id)
+            resp2 = httpx.post(
+                f"{SERVER_URL}/api/tickets/{ticket_id}/notes",
+                json={"content": "", "internal": False},
+                headers=test_admin_headers,
+                timeout=10,
+            )
+            assert resp2.status_code == 422, f"Expected 422, got {resp2.status_code}: {resp2.text[:200]}"

@@ -216,3 +216,50 @@ class TestRecurringInvoiceErrors:
     def test_unauthorized_delete(self, client: httpx.Client) -> None:
         resp = client.delete("/api/recurring-invoices/fake-id", timeout=10)
         assert resp.status_code in (401, 403)
+
+    def test_create_missing_customer_id(self, test_admin_headers: dict) -> None:
+        """Recurring invoice rule without customer_id returns 422."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/recurring-invoices",
+            json={
+                "name": "Test Rule",
+                "frequency": "monthly",
+                "interval_count": 1,
+                "due_date_days": 30,
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
+
+    def test_create_invalid_frequency(self, test_admin_headers: dict) -> None:
+        """Recurring invoice rule with invalid frequency returns 422."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/recurring-invoices",
+            json={
+                "customer_id": "test-cust",
+                "name": "Bad Freq",
+                "frequency": "fortnightly",
+                "interval_count": 1,
+                "due_date_days": 30,
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
+
+    def test_create_negative_interval_count(self, test_admin_headers: dict) -> None:
+        """Recurring invoice rule with negative interval_count returns 422."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/recurring-invoices",
+            json={
+                "customer_id": "test-cust",
+                "name": "Bad Interval",
+                "frequency": "monthly",
+                "interval_count": -1,
+                "due_date_days": 30,
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"

@@ -379,6 +379,37 @@ class TestInvoiceErrors:
         resp = client.post("/api/invoices/send-overdue-reminders", timeout=10)
         assert resp.status_code in (401, 403)
 
+    def test_create_empty_customer_id(self, test_admin_headers: dict) -> None:
+        """Creating invoice with empty customer_id returns 422."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices",
+            json={"customer_id": "", "notes": "", "due_date": 0},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
+
+    def test_create_negative_due_date(self, test_admin_headers: dict) -> None:
+        """Creating invoice with negative due_date returns 422."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices",
+            json={"customer_id": "some-id", "due_date": -1},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
+
+    def test_add_line_item_negative_quantity(self, test_admin_headers: dict, session_suffix: str) -> None:
+        """Adding line item with negative quantity returns 422."""
+        inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "negqty")
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices/{inv_id}/line-items",
+            json={"description": "Bad item", "quantity": -1, "unit_price": 10},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
+
 
 class TestInvoiceEmailQueue:
     """Invoice email delivery endpoints."""
