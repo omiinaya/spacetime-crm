@@ -304,7 +304,7 @@ export default function ReportsPage() {
                     border: '1px solid var(--color-border)',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, 'Revenue']}
+                  formatter={(value: number) => [`$${Number(value || 0).toFixed(2)}`, 'Revenue']}
                 />
                 <Bar dataKey="revenue" fill="#22c55e" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -329,7 +329,7 @@ export default function ReportsPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  label={({ payload }: any) => `${payload?.status || ''}: ${payload?.count || 0}`}
+                  label={({ payload }: { payload?: { status?: string; count?: number } }) => `${payload?.status || ''}: ${payload?.count || 0}`}
                   labelLine={true}
                 >
                   {ticket_by_status.map((entry) => (
@@ -495,7 +495,7 @@ export default function ReportsPage() {
                     border: '1px solid var(--color-border)',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: any) => [value, 'New Customers']}
+                  formatter={(value: number) => [value, 'New Customers']}
                 />
                 <Bar dataKey="new_customers" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>

@@ -222,7 +222,7 @@ export default function RecurringInvoicesPage() {
 
   const updateLineItem = (idx: number, field: keyof RecurringLineItem, value: string | number) => {
     const updated = [...lineItems];
-    (updated[idx] as any)[field] = value;
+    (updated[idx] as Record<string, unknown>)[field] = value;
     setLineItems(updated);
   };
 

@@ -8,7 +8,7 @@ interface AuthUser {
   email: string;
   role: string;
   tenant_id?: string;
-  tenant?: Record<string, any>;
+  tenant?: Record<string, unknown>;
 }
 
 interface AuthContextType {

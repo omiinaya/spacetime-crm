@@ -42,8 +42,8 @@ export default function MapPage() {
     try {
       const res = await api.customers.geolocations.list();
       setLocations(res.locations);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (err: unknown) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -58,8 +58,8 @@ export default function MapPage() {
     try {
       await api.customers.geolocations.geocodeAll();
       await loadLocations();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (err: unknown) {
+      setError(err.message);
     } finally {
       setGeocoding(false);
     }
@@ -70,8 +70,8 @@ export default function MapPage() {
     try {
       await api.customers.geolocations.geocode(customerId);
       await loadLocations();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (err: unknown) {
+      setError(err.message);
     } finally {
       setGeocodingSingle(null);
     }

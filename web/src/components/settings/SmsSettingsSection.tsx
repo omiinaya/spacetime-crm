@@ -42,7 +42,7 @@ export default function SmsSettingsSection() {
   const saveMutation = useMutation({
     mutationFn: (data: { account_sid?: string; auth_token?: string; from_number?: string }) => {
       const payload = { ...data };
-      if (!payload.auth_token) payload.auth_token = undefined as any;
+      if (!payload.auth_token) payload.auth_token = undefined;
       return api.settings.sms.save(payload);
     },
     onSuccess: () => {
@@ -57,7 +57,7 @@ export default function SmsSettingsSection() {
   const testMutation = useMutation({
     mutationFn: async () => {
       const saveData = { ...smsConfig };
-      if (!saveData.auth_token) saveData.auth_token = undefined as any;
+      if (!saveData.auth_token) saveData.auth_token = undefined;
       await api.settings.sms.save(saveData);
       return api.settings.sms.test();
     },

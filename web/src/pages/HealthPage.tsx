@@ -40,7 +40,7 @@ export default function HealthPage() {
       const [h, r] = await Promise.all([api.health.check(), api.health.ready()]);
       setHealth(h);
       setReady(r);
-    } catch (e: any) {
+    } catch (err: unknown) {
       setError(e?.message || 'Health check failed');
     } finally {
       setLoading(false);

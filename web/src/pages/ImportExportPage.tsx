@@ -41,8 +41,8 @@ export default function ImportExportPage() {
         ? api.import.customers(file)
         : api.import.products(file));
       setResult(res);
-    } catch (e: any) {
-      setResult({ imported: 0, errors: [e.message || 'Import failed'] });
+    } catch (err: unknown) {
+      setResult({ imported: 0, errors: [err.message || 'Import failed'] });
     } finally {
       setImporting(false);
     }

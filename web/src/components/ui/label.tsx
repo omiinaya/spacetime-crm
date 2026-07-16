@@ -1,16 +1,11 @@
 import { cn } from '../../lib/utils';
+import type { LabelHTMLAttributes, ReactNode } from 'react';
 
-export function Label({
-  children,
-  className,
-  htmlFor,
-  ...props
-}: {
-  children: React.ReactNode;
-  className?: string;
-  htmlFor?: string;
-  [key: string]: any;
-}) {
+interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
+  children: ReactNode;
+}
+
+export function Label({ children, className, htmlFor, ...props }: LabelProps) {
   return (
     <label
       htmlFor={htmlFor}

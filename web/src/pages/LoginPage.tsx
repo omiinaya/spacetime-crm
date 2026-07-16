@@ -16,7 +16,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(email, password);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Login failed');
     } finally {
       setBusy(false);
@@ -29,7 +29,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await complete2FA(code);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Verification failed');
     } finally {
       setBusy(false);

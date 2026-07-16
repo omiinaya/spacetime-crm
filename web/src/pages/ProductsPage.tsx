@@ -248,7 +248,13 @@ export default function ProductsPage() {
 
   const scanLoop = () => {
     if (!scanning || !videoRef.current || !barcodeDetectorSupported) return;
-    const detector = new (window as any).BarcodeDetector({
+    const BarcodeDetectorCtor = (window as unknown as {
+      BarcodeDetector?: new (options?: { formats?: string[] }) => {
+        detect: (input: HTMLVideoElement) => Promise<Array<{ rawValue: string }>>;
+      };
+    }).BarcodeDetector;
+    if (!BarcodeDetectorCtor) return;
+    const detector = new BarcodeDetectorCtor({
       formats: [
         'qr_code',
         'ean_13',
@@ -263,7 +269,7 @@ export default function ProductsPage() {
     });
     detector
       .detect(videoRef.current)
-      .then((barcodes: any[]) => {
+      .then((barcodes: Array<{rawValue: string}>) => {
         if (barcodes.length > 0) {
           const code = barcodes[0].rawValue;
           setForm({ ...form, barcode: code });

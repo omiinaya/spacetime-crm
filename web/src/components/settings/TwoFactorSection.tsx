@@ -53,8 +53,8 @@ export default function TwoFactorSection() {
       setSecret(data.secret);
       setProvisioningUri(data.provisioning_uri);
       setStep('verify');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (err: unknown) {
+      toast.error(err.message);
     } finally {
       setBusy(false);
     }
@@ -82,8 +82,8 @@ export default function TwoFactorSection() {
       setStep('idle');
       setSecret('');
       setVerifyCode('');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (err: unknown) {
+      toast.error(err.message);
     } finally {
       setBusy(false);
     }
@@ -110,8 +110,8 @@ export default function TwoFactorSection() {
       setIsEnrolled(false);
       setShowDisable(false);
       setDisableCode('');
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (err: unknown) {
+      toast.error(err.message);
     } finally {
       setBusy(false);
     }

@@ -103,7 +103,7 @@ export default function PosPage() {
         setLocked(false);
         setPinInput('');
         setPinError('');
-      } catch (err: any) {
+      } catch (err: unknown) {
         setPinError('Invalid PIN — try again');
         setPinInput('');
         pinRef.current?.focus();

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, createElement } from 'react';
+import type { SavedPaymentMethod } from './api-types';
 
 const API_BASE = '/api';
 
@@ -241,6 +242,6 @@ export const portalApi = {
       }>('/portal/appointments'),
   },
   paymentMethods: {
-    list: () => portalApiFetch<{ payment_methods: any[] }>('/portal/payment-methods'),
+    list: () => portalApiFetch<{ payment_methods: SavedPaymentMethod[] }>('/portal/payment-methods'),
   },
 };

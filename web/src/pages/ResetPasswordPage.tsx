@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
       setTimeout(() => {
         window.location.href = '/';
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || 'Something went wrong');
     } finally {
       setBusy(false);

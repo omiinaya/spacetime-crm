@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
       }
 
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || 'Something went wrong. Please try again.');
     } finally {
       setBusy(false);

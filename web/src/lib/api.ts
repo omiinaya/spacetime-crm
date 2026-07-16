@@ -123,7 +123,7 @@ export const api = {
           error?: string;
         }>(`/customers/${customerId}/geocode`, { method: 'POST' }),
       geocodeAll: () =>
-        apiFetch<{ geocoded: number; results: any[] }>('/customers/geocode-all', {
+        apiFetch<{ geocoded: number; results: Array<{ id: string; latitude: number; longitude: number; display_name?: string; error?: string }> }>('/customers/geocode-all', {
           method: 'POST',
         }),
     },
@@ -152,12 +152,12 @@ export const api = {
           limit: number;
         }>(`/checklist-templates${qs ? `?${qs}` : ''}`);
       },
-      create: (data: { name: string; description?: string; items?: any[] }) =>
+      create: (data: { name: string; description?: string; items?: ChecklistItem[] }) =>
         apiFetch<{ ok: boolean }>('/checklist-templates', {
           method: 'POST',
           body: JSON.stringify(data),
         }),
-      update: (id: string, data: { name: string; description?: string; items?: any[] }) =>
+      update: (id: string, data: { name: string; description?: string; items?: ChecklistItem[] }) =>
         apiFetch<{ ok: boolean }>(`/checklist-templates/${id}`, {
           method: 'PUT',
           body: JSON.stringify(data),
@@ -319,7 +319,7 @@ export const api = {
         sent: number;
         failed: number;
         skipped: number;
-        details: any[];
+        details: Array<{ invoice_id: string; status: string; error?: string }>;
       }>('/invoices/send-batch-email', {
         method: 'POST',
         body: JSON.stringify({ invoice_ids: invoiceIds }),
@@ -330,7 +330,7 @@ export const api = {
         body: JSON.stringify({ invoice_ids: invoiceIds, ...data }),
       }),
     emailQueueStatus: () =>
-      apiFetch<{ sends: any[]; count: number }>('/invoices/email-queue-status'),
+      apiFetch<{ sends: Array<{ id: string; invoice_id: string; to_email: string; subject: string; status: string; created_at: number }>; count: number }>('/invoices/email-queue-status'),
   },
   payments: {
     list: (invoiceId?: string, offset?: number, limit?: number) => {
@@ -652,14 +652,14 @@ export const api = {
       report_type: string;
       schedule_frequency: string;
       recipients: string[];
-      schedule_config?: Record<string, any>;
-      filters?: Record<string, any>;
+      schedule_config?: Record<string, unknown>;
+      filters?: Record<string, unknown>;
     }) =>
       apiFetch<{ ok: boolean; id: string; next_run_at: number }>('/report-schedules', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (id: string, data: Record<string, any>) =>
+    update: (id: string, data: Record<string, unknown>) =>
       apiFetch<{ ok: boolean }>(`/report-schedules/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
@@ -849,12 +849,12 @@ export const api = {
   },
   recurringInvoices: {
     list: () => apiFetch<{ rules: RecurringInvoiceRule[] }>('/recurring-invoices'),
-    create: (data: any) =>
+    create: (data: { name: string; frequency: string; interval_count: number; next_generation_date: number; due_date_days: number; line_items_json: string; currency: string; customer_id: string }) =>
       apiFetch<{ ok: boolean }>('/recurring-invoices', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (id: string, data: any) =>
+    update: (id: string, data: Partial<{ name: string; frequency: string; interval_count: number; next_generation_date: number; due_date_days: number; line_items_json: string; currency: string; status: string }>) =>
       apiFetch<{ ok: boolean }>(`/recurring-invoices/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
@@ -878,7 +878,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ customer_id }),
       }),
-    save: (data: any) =>
+    save: (data: { stripe_payment_method_id: string; customer_id: string; brand: string; last4: string; exp_month: number; exp_year: number; is_default?: boolean }) =>
       apiFetch<{ ok: boolean }>('/payment-methods', {
         method: 'POST',
         body: JSON.stringify(data),

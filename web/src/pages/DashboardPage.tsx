@@ -285,7 +285,7 @@ export default function DashboardPage({
                       border: '1px solid var(--color-border)',
                       borderRadius: '8px',
                     }}
-                    formatter={(v: any) => [`$${Number(v).toFixed(2)}`, 'Revenue']}
+                    formatter={(v: number) => [`$${Number(v).toFixed(2)}`, 'Revenue']}
                   />
                   <Bar dataKey="revenue" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
