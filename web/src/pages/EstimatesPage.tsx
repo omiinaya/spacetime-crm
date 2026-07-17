@@ -260,7 +260,22 @@ export default function EstimatesPage() {
 
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				<div className="space-y-3">
-					{estimates.map((est) => {
+				{estimates.length === 0 ? (
+					<div className="flex flex-col items-center justify-center py-20 text-center">
+						<div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+							<FileText className="h-6 w-6 text-muted-foreground" />
+						</div>
+						<h3 className="text-lg font-semibold mb-1">No estimates yet</h3>
+						<p className="text-sm text-muted-foreground mb-4 max-w-sm">
+							Create your first estimate to get started
+						</p>
+						<Button onClick={() => setShowForm(true)}>
+							New Estimate
+						</Button>
+					</div>
+				) : (
+					<>
+						{estimates.map((est) => {
 						const cust = customers.find((c) => c.id === est.customer_id);
 						return (
 							<Card
@@ -289,6 +304,8 @@ export default function EstimatesPage() {
 							</Card>
 						);
 					})}
+					</>
+				)}
 				</div>
 
 				{selectedEst && (

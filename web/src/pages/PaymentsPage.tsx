@@ -236,6 +236,9 @@ export default function PaymentsPage() {
 					<p className="text-sm text-muted-foreground mb-4 max-w-sm">
 						Payments will appear here once recorded
 					</p>
+					<Button onClick={() => setShowForm(true)}>
+						Record Payment
+					</Button>
 				</div>
 			) : (
 				<>

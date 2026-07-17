@@ -550,7 +550,26 @@ export default function ProductsPage() {
 				<div
 					className={`space-y-3 ${selectedProduct ? "hidden lg:block" : ""}`}
 				>
-					{products.map((p) => (
+					{products.length === 0 ? (
+						<div className="flex flex-col items-center justify-center py-20 text-center">
+							<div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+								<Package className="h-6 w-6 text-muted-foreground" />
+							</div>
+							<h3 className="text-lg font-semibold mb-1">No products yet</h3>
+							<p className="text-sm text-muted-foreground mb-4 max-w-sm">
+								Add your first product to start managing inventory
+							</p>
+							<Button onClick={() => {
+								setShowForm(true);
+								setEditId(null);
+								setForm({ ...emptyForm });
+							}}>
+								Add Product
+							</Button>
+						</div>
+					) : (
+						<>
+							{products.map((p) => (
 						<Card
 							key={p.id}
 							className={`cursor-pointer transition-colors ${selectedProduct?.id === p.id ? "border-primary" : "hover:border-primary/30"}`}
@@ -608,6 +627,8 @@ export default function ProductsPage() {
 							</CardContent>
 						</Card>
 					))}
+					</>
+					)}
 				</div>
 
 				{/* Detail panel */}
