@@ -563,6 +563,7 @@ export interface SavedPaymentMethod {
 
 export interface CustomFieldDefinition {
 	id: string;
+	tenant_id: string;
 	entity_type: string;
 	label: string;
 	field_type: string;
@@ -576,6 +577,7 @@ export interface CustomFieldDefinition {
 
 export interface CustomFieldValue {
 	id: string;
+	tenant_id: string;
 	entity_id: string;
 	field_id: string;
 	value: string;
