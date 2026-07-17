@@ -452,7 +452,7 @@ def assert_unauthorized(resp: httpx.Response) -> None:
     assert resp.status_code in (401, 403), f"Expected 401/403, got {resp.status_code}: {resp.text[:300]}"
 
 
-def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -> dict:
+def create_customer(auth_headers_param: dict, session_suffix: str = "", **overrides) -> dict:
     """Create a customer and return the parsed response + ID.
 
     Uses a unique email by default to avoid collisions between test runs.
@@ -472,7 +472,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     resp = httpx.post(
         f"{SERVER_URL}/api/customers",
         json=data,
-        headers=auth_headers_session,
+        headers=auth_headers_param,
         timeout=10,
     )
     assert resp.status_code == 200, f"Customer create failed: {resp.text[:200]}"
@@ -480,7 +480,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     r2 = httpx.get(
         f"{SERVER_URL}/api/customers",
         params={"search": data["email"]},
-        headers=auth_headers_session,
+        headers=auth_headers_param,
         timeout=10,
     )
     assert r2.status_code == 200
