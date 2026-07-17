@@ -219,15 +219,41 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
         total_paid_count = sum(1 for inv in invoices if inv.get("status") == "paid")
         outstanding = sum(float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue"))
 
+        # Revenue/frequency breakdown by item_type (service vs part)
+        line_items = await _sql_t("SELECT * FROM invoice_line_items", tenant_id)
+        paid_ids = {inv["id"] for inv in invoices if inv.get("status") == "paid"}
+        service_rev = 0.0
+        part_rev = 0.0
+        service_count = 0
+        part_count = 0
+        for li in line_items:
+            if li.get("invoice_id") in paid_ids:
+                qty = float(li.get("quantity", 0))
+                price = float(li.get("unit_price", 0))
+                rev = qty * price
+                if li.get("item_type") == "service":
+                    service_rev += rev
+                    service_count += qty
+                else:
+                    part_rev += rev
+                    part_count += qty
+
         return {
             "metrics": [
                 {"label": "Total Paid", "value": f"${total_paid:,.2f}"},
                 {"label": "Invoices Sent", "value": total_sent},
                 {"label": "Paid", "value": total_paid_count},
                 {"label": "Outstanding", "value": f"${outstanding:,.2f}"},
+                {"label": "Service Items", "value": service_count},
+                {"label": "Part Items", "value": part_count},
             ],
             "chart_label": "Revenue by Month (Last {period_start} Months)",
             "chart": revenue_by_month,
+            "chart2_label": "Revenue by Type (Service vs Part)",
+            "chart2": [
+                {"label": "Service", "value": round(service_rev, 2)},
+                {"label": "Part", "value": round(part_rev, 2)},
+            ],
         }
 
     elif report_type == "customers":
