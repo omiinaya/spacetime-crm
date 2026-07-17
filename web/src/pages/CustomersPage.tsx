@@ -315,11 +315,29 @@ export default function CustomersPage() {
 
 	const fullName = (c: Customer) => `${c.first_name} ${c.last_name}`;
 
+	const { data: duplicatesData } = useQuery({
+		queryKey: ["customer-duplicates"],
+		queryFn: () => api.customers.duplicates(),
+		refetchInterval: 60000,
+	});
+	const duplicateCount = duplicatesData?.count ?? 0;
+	const duplicateCustomerIds = new Set<string>();
+	duplicatesData?.duplicates?.forEach((dup: { customers: Customer[] }) => {
+		dup.customers.forEach((c: Customer) => duplicateCustomerIds.add(c.id));
+	});
+
 	return (
 		<>
 			<div className="flex items-start justify-between gap-2 flex-wrap">
 				<div>
-					<h1 className="text-2xl font-bold">Customers</h1>
+					<div className="flex items-center gap-2">
+						<h1 className="text-2xl font-bold">Customers</h1>
+						{duplicateCount > 0 && (
+							<Badge variant="destructive">
+								{duplicateCount} duplicate{duplicateCount !== 1 ? "s" : ""} found
+							</Badge>
+						)}
+					</div>
 					<p className="text-sm text-muted-foreground mt-1">
 						Manage your customer database
 					</p>
@@ -451,7 +469,7 @@ export default function CustomersPage() {
 						<Card
 							className={`hover:border-primary/30 transition-colors cursor-pointer ${
 								expandedCustomerId === c.id ? "border-primary/40" : ""
-							}`}
+							} ${duplicateCustomerIds.has(c.id) ? "ring-2 ring-destructive" : ""}`}
 							onClick={() => handleToggleExpand(c.id)}
 						>
 							<CardContent className="pt-4">
