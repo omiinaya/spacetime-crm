@@ -323,3 +323,18 @@ setup-git-hooks:  ## Configure .githooks
 	@echo "✅ Git hooks configured (core.hooksPath = .githooks)"
 	@chmod +x .githooks/* 2>/dev/null || true
 	@echo "Done."
+
+# ── Commitlint ─────────────────────────────────────────────────────
+
+commitlint: ## Validate latest commit message with commitlint
+	@if [ -f web/node_modules/.bin/commitlint ]; then \
+		git log -1 --pretty=%B | web/node_modules/.bin/commitlint; \
+	else \
+		echo "⚠️  commitlint not installed. Run: cd web && npm install -D @commitlint/cli @commitlint/config-conventional"; \
+	fi
+
+commitlint-install: ## Install commitlint dependencies
+	cd web && npm install -D @commitlint/cli @commitlint/config-conventional
+
+
+.PHONY: commitlint commitlint-install setup-git-hooks
