@@ -152,7 +152,8 @@ export default function TicketsPage() {
 			} else {
 				setTimerSeconds(0);
 			}
-		} catch {
+		} catch (e) {
+			console.error("Failed to load timers:", e);
 			setTimers([]);
 		}
 	};
@@ -172,7 +173,8 @@ export default function TicketsPage() {
 			await api.tickets.timers.start(selectedTicket.id, user.id);
 			await loadTimers(selectedTicket.id);
 			toast.success("Timer started");
-		} catch {
+		} catch (e) {
+			console.error("Failed to start timer:", e);
 			toast.error("Failed to start timer");
 		}
 	};
@@ -184,7 +186,8 @@ export default function TicketsPage() {
 			await api.tickets.timers.stop(running.id);
 			await loadTimers(selectedTicket!.id);
 			toast.success("Timer stopped");
-		} catch {
+		} catch (e) {
+			console.error("Failed to stop timer:", e);
 			toast.error("Failed to stop timer");
 		}
 	};
@@ -221,7 +224,7 @@ export default function TicketsPage() {
 			});
 			queryClient.invalidateQueries({ queryKey: ["tickets"] });
 		},
-		onError: () => toast.error("Failed to create ticket"),
+		onError: (e) => { console.error("Failed to create ticket:", e); toast.error("Failed to create ticket"); },
 	});
 
 	const statusMutation = useMutation({
@@ -242,7 +245,8 @@ export default function TicketsPage() {
 		try {
 			const res = await api.checklist.ticket.list(ticketId);
 			setChecklist(res.items);
-		} catch {
+		} catch (e) {
+			console.error("Failed to load checklist:", e);
 			setChecklist([]);
 		}
 	};
@@ -251,7 +255,8 @@ export default function TicketsPage() {
 		try {
 			const res = await api.checklist.templates.list();
 			setChecklistTemplates(res.templates);
-		} catch {
+		} catch (e) {
+			console.error("Failed to load templates:", e);
 			setChecklistTemplates([]);
 		}
 	};
@@ -263,7 +268,8 @@ export default function TicketsPage() {
 			toast.success("Checklist applied");
 			setShowApplyTemplate(false);
 			loadChecklist(selectedTicket.id);
-		} catch {
+		} catch (e) {
+			console.error("Failed to apply checklist:", e);
 			toast.error("Failed to apply checklist");
 		}
 	};
@@ -277,7 +283,8 @@ export default function TicketsPage() {
 				!item.completed,
 			);
 			loadChecklist(selectedTicket.id);
-		} catch {
+		} catch (e) {
+			console.error("Failed to update checklist item:", e);
 			toast.error("Failed to update checklist item");
 		}
 	};
@@ -288,7 +295,8 @@ export default function TicketsPage() {
 			await api.checklist.ticket.clear(selectedTicket.id);
 			toast.success("Checklist cleared");
 			setChecklist([]);
-		} catch {
+		} catch (e) {
+			console.error("Failed to clear checklist:", e);
 			toast.error("Failed to clear checklist");
 		}
 	};
@@ -310,7 +318,7 @@ export default function TicketsPage() {
 			setNewNote("");
 			queryClient.invalidateQueries({ queryKey: ["ticket-notes", ticketId] });
 		},
-		onError: () => toast.error("Failed to add note"),
+		onError: (e) => { console.error("Failed to add note:", e); toast.error("Failed to add note"); },
 	});
 
 	const addNote = () => {

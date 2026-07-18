@@ -116,7 +116,10 @@ export default function DashboardPage({
 		api.reports
 			.get()
 			.then(setReports)
-			.catch(() => {});
+			.catch((err) => {
+				console.error("Failed to load reports:", err);
+				// Error is handled silently - reports remain null/empty
+			});
 	}, []);
 
 	const summaryCards: {

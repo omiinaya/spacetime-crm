@@ -33,6 +33,7 @@ import {
 	Award,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 
 const STATUS_COLORS: Record<string, string> = {
 	open: "#f59e0b",
@@ -81,7 +82,7 @@ export default function ReportsPage() {
 			const res = await api.reportSchedules.list();
 			setSchedules(res.schedules || []);
 		} catch (e) {
-			console.error("Failed to load schedules", e);
+			console.error("Failed to load schedules", e); toast.error("Failed to load schedules");
 		} finally {
 			setLoading(false);
 		}
@@ -108,7 +109,7 @@ export default function ReportsPage() {
 			setShowForm(false);
 			await loadSchedules();
 		} catch (e) {
-			console.error("Failed to create schedule", e);
+			console.error("Failed to create schedule", e); toast.error("Failed to create schedule");
 		} finally {
 			setCreating(false);
 		}
@@ -120,7 +121,7 @@ export default function ReportsPage() {
 			await api.reportSchedules.runNow(id);
 			await loadSchedules();
 		} catch (e) {
-			console.error("Failed to run schedule", e);
+			console.error("Failed to run schedule", e); toast.error("Failed to run schedule");
 		} finally {
 			setRunningId(null);
 		}
@@ -131,7 +132,7 @@ export default function ReportsPage() {
 			await api.reportSchedules.update(id, { enabled: !enabled });
 			await loadSchedules();
 		} catch (e) {
-			console.error("Failed to toggle schedule", e);
+			console.error("Failed to toggle schedule", e); toast.error("Failed to toggle schedule");
 		}
 	};
 
@@ -140,7 +141,7 @@ export default function ReportsPage() {
 			await api.reportSchedules.delete(id);
 			await loadSchedules();
 		} catch (e) {
-			console.error("Failed to delete schedule", e);
+			console.error("Failed to delete schedule", e); toast.error("Failed to delete schedule");
 		}
 	};
 

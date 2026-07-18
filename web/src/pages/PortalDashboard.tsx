@@ -17,8 +17,8 @@ export default function PortalDashboard() {
 				setStats(s);
 				setLoading(false);
 			})
-			.catch(() => {
-				setError("Failed to load dashboard stats");
+			.catch((err) => {
+				setError(err?.message || "Failed to load dashboard stats");
 				setLoading(false);
 			});
 	}, []);
