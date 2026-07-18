@@ -13,6 +13,7 @@ import {
 	User,
 } from "lucide-react";
 import { api } from "../lib/api";
+import type { Tenant, TenantMember } from "../lib/api-types";
 import { useAuth, hasRole } from "../lib/auth";
 import { Button } from "../components/ui/button";
 import {
@@ -22,24 +23,6 @@ import {
 	CardTitle,
 } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
-
-interface Tenant {
-	id: string;
-	name: string;
-	slug: string;
-	logo_url: string;
-	settings: string;
-	created_at: number;
-	updated_at: number;
-}
-
-interface TenantMember {
-	id: string;
-	tenant_id: string;
-	username: string;
-	role: string;
-	created_at: number;
-}
 
 export default function TenantsPage() {
 	const { user, refreshTenant } = useAuth();

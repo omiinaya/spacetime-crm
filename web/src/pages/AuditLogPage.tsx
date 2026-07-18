@@ -1,15 +1,6 @@
 import { useState } from "react";
+import type { AuditLogEntry } from "../lib/api-types";
 
-interface AuditLogEntry {
-	id: string;
-	created_at: number;
-	user_name: string;
-	user_id: string;
-	action: string;
-	entity: string;
-	entity_id: string;
-	details?: string;
-}
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
 import { api } from "../lib/api";
