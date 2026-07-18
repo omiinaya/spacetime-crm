@@ -13,7 +13,9 @@ RUN npm run build
 # ── Stage 2: Runtime ─────────────────────────────────────
 FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends \n    curl ca-certificates \n    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/server
 COPY server/requirements.txt .
@@ -23,12 +25,21 @@ COPY server/ .
 
 COPY --from=frontend /app/web/dist /app/web/dist
 
-RUN curl -L -o /tmp/spacetime.tar.gz \n    "https://github.com/clockworklabs/SpacetimeDB/releases/download/v2.4.0/spacetime-x86_64-unknown-linux-gnu.tar.gz" && \n    tar xzf /tmp/spacetime.tar.gz -C /usr/local/bin/ && \n    rm /tmp/spacetime.tar.gz && \n    if [ -f /usr/local/bin/spacetimedb-cli ] && [ ! -f /usr/local/bin/spacetime ]; then \n      mv /usr/local/bin/spacetimedb-cli /usr/local/bin/spacetime; \n    fi && \n    chmod +x /usr/local/bin/spacetime
+RUN curl -L -o /tmp/spacetime.tar.gz \
+    "https://github.com/clockworklabs/SpacetimeDB/releases/download/v2.4.0/spacetime-x86_64-unknown-linux-gnu.tar.gz" && \
+    tar xzf /tmp/spacetime.tar.gz -C /usr/local/bin/ && \
+    rm /tmp/spacetime.tar.gz && \
+    if [ -f /usr/local/bin/spacetimedb-cli ] && [ ! -f /usr/local/bin/spacetime ]; then \
+      mv /usr/local/bin/spacetimedb-cli /usr/local/bin/spacetime; \
+    fi && \
+    chmod +x /usr/local/bin/spacetime
 
 COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \n    CMD curl -sf http://localhost:8723/api/health/ready || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -sf http://localhost:8723/api/health/ready || exit 1
 
 EXPOSE 8723
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
