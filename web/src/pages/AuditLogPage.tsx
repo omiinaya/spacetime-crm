@@ -136,7 +136,7 @@ export default function AuditLogPage() {
 							</svg>
 						</div>
 						<h3 className="text-lg font-semibold mb-1">Failed to load audit log</h3>
-						<p className="text-sm text-muted-foreground">{(error as any)?.message || "An unexpected error occurred"}</p>
+						<p className="text-sm text-muted-foreground">{error?.message || "An unexpected error occurred"}</p>
 						<button
 							onClick={() => refetch()}
 							className="mt-4 text-sm px-4 py-2 bg-primary/10 text-primary rounded-md hover:bg-primary/20"
