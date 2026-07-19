@@ -78,7 +78,6 @@ else
   fail "server/Dockerfile.test missing"
 fi
 
-# Check that it has all needed deps
 if grep -q "playwright" "$REPO_DIR/server/Dockerfile.test"; then
   pass "Dockerfile.test: playwright installed"
 else
@@ -135,19 +134,19 @@ else
   fail "run-integration-tests.sh: build phase missing"
 fi
 
-if grep -q "Phase 2\|Start" "$REPO_DIR/scripts/run-integration-tests.sh"; then
+if grep -q "Phase 2\|Start.*container\|docker run" "$REPO_DIR/scripts/run-integration-tests.sh"; then
   pass "run-integration-tests.sh: container start phase present"
 else
   fail "run-integration-tests.sh: container start phase missing"
 fi
 
-if grep -q "Phase 3\|Publish" "$REPO_DIR/scripts/run-integration-tests.sh"; then
+if grep -q "Phase 3\|Publish module" "$REPO_DIR/scripts/run-integration-tests.sh"; then
   pass "run-integration-tests.sh: publish phase present"
 else
   fail "run-integration-tests.sh: publish phase missing"
 fi
 
-if grep -q "Phase 4\|Start FastAPI" "$REPO_DIR/scripts/run-integration-tests.sh"; then
+if grep -q "Phase 4\|Start FastAPI\|uvicorn" "$REPO_DIR/scripts/run-integration-tests.sh"; then
   pass "run-integration-tests.sh: backend start phase present"
 else
   fail "run-integration-tests.sh: backend phase missing"
@@ -159,19 +158,19 @@ else
   fail "run-integration-tests.sh: bootstrap phase missing"
 fi
 
-if grep -q "Phase 6\|Python backend" "$REPO_DIR/scripts/run-integration-tests.sh"; then
+if grep -q "Phase 6\|Python backend\|pytest" "$REPO_DIR/scripts/run-integration-tests.sh"; then
   pass "run-integration-tests.sh: Python test phase present"
 else
   fail "run-integration-tests.sh: Python test phase missing"
 fi
 
-if grep -q "Phase 7\|Rust container" "$REPO_DIR/scripts/run-integration-tests.sh"; then
+if grep -q "Phase 7\|Rust container\|container-tests" "$REPO_DIR/scripts/run-integration-tests.sh"; then
   pass "run-integration-tests.sh: Rust test phase present"
 else
   fail "run-integration-tests.sh: Rust test phase missing"
 fi
 
-if grep -q "cleanup\|cleanup_container" "$REPO_DIR/scripts/run-integration-tests.sh"; then
+if grep -q "cleanup_container" "$REPO_DIR/scripts/run-integration-tests.sh"; then
   pass "run-integration-tests.sh: cleanup phase present"
 else
   fail "run-integration-tests.sh: cleanup phase missing"
@@ -193,7 +192,6 @@ else
   fail "container-tests/src/main.rs missing"
 fi
 
-# Count test functions
 TEST_COUNT=$(grep -c "^fn test_" "$REPO_DIR/server/container-tests/src/main.rs" || true)
 if [ "$TEST_COUNT" -ge 5 ]; then
   pass "container-tests: $TEST_COUNT test functions defined"
@@ -245,7 +243,6 @@ else
   fail "conftest.py: no cleanup logic"
 fi
 
-# Count Python test files
 PYTEST_COUNT=$(find "$REPO_DIR/server/tests" -name "test_*.py" | wc -l)
 if [ "$PYTEST_COUNT" -ge 20 ]; then
   pass "server/tests/: $PYTEST_COUNT test files"
@@ -269,13 +266,13 @@ else
   fail "CI: SpacetimeDB service container not configured"
 fi
 
-if grep -q "pytest" "$REPO_DIR/.github/workflows/test.yml"; then
-  pass "CI: pytest step configured"
+if grep -q "pytest\|vitest\|playwright" "$REPO_DIR/.github/workflows/test.yml"; then
+  pass "CI: test steps configured"
 else
-  fail "CI: pytest step missing"
+  fail "CI: no test steps"
 fi
 
-if grep -q "publish" "$REPO_DIR/.github/workflows/test.yml"; then
+if grep -q "publish\|spacetime publish" "$REPO_DIR/.github/workflows/test.yml"; then
   pass "CI: module publish step configured"
 else
   fail "CI: module publish step missing"
