@@ -1,22 +1,22 @@
 """Error handling and input validation tests."""
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
 
 
 @pytest.fixture
-def product_id_for_validation(test_admin_headers: dict, session_suffix: str) -> str:
+def product_id_for_validation(auth_headers: dict, session_suffix: str) -> str:
     """Create a product for validation tests and track for cleanup."""
     suf = unique_suffix()
     sku = f"BAD-{session_suffix}-{suf}"
     resp = httpx.post(
         f"{SERVER_URL}/api/products",
         json={"name": "Bad", "sku": sku, "price": -5.00, "quantity_on_hand": -10},
-        headers=test_admin_headers, timeout=10,
+        headers=auth_headers, timeout=10,
     )
     assert resp.status_code < 500
     # Track for cleanup
-    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=test_admin_headers, timeout=10)
+    r = httpx.get(f"{SERVER_URL}/api/products", params={"search": sku}, headers=auth_headers, timeout=10)
     prods = r.json().get("products", [])
     if prods:
         _track_entity("product", prods[0]["id"])
@@ -26,12 +26,12 @@ def product_id_for_validation(test_admin_headers: dict, session_suffix: str) -> 
 class TestValidation:
     """API input validation and error responses."""
 
-    def test_sql_injection_tenant_id(self, test_admin_headers: dict):
+    def test_sql_injection_tenant_id(self, auth_headers: dict):
         """tenant_id containing SQL injection characters is rejected."""
         # Attempt to use a crafted tenant_id — should 400
         resp = httpx.get(
             f"{SERVER_URL}/api/tenants/foo'; DROP TABLE customer; --",
-            headers=test_admin_headers, timeout=10,
+            headers=auth_headers, timeout=10,
         )
         assert resp.status_code in (400, 404), f"Expected 400/404, got {resp.status_code}"
 
@@ -45,21 +45,21 @@ class TestValidation:
         )
         assert resp.status_code in (400, 422)
 
-    def test_invalid_http_method(self, test_admin_headers: dict):
+    def test_invalid_http_method(self, auth_headers: dict):
         """Unsupported HTTP method returns 405."""
         resp = httpx.patch(
             f"{SERVER_URL}/api/customers",
-            headers=test_admin_headers, timeout=10,
+            headers=auth_headers, timeout=10,
         )
         assert resp.status_code in (405, 400)
 
-    def test_empty_body_post(self, test_admin_headers: dict):
+    def test_empty_body_post(self, auth_headers: dict):
         """POST with empty JSON body returns 422 with Pydantic validation (where implemented)."""
         # Test with customer endpoint which has Pydantic validation
         resp = httpx.post(
             f"{SERVER_URL}/api/customers",
             json={"first_name": "", "last_name": "", "email": ""},
-            headers=test_admin_headers, timeout=10,
+            headers=auth_headers, timeout=10,
         )
         assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
 
@@ -72,7 +72,7 @@ class TestValidation:
         # In production, the SPA serves index.html for non-API paths
         assert resp.status_code < 500
 
-    def test_negative_quantity_product(self, test_admin_headers: dict, product_id_for_validation: str):
+    def test_negative_quantity_product(self, auth_headers: dict, product_id_for_validation: str):
         """Creating product with negative quantity is handled."""
         # Product created in product_id_for_validation fixture
         assert True  # Fixture verifies the product creation doesn't crash

@@ -12,7 +12,7 @@ Validates the auto-generated OpenAPI schema and endpoint contracts:
 import json
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, assert_unauthorized, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, assert_unauthorized
 
 
 # ── Helpers ──────────────────────────────────────────────────────

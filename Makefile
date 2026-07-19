@@ -192,17 +192,7 @@ test-unit:  ## Run fast offline-safe unit tests
 	fi
 
 test-container: ## Spin up test STDB container and run full integration suite (build → container → publish → backend → test → cleanup)
-	@if docker pull spacetimedb/spacetimedb:latest >/dev/null 2>&1 || docker image inspect spacetimedb/spacetimedb:latest >/dev/null 2>&1; then \
-		echo "Using Docker-based test runner..."; \
-		bash scripts/run-integration-tests.sh $(ARGS); \
-	elif command -v spacetimedb-standalone >/dev/null 2>&1 || [ -f "$(HOME)/.local/share/spacetime/bin/2.6.1/spacetimedb-standalone" ]; then \
-		echo "Docker image not available — using standalone STDB binary..."; \
-		bash scripts/run-integration-tests-standalone.sh $(ARGS); \
-	else \
-		echo "ERROR: Neither Docker (spacetimedb/spacetimedb:latest) nor spacetimedb-standalone binary available."; \
-		echo "Install SpacetimeDB or run with --local-stdb pointing to an existing STDB instance."; \
-		exit 1; \
-	fi
+	@bash scripts/run-integration-tests.sh $(ARGS)
 
 test-rust-container: ## Build & run standalone Rust container tests (requires running STDB)
 	@echo "🚀 Building container test binary..."

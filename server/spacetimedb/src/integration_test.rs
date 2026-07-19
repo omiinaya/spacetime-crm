@@ -649,7 +649,7 @@ mod tests {
         assert!(!ctx.db.user().id().find(&id).unwrap().totp_enabled);
         assert!(ctx.db.user().id().find(&id).unwrap().totp_secret.is_empty());
         // Set secret
-        let secret = "JBSWY3DPEHPK3PXP".to_string();
+        let secret = "PLACEHOLDER_TOTP_SECRET".to_string();
         set_user_totp_secret(&ctx, id.clone(), secret.clone());
         let u = ctx.db.user().id().find(&id).unwrap();
         assert_eq!(u.totp_secret, secret);

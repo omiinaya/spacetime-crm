@@ -1,35 +1,47 @@
 """2FA / TOTP authentication endpoint tests.
 
-Uses the isolated tenant admin for user creation so a failed 2FA test
-never affects the global admin. All test users are created within the
-isolated tenant scope and cleaned up at module end.
+Uses a dedicated test user (created per module) instead of the admin
+account, so a failed 2FA test never locks out the admin. The fixture
+always cleans up (disables 2FA, deletes the user) in a finalizer.
 """
 import pyotp
 import httpx
 import time
 import pytest
-from .conftest import SERVER_URL, assert_ok, _track_entity
+from .conftest import SERVER_URL, assert_ok
+
+
+def _admin_login() -> dict:
+    """Log in as admin and return auth headers dict."""
+    r = httpx.post(
+        f"{SERVER_URL}/api/auth/login",
+        json={"email": "admin@crm.local", "password": "PLACEHOLDER_ADMIN_PW"},
+        timeout=10,
+    )
+    assert r.status_code == 200, f"Admin login failed: {r.text[:200]}"
+    data = r.json()
+    assert "token" in data
+    return {"Authorization": f"Bearer {data['token']}", "Content-Type": "application/json"}
 
 
 @pytest.fixture(scope="module")
-def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, str]:
+def _2fa_user() -> tuple[str, str, str]:
     """Create a fresh test user for all 2FA tests in this module.
 
-    Uses the isolated tenant admin (not global admin) so 2FA state
-    changes never pollute the global bootstrap user.
     Returns (email, password, user_id). Cleans up after the module
     finishes, regardless of test failures.
     """
-    suffix = session_suffix[:8]
+    suffix = str(int(time.time() * 1000))[-10:]
     name = f"2fa-module-{suffix}"
     email = f"{name}@test.com"
     pw = "testpass123"
+    admin_h = _admin_login()
 
-    # Create user via isolated tenant admin
+    # Create user
     resp = httpx.post(
         f"{SERVER_URL}/api/users",
         json={"name": name, "email": email, "role": "admin"},
-        headers=test_admin_headers, timeout=10,
+        headers=admin_h, timeout=10,
     )
     assert resp.status_code == 200, f"Create 2FA test user failed: {resp.text[:200]}"
 
@@ -37,24 +49,24 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     list_resp = httpx.get(
         f"{SERVER_URL}/api/users",
         params={"limit": 500},
-        headers=test_admin_headers, timeout=10,
+        headers=admin_h, timeout=10,
     )
     users = list_resp.json().get("users", [])
     uid = next((u["id"] for u in users if u.get("email") == email), None)
     assert uid, f"Could not find user ID for {email}"
-    _track_entity("user", uid)
 
     yield email, pw, uid
 
     # --- Cleanup ---
-    # Delete the test user (regardless of 2FA state)
+    # Delete the test user from admin side (regardless of 2FA state)
     try:
-        httpx.delete(f"{SERVER_URL}/api/users/{uid}", headers=test_admin_headers, timeout=10)
+        clean_h = _admin_login()
+        httpx.delete(f"{SERVER_URL}/api/users/{uid}", headers=clean_h, timeout=10)
     except Exception:
         pass
 
 
-def _disable_2fa_user(email: str, pw: str, secret: str, admin_headers: dict) -> None:
+def _disable_2fa_user(email: str, pw: str, secret: str) -> None:
     """Disable 2FA on a user account. Safe to call even if 2FA is not enabled."""
     try:
         totp = pyotp.TOTP(secret)
@@ -85,7 +97,7 @@ def _disable_2fa_user(email: str, pw: str, secret: str, admin_headers: dict) -> 
 # ── Tests ──
 
 
-def test_setup_returns_secret(_2fa_user, test_admin_headers: dict):
+def test_setup_returns_secret(_2fa_user):
     """Setup generates a secret and provisioning URI."""
     email, pw, _uid = _2fa_user
     r = httpx.post(
@@ -104,7 +116,7 @@ def test_setup_returns_secret(_2fa_user, test_admin_headers: dict):
     assert "otpauth://" in data["provisioning_uri"]
 
 
-def test_verify_valid_code_enables_2fa(_2fa_user, test_admin_headers: dict):
+def test_verify_valid_code_enables_2fa(_2fa_user):
     """Verify a valid TOTP code enables 2FA. Cleanup always runs."""
     email, pw, _uid = _2fa_user
 
@@ -127,10 +139,10 @@ def test_verify_valid_code_enables_2fa(_2fa_user, test_admin_headers: dict):
     assert me_req.json().get("totp_enabled") is True
 
     # Cleanup: disable 2FA on this user
-    _disable_2fa_user(email, pw, secret, test_admin_headers)
+    _disable_2fa_user(email, pw, secret)
 
 
-def test_verify_invalid_code_fails(_2fa_user, test_admin_headers: dict):
+def test_verify_invalid_code_fails(_2fa_user):
     """Verify with wrong code returns 401."""
     email, pw, _uid = _2fa_user
 
@@ -148,10 +160,10 @@ def test_verify_invalid_code_fails(_2fa_user, test_admin_headers: dict):
     assert resp.status_code == 401
 
     # Cleanup
-    _disable_2fa_user(email, pw, secret, test_admin_headers)
+    _disable_2fa_user(email, pw, secret)
 
 
-def test_double_setup_fails_after_enable(_2fa_user, test_admin_headers: dict):
+def test_double_setup_fails_after_enable(_2fa_user):
     """Setting up 2FA again after it's enabled should fail."""
     email, pw, _uid = _2fa_user
 
@@ -171,10 +183,10 @@ def test_double_setup_fails_after_enable(_2fa_user, test_admin_headers: dict):
     assert resp.status_code == 400
 
     # Cleanup
-    _disable_2fa_user(email, pw, secret, test_admin_headers)
+    _disable_2fa_user(email, pw, secret)
 
 
-def test_login_requires_2fa_when_enabled(_2fa_user, test_admin_headers: dict):
+def test_login_requires_2fa_when_enabled(_2fa_user):
     """Login should return requires_2fa when 2FA is enabled."""
     email, pw, _uid = _2fa_user
 
@@ -201,10 +213,10 @@ def test_login_requires_2fa_when_enabled(_2fa_user, test_admin_headers: dict):
     assert "token" not in data
 
     # Cleanup
-    _disable_2fa_user(email, pw, secret, test_admin_headers)
+    _disable_2fa_user(email, pw, secret)
 
 
-def test_complete_login_with_valid_code(_2fa_user, test_admin_headers: dict):
+def test_complete_login_with_valid_code(_2fa_user):
     """Complete login with valid TOTP code returns full JWT."""
     email, pw, _uid = _2fa_user
 
@@ -235,10 +247,10 @@ def test_complete_login_with_valid_code(_2fa_user, test_admin_headers: dict):
     assert "user" in data
 
     # Cleanup
-    _disable_2fa_user(email, pw, secret, test_admin_headers)
+    _disable_2fa_user(email, pw, secret)
 
 
-def test_complete_login_with_invalid_code_fails(_2fa_user, test_admin_headers: dict):
+def test_complete_login_with_invalid_code_fails(_2fa_user):
     """Complete login with invalid code returns 401."""
     email, pw, _uid = _2fa_user
 
@@ -267,10 +279,10 @@ def test_complete_login_with_invalid_code_fails(_2fa_user, test_admin_headers: d
     assert complete.status_code == 401
 
     # Cleanup
-    _disable_2fa_user(email, pw, secret, test_admin_headers)
+    _disable_2fa_user(email, pw, secret)
 
 
-def test_disable_with_valid_code(_2fa_user, test_admin_headers: dict):
+def test_disable_with_valid_code(_2fa_user):
     """Disable 2FA with a valid TOTP code."""
     email, pw, _uid = _2fa_user
 

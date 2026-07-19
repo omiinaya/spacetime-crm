@@ -1,28 +1,28 @@
 """User management tests."""
 import httpx
 import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
 
 
 class TestUserCRUD:
-    def test_list(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/users", headers=test_admin_headers, timeout=10)
+    def test_list(self, auth_headers: dict):
+        resp = httpx.get(f"{SERVER_URL}/api/users", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert "users" in data
         assert "total" in data
 
-    def test_create(self, test_admin_headers: dict, session_suffix: str):
+    def test_create(self, auth_headers: dict, session_suffix: str):
         suf = unique_suffix()
         email = f"tech-{session_suffix}-{suf}@test.com"
         resp = httpx.post(f"{SERVER_URL}/api/users", json={
             "name": f"Tech User {session_suffix}-{suf}",
             "email": email,
             "role": "tech",
-        }, headers=test_admin_headers, timeout=10)
+        }, headers=auth_headers, timeout=10)
         assert_ok(resp)
 
         # Verify it appears in listing
-        r2 = httpx.get(f"{SERVER_URL}/api/users", params={"limit": 500}, headers=test_admin_headers, timeout=10)
+        r2 = httpx.get(f"{SERVER_URL}/api/users", params={"limit": 500}, headers=auth_headers, timeout=10)
         data = r2.json()
         emails = [u.get("email", "") for u in data.get("users", [])]
         assert any(f"tech-{suf}" in e for e in emails)
@@ -32,16 +32,16 @@ class TestUserCRUD:
                 _track_entity("user", u["id"])
                 break
 
-    def test_create_invalid_role(self, test_admin_headers: dict):
+    def test_create_invalid_role(self, auth_headers: dict):
         resp = httpx.post(f"{SERVER_URL}/api/users", json={
             "name": "Bad", "email": "bad@test.com", "role": "superadmin",
-        }, headers=test_admin_headers, timeout=10)
+        }, headers=auth_headers, timeout=10)
         assert resp.status_code == 422
 
-    def test_create_missing_name(self, test_admin_headers: dict):
+    def test_create_missing_name(self, auth_headers: dict):
         resp = httpx.post(f"{SERVER_URL}/api/users", json={
             "email": "missing@test.com", "role": "tech",
-        }, headers=test_admin_headers, timeout=10)
+        }, headers=auth_headers, timeout=10)
         assert resp.status_code == 422
 
 

@@ -1,11 +1,11 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** | 2026-07-07 |
-| **Overall completeness:** | ~96% |
+| **Last assessed:** | 2026-07-02 |
+| **Overall completeness:** | ~95% |
 | **Total endpoints:** | 99 API routes (25 route files) |
 | **Total STDB artifacts:** | 27 tables + 73 reducers |
 | **Total frontend pages:** | 22 admin + 3 auth + 5 portal = 30 pages |
-| **Total tests:** | 597 (503 backend + 94 frontend) |
+| **Total tests:** | 367 (273 backend + 94 frontend) |
 
 ---
 
@@ -13,11 +13,11 @@
 
 | Layer | Files | Lines | Completeness | Test Count | Anti-Patterns |
 |-------|-------|-------|:------------:|:----------:|:-------------:|
-| STDB Module (Rust) | 16 files | ~1,900 | 88% | 134 #[test] (4 files) | 1 major, 3 minor |
-| Backend API (Python) | 30 files | ~4,500 | 92% | 369 integration (28 files) | 2 major, 5 minor |
-| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit (13 files) | 3 major, 6 minor |
+| STDB Module (Rust) | 16 files | ~1,900 | 88% | ~200 #[cfg(test)] + container CI | 1 major, 3 minor |
+| Backend API (Python) | 30 files | ~4,500 | 92% | 273 integration | 2 major, 5 minor |
+| Frontend (TypeScript) | 45+ files | ~8,000 | 82% | 94 unit | 4 major, 8 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
-| **Overall** | **~110 files** | **~20,000** | **~96%** | **597** | **~20 items** |
+| **Overall** | **~110 files** | **~20,000** | **~95%** | **367** | **~20 items** |
 
 ---
 
@@ -406,7 +406,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Area | Status | Details |
 |------|--------|---------|
 | Rust unit tests | ❌ 18 tests (compile-only) | 70 reducers, 27 tables — no runtime execution |
-| Python backend tests | ✅ 362 tests (27 files) | All 25 route + spec modules covered |
+| Python backend tests | ✅ 273 tests (25 files) | All 23 route modules covered |
 | TypeScript frontend tests | ✅ 94 tests (13 suites) | UI components + 5 page tests |
 | E2E tests | ✅ 33 tests (5 suites) | Playwright: Nav, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test, lint |
@@ -417,7 +417,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 - ❌ No performance/load tests
 - ❌ Tests share STDB state (no fresh DB per run)
 - ❌ No Rust runtime tests (need STDB host)
-- ✅ OpenAPI spec tests with schema validation, auth enforcement, response contracts, error contracts, CORS contracts, and request body field requirements (30 tests in `test_openapi_spec.py`)
+- ❌ No contract/API spec tests (no OpenAPI)
 
 ---
 
@@ -502,13 +502,13 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | Phase | Items | Hours | Priority |
 |-------|-------|:-----:|:--------:|
-| **5: Field & Type Gaps** | 11 TS fields, 7 whole-table types, 10 API models | **✅ DONE** | ✅ DONE |
+| **5: Field & Type Gaps** | 11 TS fields, 7 whole-table types, 10 API models | **~3h** | 🔴 HIGH |
 | **6: UX Gaps** | 4 error states, 3 empty states, 1 loading state, 2 bugs, TS `any` cleanup | **~2h** | 🟡 MEDIUM |
 | **7: Code Quality** | 9 hardcoded URLs, inline imports, password hash leak, dead code, test isolation | **~3h** | 🔴 HIGH |
 | **8: Feature Additions** | ~15 small features + ~9 larger features | **~15h** | 🟢 LOW |
 || **9: Infrastructure** | ✅ Reverse proxy + TLS + prod compose + env template done (~2h saved). Remaining: structured logging, Dockerfile healthcheck, CI/CD, dev tooling | **~2h** | 🟡 MEDIUM |
 | **Test coverage** | Negative tests, concurrent tests, Rust runtime tests, load tests | **~6h** | 🟡 MEDIUM |
-| **Overall remaining** | **~30 hours** | | |
+| **Overall remaining** | **~33 hours** | | |
 
 ---
 
@@ -517,14 +517,14 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 ### Immediate (fix 1st)
 1. ~~**Fix 9 hardcoded `localhost:8723/portal/` URLs** — will break all portal links in production~~ ✅ Done (`5d1ec57`)
 2. ~~**Hide `portal_password_hash`** from customer API responses~~ ✅ Done (`5d1ec57`)
-3. ~~**Add TS interfaces** for Tenant, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition~~ ✅ Done (`320d2aa`)
+3. **Add TS interfaces** for Tenant, RecurringInvoiceRule, SavedPaymentMethod, CustomFieldDefinition
 4. **Add missing empty/error states** on PaymentsPage, ProductsPage, PortalDashboard
 
 ### This sprint
 5. **Add ErrorBoundary** to each page
-6. ~~**Add device_imei/device_password** to TicketCreate + Ticket TS interface~~ ✅ Done (`320d2aa`)
+6. **Add device_imei/device_password** to TicketCreate + Ticket TS interface
 7. **Fix PaymentsPage currency display bug**
-8. ~~**Add missing Pydantic models** for ScheduledReport, Invoice discount fields~~ ✅ Done (`320d2aa`)
+8. **Add missing Pydantic models** for ScheduledReport, Invoice discount fields
 9. **Add structured logging**
 
 ### Next sprint

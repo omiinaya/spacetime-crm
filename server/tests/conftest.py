@@ -16,18 +16,16 @@ import uuid
 import time
 import pytest
 import httpx
-import bcrypt
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
-ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "admin123")
+ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "PLACEHOLDER_ADMIN_PW")
 
 # Test STDB container settings (used by test helpers for direct SQL lookups)
 STDB_HOST = os.environ.get("STDB_HOST", "localhost")
-STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3001")))
+STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "3002")))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
 STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
-STDB_CALL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/call"
 
 
 def _stdb_sql(query: str) -> list[dict]:
@@ -75,24 +73,23 @@ def unique_suffix() -> str:
 _STDB_TABLES = {
     "ticket": "ticket",
     "customer": "customer",
-    "invoice": "invoices",
+    "invoice": "invoice",
     "payment": "payment",
-    "product": "products",
+    "product": "product",
     "appointment": "appointment",
-    "estimate": "estimates",
+    "estimate": "estimate",
     "purchase_order": "purchase_order",
-    "tax_rate": "tax_rates",
+    "tax_rate": "tax_rate",
     "user": "user",
-    "webhook_subscription": "webhook_subscriptions",
-    "recurring_invoice_rule": "recurring_invoice_rules",
-    "report_schedule": "scheduled_reports",
-    "checklist_template": "checklist_templates",
-    "custom_field_definition": "custom_field_definitions",
+    "webhook_subscription": "webhook_subscription",
+    "recurring_invoice_rule": "recurring_invoice_rule",
+    "report_schedule": "report_schedule",
+    "checklist_template": "checklist_template",
+    "custom_field_definition": "custom_field_definition",
     "counter_sale": "counter_sale",
     "adjustment": "inventory_adjustment",
     "pos_line_item": "pos_line_item",
     "saved_payment_method": "saved_payment_methods",
-    "tenant": "tenants",
 }
 
 # ── Session-isolation tracker ──────────────────────────────────────
@@ -143,41 +140,36 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
     # Delete in dependency-safe order (children first)
     # These are best-effort — tables may not exist or have no matching rows
     tables_order = [
-        # Child/dependent tables (must delete before parents)
-        "ticket_checklist_items",
+        # POS child tables
+        "pos_line_item",
+        # Ticket child tables
         "ticket_note",
         "ticket_timer",
         "saved_payment_methods",
-        "tenant_members",
-        "tenants",
-        "counter_sale_line_item",
-        "pos_line_item",
-        "invoice_line_items",
-        "estimate_line_items",
+        # Invoice/estimate child tables
+        "invoice_line_item",
+        "estimate_line_item",
         "payment",
         "purchase_order_line_item",
         "inventory_adjustment",
         "appointment",
-        "recurring_invoice_rules",
-        "webhook_subscriptions",
-        "scheduled_reports",
-        "custom_field_values",
-        "custom_field_definitions",
-        "checklist_templates",
-        "customer_geolocations",
+        "recurring_invoice_rule",
+        "webhook_subscription",
+        "report_schedule",
+        "custom_field_value",
+        "custom_field_definition",
+        "checklist_template",
         # Main entities
         "ticket",
-        "invoices",
-        "estimates",
+        "invoice",
+        "estimate",
         "purchase_order",
         "counter_sale",
-        "products",
+        "adjustment",
+        "product",
         "customer",
-        "tax_rates",
+        "tax_rate",
         "user",
-        "user_settings",
-        # Audit/config tables
-        "audit_log",
     ]
     for table in tables_order:
         try:
@@ -189,11 +181,7 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
                 f"OR (name IS NOT NULL AND name LIKE '%{suffix}%') "
                 f"OR (title IS NOT NULL AND title LIKE '%{suffix}%') "
                 f"OR (sku IS NOT NULL AND sku LIKE '%{suffix}%') "
-                f"OR (customer_name IS NOT NULL AND customer_name LIKE '%{suffix}%') "
-                f"OR (slug IS NOT NULL AND slug LIKE '%{suffix}%') "
-                f"OR (label IS NOT NULL AND label LIKE '%{suffix}%') "
-                f"OR (url IS NOT NULL AND url LIKE '%{suffix}%') "
-                f"OR (username IS NOT NULL AND username LIKE '%{suffix}%')"
+                f"OR (customer_name IS NOT NULL AND customer_name LIKE '%{suffix}%')"
             )
             count += 1
         except Exception:
@@ -272,143 +260,6 @@ def auth_headers(admin_token) -> dict:
     return {"Authorization": f"Bearer {admin_token}"}
 
 
-# ── Isolated tenant fixtures ──────────────────────────────────────
-#
-# Each test session gets its own tenant with an admin user for complete
-# STDB state isolation between parallel test runs. This avoids flaky tests
-# when multiple test sessions run against the same STDB instance.
-
-@pytest.fixture(scope="session")
-def test_tenant_slug(session_suffix: str) -> str:
-    """Unique tenant slug for this test session."""
-    return f"test-tenant-{session_suffix}"
-
-
-@pytest.fixture(scope="session")
-def test_tenant_name(session_suffix: str) -> str:
-    """Unique tenant name for this test session."""
-    return f"Test Tenant {session_suffix}"
-
-
-@pytest.fixture(scope="session")
-def test_admin_email(session_suffix: str) -> str:
-    """Unique admin email for this test session's tenant."""
-    return f"admin-{session_suffix}@test.local"
-
-
-@pytest.fixture(scope="session")
-def test_admin_password() -> str:
-    """Password for test admin users."""
-    return "testadmin123"
-
-
-@pytest.fixture(scope="session")
-def isolated_tenant(
-    test_tenant_slug: str,
-    test_tenant_name: str,
-    test_admin_email: str,
-    test_admin_password: str,
-    auth_headers_session: dict,
-) -> dict:
-    """
-    Create an isolated tenant with an admin user for this test session.
-
-    Returns a dict with tenant_id, admin_user_id, admin_email, admin_token.
-    Cleans up the tenant at session end.
-    """
-    # Create tenant
-    resp = httpx.post(
-        f"{SERVER_URL}/api/tenants",
-        json={"name": test_tenant_name, "slug": test_tenant_slug},
-        headers=auth_headers_session,
-        timeout=10,
-    )
-    assert resp.status_code == 200, f"Failed to create tenant: {resp.text}"
-
-    # Get the tenant ID
-    rows = _stdb_sql(f"SELECT * FROM tenants WHERE slug = '{test_tenant_slug}'")
-    assert rows and rows[0]["rows"], f"Tenant not found: {test_tenant_slug}"
-    tenant_id = rows[0]["rows"][0][0]
-
-    # Create admin user in the new tenant
-    resp = httpx.post(
-        f"{SERVER_URL}/api/users",
-        json={"name": f"test-admin-{test_tenant_slug}", "email": test_admin_email, "role": "admin"},
-        headers=auth_headers_session,
-        timeout=10,
-    )
-    assert resp.status_code == 200, f"Failed to create admin user: {resp.text}"
-
-    # Get the user ID
-    rows = _stdb_sql(f"SELECT * FROM user WHERE email = '{test_admin_email}'")
-    assert rows and rows[0]["rows"], f"Admin user not found: {test_admin_email}"
-    admin_user_id = rows[0]["rows"][0][0]
-
-    # Add admin user to tenant
-    resp = httpx.post(
-        f"{SERVER_URL}/api/tenants/{tenant_id}/members",
-        json={"username": f"test-admin-{test_tenant_slug}", "role": "admin"},
-        headers=auth_headers_session,
-        timeout=10,
-    )
-    assert resp.status_code == 200, f"Failed to add tenant member: {resp.text}"
-
-    # Set password for the admin user
-    hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
-
-    # Log in as the test admin to get a token
-    resp = httpx.post(
-        f"{SERVER_URL}/api/auth/login",
-        json={"email": test_admin_email, "password": test_admin_password},
-        timeout=10,
-    )
-    assert resp.status_code == 200, f"Test admin login failed: {resp.text}"
-    admin_token = resp.json()["token"]
-
-    tenant_info = {
-        "tenant_id": tenant_id,
-        "tenant_slug": test_tenant_slug,
-        "admin_user_id": admin_user_id,
-        "admin_email": test_admin_email,
-        "admin_token": admin_token,
-    }
-
-    # Track for cleanup
-    _CREATED_ENTITIES.setdefault("tenant", []).append(tenant_id)
-    _CREATED_ENTITIES.setdefault("user", []).append(admin_user_id)
-
-    yield tenant_info
-
-    # Cleanup: delete tenant (cascades to all data)
-    try:
-        httpx.delete(
-            f"{SERVER_URL}/api/tenants/{tenant_id}",
-            headers=auth_headers_session,
-            timeout=10,
-        )
-    except Exception:
-        pass
-
-
-@pytest.fixture(scope="session")
-def test_admin_token(isolated_tenant: dict) -> str:
-    """JWT token for the isolated test admin user."""
-    return isolated_tenant["admin_token"]
-
-
-@pytest.fixture(scope="session")
-def test_admin_headers(test_admin_token: str) -> dict:
-    """Bearer auth header dict for the isolated test admin."""
-    return {"Authorization": f"Bearer {test_admin_token}"}
-
-
-@pytest.fixture(scope="session")
-def test_tenant_id(isolated_tenant: dict) -> str:
-    """Tenant ID for the isolated test tenant."""
-    return isolated_tenant["tenant_id"]
-
-
 # ── Session cleanup fixture ──────────────────────────────────────
 
 
@@ -466,7 +317,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     resp = httpx.post(
         f"{SERVER_URL}/api/customers",
         json=data,
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert resp.status_code == 200, f"Customer create failed: {resp.text[:200]}"
@@ -474,7 +325,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     r2 = httpx.get(
         f"{SERVER_URL}/api/customers",
         params={"search": data["email"]},
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert r2.status_code == 200
@@ -617,92 +468,3 @@ def restore_sla_targets(auth_headers: dict, targets: dict) -> None:
 def reset_sla_targets(auth_headers: dict) -> None:
     """Reset SLA targets back to defaults for test isolation."""
     restore_sla_targets(auth_headers, dict(DEFAULT_SLA_TARGETS))
-
-
-# ── Default tax rate save/restore helpers ──────────────────────────
-
-
-def save_default_tax_rate(auth_headers: dict) -> dict | None:
-    """Fetch current default tax rate so it can be restored later."""
-    try:
-        resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10)
-        if resp.status_code == 200:
-            rates = resp.json().get("tax_rates", [])
-            for rate in rates:
-                if rate.get("is_default"):
-                    return {"id": rate["id"], "rate": rate["rate"], "name": rate["name"]}
-    except Exception:
-        pass
-    return None
-
-
-def restore_default_tax_rate(auth_headers: dict, saved: dict | None) -> None:
-    """Restore previously saved default tax rate, or clear default if none existed."""
-    if saved is None:
-        return
-    try:
-        # Remove default from all rates first
-        rates_resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10)
-        if rates_resp.status_code == 200:
-            for rate in rates_resp.json().get("tax_rates", []):
-                if rate.get("is_default") and rate["id"] != saved.get("id"):
-                    httpx.put(
-                        f"{SERVER_URL}/api/tax-rates/{rate['id']}",
-                        json={"name": rate["name"], "rate": rate["rate"], "is_default": False},
-                        headers=auth_headers, timeout=10,
-                    )
-        # Restore the saved rate as default
-        httpx.put(
-            f"{SERVER_URL}/api/tax-rates/{saved['id']}",
-            json={"name": saved["name"], "rate": saved["rate"], "is_default": True},
-            headers=auth_headers, timeout=10,
-        )
-    except Exception:
-        pass
-
-
-# ── Global state reset ─────────────────────────────────────────────
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _reset_global_state(auth_headers_session: dict, session_suffix: str):
-    """Reset all global mutable state (settings, SLA targets, defaults) before session starts.
-
-    This runs BEFORE the first test in each session to ensure clean settings
-    regardless of what previous test sessions may have left behind.
-    Settings tests use their own save/restore within test methods, so
-    this is a safety net for interrupted runs that never cleaned up.
-    """
-    # Reset SLA targets
-    reset_sla_targets(auth_headers_session)
-    # Reset mail settings
-    try:
-        httpx.post(
-            f"{SERVER_URL}/api/settings/mail",
-            json={
-                "smtp_host": "",
-                "smtp_port": 587,
-                "smtp_user": "",
-                "smtp_password": "",
-                "smtp_from_email": "",
-                "smtp_from_name": "",
-                "smtp_tls": True,
-            },
-            headers=auth_headers_session, timeout=10,
-        )
-    except Exception:
-        pass
-    # Reset SMS settings
-    try:
-        httpx.post(
-            f"{SERVER_URL}/api/settings/sms",
-            json={
-                "twilio_account_sid": "",
-                "twilio_auth_token": "",
-                "twilio_from_number": "",
-            },
-            headers=auth_headers_session, timeout=10,
-        )
-    except Exception:
-        pass
-    yield  # Session runs here — no post-session reset needed, cleanup fixture handles entities

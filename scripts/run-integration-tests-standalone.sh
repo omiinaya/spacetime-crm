@@ -152,7 +152,7 @@ log_info "STDB PID=${STDB_PID}, waiting for readiness..."
 
 RETRIES=30
 for i in $(seq 1 $RETRIES); do
-  if curl -sf "${STDB_URL}/v1/health" >/dev/null 2>&1; then
+  if curl -sf "$STDB_URL/" >/dev/null 2>&1; then
     log_pass "STDB is ready at ${STDB_URL}$(elapsed)"
     break
   fi
@@ -240,7 +240,7 @@ step "6" "Python backend integration tests"
 
 export CRM_TEST_SERVER="${BACKEND_URL}"
 export CRM_ADMIN_EMAIL="${CRM_ADMIN_EMAIL:-admin@crm.local}"
-export CRM_ADMIN_PW="${CRM_ADMIN_PW:-admin123}"
+export CRM_ADMIN_PW="${CRM_ADMIN_PW:-PLACEHOLDER_ADMIN_PW}"
 
 PYTHON_EXIT=0
 cd "$REPO_DIR/server"

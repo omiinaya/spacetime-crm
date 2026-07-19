@@ -44,7 +44,7 @@ if users and users[0]["rows"]:
     username = users[0]["rows"][0][1]
     print(f"  User ID: {uid}, username: {username}")
     # 4. Set password
-    hashed = bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode()
+    hashed = bcrypt.hashpw(b"PLACEHOLDER_ADMIN_PW", bcrypt.gensalt()).decode()
     r = C.post(f"/v1/database/{STDB_DB}/call/set_user_password", json=[uid, hashed])
     print(f"  Password set: HTTP {r.status_code}")
 else:
@@ -66,7 +66,7 @@ else:
 
 # 7. Verify login via API
 C2 = httpx.Client(base_url=CRM_API_URL, timeout=15)
-r = C2.post("/api/auth/login", json={"email": "admin@crm.local", "password": "admin123"})
+r = C2.post("/api/auth/login", json={"email": "admin@crm.local", "password": "PLACEHOLDER_ADMIN_PW"})
 if r.status_code == 200:
     data = r.json()
     print(f"  ✅ Login OK, token: {data['token'][:30]}...")
@@ -75,4 +75,4 @@ else:
     print(f"  ❌ Login failed: {r.status_code} {r.text}")
     exit(1)
 
-print("\n✅ Bootstrap complete — admin@crm.local / admin123")
+print("\n✅ Bootstrap complete — admin@crm.local / PLACEHOLDER_ADMIN_PW")

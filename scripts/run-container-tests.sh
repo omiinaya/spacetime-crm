@@ -143,7 +143,7 @@ step "3" "Verify service health"
 # Check STDB
 log_info "Checking STDB at ${STDB_URL}..."
 for i in $(seq 1 15); do
-  if curl -sf "${STDB_URL}/v1/health" >/dev/null 2>&1; then
+  if curl -sf "${STDB_URL}/" >/dev/null 2>&1; then
     log_pass "STDB is healthy$(elapsed)"
     break
   fi
@@ -177,7 +177,7 @@ step "4" "Run Python integration tests (pytest)"
 
 export CRM_TEST_SERVER="${BACKEND_URL}"
 export CRM_ADMIN_EMAIL="${CRM_ADMIN_EMAIL:-admin@crm.local}"
-export CRM_ADMIN_PW="${CRM_ADMIN_PW:-admin123}"
+export CRM_ADMIN_PW="${CRM_ADMIN_PW:-PLACEHOLDER_ADMIN_PW}"
 export STDB_HOST="${STDB_HOST}"
 export STDB_PORT="${STDB_PORT}"
 export STDB_DB="${STDB_DB}"

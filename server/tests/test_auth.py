@@ -1,9 +1,4 @@
-"""Auth and permissions integration tests.
-
-Uses isolated tenant admin for most tests to avoid polluting global admin state.
-Global admin tests are kept for coverage but are scoped to only check that
-the bootstrap admin user exists and can log in.
-"""
+"""Auth and permissions integration tests."""
 import base64
 import json
 import pytest
@@ -14,8 +9,8 @@ from .conftest import SERVER_URL, ADMIN_EMAIL, ADMIN_PW, assert_ok, assert_unaut
 class TestAuth:
     """Authentication and authorization flows."""
 
-    def test_login_success_admin(self, client: httpx.Client):
-        """Global admin credentials return a token (bootstrap state test)."""
+    def test_login_success(self, client: httpx.Client):
+        """Valid admin credentials return a token."""
         resp = client.post("/api/auth/login", json={
             "email": ADMIN_EMAIL, "password": ADMIN_PW,
         })
@@ -23,16 +18,6 @@ class TestAuth:
         assert "token" in data
         assert data["user"]["role"] == "admin"
         assert "tenant_id" in data["user"]
-
-    def test_login_success_isolated(self, test_admin_headers: dict):
-        """Isolated tenant admin can also log in (uses session-specific creds)."""
-        # We need to log in as the isolated admin — extract email from headers
-        # The isolated tenant admin email is f"admin-{session_suffix}@test.local"
-        # We'll verify that the existing token is valid first
-        resp = httpx.get(f"{SERVER_URL}/api/auth/me", headers=test_admin_headers, timeout=10)
-        data = assert_ok(resp)
-        assert "email" in data
-        assert data["role"] == "admin"
 
     def test_login_invalid_password(self, client: httpx.Client):
         """Wrong password returns 401."""
@@ -73,9 +58,9 @@ class TestAuth:
         })
         assert_unauthorized(resp)
 
-    def test_auth_me_endpoint(self, test_admin_headers: dict):
-        """GET /api/auth/me returns current user (using isolated tenant)."""
-        resp = httpx.get(f"{SERVER_URL}/api/auth/me", headers=test_admin_headers, timeout=10)
+    def test_auth_me_endpoint(self, auth_client: httpx.Client):
+        """GET /api/auth/me returns current user."""
+        resp = auth_client.get("/api/auth/me")
         data = assert_ok(resp)
         assert "email" in data
         assert data["role"] == "admin"
@@ -97,9 +82,9 @@ class TestPermissions:
         resp = client.get("/api/health/ready")
         assert_ok(resp)
 
-    def test_admin_access(self, test_admin_headers: dict):
-        """Admin (isolated tenant) can access admin-only endpoints."""
-        resp = httpx.get(f"{SERVER_URL}/api/audit-log", headers=test_admin_headers, timeout=10)
+    def test_admin_access(self, auth_client: httpx.Client):
+        """Admin can access admin-only endpoints."""
+        resp = auth_client.get("/api/audit-log")
         # May return empty, but shouldn't 403
         assert resp.status_code != 403
 

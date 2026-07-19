@@ -6,7 +6,7 @@ import sys
 
 BASE = "http://localhost:8723"
 ADMIN_EMAIL = "admin@crm.local"
-ADMIN_PW = "admin123"
+ADMIN_PW = "PLACEHOLDER_ADMIN_PW"
 
 # Login
 resp = httpx.post(f"{BASE}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PW})

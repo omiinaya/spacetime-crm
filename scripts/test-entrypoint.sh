@@ -17,7 +17,7 @@
 #   SERVER_PORT     - Backend port (default: 8723)
 #   JWT_SECRET      - JWT signing secret (required)
 #   CRM_ADMIN_EMAIL - Admin email for bootstrap (default: admin@crm.local)
-#   CRM_ADMIN_PW    - Admin password for bootstrap (default: admin123)
+#   CRM_ADMIN_PW    - Admin password for bootstrap (default: PLACEHOLDER_ADMIN_PW)
 #   LOG_LEVEL       - Python log level (default: info)
 #   RELOAD          - Enable uvicorn reload (default: false)
 # ──────────────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ STDB_DB="${STDB_DB:-spacetime-crm-test}"
 SERVER_PORT="${SERVER_PORT:-8723}"
 JWT_SECRET="${JWT_SECRET:-test-secret-change-in-production}"
 CRM_ADMIN_EMAIL="${CRM_ADMIN_EMAIL:-admin@crm.local}"
-CRM_ADMIN_PW="${CRM_ADMIN_PW:-admin123}"
+CRM_ADMIN_PW="${CRM_ADMIN_PW:-PLACEHOLDER_ADMIN_PW}"
 LOG_LEVEL="${LOG_LEVEL:-info}"
 RELOAD="${RELOAD:-false}"
 
@@ -48,7 +48,7 @@ log_fail()  { echo -e "\033[0;31m[FAIL]\033[0m  $*"; }
 log_info "Waiting for SpacetimeDB at ${STDB_URL}..."
 
 for i in $(seq 1 60); do
-    if curl -sf "${STDB_URL}/v1/health" > /dev/null 2>&1; then
+    if curl -sf "${STDB_URL}/" > /dev/null 2>&1; then
         log_pass "SpacetimeDB is ready at ${STDB_URL}"
         break
     fi
@@ -101,7 +101,7 @@ STDB_PORT = int(os.environ.get("STDB_PORT", "3001"))
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm-test")
 SERVER_URL = f"http://localhost:{os.environ.get('SERVER_PORT', '8723')}"
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
-ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "admin123")
+ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "PLACEHOLDER_ADMIN_PW")
 
 sql_url = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
 
