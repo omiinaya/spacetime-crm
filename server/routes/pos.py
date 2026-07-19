@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from helpers import (
+from helpers import _safe_id, (
     _sql, _paginated, _call, _log_audit, _fire_webhook,
     require_role, logger, jinja_env,
 )
@@ -28,11 +28,11 @@ async def list_pos_sales(offset: int = 0, limit: int = 50, user: dict = Depends(
 @router.get("/api/pos/sales/{sale_id}")
 async def get_pos_sale(sale_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Get a single counter sale with line items."""
-    rows = await _sql(f"SELECT * FROM counter_sale WHERE id = '{sale_id}' AND tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM counter_sale WHERE id = '{_safe_id(sale_id)}' AND tenant_id = '{user['tenant_id']}'")
     if not rows:
         raise HTTPException(404, "Sale not found")
     sale = rows[0]
-    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'")
+    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{_safe_id(sale_id)}'")
     sale["line_items"] = sorted(items, key=lambda x: x.get("sort_order", 0))
     return {"sale": sale}
 
@@ -40,12 +40,12 @@ async def get_pos_sale(sale_id: str, user: dict = Depends(require_role("admin", 
 @router.get("/api/pos/sales/{sale_id}/receipt-pdf")
 async def get_pos_receipt_pdf(sale_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Generate a printable PDF receipt for a completed counter sale."""
-    rows = await _sql(f"SELECT * FROM counter_sale WHERE id = '{sale_id}' AND tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM counter_sale WHERE id = '{_safe_id(sale_id)}' AND tenant_id = '{user['tenant_id']}'")
     if not rows:
         raise HTTPException(404, "Sale not found")
     sale = rows[0]
 
-    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'")
+    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{_safe_id(sale_id)}'")
     items = sorted(items, key=lambda x: x.get("sort_order", 0))
 
     receipt_number = sale.get("receipt_number", sale.get("id", "N/A"))

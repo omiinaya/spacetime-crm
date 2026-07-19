@@ -57,7 +57,7 @@ async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(requ
 async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: dict = Depends(require_role("admin"))):
     """Update an existing scheduled report."""
     _safe_id(schedule_id)
-    existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
+    existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{_safe_id(schedule_id)}'")
     if not existing:
         raise HTTPException(404, "Schedule not found")
 
@@ -99,7 +99,7 @@ async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("a
 async def run_schedule_now(schedule_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Generate and deliver a scheduled report immediately."""
     _safe_id(schedule_id)
-    schedules = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
+    schedules = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{_safe_id(schedule_id)}'")
     if not schedules:
         raise HTTPException(404, "Schedule not found")
 

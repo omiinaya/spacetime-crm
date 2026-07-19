@@ -5,7 +5,7 @@ import asyncio
 from fastapi import APIRouter, Depends
 
 from config import settings
-from helpers import (
+from helpers import _safe_id, (
     _sql, _paginated, _call, _log_audit, _fire_webhook,
     require_role, logger,
 )
@@ -40,8 +40,8 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
         body.currency,
     ])
     if invoice_id:
-        invoices = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
-        payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+        invoices = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}'")
+        payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
         if invoices:
             inv = invoices[0]
             total_paid = sum(float(p.get("amount", 0)) for p in payments)
@@ -51,9 +51,7 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
                 await _call("update_invoice_status", [invoice_id, new_status])
 
             async def _notify():
-                from mail import _customer_email as _mail_customer_email, _notify_payment_received
-                from sms import _customer_phone as _sms_customer_phone, _notify_payment_received as _sms_payment_received
-                cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
+                cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(body.customer_id)}'")
                 email = _mail_customer_email(cust[0]) if cust else None
                 if email:
                     link = f"{settings.app_url}/portal/"

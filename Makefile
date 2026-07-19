@@ -175,6 +175,25 @@ clean-all: clean ## Thorough clean including lockfiles
 
 # ── Agent-Friendly Targets ─────────────────────────────────────────────
 
+
+
+# ── Container Build/Deploy ─────────────────────────────────────────────
+
+container-build: ## Build Docker image for the backend
+	docker compose build
+
+container-up: ## Start all services with Docker Compose
+	docker compose up -d
+
+container-down: ## Stop and remove containers
+	docker compose down
+
+container-logs: ## Tail logs from all containers
+	docker compose logs -f
+
+container-rebuild: container-build container-up ## Rebuild and restart containers
+
+.PHONY: container-build container-up container-down container-logs container-rebuild
 .PHONY: test-unit test-integration test-container test-rust-container test-quick coverage check-ports deps-check health setup-git-hooks
 
 test-unit:  ## Run fast offline-safe unit tests
@@ -205,10 +224,8 @@ test-container: ## Spin up test STDB container and run full integration suite (b
 	fi
 
 test-rust-container: ## Build & run standalone Rust container tests (requires running STDB)
-	@echo "🚀 Building container test binary..."
-	@cargo build --manifest-path server/container-tests/Cargo.toml
 	@echo "🚀 Running container tests..."
-	@cd server/container-tests && ./target/debug/container-tests
+	@cargo run --manifest-path server/container-tests/Cargo.toml
 
 test-integration:  ## Tests needing running services (STDB + backend + frontend)
 	@echo "⚠️  Integration tests require STDB on :3001 and backend on :8723"

@@ -18,7 +18,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: server/Dockerfile
+      dockerfile: ./Dockerfile
       network: host
     dns:
       - 8.8.8.8

@@ -18,10 +18,9 @@ from client import get_http_client
 from config import settings
 from webhooks import fire_event as _fire_webhook_event, ALL_EVENTS as WEBHOOK_EVENTS
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer(auto_error=True)
 
 # ── Jinja2 template loader ────────────────────────────────────
 
@@ -226,7 +225,7 @@ def require_role(*roles: str):
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(401, "Invalid token: no subject")
-        rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+        rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user_id)}'")
         if not rows:
             raise HTTPException(401, "User not found")
         user = rows[0]
@@ -241,6 +240,16 @@ def require_role(*roles: str):
             )
         return user
     return _check
+
+
+
+def _sanitize_sql(val: str) -> str:
+    """Escape a string value for safe SQL interpolation by doubling single quotes.
+    
+    This prevents SQL injection while allowing special characters like @ and .
+    Use for values that are not IDs (e.g., emails, names).
+    """
+    return val.replace("'", "''")
 
 
 def _safe_id(id_str: str) -> str:
@@ -269,7 +278,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if not user_id:
         raise HTTPException(401, "Invalid token: no subject")
 
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_safe_id(user_id)}'")
     if not rows:
         raise HTTPException(401, "User not found")
     user = rows[0]

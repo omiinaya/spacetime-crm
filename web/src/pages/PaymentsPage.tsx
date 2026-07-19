@@ -58,7 +58,11 @@ export default function PaymentsPage() {
     onError: () => toast.error("Failed to delete"),
   });
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalsByCurrency = payments.reduce((acc, p) => {
+  const ccy = p.currency || "USD";
+  acc[ccy] = (acc[ccy] || 0) + p.amount;
+  return acc;
+}, {} as Record<string, number>);
 
   return (
     <>
@@ -75,7 +79,7 @@ export default function PaymentsPage() {
           <CreditCard className="h-8 w-8 text-green-400" />
           <div>
             <p className="text-xs text-muted-foreground">Total Collected</p>
-            <p className="text-2xl font-bold text-green-400">{form.currency || "USD"} {totalAmount.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-400">{Object.entries(totalsByCurrency).map(([ccy, amt]) => `${ccy} ${amt.toFixed(2)}`).join(", ")}</p>
           </div>
         </CardContent>
       </Card>
@@ -122,7 +126,20 @@ export default function PaymentsPage() {
         </Card>
       )}
 
-      <div className="space-y-3">
+      {empty ? (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+        <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 12a8 8 0 11-16 0 8 8 0 0116 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold mb-1">No payments yet</h3>
+      <p className="text-sm text-muted-foreground mb-4 max-w-sm">Payments will appear here once recorded</p>
+    </div>
+  ) : (
+    <>
+    <div className="space-y-3">
         {payments.map((p) => (
           <Card key={p.id}>
             <CardContent className="pt-4 flex items-center justify-between">
@@ -136,6 +153,7 @@ export default function PaymentsPage() {
           </Card>
         ))}
       </div>
+
 
       <Pagination
         page={pag.page}

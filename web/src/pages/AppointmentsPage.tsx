@@ -301,6 +301,7 @@ export default function AppointmentsPage() {
                       {a.description && (
                         <p className="text-xs text-muted-foreground/70 mt-1">{a.description}</p>
                       )}
+                      <p className="text-xs text-muted-foreground/50">Updated: {new Date(a.updated_at).toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
                       <Select

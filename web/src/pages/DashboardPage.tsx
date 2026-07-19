@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
@@ -68,7 +69,7 @@ export default function DashboardPage({
     api.reports.get().then(setReports).catch(() => {});
   }, []);
 
-  const summaryCards: { label: string; value: string | number; icon: any; color: string; link: PageId }[] = [
+  const summaryCards: { label: string; value: string | number; icon: React.ElementType; color: string; link: PageId }[] = [
     { label: "Total Customers", value: stats?.total_customers ?? 0, icon: Users, color: "text-blue-400", link: "customers" },
     { label: "Open Tickets", value: stats?.open_tickets ?? 0, icon: Ticket, color: "text-amber-400", link: "tickets" },
     { label: "Revenue", value: `$${(stats?.revenue ?? 0).toFixed(2)}`, icon: CreditCard, color: "text-green-400", link: "invoices" },
@@ -214,7 +215,7 @@ export default function DashboardPage({
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={(entry: any) => `${entry.status}: ${entry.count}`}
+                    label={(entry: {status: string; count: number}) => `${entry.status}: ${entry.count}`}
                   >
                     {reports.ticket_by_status.map((_, i) => (
                       <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />

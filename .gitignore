@@ -19,3 +19,14 @@ web/.auth/
 
 # Virtual environment
 server/.venv/
+
+# Secret files and credentials
+*.env.local
+*.env.prod
+*.env.*.local
+*.pem
+*.key
+*.cert
+credentials*
+*.secret
+secrets.yml

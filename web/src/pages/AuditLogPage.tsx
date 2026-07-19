@@ -1,4 +1,15 @@
 import { useState } from "react";
+
+interface AuditLogEntry {
+  id: string;
+  created_at: number;
+  user_name: string;
+  user_id: string;
+  action: string;
+  entity: string;
+  entity_id: string;
+  details?: string;
+}
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
 import { api } from "../lib/api";
@@ -36,7 +47,7 @@ export default function AuditLogPage() {
   const [entityFilter, setEntityFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["audit-log", { entity: entityFilter || undefined, action: actionFilter || undefined }],
     queryFn: () => api.auditLog.list(200, entityFilter || undefined, actionFilter || undefined),
   });
@@ -102,7 +113,7 @@ export default function AuditLogPage() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e: any) => (
+                {entries.map((e: AuditLogEntry) => (
                   <tr key={e.id} className="border-b border-slate-800 hover:bg-slate-800/30">
                     <td className="px-4 py-3 text-slate-400 whitespace-nowrap font-mono text-xs">
                       {formatTime(e.created_at)}

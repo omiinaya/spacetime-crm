@@ -59,7 +59,7 @@ services:
       - JWT_SECRET=test-secret-change-in-production
       - JWT_EXPIRE_HOURS=24
       - CRM_ADMIN_EMAIL=admin@crm.local
-      - CRM_ADMIN_PW=PLACEHOLDER_ADMIN_PW
+      - CRM_ADMIN_PW=${CRM_ADMIN_PW:-change-me-in-production}
       - LOG_LEVEL=debug
     depends_on:
       spacetime-test:
@@ -89,7 +89,7 @@ services:
     environment:
       - CRM_TEST_SERVER=http://backend-test:8723
       - CRM_ADMIN_EMAIL=admin@crm.local
-      - CRM_ADMIN_PW=PLACEHOLDER_ADMIN_PW
+      - CRM_ADMIN_PW=${CRM_ADMIN_PW:-change-me-in-production}
       - STDB_HOST=spacetime-test
       - STDB_PORT=3001
       - STDB_DB=spacetime-crm-test

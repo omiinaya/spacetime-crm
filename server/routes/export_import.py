@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 
-from helpers import (
+from helpers import _safe_id, (
     _sql, _call, _log_audit,
     require_role, logger,
 )
@@ -70,7 +70,7 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
     if "first_name" not in (reader.fieldnames or []):
         raise HTTPException(400, "CSV must contain 'first_name' column")
 
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
     count = 0
     errors = []
     has_id = "id" in (reader.fieldnames or [])
@@ -124,7 +124,7 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
     if "name" not in (reader.fieldnames or []):
         raise HTTPException(400, "CSV must contain 'name' column")
 
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
     count = 0
     errors = []
     has_id = "id" in (reader.fieldnames or [])

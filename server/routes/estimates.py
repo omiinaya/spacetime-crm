@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 
-from helpers import (
+from helpers import _safe_id, (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
     require_role, logger,
 )
@@ -55,7 +55,7 @@ async def update_estimate_status(estimate_id: str, body: EstimateStatusUpdate, u
 
 @router.get("/api/estimates/{estimate_id}/line-items")
 async def get_estimate_line_items(estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql(f"SELECT * FROM estimate_line_items WHERE estimate_id = '{estimate_id}'")
+    rows = await _sql(f"SELECT * FROM estimate_line_items WHERE estimate_id = '{_safe_id(estimate_id)}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
@@ -82,7 +82,7 @@ async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("a
 @router.post("/api/estimates/{estimate_id}/convert")
 async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Convert an approved estimate to an invoice (atomic reducer)."""
-    est_rows = await _sql(f"SELECT * FROM estimates WHERE id = '{estimate_id}'")
+    est_rows = await _sql(f"SELECT * FROM estimates WHERE id = '{_safe_id(estimate_id)}'")
     if not est_rows:
         raise HTTPException(404, "Estimate not found")
     est = est_rows[0]
@@ -91,7 +91,7 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
 
     await _call("convert_estimate_to_invoice", [estimate_id])
 
-    est_rows = await _sql(f"SELECT invoice_id FROM estimates WHERE id = '{estimate_id}'")
+    est_rows = await _sql(f"SELECT invoice_id FROM estimates WHERE id = '{_safe_id(estimate_id)}'")
     inv_id = est_rows[0].get("invoice_id", "") if est_rows else ""
     if not inv_id:
         raise HTTPException(500, "Failed to get generated invoice ID")
@@ -107,7 +107,7 @@ async def convert_estimate(estimate_id: str, user: dict = Depends(require_role("
     }))
 
     async def _sms_notify():
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{est.get('customer_id', '')}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(est.get('customer_id', ''))}'")
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
             _sms_estimate_approved(phone, est.get("estimate_number", 0), float(est.get("total", 0)))

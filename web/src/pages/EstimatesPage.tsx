@@ -45,6 +45,7 @@ export default function EstimatesPage() {
   });
 
   const estimates = data?.estimates ?? [];
+  const hasData = data && data.estimates && data.estimates.length > 0 && data.total > 0;
   const customers = data?.customers ?? [];
 
   const { data: lineItemsData } = useQuery({
@@ -199,6 +200,8 @@ export default function EstimatesPage() {
                   <option value="approved">Approved</option>
                   <option value="declined">Declined</option>
                 </Select>
+                {selectedEst.tax_rate > 0 && <p className="text-sm text-muted-foreground">Tax Rate: {selectedEst.tax_rate}%</p>}
+                {selectedEst.invoice_id && <a href={"/invoices/" + selectedEst.invoice_id} className="text-xs text-primary underline">View Invoice</a>}
                 <div className="space-y-2">
                   {lineItems.map((li) => (
                     <div key={li.id} className="flex justify-between text-sm p-2 rounded bg-muted/50">

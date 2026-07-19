@@ -6,7 +6,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 
 from config import settings
-from helpers import (
+from helpers import _safe_id, (
     _sql, _paginated, _call, _sort, _log_audit, _fire_webhook,
     require_role, logger,
 )
@@ -48,6 +48,8 @@ async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("a
         body.device_type,
         body.device_model,
         body.device_serial,
+        body.device_imei,
+        body.device_password,
         body.priority,
     ])
     await _log_audit(user, "create", "ticket", body.title, f"customer={body.customer_id}")
@@ -95,10 +97,10 @@ async def update_ticket_status(ticket_id: str, body: TicketStatusUpdate, user: d
     await _call("update_ticket_status", [ticket_id, status])
 
     async def _notify():
-        rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}'")
+        rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}'")
         if rows:
             t = rows[0]
-            cust = await _sql(f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'")
+            cust = await _sql(f"SELECT * FROM customer WHERE id = '{_safe_id(t.get('customer_id', ''))}'")
             email = _mail_customer_email(cust[0]) if cust else None
             if email:
                 link = f"{settings.app_url}/portal/"
@@ -125,7 +127,7 @@ async def assign_ticket(ticket_id: str, body: TicketAssign, user: dict = Depends
 
 @router.get("/api/tickets/{ticket_id}/notes")
 async def get_ticket_notes(ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}'")
+    rows = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{_safe_id(ticket_id)}'")
     return {"notes": _sort(rows, "created_at", desc=False)}
 
 
@@ -153,7 +155,7 @@ async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin
 @router.post("/api/tickets/{ticket_id}/timers/start")
 async def start_ticket_timer(ticket_id: str, body: TicketTimerStart, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     await _call("start_ticket_timer", [ticket_id, body.user_id])
-    rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{ticket_id}'")
+    rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{_safe_id(ticket_id)}'")
     return {"timers": _sort(rows, "start_time")}
 
 
@@ -189,7 +191,7 @@ async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("
 @router.get("/api/tickets/{ticket_id}/checklist")
 async def get_ticket_checklist(ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Get checklist items for a ticket."""
-    rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{ticket_id}'")
+    rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{_safe_id(ticket_id)}'")
     return {"items": _sort(rows, "sort_order")}
 
 

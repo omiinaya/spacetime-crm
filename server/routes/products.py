@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from helpers import (
+from helpers import _safe_id, (
     _sql, _paginated, _call, _sort, _log_audit,
     require_role, logger,
 )
@@ -96,7 +96,7 @@ async def update_product(product_id: str, body: ProductCreate, user: dict = Depe
 
 @router.get("/api/products/{product_id}/adjustments")
 async def get_product_adjustments(product_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
-    rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{product_id}'")
+    rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{_safe_id(product_id)}'")
     return {"adjustments": _sort(rows, "created_at")}
 
 
@@ -118,7 +118,7 @@ async def create_adjustment(product_id: str, body: InventoryAdjustmentCreate, us
 @router.get("/api/products/low-stock")
 async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """List products below minimum stock threshold for the current tenant."""
-    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}'")
     low_stock = [
         r for r in rows
         if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
@@ -129,7 +129,7 @@ async def list_low_stock(user: dict = Depends(require_role("admin", "tech", "fro
 @router.get("/api/products/by-barcode/{barcode}")
 async def lookup_product_by_barcode(barcode: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
     """Find a product by barcode (exact match, tenant-scoped)."""
-    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}' AND barcode = '{barcode}'")
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{_safe_id(user['tenant_id'])}' AND barcode = '{_sanitize_sql(barcode)}'")
     if not rows:
         raise HTTPException(404, "Product not found for this barcode")
     return {"product": rows[0]}
@@ -160,8 +160,8 @@ async def transfer_stock(body: StockTransferRequest, user: dict = Depends(requir
     uid = user["id"]
 
     # Verify both products exist and belong to this tenant
-    src_rows = await _sql(f"SELECT * FROM products WHERE id = '{body.source_product_id}' AND tenant_id = '{tid}'")
-    dst_rows = await _sql(f"SELECT * FROM products WHERE id = '{body.destination_product_id}' AND tenant_id = '{tid}'")
+    src_rows = await _sql(f"SELECT * FROM products WHERE id = '{_safe_id(body.source_product_id)}' AND tenant_id = '{tid}'")
+    dst_rows = await _sql(f"SELECT * FROM products WHERE id = '{_safe_id(body.destination_product_id)}' AND tenant_id = '{tid}'")
     if not src_rows:
         raise HTTPException(404, "Source product not found")
     if not dst_rows:

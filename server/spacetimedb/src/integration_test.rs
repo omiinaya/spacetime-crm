@@ -649,7 +649,7 @@ mod tests {
         assert!(!ctx.db.user().id().find(&id).unwrap().totp_enabled);
         assert!(ctx.db.user().id().find(&id).unwrap().totp_secret.is_empty());
         // Set secret
-        let secret = "PLACEHOLDER_TOTP_SECRET".to_string();
+        let secret = "TEST_TOTP_SECRET_VALUE".to_string();
         set_user_totp_secret(&ctx, id.clone(), secret.clone());
         let u = ctx.db.user().id().find(&id).unwrap();
         assert_eq!(u.totp_secret, secret);
@@ -738,6 +738,7 @@ mod tests {
         create_recurring_invoice_rule(&ctx, "t_rir".into(), "cust_1".into(),
             "Monthly Rent".into(), "monthly".into(), 1, 15,
             r#"[{"description":"Rent","quantity":1,"unit_price":1000}]"#.into(),
+            "USD".into(),
             1700000000000);
         let rules: Vec<RecurringInvoiceRule> = ctx.db.recurring_invoice_rules().iter().collect();
         assert_eq!(rules.len(), 1);
@@ -750,9 +751,9 @@ mod tests {
     #[test]
     fn test_update_recurring_invoice_rule() {
         let ctx = test_ctx();
-        create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Old".into(), "monthly".into(), 1, 15, "[]".into(), 1000);
+        create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Old".into(), "monthly".into(), 1, 15, "[]".into(), "USD".into(), 1000);
         let id = ctx.db.recurring_invoice_rules().iter().next().unwrap().id.clone();
-        update_recurring_invoice_rule(&ctx, id.clone(), "New Name".into(), "weekly".into(), 2, 30, r#"[{"desc":"X"}]"#.into(), 2000, "paused".into());
+        update_recurring_invoice_rule(&ctx, id.clone(), "New Name".into(), "weekly".into(), 2, 30, r#"[{"desc":"X"}]"#.into(), "USD".into(), 2000, "paused".into());
         let updated = ctx.db.recurring_invoice_rules().id().find(&id).unwrap();
         assert_eq!(updated.name, "New Name");
         assert_eq!(updated.frequency, "weekly");
@@ -762,7 +763,7 @@ mod tests {
     #[test]
     fn test_delete_recurring_invoice_rule() {
         let ctx = test_ctx();
-        create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Del".into(), "m".into(), 1, 15, "[]".into(), 1000);
+        create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Del".into(), "m".into(), 1, 15, "[]".into(), "USD".into(), 1000);
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
         let id = ctx.db.recurring_invoice_rules().iter().next().unwrap().id.clone();
         delete_recurring_invoice_rule(&ctx, id);
@@ -1467,7 +1468,7 @@ mod tests {
         let items = r#"[{"description":"Monthly rent","quantity":1,"unit_price":500}]"#;
         create_recurring_invoice_rule(&ctx, "t_gr".into(), "cust_1".into(),
             "Monthly Rent".into(), "monthly".into(), 1, 15,
-            items.into(), now - 1000); // due now
+            items.into(), "USD".into(), now - 1000); // due now
         // Generate invoices
         assert_eq!(ctx.db.invoices().iter().count(), 0);
         generate_recurring_invoices(&ctx);
@@ -1495,7 +1496,7 @@ mod tests {
         // Create a rule with future date
         let far_future = 9999999999999999;
         create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Future".into(),
-            "monthly".into(), 1, 15, "[]".into(), far_future);
+            "monthly".into(), 1, 15, "[]".into(), "USD".into(), far_future);
         generate_recurring_invoices(&ctx);
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
@@ -1505,10 +1506,10 @@ mod tests {
         let ctx = test_ctx();
         let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
         create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Paused".into(),
-            "monthly".into(), 1, 15, "[]".into(), now - 1000);
+            "monthly".into(), 1, 15, "[]".into(), "USD".into(), now - 1000);
         // Pause it
         let id = ctx.db.recurring_invoice_rules().iter().next().unwrap().id.clone();
-        update_recurring_invoice_rule(&ctx, id, "Paused".into(), "monthly".into(), 1, 15, "[]".into(), now - 1000, "paused".into());
+        update_recurring_invoice_rule(&ctx, id, "Paused".into(), "monthly".into(), 1, 15, "[]".into(), "USD".into(), now - 1000, "paused".into());
         generate_recurring_invoices(&ctx);
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
@@ -1519,7 +1520,7 @@ mod tests {
         let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
         // Rule with empty customer_id
         create_recurring_invoice_rule(&ctx, "t".into(), "".into(), "NoCust".into(),
-            "monthly".into(), 1, 15, "[]".into(), now - 1000);
+            "monthly".into(), 1, 15, "[]".into(), "USD".into(), now - 1000);
         generate_recurring_invoices(&ctx);
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }

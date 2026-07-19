@@ -92,6 +92,8 @@ function UserSettings() {
                 </div>
               </div>
               <Badge variant={u.active ? "success" : "secondary"}>{u.role}</Badge>
+              <span className="text-xs text-muted-foreground">PIN: {u.pin || "-"}</span>
+              <span className="text-xs text-muted-foreground">2FA: {u.totp_enabled ? "ON" : "OFF"}</span>
             </div>
           ))}
         </div>
@@ -381,7 +383,7 @@ function SmsSettingsSection() {
   const saveMutation = useMutation({
     mutationFn: (data: { account_sid?: string; auth_token?: string; from_number?: string }) => {
       const payload = { ...data };
-      if (!payload.auth_token) (payload as any).auth_token = undefined;
+      if (!payload.auth_token) payload.auth_token = undefined as any;
       return api.settings.sms.save(payload);
     },
     onSuccess: () => {
@@ -396,7 +398,7 @@ function SmsSettingsSection() {
   const testMutation = useMutation({
     mutationFn: async () => {
       const saveData = { ...smsConfig };
-      if (!saveData.auth_token) (saveData as any).auth_token = undefined;
+      if (!saveData.auth_token) saveData.auth_token = undefined as any;
       await api.settings.sms.save(saveData);
       return api.settings.sms.test();
     },
@@ -866,7 +868,7 @@ function PinSection() {
       setPin("");
       setConfirmPin("");
       setHasPin(true);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message || "Failed to set PIN");
     } finally {
       setBusy(false);
@@ -879,7 +881,7 @@ function PinSection() {
       await api.auth.setPin("");
       toast.success("POS PIN removed");
       setHasPin(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message || "Failed to remove PIN");
     } finally {
       setBusy(false);
@@ -992,7 +994,7 @@ function TwoFactorSection() {
       setSecret(data.secret);
       setProvisioningUri(data.provisioning_uri);
       setStep("verify");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message);
     } finally {
       setBusy(false);
@@ -1018,7 +1020,7 @@ function TwoFactorSection() {
       setStep("idle");
       setSecret("");
       setVerifyCode("");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message);
     } finally {
       setBusy(false);
@@ -1043,7 +1045,7 @@ function TwoFactorSection() {
       setIsEnrolled(false);
       setShowDisable(false);
       setDisableCode("");
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.error(e.message);
     } finally {
       setBusy(false);
