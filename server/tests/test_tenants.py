@@ -2,67 +2,68 @@
 import pytest
 import httpx
 import uuid
-from .conftest import SERVER_URL, assert_ok
+from .conftest import SERVER_URL, assert_ok, test_admin_headers, test_tenant_id, test_admin_token
 
 
 class TestTenants:
     """Multi-tenant CRUD and member management."""
 
-    def test_list_tenants(self, auth_headers: dict):
+    def test_list_tenants(self, test_admin_headers: dict):
         """Admin can list all tenants."""
-        resp = httpx.get(f"{SERVER_URL}/api/tenants", headers=auth_headers, timeout=10)
+        resp = httpx.get(f"{SERVER_URL}/api/tenants", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "tenants" in data
         assert len(data["tenants"]) >= 1  # At least the default tenant
 
-    def test_get_tenant(self, auth_headers: dict, admin_user: dict):
+    def test_get_tenant(self, test_admin_headers: dict, test_tenant_id: str):
         """Admin can fetch a specific tenant."""
-        tid = admin_user.get("tenant_id")
-        assert tid, "Admin has no tenant_id"
-        resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=auth_headers, timeout=10)
+        tid = test_tenant_id
+        resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "tenant" in data
         assert data["tenant"]["id"] == tid
 
-    def test_create_tenant(self, auth_headers: dict):
+    def test_create_tenant(self, test_admin_headers: dict):
         """Create a new tenant."""
         slug = f"test-tenant-{uuid.uuid4().hex[:8]}"
         resp = httpx.post(
             f"{SERVER_URL}/api/tenants",
             json={"name": "Test Tenant", "slug": slug},
-            headers=auth_headers, timeout=10,
+            headers=test_admin_headers, timeout=10,
         )
         data = assert_ok(resp)
         assert data.get("ok") is True
 
-    def test_tenant_members(self, auth_headers: dict, admin_user: dict):
+    def test_tenant_members(self, test_admin_headers: dict, test_tenant_id: str, test_tenant_slug: str):
         """Tenant members list includes admin."""
-        tid = admin_user["tenant_id"]
-        resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=auth_headers, timeout=10)
+        tid = test_tenant_id
+        resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         tenant = data["tenant"]
         assert "members" in tenant
         member_names = [m["username"] for m in tenant["members"]]
-        assert admin_user["name"] in member_names, f"Admin {admin_user['name']} not in {member_names}"
+        # The isolated tenant admin username follows the pattern test-admin-{tenant_slug}
+        expected_username = f"test-admin-{test_tenant_slug}"
+        assert expected_username in member_names, f"Admin {expected_username} not in {member_names}"
 
     def test_unauthenticated_tenant_access(self, client: httpx.Client):
         """Unauthenticated requests to tenant endpoints fail."""
         resp = client.get("/api/tenants")
         assert resp.status_code in (401, 403)
 
-    def test_tenant_update(self, auth_headers: dict, admin_user: dict):
+    def test_tenant_update(self, test_admin_headers: dict, test_tenant_id: str):
         """Update tenant settings. Always restores original name/slug."""
-        tid = admin_user["tenant_id"]
+        tid = test_tenant_id
         # Fetch current tenant so we can restore
-        current = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=auth_headers, timeout=10).json()
+        current = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10).json()
         orig_tenant = current.get("tenant", {})
-        orig_name = orig_tenant.get("name", "Main Shop")
-        orig_slug = orig_tenant.get("slug", "main-shop")
+        orig_name = orig_tenant.get("name", "Test Tenant")
+        orig_slug = orig_tenant.get("slug", "test-tenant")
         try:
             resp = httpx.put(
                 f"{SERVER_URL}/api/tenants/{tid}",
                 json={"name": "Updated Shop", "slug": "updated-shop"},
-                headers=auth_headers, timeout=10,
+                headers=test_admin_headers, timeout=10,
             )
             assert_ok(resp)
         finally:
@@ -70,6 +71,6 @@ class TestTenants:
             resp = httpx.put(
                 f"{SERVER_URL}/api/tenants/{tid}",
                 json={"name": orig_name, "slug": orig_slug},
-                headers=auth_headers, timeout=10,
+                headers=test_admin_headers, timeout=10,
             )
             assert_ok(resp)

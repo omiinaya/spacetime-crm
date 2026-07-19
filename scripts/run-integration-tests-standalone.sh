@@ -152,7 +152,7 @@ log_info "STDB PID=${STDB_PID}, waiting for readiness..."
 
 RETRIES=30
 for i in $(seq 1 $RETRIES); do
-  if curl -sf "$STDB_URL/" >/dev/null 2>&1; then
+  if curl -sf "${STDB_URL}/v1/health" >/dev/null 2>&1; then
     log_pass "STDB is ready at ${STDB_URL}$(elapsed)"
     break
   fi
