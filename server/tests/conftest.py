@@ -64,6 +64,22 @@ def _stdb_write(query: str) -> None:
         pass
 
 
+def _stdb_call(reducer: str, args: list[str]) -> None:
+    """Call a STDB reducer via the HTTP call endpoint.
+
+    STDB reducers cannot be invoked via SQL SELECT. They must be called
+    via the /v1/database/{db}/call/{reducer} REST endpoint.
+    """
+    resp = httpx.post(
+        f"{STDB_CALL_URL}/{reducer}",
+        json=args,
+        timeout=30,
+    )
+    assert resp.status_code == 200, (
+        f"STDB call '{reducer}' failed ({resp.status_code}): {resp.text[:200]}"
+    )
+
+
 def unique_suffix() -> str:
     """Return a short unique string for creating unique test entities."""
     return uuid.uuid4().hex[:8]
@@ -355,7 +371,7 @@ def isolated_tenant(
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
+    _stdb_call("set_user_password", [admin_user_id, hashed])
 
     # Log in as the test admin to get a token
     resp = httpx.post(
@@ -466,7 +482,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     resp = httpx.post(
         f"{SERVER_URL}/api/customers",
         json=data,
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert resp.status_code == 200, f"Customer create failed: {resp.text[:200]}"
@@ -474,7 +490,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     r2 = httpx.get(
         f"{SERVER_URL}/api/customers",
         params={"search": data["email"]},
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert r2.status_code == 200
