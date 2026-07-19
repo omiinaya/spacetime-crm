@@ -10,9 +10,6 @@ from helpers import (
     require_role, logger,
 )
 from models import PaymentCreate
-from mail import _customer_email as _mail_customer_email, _notify_payment_received
-from sms import _customer_phone as _sms_customer_phone, _notify_payment_received as _sms_payment_received
-
 router = APIRouter()
 
 
@@ -54,6 +51,8 @@ async def record_payment(body: PaymentCreate, user: dict = Depends(require_role(
                 await _call("update_invoice_status", [invoice_id, new_status])
 
             async def _notify():
+                from mail import _customer_email as _mail_customer_email, _notify_payment_received
+                from sms import _customer_phone as _sms_customer_phone, _notify_payment_received as _sms_payment_received
                 cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
                 email = _mail_customer_email(cust[0]) if cust else None
                 if email:
