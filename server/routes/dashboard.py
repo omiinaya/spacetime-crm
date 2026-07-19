@@ -1,12 +1,20 @@
 """Dashboard stats + Reports + Audit Log routes."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sql, _sql_t, _paginated, _call, _sort, _log_audit,
-    require_role, get_current_user, logger,
+    _sql,
+    _sql_t,
+    _paginated,
+    _call,
+    _sort,
+    _log_audit,
+    require_role,
+    get_current_user,
+    logger,
 )
 
 router = APIRouter()
@@ -23,12 +31,18 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     total_tickets = len(all_tickets)
     open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
     revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") == "paid")
-    pending_revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") not in ("paid", "cancelled"))
+    pending_revenue = sum(
+        float(i.get("total", 0)) for i in all_invoices if i.get("status") not in ("paid", "cancelled")
+    )
     upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
 
     # Overdue invoices — detect on-the-fly from SQL
     now = int(datetime.utcnow().timestamp() * 1000)
-    sent_partial = [i for i in all_invoices if i.get("status") in ("sent", "partial") and i.get("due_date", 0) > 0 and i.get("due_date", 0) < now]
+    sent_partial = [
+        i
+        for i in all_invoices
+        if i.get("status") in ("sent", "partial") and i.get("due_date", 0) > 0 and i.get("due_date", 0) < now
+    ]
     overdue_invoices = [i for i in all_invoices if i.get("status") == "overdue"]
     # Also include invoices that are past due but not yet marked overdue (detect on-the-fly)
     combined_overdue = overdue_invoices + sent_partial
@@ -40,11 +54,19 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     day_start_ms = int(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
     day_end_ms = day_start_ms + 86400000
-    today_appts = [a for a in all_appointments if day_start_ms <= a.get("start_time", 0) < day_end_ms and a.get("status") not in ("cancelled",)]
+    today_appts = [
+        a
+        for a in all_appointments
+        if day_start_ms <= a.get("start_time", 0) < day_end_ms and a.get("status") not in ("cancelled",)
+    ]
     today_appts_sorted = sorted(today_appts, key=lambda x: x.get("start_time", 0))[:10]
 
     # My assigned tickets for dashboard personalization
-    my_tickets = [t for t in all_tickets if t.get("assigned_user_id") == user["id"] and t.get("status") not in ("resolved", "closed")]
+    my_tickets = [
+        t
+        for t in all_tickets
+        if t.get("assigned_user_id") == user["id"] and t.get("status") not in ("resolved", "closed")
+    ]
 
     # Priority breakdown for my tickets
     my_ticket_counts = {"all": len(my_tickets), "urgent": 0, "high": 0, "medium": 0, "low": 0}
@@ -60,9 +82,7 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     now_ms_month = int(datetime.utcnow().timestamp() * 1000)
     month_start_ms = int(datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
     monthly_revenue = sum(
-        float(p.get("amount", 0))
-        for p in all_payments
-        if month_start_ms <= p.get("created_at", 0) < now_ms_month
+        float(p.get("amount", 0)) for p in all_payments if month_start_ms <= p.get("created_at", 0) < now_ms_month
     )
     monthly_revenue = round(monthly_revenue, 2)
     revenue_target = 25000.0  # default monthly target
@@ -112,9 +132,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
         month_revenue = sum(
-            float(p.get("amount", 0))
-            for p in all_payments
-            if month_start_ts <= p.get("created_at", 0) < month_end_ts
+            float(p.get("amount", 0)) for p in all_payments if month_start_ts <= p.get("created_at", 0) < month_end_ts
         )
         revenue_by_month.append({"month": month_label, "revenue": round(month_revenue, 2)})
 
@@ -139,10 +157,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         month_start_ts = int(month_start.timestamp() * 1000)
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
-        month_count = sum(
-            1 for a in all_appointments
-            if month_start_ts <= a.get("start_time", 0) < month_end_ts
-        )
+        month_count = sum(1 for a in all_appointments if month_start_ts <= a.get("start_time", 0) < month_end_ts)
         appt_by_month.append({"month": month_label, "appointments": month_count})
 
     total_revenue = sum(float(p.get("amount", 0)) for p in all_payments)
@@ -151,8 +166,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
     total_sent = sum(1 for inv in all_invoices if inv.get("status") not in ("draft", "cancelled"))
     total_paid = sum(1 for inv in all_invoices if inv.get("status") == "paid")
     outstanding_revenue = sum(
-        float(inv.get("total", 0)) for inv in all_invoices
-        if inv.get("status") in ("sent", "overdue", "partial")
+        float(inv.get("total", 0)) for inv in all_invoices if inv.get("status") in ("sent", "overdue", "partial")
     )
 
     resolution_times = []
@@ -190,7 +204,11 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
     # Also check on-the-fly overdue
     now_ms_inv = int(now.timestamp() * 1000)
     for inv in all_invoices:
-        if inv.get("status") in ("sent", "partial") and inv.get("due_date", 0) > 0 and inv.get("due_date", 0) < now_ms_inv:
+        if (
+            inv.get("status") in ("sent", "partial")
+            and inv.get("due_date", 0) > 0
+            and inv.get("due_date", 0) < now_ms_inv
+        ):
             overdue_invoices += 1
             total_sent_invoices += 1
     overdue_rate = round((overdue_invoices / total_sent_invoices * 100), 1) if total_sent_invoices > 0 else 0
@@ -213,10 +231,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         if inv.get("status") == "paid":
             customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
     all_customers = await _sql("SELECT id, first_name, last_name FROM customer")
-    cust_name_map = {
-        c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
-        for c in all_customers
-    }
+    cust_name_map = {c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip() for c in all_customers}
     top_customers = [
         {"customer_name": cust_name_map.get(cid, "Unknown"), "revenue": round(rev, 2)}
         for cid, rev in sorted(customer_revenue.items(), key=lambda x: -x[1])[:10]
@@ -230,10 +245,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         month_start_ts = int(month_start.timestamp() * 1000)
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
-        month_count = sum(
-            1 for c in all_customers
-            if month_start_ts <= c.get("created_at", 0) < month_end_ts
-        )
+        month_count = sum(1 for c in all_customers if month_start_ts <= c.get("created_at", 0) < month_end_ts)
         customers_by_month.append({"month": month_label, "new_customers": month_count})
 
     return {
@@ -262,6 +274,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
 
 # ── AUDIT LOG ──
 
+
 @router.get("/api/audit-log")
 async def get_audit_log(
     offset: int = 0,
@@ -277,9 +290,12 @@ async def get_audit_log(
     if action:
         where += (" AND " if where else "") + f"action = '{action}'"
     rows, total = await _paginated(
-        "", "audit_log",
-        offset=offset, limit=limit,
+        "",
+        "audit_log",
+        offset=offset,
+        limit=limit,
         where_extra=where,
-        order_by="created_at", order_desc=True,
+        order_by="created_at",
+        order_desc=True,
     )
     return {"entries": rows, "total": total, "offset": offset, "limit": limit}

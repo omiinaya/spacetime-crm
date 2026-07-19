@@ -4,6 +4,7 @@ Uses session-scoped isolation via session_suffix and tracks all created
 entities so the session cleanup fixture can remove them — no shared STDB
 state between test sessions.
 """
+
 import pytest
 import httpx
 from .conftest import (
@@ -86,9 +87,7 @@ class TestPurchaseOrderCRUD:
             _track_entity("purchase_order", data["purchase_order"]["id"])
 
     def test_list_purchase_orders(self, auth_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/purchase-orders", headers=auth_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/purchase-orders", headers=auth_headers, timeout=10)
         data = assert_ok(resp)
         assert "purchase_orders" in data
         assert "total" in data
@@ -128,9 +127,7 @@ class TestPurchaseOrderCRUD:
 class TestPOLineItems:
     """PO line item lifecycle: add, list, delete."""
 
-    def test_add_line_item(
-        self, auth_headers: dict, test_product_id: str, session_suffix: str
-    ):
+    def test_add_line_item(self, auth_headers: dict, test_product_id: str, session_suffix: str):
         po_id = _create_po(auth_headers, session_suffix, "addli")
         resp = httpx.post(
             f"{SERVER_URL}/api/purchase-orders/{po_id}/line-items",
@@ -145,9 +142,7 @@ class TestPOLineItems:
         )
         assert_ok(resp)
 
-    def test_list_line_items_in_get(
-        self, auth_headers: dict, test_product_id: str, session_suffix: str
-    ):
+    def test_list_line_items_in_get(self, auth_headers: dict, test_product_id: str, session_suffix: str):
         po_id = _create_po(auth_headers, session_suffix, "listli")
         httpx.post(
             f"{SERVER_URL}/api/purchase-orders/{po_id}/line-items",
@@ -170,9 +165,7 @@ class TestPOLineItems:
         assert len(items) >= 1
         assert items[0]["description"] == "Gadget"
 
-    def test_delete_line_item(
-        self, auth_headers: dict, test_product_id: str, session_suffix: str
-    ):
+    def test_delete_line_item(self, auth_headers: dict, test_product_id: str, session_suffix: str):
         po_id = _create_po(auth_headers, session_suffix, "delli")
         httpx.post(
             f"{SERVER_URL}/api/purchase-orders/{po_id}/line-items",
@@ -225,9 +218,7 @@ class TestPOLineItems:
 class TestPOReceiving:
     """Purchase order receiving flow — partial and full receive."""
 
-    def test_receive_item_updates_stock(
-        self, auth_headers: dict, test_product_id: str, session_suffix: str
-    ):
+    def test_receive_item_updates_stock(self, auth_headers: dict, test_product_id: str, session_suffix: str):
         """Receiving a PO item adds to product stock."""
         po_id = _create_po(auth_headers, session_suffix, "receive")
         product_id = test_product_id
@@ -273,9 +264,7 @@ class TestPOReceiving:
         )
         for li in r2.json()["purchase_order"]["line_items"]:
             if li["id"] == item_id:
-                assert (
-                    float(li.get("received_quantity", 0)) == 10
-                ), f"receive_quantity not set: {li}"
+                assert float(li.get("received_quantity", 0)) == 10, f"receive_quantity not set: {li}"
                 break
         else:
             pytest.fail("Line item not found in PO after receive")
@@ -288,13 +277,9 @@ class TestPOReceiving:
         )
         adj = r3.json().get("adjustments", [])
         assert len(adj) >= 1, f"Expected at least 1 adjustment, got {adj}"
-        assert any(
-            a.get("reason") == "received" for a in adj
-        ), f"Expected 'received' adjustment, got: {adj}"
+        assert any(a.get("reason") == "received" for a in adj), f"Expected 'received' adjustment, got: {adj}"
 
-    def test_full_receive_updates_progress(
-        self, auth_headers: dict, test_product_id: str, session_suffix: str
-    ):
+    def test_full_receive_updates_progress(self, auth_headers: dict, test_product_id: str, session_suffix: str):
         """Receiving all items shows 100% receipt_progress."""
         po_id = _create_po(auth_headers, session_suffix, "fullrecv")
         httpx.post(
@@ -335,17 +320,13 @@ class TestPOReceiving:
         po_data = r2.json()["purchase_order"]
         for li in po_data["line_items"]:
             if li["id"] == item_id:
-                assert (
-                    float(li.get("received_quantity", 0)) == 5
-                ), f"Line item received_quantity not updated: {li}"
+                assert float(li.get("received_quantity", 0)) == 5, f"Line item received_quantity not updated: {li}"
                 break
 
 
 class TestPOErrors:
     def test_create_missing_vendor(self, auth_headers: dict):
-        resp = httpx.post(
-            f"{SERVER_URL}/api/purchase-orders", json={}, headers=auth_headers, timeout=10
-        )
+        resp = httpx.post(f"{SERVER_URL}/api/purchase-orders", json={}, headers=auth_headers, timeout=10)
         assert resp.status_code == 422
 
     def test_unauthorized_access(self, client: httpx.Client):

@@ -1,19 +1,39 @@
 """Estimate CRUD, line items, status workflow, and conversion integration tests."""
+
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
+from .conftest import (
+    SERVER_URL,
+    assert_ok,
+    create_customer,
+    unique_suffix,
+    _stdb_sql,
+    _track_entity,
+    test_admin_headers,
+)
 
 
 def _create_customer(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     suf = suffix or unique_suffix()
-    c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Est", last_name=f"Test{suf}", email=f"est-{session_suffix}-{suf}@example.com")
+    c = create_customer(
+        test_admin_headers,
+        session_suffix=session_suffix,
+        first_name="Est",
+        last_name=f"Test{suf}",
+        email=f"est-{session_suffix}-{suf}@example.com",
+    )
     return c["id"]
 
 
 def _create_estimate(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     cid = _create_customer(test_admin_headers, session_suffix, suffix)
     notes = f"Est test {session_suffix}-{suffix or unique_suffix()}"
-    httpx.post(f"{SERVER_URL}/api/estimates", json={"customer_id": cid, "notes": notes, "expires_at": 0}, headers=test_admin_headers, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/estimates",
+        json={"customer_id": cid, "notes": notes, "expires_at": 0},
+        headers=test_admin_headers,
+        timeout=10,
+    )
     rows = _stdb_sql(f"SELECT id FROM estimate WHERE notes = '{notes}'")
     assert len(rows) > 0, f"Estimate not found for notes '{notes}'"
     eid = rows[0]["id"]
@@ -27,11 +47,13 @@ class TestEstimateCRUD:
     def test_create_estimate(self, test_admin_headers: dict, session_suffix: str):
         cid = _create_customer(test_admin_headers, session_suffix, "create")
         from .conftest import unique_suffix, test_admin_headers
+
         notes = f"Test estimate {session_suffix}-{unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/estimates",
             json={"customer_id": cid, "notes": notes, "expires_at": 0},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -42,7 +64,9 @@ class TestEstimateCRUD:
         assert "total" in data
 
     def test_list_estimates_filter_by_status(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/estimates", params={"status": "draft"}, headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/estimates", params={"status": "draft"}, headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         for est in data["estimates"]:
             assert est["status"] == "draft"
@@ -57,7 +81,8 @@ class TestEstimateCRUD:
             resp = httpx.post(
                 f"{SERVER_URL}/api/estimates/{est_id}/line-items",
                 json=item,
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
@@ -72,7 +97,8 @@ class TestEstimateCRUD:
             resp = httpx.put(
                 f"{SERVER_URL}/api/estimates/{est_id}/status",
                 json={"status": status},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
@@ -91,10 +117,20 @@ class TestEstimateConversion:
         cid = _create_customer(test_admin_headers, session_suffix, "conv2")
 
         # Add line item (so estimate has content)
-        httpx.post(f"{SERVER_URL}/api/estimates/{est_id}/line-items", json={"description": "Repair service", "quantity": 1, "unit_price": 150}, headers=test_admin_headers, timeout=10)
+        httpx.post(
+            f"{SERVER_URL}/api/estimates/{est_id}/line-items",
+            json={"description": "Repair service", "quantity": 1, "unit_price": 150},
+            headers=test_admin_headers,
+            timeout=10,
+        )
 
         # Approve
-        httpx.put(f"{SERVER_URL}/api/estimates/{est_id}/status", json={"status": "approved"}, headers=test_admin_headers, timeout=10)
+        httpx.put(
+            f"{SERVER_URL}/api/estimates/{est_id}/status",
+            json={"status": "approved"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
 
         # Convert
         resp = httpx.post(f"{SERVER_URL}/api/estimates/{est_id}/convert", headers=test_admin_headers, timeout=15)
@@ -116,13 +152,17 @@ class TestEstimateConversion:
         assert resp.status_code == 400, f"Expected 400 for non-approved, got {resp.status_code}: {resp.text[:200]}"
 
     def test_convert_nonexistent(self, test_admin_headers: dict):
-        resp = httpx.post(f"{SERVER_URL}/api/estimates/nonexistent-id-99999/convert", headers=test_admin_headers, timeout=10)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/estimates/nonexistent-id-99999/convert", headers=test_admin_headers, timeout=10
+        )
         assert resp.status_code == 404
 
 
 class TestEstimateErrors:
     def test_create_missing_customer(self, test_admin_headers: dict):
-        resp = httpx.post(f"{SERVER_URL}/api/estimates", json={"notes": "No customer"}, headers=test_admin_headers, timeout=10)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/estimates", json={"notes": "No customer"}, headers=test_admin_headers, timeout=10
+        )
         assert resp.status_code == 422
 
     def test_delete_nonexistent(self, test_admin_headers: dict):

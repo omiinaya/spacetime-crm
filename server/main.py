@@ -1,4 +1,5 @@
 """SpacetimeCRM — FastAPI application entry point."""
+
 from __future__ import annotations
 
 import secrets
@@ -40,9 +41,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 from handlers import register_exception_handlers
+
 register_exception_handlers(app)
 
 from routes import register_routers
+
 register_routers(app)
 
 # ── SPA static files ──────────────────────────────────────────

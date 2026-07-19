@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Seed demo data into SpacetimeCRM."""
+
 import httpx
 import json
 import sys
@@ -15,8 +16,10 @@ TOKEN = resp.json()["token"]
 H = {"Authorization": f"Bearer {TOKEN}"}
 C = httpx.Client(headers=H, base_url=BASE)
 
+
 def ok(r):
     return r.status_code == 200
+
 
 # ── Customers ──
 customers = [
@@ -28,11 +31,21 @@ customers = [
 ]
 cust_ids = []
 for fname, lname, email, phone, company, addr, city, state, zip_code in customers:
-    r = C.post("/api/customers", json={
-        "first_name": fname, "last_name": lname, "email": email, "phone": phone,
-        "company": company, "address_line1": addr, "city": city, "state": state, "zip": zip_code,
-        "mobile": phone,
-    })
+    r = C.post(
+        "/api/customers",
+        json={
+            "first_name": fname,
+            "last_name": lname,
+            "email": email,
+            "phone": phone,
+            "company": company,
+            "address_line1": addr,
+            "city": city,
+            "state": state,
+            "zip": zip_code,
+            "mobile": phone,
+        },
+    )
     if ok(r):
         # Fetch the customer back to get the STDB-assigned ID
         r2 = C.get(f"/api/customers?search={email}")
@@ -58,10 +71,18 @@ products = [
 ]
 prod_ids = []
 for name, sku, price, cost, stock, min_stock in products:
-    r = C.post("/api/products", json={
-        "name": name, "sku": sku, "price": price, "cost": cost,
-        "quantity_on_hand": stock, "min_stock": min_stock, "active": True,
-    })
+    r = C.post(
+        "/api/products",
+        json={
+            "name": name,
+            "sku": sku,
+            "price": price,
+            "cost": cost,
+            "quantity_on_hand": stock,
+            "min_stock": min_stock,
+            "active": True,
+        },
+    )
     if ok(r):
         prod_ids.append(r.json().get("id", ""))
         print(f"  ✅ Product: {name}")
@@ -77,11 +98,18 @@ tickets = [
 ]
 ticket_ids = []
 for ci, device, issue, status, priority in tickets:
-    r = C.post("/api/tickets", json={
-        "customer_id": cust_ids[ci], "device_type": device.split()[0],
-        "device_model": device, "title": f"{device} - {issue[:30]}",
-        "description": issue, "status": status, "priority": priority,
-    })
+    r = C.post(
+        "/api/tickets",
+        json={
+            "customer_id": cust_ids[ci],
+            "device_type": device.split()[0],
+            "device_model": device,
+            "title": f"{device} - {issue[:30]}",
+            "description": issue,
+            "status": status,
+            "priority": priority,
+        },
+    )
     if ok(r):
         ticket_ids.append(r.json().get("id", ""))
         print(f"  ✅ Ticket: {device} ({status})")
@@ -93,12 +121,17 @@ inv_items_data = [
     (4, 5, [("Data Recovery", "DAT-001", 1, 99.99)]),
 ]
 for ci, ti, items in inv_items_data:
-    r = C.post("/api/invoices", json={
-        "customer_id": cust_ids[ci], "ticket_id": ticket_ids[ti] if ti < len(ticket_ids) else "",
-        "subtotal": sum(q * p for _, _, q, p in items),
-        "total": sum(q * p for _, _, q, p in items),
-        "status": "sent", "notes": "Demo invoice",
-    })
+    r = C.post(
+        "/api/invoices",
+        json={
+            "customer_id": cust_ids[ci],
+            "ticket_id": ticket_ids[ti] if ti < len(ticket_ids) else "",
+            "subtotal": sum(q * p for _, _, q, p in items),
+            "total": sum(q * p for _, _, q, p in items),
+            "status": "sent",
+            "notes": "Demo invoice",
+        },
+    )
     inv_data = r.json()
     print(f"  ✅ Invoice created: HTTP {r.status_code}")
     # Get the invoice ID from the list
@@ -107,23 +140,36 @@ for ci, ti, items in inv_items_data:
     if invoices:
         inv_id = invoices[0]["id"]
         for desc, _, qty, price in items:
-            C.post(f"/api/invoices/{inv_id}/line-items", json={
-                "item_type": "product", "description": desc,
-                "quantity": qty, "unit_price": price, "total": qty * price,
-            })
+            C.post(
+                f"/api/invoices/{inv_id}/line-items",
+                json={
+                    "item_type": "product",
+                    "description": desc,
+                    "quantity": qty,
+                    "unit_price": price,
+                    "total": qty * price,
+                },
+            )
 
 # ── Payments ──
 r = C.get("/api/invoices")
 invoices = r.json().get("invoices", [])
 if invoices:
-    C.post("/api/payments", json={
-        "invoice_id": invoices[-1]["id"], "customer_id": invoices[-1].get("customer_id", ""),
-        "amount": 49.99, "method": "card", "notes": "Partial payment",
-    })
+    C.post(
+        "/api/payments",
+        json={
+            "invoice_id": invoices[-1]["id"],
+            "customer_id": invoices[-1].get("customer_id", ""),
+            "amount": 49.99,
+            "method": "card",
+            "notes": "Partial payment",
+        },
+    )
     print(f"  ✅ Payment recorded")
 
 # ── Appointments ──
 import time
+
 now = int(time.time() * 1000)
 appts = [
     (0, "iPhone 15 Screen Repair", now + 86400000, now + 86400000 + 3600000, "scheduled"),
@@ -131,10 +177,16 @@ appts = [
     (2, "Charging Port Diagnosis", now - 86400000, now - 86400000 + 3600000, "completed"),
 ]
 for ci, title, start, end, status in appts:
-    r = C.post("/api/appointments", json={
-        "customer_id": cust_ids[ci], "title": title,
-        "start_time": start, "end_time": end, "status": status,
-    })
+    r = C.post(
+        "/api/appointments",
+        json={
+            "customer_id": cust_ids[ci],
+            "title": title,
+            "start_time": start,
+            "end_time": end,
+            "status": status,
+        },
+    )
     if ok(r):
         print(f"  ✅ Appointment: {title}")
 
@@ -142,7 +194,7 @@ for ci, title, start, end, status in appts:
 print("\n=== VERIFICATION ===")
 for table in ["customers", "products", "tickets", "invoices", "payments", "appointments"]:
     r = C.get(f"/api/{table}")
-    count = len(r.json().get(table if table != "products" else table, r.json().get(table.rstrip('s'), [])))
+    count = len(r.json().get(table if table != "products" else table, r.json().get(table.rstrip("s"), [])))
     print(f"  {table}: {count}")
 
 print("\n✅ Demo data seeded!")

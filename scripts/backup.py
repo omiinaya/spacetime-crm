@@ -35,17 +35,17 @@ TABLES = [
     "customer",
     "user",
     "user_settings",
-    "products",            # accessor = products
-    "tax_rates",           # accessor = tax_rates
+    "products",  # accessor = products
+    "tax_rates",  # accessor = tax_rates
     "ticket",
     "ticket_note",
     "ticket_timer",
-    "invoices",            # accessor = invoices
+    "invoices",  # accessor = invoices
     "invoice_line_items",  # accessor = invoice_line_items
     "payment",
     "appointment",
-    "estimates",           # accessor = estimates
-    "estimate_line_items", # accessor = estimate_line_items
+    "estimates",  # accessor = estimates
+    "estimate_line_items",  # accessor = estimate_line_items
     "purchase_order",
     "purchase_order_line_item",
     "inventory_adjustment",
@@ -70,11 +70,7 @@ def sql_query(client: httpx.Client, query: str) -> list[dict]:
         for table_result in data:
             rows = table_result.get("rows", [])
             schema = table_result.get("schema", {})
-            cols = [
-                e["name"]["some"]
-                for e in schema.get("elements", [])
-                if "some" in e.get("name", {})
-            ]
+            cols = [e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})]
             for row in rows:
                 result.append(dict(zip(cols, row)))
     return result

@@ -2,9 +2,18 @@
 
 Each test method creates its own data for STDB state isolation.
 """
+
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
+from .conftest import (
+    SERVER_URL,
+    assert_ok,
+    create_customer,
+    unique_suffix,
+    _stdb_sql,
+    _track_entity,
+    test_admin_headers,
+)
 
 
 def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> str:
@@ -16,19 +25,26 @@ def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suff
     suf = suffix or unique_suffix()
     title = overrides.get("title", f"Appt-{session_suffix}-{suf}")
     email = f"appt-cust-{session_suffix}-{suf}@example.com"
-    c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Test{suf}", email=email)
+    c = create_customer(
+        test_admin_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Test{suf}", email=email
+    )
     cid = c.get("id")
     assert cid
 
-    httpx.post(f"{SERVER_URL}/api/appointments", json={
-        "customer_id": cid,
-        "title": title,
-        "description": overrides.get("description", "Auto-generated"),
-        "start_time": overrides.get("start_time", 1783000000000),
-        "end_time": overrides.get("end_time", 1783003600000),
-        "all_day": overrides.get("all_day", False),
-        "recurrence_rule": overrides.get("recurrence_rule", ""),
-    }, headers=test_admin_headers, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/appointments",
+        json={
+            "customer_id": cid,
+            "title": title,
+            "description": overrides.get("description", "Auto-generated"),
+            "start_time": overrides.get("start_time", 1783000000000),
+            "end_time": overrides.get("end_time", 1783003600000),
+            "all_day": overrides.get("all_day", False),
+            "recurrence_rule": overrides.get("recurrence_rule", ""),
+        },
+        headers=test_admin_headers,
+        timeout=10,
+    )
 
     rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
     assert len(rows) >= 1, f"No appointment found with title '{title}'"
@@ -61,7 +77,8 @@ class TestAppointmentCRUD:
             resp = httpx.put(
                 f"{SERVER_URL}/api/appointments/{appt_id}/status",
                 json={"status": status},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
@@ -76,7 +93,13 @@ class TestRecurringAppointments:
     """Recurring appointment series and occurrence generation."""
 
     def _make_customer(self, test_admin_headers: dict, session_suffix: str = "") -> str:
-        c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Recur", last_name="Appt", email=f"recur-appt-{session_suffix}-{unique_suffix()}@example.com")
+        c = create_customer(
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Recur",
+            last_name="Appt",
+            email=f"recur-appt-{session_suffix}-{unique_suffix()}@example.com",
+        )
         return c["id"]
 
     def test_create_recurring_appointment(self, test_admin_headers: dict, session_suffix: str):
@@ -91,7 +114,8 @@ class TestRecurringAppointments:
                 "end_time": 1783003600000,
                 "recurrence_rule": "weekly",
             },
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -124,7 +148,8 @@ class TestRecurringAppointments:
         resp = httpx.post(
             f"{SERVER_URL}/api/appointments/generate-next",
             json={"series_id": series_id},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert data.get("start_time", 0) > 0, f"Expected start_time, got: {data}"
@@ -137,7 +162,8 @@ class TestRecurringAppointments:
         resp = httpx.put(
             f"{SERVER_URL}/api/appointments/{appt_id}/recurrence",
             json={"recurrence_rule": "monthly"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -156,7 +182,12 @@ class TestRecurringAppointments:
 
         # Generate 2 occurrences
         for _ in range(2):
-            httpx.post(f"{SERVER_URL}/api/appointments/generate-next", json={"series_id": series_id}, headers=test_admin_headers, timeout=10)
+            httpx.post(
+                f"{SERVER_URL}/api/appointments/generate-next",
+                json={"series_id": series_id},
+                headers=test_admin_headers,
+                timeout=10,
+            )
 
         # Check series again via STDB SQL
         children = _stdb_sql(f"SELECT * FROM appointment WHERE series_id = '{series_id}'")
@@ -171,7 +202,8 @@ class TestAppointmentErrors:
         resp = httpx.post(
             f"{SERVER_URL}/api/appointments",
             json={"customer_id": "test", "start_time": 0, "end_time": 0},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 422
 

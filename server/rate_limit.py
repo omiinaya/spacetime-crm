@@ -6,6 +6,7 @@ Tiered limits:
   Settings / admin      30/minute
   Everything else      100/minute  (default)
 """
+
 from __future__ import annotations
 
 from slowapi import Limiter as _Limiter

@@ -1,4 +1,5 @@
 """Stripe payment processing for SpacetimeCRM."""
+
 import logging
 from typing import Any, Optional
 
@@ -44,17 +45,19 @@ async def create_checkout_session(
             mode="payment",
             payment_method_types=["card"],
             customer_email=customer_email,
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {
-                        "name": f"Invoice #{invoice_number}",
-                        "description": line_items_desc or f"Payment for Invoice #{invoice_number}",
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {
+                            "name": f"Invoice #{invoice_number}",
+                            "description": line_items_desc or f"Payment for Invoice #{invoice_number}",
+                        },
+                        "unit_amount": int(round(amount * 100)),  # cents
                     },
-                    "unit_amount": int(round(amount * 100)),  # cents
-                },
-                "quantity": 1,
-            }],
+                    "quantity": 1,
+                }
+            ],
             metadata={
                 "invoice_id": invoice_id,
                 "customer_id": customer_id,
@@ -82,9 +85,7 @@ async def verify_webhook(payload: bytes, sig_header: str) -> Optional[dict[str, 
     init_stripe()
 
     try:
-        event = stripe_lib.Webhook.construct_event(
-            payload, sig_header, settings.stripe_webhook_secret
-        )
+        event = stripe_lib.Webhook.construct_event(payload, sig_header, settings.stripe_webhook_secret)
         return event.to_dict_recursive()
     except StripeError as e:
         logger.error("Stripe webhook signature verification failed: %s", e)
@@ -149,7 +150,9 @@ async def create_payment_intent(
         )
         logger.info(
             "Stripe PaymentIntent %s: status=%s for invoice #%s",
-            intent.id, intent.status, invoice_number,
+            intent.id,
+            intent.status,
+            invoice_number,
         )
         return {
             "payment_intent_id": intent.id,

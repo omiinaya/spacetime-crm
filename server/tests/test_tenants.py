@@ -1,8 +1,17 @@
 """Tenant management integration tests."""
+
 import pytest
 import httpx
 import uuid
-from .conftest import SERVER_URL, assert_ok, test_admin_headers, test_tenant_id, test_admin_token, _track_entity, _stdb_sql
+from .conftest import (
+    SERVER_URL,
+    assert_ok,
+    test_admin_headers,
+    test_tenant_id,
+    test_admin_token,
+    _track_entity,
+    _stdb_sql,
+)
 
 
 class TestTenants:
@@ -29,7 +38,8 @@ class TestTenants:
         resp = httpx.post(
             f"{SERVER_URL}/api/tenants",
             json={"name": "Test Tenant", "slug": slug},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert data.get("ok") is True
@@ -63,7 +73,8 @@ class TestTenants:
             resp = httpx.put(
                 f"{SERVER_URL}/api/tenants/{tid}",
                 json={"name": "Updated Shop", "slug": "updated-shop"},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
         finally:
@@ -71,6 +82,7 @@ class TestTenants:
             resp = httpx.put(
                 f"{SERVER_URL}/api/tenants/{tid}",
                 json={"name": orig_name, "slug": orig_slug},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)

@@ -3,6 +3,7 @@
 All POST/PUT endpoints should use these models instead of raw `body: dict`.
 This provides type validation, clear error messages (422), and API docs.
 """
+
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from sanitize import SanitizedModel
@@ -14,6 +15,7 @@ BaseModel = SanitizedModel
 
 # ─── Auth ────────────────────────────────────────────────────────
 
+
 class LoginRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=1, max_length=255)
@@ -24,6 +26,7 @@ class SetPasswordRequest(BaseModel):
 
 
 # ─── Customers ───────────────────────────────────────────────────
+
 
 class CustomerCreate(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=100)
@@ -59,6 +62,7 @@ class CustomerUpdate(BaseModel):
 
 # ─── Tickets ─────────────────────────────────────────────────────
 
+
 class TicketCreate(BaseModel):
     customer_id: str = Field(..., min_length=1, max_length=100)
     title: str = Field(..., min_length=1, max_length=500)
@@ -90,6 +94,7 @@ class TicketNoteCreate(BaseModel):
 
 
 # ─── Invoices ────────────────────────────────────────────────────
+
 
 class InvoiceCreate(BaseModel):
     customer_id: str = Field(..., min_length=1, max_length=100)
@@ -130,6 +135,7 @@ class BulkInvoiceEdit(BaseModel):
 
 # ─── Payments ────────────────────────────────────────────────────
 
+
 class PaymentCreate(BaseModel):
     invoice_id: str = Field(..., min_length=1, max_length=100)
     customer_id: str = Field(..., min_length=1, max_length=100)
@@ -141,6 +147,7 @@ class PaymentCreate(BaseModel):
 
 
 # ─── Appointments ────────────────────────────────────────────────
+
 
 class AppointmentCreate(BaseModel):
     customer_id: str = Field(..., min_length=1, max_length=100)
@@ -169,6 +176,7 @@ class GenerateNextOccurrence(BaseModel):
 
 # ─── Products ────────────────────────────────────────────────────
 
+
 class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     sku: str = Field(default="", max_length=100)
@@ -188,6 +196,7 @@ class ProductQuantityUpdate(BaseModel):
 
 
 # ─── Purchase Orders ─────────────────────────────────────────────
+
 
 class PurchaseOrderCreate(BaseModel):
     vendor_name: str = Field(..., min_length=1, max_length=255)
@@ -218,6 +227,7 @@ class POApprovalAction(BaseModel):
 
 # ─── Scheduled Reports ──────────────────────────────────────────
 
+
 class ScheduledReportCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     report_type: str = Field(..., pattern=r"^(revenue|tickets|invoices|appointments|tech_productivity|customers)$")
@@ -238,6 +248,7 @@ class ScheduledReportUpdate(BaseModel):
 
 
 # ─── Estimates ───────────────────────────────────────────────────
+
 
 class EstimateCreate(BaseModel):
     customer_id: str = Field(..., min_length=1, max_length=100)
@@ -262,6 +273,7 @@ class EstimateLineItemCreate(BaseModel):
 
 # ─── Tax Rates ───────────────────────────────────────────────────
 
+
 class TaxRateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     rate: float = Field(..., ge=0, le=100)
@@ -275,6 +287,7 @@ class TaxRateUpdate(BaseModel):
 
 
 # ─── Inventory ───────────────────────────────────────────────────
+
 
 class InventoryAdjustmentCreate(BaseModel):
     quantity_change: float = Field(...)
@@ -293,6 +306,7 @@ class StockTransferRequest(BaseModel):
 
 
 # ─── Tenants ─────────────────────────────────────────────────────
+
 
 class TenantCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -317,6 +331,7 @@ class TenantMemberRoleUpdate(BaseModel):
 
 # ─── Custom Fields ───────────────────────────────────────────────
 
+
 class CustomFieldDefinitionCreate(BaseModel):
     id: str = Field(default="", max_length=100)
     entity_type: str = Field(..., pattern=r"^(customer|ticket|invoice|product)$")
@@ -333,6 +348,7 @@ class CustomFieldValuesUpdate(BaseModel):
 
 
 # ─── Checklist ───────────────────────────────────────────────────
+
 
 class ChecklistTemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -356,6 +372,7 @@ class ChecklistToggle(BaseModel):
 
 # ─── Webhook ─────────────────────────────────────────────────────
 
+
 class WebhookSubscriptionCreate(BaseModel):
     url: str = Field(..., min_length=5, max_length=2000)
     events: str = Field(..., min_length=1)
@@ -370,6 +387,7 @@ class WebhookSubscriptionUpdate(BaseModel):
 
 
 # ─── User ────────────────────────────────────────────────────────
+
 
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -391,6 +409,7 @@ class UserSettingsUpdate(BaseModel):
 
 # ─── Mail/SMS Settings ───────────────────────────────────────────
 
+
 class MailSettingsUpdate(BaseModel):
     smtp_host: str = Field(default="", max_length=255)
     smtp_port: int = Field(default=587, ge=1, le=65535)
@@ -410,6 +429,7 @@ class SMSSettingsUpdate(BaseModel):
 
 
 # ─── Portal ──────────────────────────────────────────────────────
+
 
 class PortalLoginRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
@@ -452,6 +472,7 @@ class TenantMigrate(BaseModel):
 
 # ─── Recurring Invoices ─────────────────────────────────────────
 
+
 class RecurringInvoiceLineItem(BaseModel):
     description: str = Field(default="", max_length=500)
     quantity: float = Field(default=1, ge=0)
@@ -481,6 +502,7 @@ class RecurringInvoiceRuleUpdate(BaseModel):
 
 # ─── Payment Methods ────────────────────────────────────────────
 
+
 class SavePaymentMethodRequest(BaseModel):
     customer_id: str = Field(..., min_length=1, max_length=100)
     stripe_payment_method_id: str = Field(..., min_length=1, max_length=255)
@@ -498,7 +520,9 @@ class PortalPayWithSavedCard(BaseModel):
     invoice_id: str = Field(..., min_length=1)
     payment_method_id: str = Field(..., min_length=1)
 
+
 # ─── POS / Counter Sale ─────────────────────────────────────────
+
 
 class POSCreate(BaseModel):
     customer_id: str = Field(default="", max_length=100)
@@ -518,7 +542,9 @@ class POSAddItem(BaseModel):
     quantity: float = Field(..., gt=0)
     unit_price: float = Field(..., ge=0)
 
+
 # ─── 2FA / TOTP ─────────────────────────────────────────────────
+
 
 class Setup2FARequest(BaseModel):
     code: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
@@ -543,6 +569,7 @@ class PosLoginRequest(BaseModel):
 
 
 # ─── Business Hours ─────────────────────────────────────────────
+
 
 class DayHours(BaseModel):
     enabled: bool = True

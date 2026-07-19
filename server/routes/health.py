@@ -1,4 +1,5 @@
 """Health check routes."""
+
 from __future__ import annotations
 
 import httpx

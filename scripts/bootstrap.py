@@ -4,6 +4,7 @@
 Reads environment variables STDB_HOST, STDB_PORT, STDB_DB, and CRM_API_URL
 for flexibility with test instances (defaults: localhost:3001 / spacetime-crm / localhost:8723).
 """
+
 import os
 import httpx
 import bcrypt
@@ -37,14 +38,20 @@ r = C.post(f"/v1/database/{STDB_DB}/call/create_user", json=["admin", "admin@crm
 print(f"  User created: HTTP {r.status_code}")
 
 # 3. Find user ID
-r = C.post(f"/v1/database/{STDB_DB}/sql", content="SELECT * FROM user WHERE email = 'admin@crm.local'", headers={"Content-Type": "text/plain"})
+r = C.post(
+    f"/v1/database/{STDB_DB}/sql",
+    content="SELECT * FROM user WHERE email = 'admin@crm.local'",
+    headers={"Content-Type": "text/plain"},
+)
 users = r.json()
 if users and users[0]["rows"]:
     uid = users[0]["rows"][0][0]
     username = users[0]["rows"][0][1]
     print(f"  User ID: {uid}, username: {username}")
     # 4. Set password
-    hashed = bcrypt.hashpw(os.environ.get("CRM_ADMIN_PW", "change-me-in-production").encode(), bcrypt.gensalt()).decode()
+    hashed = bcrypt.hashpw(
+        os.environ.get("CRM_ADMIN_PW", "change-me-in-production").encode(), bcrypt.gensalt()
+    ).decode()
     r = C.post(f"/v1/database/{STDB_DB}/call/set_user_password", json=[uid, hashed])
     print(f"  Password set: HTTP {r.status_code}")
 else:
@@ -52,7 +59,11 @@ else:
     exit(1)
 
 # 5. Find tenant ID
-r = C.post(f"/v1/database/{STDB_DB}/sql", content="SELECT * FROM tenants WHERE slug = 'default'", headers={"Content-Type": "text/plain"})
+r = C.post(
+    f"/v1/database/{STDB_DB}/sql",
+    content="SELECT * FROM tenants WHERE slug = 'default'",
+    headers={"Content-Type": "text/plain"},
+)
 tenants = r.json()
 if tenants and tenants[0]["rows"]:
     tid = tenants[0]["rows"][0][0]
@@ -66,7 +77,10 @@ else:
 
 # 7. Verify login via API
 C2 = httpx.Client(base_url=CRM_API_URL, timeout=15)
-r = C2.post("/api/auth/login", json={"email": "admin@crm.local", "password": os.environ.get("CRM_ADMIN_PW", "change-me-in-production")})
+r = C2.post(
+    "/api/auth/login",
+    json={"email": "admin@crm.local", "password": os.environ.get("CRM_ADMIN_PW", "change-me-in-production")},
+)
 if r.status_code == 200:
     data = r.json()
     print(f"  ✅ Login OK, token: {data['token'][:30]}...")

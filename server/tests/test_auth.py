@@ -4,6 +4,7 @@ Uses isolated tenant admin for most tests to avoid polluting global admin state.
 Global admin tests are kept for coverage but are scoped to only check that
 the bootstrap admin user exists and can log in.
 """
+
 import base64
 import json
 import pytest
@@ -16,9 +17,13 @@ class TestAuth:
 
     def test_login_success_admin(self, client: httpx.Client):
         """Global admin credentials return a token (bootstrap state test)."""
-        resp = client.post("/api/auth/login", json={
-            "email": ADMIN_EMAIL, "password": ADMIN_PW,
-        })
+        resp = client.post(
+            "/api/auth/login",
+            json={
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PW,
+            },
+        )
         data = assert_ok(resp)
         assert "token" in data
         assert data["user"]["role"] == "admin"
@@ -36,16 +41,24 @@ class TestAuth:
 
     def test_login_invalid_password(self, client: httpx.Client):
         """Wrong password returns 401."""
-        resp = client.post("/api/auth/login", json={
-            "email": ADMIN_EMAIL, "password": "wrongpassword",
-        })
+        resp = client.post(
+            "/api/auth/login",
+            json={
+                "email": ADMIN_EMAIL,
+                "password": "wrongpassword",
+            },
+        )
         assert resp.status_code == 401
 
     def test_login_nonexistent_user(self, client: httpx.Client):
         """Unknown email returns 401."""
-        resp = client.post("/api/auth/login", json={
-            "email": "nobody@example.com", "password": "any",
-        })
+        resp = client.post(
+            "/api/auth/login",
+            json={
+                "email": "nobody@example.com",
+                "password": "any",
+            },
+        )
         assert resp.status_code == 401
 
     def test_unauthenticated_request(self, client: httpx.Client):
@@ -55,9 +68,12 @@ class TestAuth:
 
     def test_bad_token(self, client: httpx.Client):
         """Invalid JWT returns 401."""
-        resp = client.get("/api/customers", headers={
-            "Authorization": "Bearer garbage-token",
-        })
+        resp = client.get(
+            "/api/customers",
+            headers={
+                "Authorization": "Bearer garbage-token",
+            },
+        )
         assert_unauthorized(resp)
 
     def test_expired_token_returns_401(self, client: httpx.Client):
@@ -65,12 +81,19 @@ class TestAuth:
         # Craft a token that looks like a JWT but is clearly expired
         # Base64-encode a dummy expired payload
         header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).rstrip(b"=").decode()
-        payload = base64.urlsafe_b64encode(json.dumps({"sub": "user_test", "exp": 1000000, "role": "admin"}).encode()).rstrip(b"=").decode()
+        payload = (
+            base64.urlsafe_b64encode(json.dumps({"sub": "user_test", "exp": 1000000, "role": "admin"}).encode())
+            .rstrip(b"=")
+            .decode()
+        )
         sig = base64.urlsafe_b64encode(b"bad-signature").rstrip(b"=").decode()
         expired = f"{header}.{payload}.{sig}"
-        resp = client.get("/api/customers", headers={
-            "Authorization": f"Bearer {expired}",
-        })
+        resp = client.get(
+            "/api/customers",
+            headers={
+                "Authorization": f"Bearer {expired}",
+            },
+        )
         assert_unauthorized(resp)
 
     def test_auth_me_endpoint(self, test_admin_headers: dict):
@@ -82,9 +105,13 @@ class TestAuth:
 
     def test_portal_login_flow(self, client: httpx.Client):
         """Customer portal login rejects admin credentials."""
-        resp = client.post("/api/portal/login", json={
-            "email": ADMIN_EMAIL, "password": ADMIN_PW,
-        })
+        resp = client.post(
+            "/api/portal/login",
+            json={
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PW,
+            },
+        )
         # Portal login fails for non-customer credentials
         assert resp.status_code in (401, 403, 404)
 
@@ -105,10 +132,13 @@ class TestPermissions:
 
     def test_cors_header(self, client: httpx.Client):
         """CORS header is set for the configured origin."""
-        resp = client.options("/api/customers", headers={
-            "Origin": "http://localhost:5185",
-            "Access-Control-Request-Method": "GET",
-        })
+        resp = client.options(
+            "/api/customers",
+            headers={
+                "Origin": "http://localhost:5185",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
         # CORS preflight should succeed
         assert resp.status_code in (200, 204)
         assert "access-control-allow-origin" in resp.headers

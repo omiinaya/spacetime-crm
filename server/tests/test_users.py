@@ -1,4 +1,5 @@
 """User management tests."""
+
 import httpx
 import pytest
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
@@ -14,11 +15,16 @@ class TestUserCRUD:
     def test_create(self, test_admin_headers: dict, session_suffix: str):
         suf = unique_suffix()
         email = f"tech-{session_suffix}-{suf}@test.com"
-        resp = httpx.post(f"{SERVER_URL}/api/users", json={
-            "name": f"Tech User {session_suffix}-{suf}",
-            "email": email,
-            "role": "tech",
-        }, headers=test_admin_headers, timeout=10)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/users",
+            json={
+                "name": f"Tech User {session_suffix}-{suf}",
+                "email": email,
+                "role": "tech",
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
         assert_ok(resp)
 
         # Verify it appears in listing
@@ -33,15 +39,28 @@ class TestUserCRUD:
                 break
 
     def test_create_invalid_role(self, test_admin_headers: dict):
-        resp = httpx.post(f"{SERVER_URL}/api/users", json={
-            "name": "Bad", "email": "bad@test.com", "role": "superadmin",
-        }, headers=test_admin_headers, timeout=10)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/users",
+            json={
+                "name": "Bad",
+                "email": "bad@test.com",
+                "role": "superadmin",
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
         assert resp.status_code == 422
 
     def test_create_missing_name(self, test_admin_headers: dict):
-        resp = httpx.post(f"{SERVER_URL}/api/users", json={
-            "email": "missing@test.com", "role": "tech",
-        }, headers=test_admin_headers, timeout=10)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/users",
+            json={
+                "email": "missing@test.com",
+                "role": "tech",
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
         assert resp.status_code == 422
 
 
