@@ -45,11 +45,11 @@ mod tests {
         let ctx = test_ctx();
         create_ticket(&ctx, "t".into(), "c1".into(), "Fix".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
         use crate::ticket::ticket;
-        let t = ctx.db.ticket().iter().next().unwrap();
+        let t = ctx.db.ticket().iter().next().expect("expected at least one ticket record");
         let id = t.id.clone();
         assert_eq!(t.status, "new");
         update_ticket_status(&ctx, id.clone(), "in_progress".into());
-        let updated = ctx.db.ticket().id().find(&id).unwrap();
+        let updated = ctx.db.ticket().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.status, "in_progress");
     }
 
@@ -58,11 +58,11 @@ mod tests {
         let ctx = test_ctx();
         create_ticket(&ctx, "t".into(), "c1".into(), "Assign test".into(), "".into(), "".into(), "".into(), "".into(), "medium".into());
         use crate::ticket::ticket;
-        let t = ctx.db.ticket().iter().next().unwrap();
+        let t = ctx.db.ticket().iter().next().expect("expected at least one ticket record");
         let id = t.id.clone();
         assert!(t.assigned_user_id.is_empty());
         assign_ticket(&ctx, id.clone(), "user_tech".into());
-        let updated = ctx.db.ticket().id().find(&id).unwrap();
+        let updated = ctx.db.ticket().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.assigned_user_id, "user_tech");
     }
 
@@ -71,7 +71,7 @@ mod tests {
         let ctx = test_ctx();
         create_ticket(&ctx, "t".into(), "c1".into(), "Note test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
         use crate::ticket::ticket;
-        let t = ctx.db.ticket().iter().next().unwrap();
+        let t = ctx.db.ticket().iter().next().expect("expected at least one ticket record");
         let tid = t.id.clone();
         add_ticket_note(&ctx, tid.clone(), "Bob".into(), "Checked device".into(), false);
         use crate::ticket::ticket_note;
@@ -90,7 +90,7 @@ mod tests {
         create_ticket(&ctx, "t".into(), "c1".into(), "Delete me".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
         use crate::ticket::ticket;
         assert_eq!(ctx.db.ticket().iter().count(), 1);
-        let id = ctx.db.ticket().iter().next().unwrap().id.clone();
+        let id = ctx.db.ticket().iter().next().expect("expected at least one ticket record").id.clone();
         delete_ticket(&ctx, id);
         assert_eq!(ctx.db.ticket().iter().count(), 0);
     }
@@ -100,7 +100,7 @@ mod tests {
         let ctx = test_ctx();
         create_ticket(&ctx, "t".into(), "c1".into(), "Timer test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
         use crate::ticket::ticket;
-        let t = ctx.db.ticket().iter().next().unwrap();
+        let t = ctx.db.ticket().iter().next().expect("expected at least one ticket record");
         let tid = t.id.clone();
         start_ticket_timer(&ctx, tid.clone(), "user_1".into());
         use crate::ticket::ticket_timer;
@@ -109,7 +109,7 @@ mod tests {
         let tmr = &timers[0];
         assert!(tmr.running);
         stop_ticket_timer(&ctx, tmr.id.clone());
-        let stopped = ctx.db.ticket_timer().id().find(&tmr.id).unwrap();
+        let stopped = ctx.db.ticket_timer().id().find(&tmr.id).expect("expected record to exist");
         assert!(!stopped.running);
     }
 
@@ -144,7 +144,7 @@ mod tests {
         record_payment(&ctx, "t".into(), "i".into(), "c".into(), 50.0, "cash".into(), "".into(), "".into(), "USD".into());
         use crate::payment::payment;
         assert_eq!(ctx.db.payment().iter().count(), 1);
-        let id = ctx.db.payment().iter().next().unwrap().id.clone();
+        let id = ctx.db.payment().iter().next().expect("expected at least one payment record").id.clone();
         delete_payment(&ctx, id);
         assert_eq!(ctx.db.payment().iter().count(), 0);
     }
@@ -169,10 +169,10 @@ mod tests {
     fn test_update_product() {
         let ctx = test_ctx();
         create_product(&ctx, "t".into(), "Old".into(), "OLD-001".into(), "".into(), "".into(), "".into(), 10.0, 5.0, 10.0, 0.0, "".into());
-        let p = ctx.db.products().iter().next().unwrap();
+        let p = ctx.db.products().iter().next().expect("expected at least one products record");
         let pid = p.id.clone();
         update_product(&ctx, pid.clone(), "New Name".into(), "NEW-001".into(), "".into(), "desc".into(), "cat".into(), 25.0, 8.0, 5.0, "B-12".into());
-        let updated = ctx.db.products().id().find(&pid).unwrap();
+        let updated = ctx.db.products().id().find(&pid).expect("expected record to exist");
         assert_eq!(updated.name, "New Name");
     }
 
@@ -181,7 +181,7 @@ mod tests {
         let ctx = test_ctx();
         create_product(&ctx, "t".into(), "Del".into(), "DEL".into(), "".into(), "".into(), "".into(), 1.0, 0.5, 5.0, 0.0, "".into());
         assert_eq!(ctx.db.products().iter().count(), 1);
-        let id = ctx.db.products().iter().next().unwrap().id.clone();
+        let id = ctx.db.products().iter().next().expect("expected at least one products record").id.clone();
         delete_product(&ctx, id);
         assert_eq!(ctx.db.products().iter().count(), 0);
     }
@@ -205,11 +205,11 @@ mod tests {
     fn test_update_po_status() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "v1".into(), "".into(), "USD".into());
-        let po = ctx.db.purchase_order().iter().next().unwrap();
+        let po = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record");
         let poid = po.id.clone();
         assert_eq!(po.status, "draft");
         update_po_status(&ctx, poid.clone(), "sent".into());
-        let updated = ctx.db.purchase_order().id().find(&poid).unwrap();
+        let updated = ctx.db.purchase_order().id().find(&poid).expect("expected record to exist");
         assert_eq!(updated.status, "sent");
     }
 
@@ -253,11 +253,11 @@ mod tests {
         let ctx = test_ctx();
         create_ticket(&ctx, "t_derived".into(), "c1".into(), "Derive test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
         use crate::ticket::ticket;
-        let t = ctx.db.ticket().iter().next().unwrap();
+        let t = ctx.db.ticket().iter().next().expect("expected at least one ticket record");
         let tid = t.id.clone();
         add_ticket_note(&ctx, tid.clone(), "Tech".into(), "Noted".into(), false);
         use crate::ticket::ticket_note;
-        let note = ctx.db.ticket_note().iter().next().unwrap();
+        let note = ctx.db.ticket_note().iter().next().expect("expected at least one ticket note record");
         assert_eq!(note.tenant_id, "t_derived");
     }
 }

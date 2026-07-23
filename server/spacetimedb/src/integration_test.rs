@@ -56,11 +56,11 @@ mod tests {
     fn test_update_appointment_status() {
         let ctx = test_ctx();
         create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Test".into(), "".into(), 1000, 2000, false, "".into(), "".into());
-        let a = ctx.db.appointment().iter().next().unwrap();
+        let a = ctx.db.appointment().iter().next().expect("expected at least one appointment record");
         assert_eq!(a.status, "scheduled");
         let id = a.id.clone();
         update_appointment_status(&ctx, id.clone(), "completed".into());
-        let updated = ctx.db.appointment().id().find(&id).unwrap();
+        let updated = ctx.db.appointment().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.status, "completed");
     }
 
@@ -68,12 +68,12 @@ mod tests {
     fn test_set_recurrence() {
         let ctx = test_ctx();
         create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Recur".into(), "".into(), 1000, 2000, false, "".into(), "".into());
-        let a = ctx.db.appointment().iter().next().unwrap();
+        let a = ctx.db.appointment().iter().next().expect("expected at least one appointment record");
         let id = a.id.clone();
         assert!(a.recurrence_rule.is_empty());
         let rule = "FREQ=WEEKLY;BYDAY=MO";
         set_recurrence(&ctx, id.clone(), rule.into());
-        let updated = ctx.db.appointment().id().find(&id).unwrap();
+        let updated = ctx.db.appointment().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.recurrence_rule, rule);
     }
 
@@ -81,7 +81,7 @@ mod tests {
     fn test_generate_next_occurrence() {
         let ctx = test_ctx();
         create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Series".into(), "".into(), 1000, 2000, false, "".into(), "FREQ=WEEKLY".into());
-        let parent = ctx.db.appointment().iter().next().unwrap();
+        let parent = ctx.db.appointment().iter().next().expect("expected at least one appointment record");
         let series_id = parent.id.clone();
         assert_eq!(ctx.db.appointment().iter().count(), 1);
         generate_next_occurrence(&ctx, series_id.clone(), 2000, 3000, "FREQ=WEEKLY".into());
@@ -93,7 +93,7 @@ mod tests {
         let ctx = test_ctx();
         create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Del".into(), "".into(), 1000, 2000, false, "".into(), "".into());
         assert_eq!(ctx.db.appointment().iter().count(), 1);
-        let id = ctx.db.appointment().iter().next().unwrap().id.clone();
+        let id = ctx.db.appointment().iter().next().expect("expected at least one appointment record").id.clone();
         delete_appointment(&ctx, id);
         assert_eq!(ctx.db.appointment().iter().count(), 0);
     }
@@ -144,9 +144,9 @@ mod tests {
     fn test_update_checklist_template() {
         let ctx = test_ctx();
         create_checklist_template(&ctx, "t".into(), "Old".into(), "".into(), "[]".into());
-        let id = ctx.db.checklist_templates().iter().next().unwrap().id.clone();
+        let id = ctx.db.checklist_templates().iter().next().expect("expected at least one checklist templates record").id.clone();
         update_checklist_template(&ctx, id.clone(), "New".into(), "Updated".into(), r#"[{"label":"X"}]"#.into());
-        let updated = ctx.db.checklist_templates().id().find(&id).unwrap();
+        let updated = ctx.db.checklist_templates().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.name, "New");
         assert_eq!(updated.description, "Updated");
     }
@@ -156,7 +156,7 @@ mod tests {
         let ctx = test_ctx();
         create_checklist_template(&ctx, "t".into(), "Del".into(), "".into(), "[]".into());
         assert_eq!(ctx.db.checklist_templates().iter().count(), 1);
-        let id = ctx.db.checklist_templates().iter().next().unwrap().id.clone();
+        let id = ctx.db.checklist_templates().iter().next().expect("expected at least one checklist templates record").id.clone();
         delete_checklist_template(&ctx, id);
         assert_eq!(ctx.db.checklist_templates().iter().count(), 0);
     }
@@ -166,12 +166,12 @@ mod tests {
         let ctx = test_ctx();
         // Need a ticket first (for tenant_id derivation)
         crate::create_ticket(&ctx, "t_ck".into(), "c1".into(), "Check ticket".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
-        let tkt = ctx.db.ticket().iter().next().unwrap();
+        let tkt = ctx.db.ticket().iter().next().expect("expected at least one ticket record");
         let tid = tkt.id.clone();
         // Create template with items
         let items = r#"[{"label":"Check battery","order":1},{"label":"Test audio","order":2}]"#;
         create_checklist_template(&ctx, "t_ck".into(), "Audio Check".into(), "".into(), items.into());
-        let tmpl = ctx.db.checklist_templates().iter().next().unwrap();
+        let tmpl = ctx.db.checklist_templates().iter().next().expect("expected at least one checklist templates record");
         let tmpl_id = tmpl.id.clone();
 
         apply_checklist_template(&ctx, tid.clone(), tmpl_id.clone());
@@ -187,17 +187,17 @@ mod tests {
     fn test_update_checklist_item() {
         let ctx = test_ctx();
         crate::create_ticket(&ctx, "t".into(), "c1".into(), "T".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
-        let tid = ctx.db.ticket().iter().next().unwrap().id.clone();
+        let tid = ctx.db.ticket().iter().next().expect("expected at least one ticket record").id.clone();
         create_checklist_template(&ctx, "t".into(), "T".into(), "".into(), r#"[{"label":"X"}]"#.into());
-        let tmpl_id = ctx.db.checklist_templates().iter().next().unwrap().id.clone();
+        let tmpl_id = ctx.db.checklist_templates().iter().next().expect("expected at least one checklist templates record").id.clone();
         apply_checklist_template(&ctx, tid, tmpl_id);
         use crate::checklist::ticket_checklist_items;
-        let item = ctx.db.ticket_checklist_items().iter().next().unwrap();
+        let item = ctx.db.ticket_checklist_items().iter().next().expect("expected at least one ticket checklist items record");
         let item_id = item.id.clone();
         assert!(!item.completed);
         assert!(item.completed_by.is_empty());
         update_checklist_item(&ctx, item_id.clone(), true);
-        let updated = ctx.db.ticket_checklist_items().id().find(&item_id).unwrap();
+        let updated = ctx.db.ticket_checklist_items().id().find(&item_id).expect("expected record to exist");
         assert!(updated.completed);
         assert!(!updated.completed_by.is_empty());
         assert!(updated.completed_at > 0);
@@ -207,9 +207,9 @@ mod tests {
     fn test_delete_ticket_checklist() {
         let ctx = test_ctx();
         crate::create_ticket(&ctx, "t".into(), "c1".into(), "T".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
-        let tid = ctx.db.ticket().iter().next().unwrap().id.clone();
+        let tid = ctx.db.ticket().iter().next().expect("expected at least one ticket record").id.clone();
         create_checklist_template(&ctx, "t".into(), "T".into(), "".into(), r#"[{"label":"X"},{"label":"Y"}]"#.into());
-        let tmpl_id = ctx.db.checklist_templates().iter().next().unwrap().id.clone();
+        let tmpl_id = ctx.db.checklist_templates().iter().next().expect("expected at least one checklist templates record").id.clone();
         apply_checklist_template(&ctx, tid.clone(), tmpl_id);
         assert_eq!(ctx.db.ticket_checklist_items().iter().count(), 2);
         delete_ticket_checklist(&ctx, tid);
@@ -242,7 +242,7 @@ mod tests {
         let ctx = test_ctx();
         create_custom_field_definition(&ctx, "t".into(), "cfd_1".into(), "cust".into(), "Old".into(), "text".into(), "".into(), 1, false, true);
         update_custom_field_definition(&ctx, "cfd_1".into(), "New Label".into(), "number".into(), "".into(), 2, true, true);
-        let updated = ctx.db.custom_field_definitions().id().find("cfd_1".to_string()).unwrap();
+        let updated = ctx.db.custom_field_definitions().id().find("cfd_1".to_string()).expect("expected record to exist");
         assert_eq!(updated.label, "New Label");
         assert_eq!(updated.field_type, "number");
         assert!(updated.required);
@@ -274,14 +274,14 @@ mod tests {
         let result2 = set_custom_field_value(&ctx, "cust_1".into(), "cfd_ser".into(), "SN002".into(), "t_cfv".into());
         assert!(result2.is_ok());
         assert_eq!(ctx.db.custom_field_values().iter().count(), 1);
-        assert_eq!(ctx.db.custom_field_values().iter().next().unwrap().value, "SN002");
+        assert_eq!(ctx.db.custom_field_values().iter().next().expect("expected at least one custom field values record").value, "SN002");
     }
 
     #[test]
     fn test_delete_custom_field_value() {
         let ctx = test_ctx();
         create_custom_field_definition(&ctx, "t".into(), "cfd_dv".into(), "cust".into(), "V".into(), "text".into(), "".into(), 0, false, true);
-        set_custom_field_value(&ctx, "cust_1".into(), "cfd_dv".into(), "V001".into(), "t".into()).unwrap();
+        set_custom_field_value(&ctx, "cust_1".into(), "cfd_dv".into(), "V001".into(), "t".into()).expect("set_custom_field_value should succeed");
         assert_eq!(ctx.db.custom_field_values().iter().count(), 1);
         delete_custom_field_value(&ctx, "cust_1".into(), "cfd_dv".into());
         assert_eq!(ctx.db.custom_field_values().iter().count(), 0);
@@ -310,7 +310,7 @@ mod tests {
         assert_eq!(ctx.db.customer_geolocations().iter().count(), 1);
         set_customer_geolocation(&ctx, "t".into(), "cust_1".into(), 41.0, -73.0);
         assert_eq!(ctx.db.customer_geolocations().iter().count(), 1);
-        assert!((ctx.db.customer_geolocations().iter().next().unwrap().latitude - 41.0).abs() < 0.001);
+        assert!((ctx.db.customer_geolocations().iter().next().expect("expected at least one customer geolocations record").latitude - 41.0).abs() < 0.001);
     }
 
     #[test]
@@ -331,7 +331,7 @@ mod tests {
         let ctx = test_ctx();
         // Create a product first
         create_product(&ctx, "t_inv".into(), "Battery".into(), "BAT-001".into(), "".into(), "".into(), "Parts".into(), 19.99, 8.00, 100.0, 10.0, "A-1".into());
-        let prod = ctx.db.products().iter().next().unwrap();
+        let prod = ctx.db.products().iter().next().expect("expected at least one products record");
         let pid = prod.id.clone();
         assert_eq!(prod.quantity_on_hand, 100.0);
 
@@ -345,7 +345,7 @@ mod tests {
 
         // Verify product quantity was updated
         use crate::product::products;
-        let updated = ctx.db.products().id().find(&pid).unwrap();
+        let updated = ctx.db.products().id().find(&pid).expect("expected record to exist");
         assert_eq!(updated.quantity_on_hand, 95.0);
         assert_eq!(updated.quantity_available, 95.0);
     }
@@ -354,9 +354,9 @@ mod tests {
     fn test_inventory_adjustment_clamps_to_zero() {
         let ctx = test_ctx();
         create_product(&ctx, "t".into(), "Item".into(), "ITM".into(), "".into(), "".into(), "".into(), 5.0, 2.0, 3.0, 0.0, "".into());
-        let pid = ctx.db.products().iter().next().unwrap().id.clone();
+        let pid = ctx.db.products().iter().next().expect("expected at least one products record").id.clone();
         create_inventory_adjustment(&ctx, "t".into(), pid.clone(), -10.0, "damaged".into(), "".into(), "".into(), "u".into());
-        let updated = ctx.db.products().id().find(&pid).unwrap();
+        let updated = ctx.db.products().id().find(&pid).expect("expected record to exist");
         assert_eq!(updated.quantity_on_hand, 0.0); // clamped to 0
     }
 
@@ -364,10 +364,10 @@ mod tests {
     fn test_delete_inventory_adjustment() {
         let ctx = test_ctx();
         create_product(&ctx, "t".into(), "P".into(), "P".into(), "".into(), "".into(), "".into(), 1.0, 0.5, 10.0, 0.0, "".into());
-        let pid = ctx.db.products().iter().next().unwrap().id.clone();
+        let pid = ctx.db.products().iter().next().expect("expected at least one products record").id.clone();
         create_inventory_adjustment(&ctx, "t".into(), pid, 5.0, "received".into(), "".into(), "".into(), "u".into());
         assert_eq!(ctx.db.inventory_adjustment().iter().count(), 1);
-        let id = ctx.db.inventory_adjustment().iter().next().unwrap().id.clone();
+        let id = ctx.db.inventory_adjustment().iter().next().expect("expected at least one inventory adjustment record").id.clone();
         delete_inventory_adjustment(&ctx, id);
         assert_eq!(ctx.db.inventory_adjustment().iter().count(), 0);
     }
@@ -393,9 +393,9 @@ mod tests {
     fn test_add_counter_sale_item() {
         let ctx = test_ctx();
         create_counter_sale(&ctx, "t".into(), "c1".into(), "John".into(), "cash".into(), 50.0, 8.0, 0.0, "USD".into());
-        let sale_id = ctx.db.counter_sale().iter().next().unwrap().id.clone();
+        let sale_id = ctx.db.counter_sale().iter().next().expect("expected at least one counter sale record").id.clone();
         create_product(&ctx, "t".into(), "Cable".into(), "CBL".into(), "".into(), "".into(), "Acc".into(), 9.99, 4.0, 20.0, 0.0, "".into());
-        let prod_id = ctx.db.products().iter().next().unwrap().id.clone();
+        let prod_id = ctx.db.products().iter().next().expect("expected at least one products record").id.clone();
         add_counter_sale_item(&ctx, "t".into(), sale_id.clone(), prod_id, "Cable".into(), "CBL".into(), 2.0, 9.99);
 
         // Verify line item
@@ -407,7 +407,7 @@ mod tests {
 
         // Verify sale totals were recalculated
         use crate::pos::counter_sale;
-        let sale = ctx.db.counter_sale().id().find(&sale_id).unwrap();
+        let sale = ctx.db.counter_sale().id().find(&sale_id).expect("expected record to exist");
         assert_eq!(sale.items_count, 1);
         assert!((sale.subtotal - 19.98).abs() < 0.01);
         assert!(sale.total > 0.0);
@@ -417,10 +417,10 @@ mod tests {
     fn test_refund_counter_sale() {
         let ctx = test_ctx();
         create_counter_sale(&ctx, "t".into(), "c1".into(), "".into(), "card".into(), 30.0, 0.0, 0.0, "USD".into());
-        let sale_id = ctx.db.counter_sale().iter().next().unwrap().id.clone();
-        assert_eq!(ctx.db.counter_sale().id().find(&sale_id).unwrap().status, "completed");
+        let sale_id = ctx.db.counter_sale().iter().next().expect("expected at least one counter sale record").id.clone();
+        assert_eq!(ctx.db.counter_sale().id().find(&sale_id).expect("expected record to exist").status, "completed");
         refund_counter_sale(&ctx, sale_id.clone());
-        let refunded = ctx.db.counter_sale().id().find(&sale_id).unwrap();
+        let refunded = ctx.db.counter_sale().id().find(&sale_id).expect("expected record to exist");
         assert_eq!(refunded.status, "refunded");
         assert!(refunded.refunded_at > 0);
     }
@@ -429,10 +429,10 @@ mod tests {
     fn test_delete_counter_sale() {
         let ctx = test_ctx();
         create_counter_sale(&ctx, "t".into(), "c1".into(), "".into(), "cash".into(), 10.0, 0.0, 0.0, "USD".into());
-        let sale_id = ctx.db.counter_sale().iter().next().unwrap().id.clone();
+        let sale_id = ctx.db.counter_sale().iter().next().expect("expected at least one counter sale record").id.clone();
         // Add a line item
         create_product(&ctx, "t".into(), "P".into(), "P".into(), "".into(), "".into(), "".into(), 5.0, 2.0, 10.0, 0.0, "".into());
-        let pid = ctx.db.products().iter().next().unwrap().id.clone();
+        let pid = ctx.db.products().iter().next().expect("expected at least one products record").id.clone();
         add_counter_sale_item(&ctx, "t".into(), sale_id.clone(), pid, "P".into(), "P".into(), 1.0, 5.0);
 
         assert_eq!(ctx.db.counter_sale().iter().count(), 1);
@@ -468,7 +468,7 @@ mod tests {
         // Update same tenant
         upsert_sla_config(&ctx, "t_sla".into(), r#"{"urgent":2}"#.into());
         assert_eq!(ctx.db.sla_configs().iter().count(), 1);
-        let updated = ctx.db.sla_configs().tenant_id().find(&"t_sla".into()).unwrap();
+        let updated = ctx.db.sla_configs().tenant_id().find(&"t_sla".into()).expect("expected record to exist");
         assert_eq!(updated.targets_json, r#"{"urgent":2}"#);
     }
 
@@ -494,9 +494,9 @@ mod tests {
     fn test_update_tax_rate() {
         let ctx = test_ctx();
         create_tax_rate(&ctx, "t".into(), "Old".into(), 5.0, false);
-        let id = ctx.db.tax_rates().iter().next().unwrap().id.clone();
+        let id = ctx.db.tax_rates().iter().next().expect("expected at least one tax rates record").id.clone();
         update_tax_rate(&ctx, id.clone(), "New".into(), 6.0, true);
-        let updated = ctx.db.tax_rates().id().find(&id).unwrap();
+        let updated = ctx.db.tax_rates().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.name, "New");
         assert!((updated.rate - 6.0).abs() < 0.001);
         assert!(updated.is_default);
@@ -506,12 +506,12 @@ mod tests {
     fn test_tax_rate_default_clears_others() {
         let ctx = test_ctx();
         create_tax_rate(&ctx, "t".into(), "Rate A".into(), 5.0, true);
-        let a_id = ctx.db.tax_rates().iter().next().unwrap().id.clone();
+        let a_id = ctx.db.tax_rates().iter().next().expect("expected at least one tax rates record").id.clone();
         create_tax_rate(&ctx, "t".into(), "Rate B".into(), 8.0, true);
         // A should now be non-default, B is default
-        let a = ctx.db.tax_rates().id().find(&a_id).unwrap();
+        let a = ctx.db.tax_rates().id().find(&a_id).expect("expected record to exist");
         assert!(!a.is_default);
-        let b = ctx.db.tax_rates().iter().find(|r| r.id != a_id).unwrap();
+        let b = ctx.db.tax_rates().iter().find(|r| r.id != a_id).expect("expected matching record");
         assert!(b.is_default);
     }
 
@@ -520,7 +520,7 @@ mod tests {
         let ctx = test_ctx();
         create_tax_rate(&ctx, "t".into(), "Del".into(), 3.0, false);
         assert_eq!(ctx.db.tax_rates().iter().count(), 1);
-        let id = ctx.db.tax_rates().iter().next().unwrap().id.clone();
+        let id = ctx.db.tax_rates().iter().next().expect("expected at least one tax rates record").id.clone();
         delete_tax_rate(&ctx, id);
         assert_eq!(ctx.db.tax_rates().iter().count(), 0);
     }
@@ -545,9 +545,9 @@ mod tests {
     fn test_update_tenant() {
         let ctx = test_ctx();
         create_tenant(&ctx, "Old Shop".into(), "old-shop".into());
-        let id = ctx.db.tenants().iter().next().unwrap().id.clone();
+        let id = ctx.db.tenants().iter().next().expect("expected at least one tenants record").id.clone();
         update_tenant(&ctx, id.clone(), "New Shop".into(), "new-shop".into(), "https://logo.url".into(), r#"{"theme":"dark"}"#.into());
-        let updated = ctx.db.tenants().id().find(&id).unwrap();
+        let updated = ctx.db.tenants().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.name, "New Shop");
         assert_eq!(updated.slug, "new-shop");
         assert_eq!(updated.logo_url, "https://logo.url");
@@ -558,7 +558,7 @@ mod tests {
     fn test_delete_tenant() {
         let ctx = test_ctx();
         create_tenant(&ctx, "Del Shop".into(), "del-shop".into());
-        let id = ctx.db.tenants().iter().next().unwrap().id.clone();
+        let id = ctx.db.tenants().iter().next().expect("expected at least one tenants record").id.clone();
         // Add a member first
         add_tenant_member(&ctx, id.clone(), "user_1".into(), "admin".into());
         assert_eq!(ctx.db.tenants().iter().count(), 1);
@@ -572,7 +572,7 @@ mod tests {
     fn test_add_remove_tenant_member() {
         let ctx = test_ctx();
         create_tenant(&ctx, "Shop".into(), "shop".into());
-        let tid = ctx.db.tenants().iter().next().unwrap().id.clone();
+        let tid = ctx.db.tenants().iter().next().expect("expected at least one tenants record").id.clone();
         add_tenant_member(&ctx, tid.clone(), "tech_1".into(), "user".into());
         let members = ctx.db.tenant_members().iter().collect::<Vec<_>>();
         assert_eq!(members.len(), 1);
@@ -587,12 +587,12 @@ mod tests {
     fn test_update_tenant_member_role() {
         let ctx = test_ctx();
         create_tenant(&ctx, "S".into(), "s".into());
-        add_tenant_member(&ctx, ctx.db.tenants().iter().next().unwrap().id.clone(), "admin_u".into(), "user".into());
-        let member = ctx.db.tenant_members().iter().next().unwrap();
+        add_tenant_member(&ctx, ctx.db.tenants().iter().next().expect("expected at least one tenants record").id.clone(), "admin_u".into(), "user".into());
+        let member = ctx.db.tenant_members().iter().next().expect("expected at least one tenant members record");
         let mem_id = member.id.clone();
         assert_eq!(member.role, "user");
         update_tenant_member_role(&ctx, mem_id.clone(), "admin".into());
-        let updated = ctx.db.tenant_members().id().find(&mem_id).unwrap();
+        let updated = ctx.db.tenant_members().id().find(&mem_id).expect("expected record to exist");
         assert_eq!(updated.role, "admin");
     }
 
@@ -620,9 +620,9 @@ mod tests {
     fn test_update_user() {
         let ctx = test_ctx();
         create_user(&ctx, "bob".into(), "bob@t.com".into(), "tech".into());
-        let id = ctx.db.user().iter().next().unwrap().id.clone();
+        let id = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
         update_user(&ctx, id.clone(), "bob_updated".into(), "bob@new.com".into(), "admin".into(), false);
-        let updated = ctx.db.user().id().find(&id).unwrap();
+        let updated = ctx.db.user().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.name, "bob_updated");
         assert_eq!(updated.email, "bob@new.com");
         assert_eq!(updated.role, "admin");
@@ -633,33 +633,33 @@ mod tests {
     fn test_set_user_password() {
         let ctx = test_ctx();
         create_user(&ctx, "charlie".into(), "c@t.com".into(), "front_desk".into());
-        let id = ctx.db.user().iter().next().unwrap().id.clone();
-        assert!(ctx.db.user().id().find(&id).unwrap().password_hash.is_empty());
+        let id = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
+        assert!(ctx.db.user().id().find(&id).expect("expected record to exist").password_hash.is_empty());
         let hash = "bcrypt_hash_abc123".to_string();
         set_user_password(&ctx, id.clone(), hash.clone());
-        assert_eq!(ctx.db.user().id().find(&id).unwrap().password_hash, hash);
+        assert_eq!(ctx.db.user().id().find(&id).expect("expected record to exist").password_hash, hash);
     }
 
     #[test]
     fn test_user_totp_lifecycle() {
         let ctx = test_ctx();
         create_user(&ctx, "dave".into(), "d@t.com".into(), "admin".into());
-        let id = ctx.db.user().iter().next().unwrap().id.clone();
+        let id = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
         // Initial state
-        assert!(!ctx.db.user().id().find(&id).unwrap().totp_enabled);
-        assert!(ctx.db.user().id().find(&id).unwrap().totp_secret.is_empty());
+        assert!(!ctx.db.user().id().find(&id).expect("expected record to exist").totp_enabled);
+        assert!(ctx.db.user().id().find(&id).expect("expected record to exist").totp_secret.is_empty());
         // Set secret
         let secret = "JBSWY3DPEHPK3PXP".to_string();
         set_user_totp_secret(&ctx, id.clone(), secret.clone());
-        let u = ctx.db.user().id().find(&id).unwrap();
+        let u = ctx.db.user().id().find(&id).expect("expected record to exist");
         assert_eq!(u.totp_secret, secret);
         assert!(!u.totp_enabled);
         // Enable
         enable_user_totp(&ctx, id.clone());
-        assert!(ctx.db.user().id().find(&id).unwrap().totp_enabled);
+        assert!(ctx.db.user().id().find(&id).expect("expected record to exist").totp_enabled);
         // Disable
         disable_user_totp(&ctx, id.clone());
-        let u2 = ctx.db.user().id().find(&id).unwrap();
+        let u2 = ctx.db.user().id().find(&id).expect("expected record to exist");
         assert!(!u2.totp_enabled);
         assert!(u2.totp_secret.is_empty());
     }
@@ -669,7 +669,7 @@ mod tests {
         let ctx = test_ctx();
         create_user(&ctx, "eve".into(), "e@t.com".into(), "tech".into());
         assert_eq!(ctx.db.user().iter().count(), 1);
-        let id = ctx.db.user().iter().next().unwrap().id.clone();
+        let id = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
         delete_user(&ctx, id);
         assert_eq!(ctx.db.user().iter().count(), 0);
     }
@@ -709,10 +709,10 @@ mod tests {
     fn test_update_webhook_subscription() {
         let ctx = test_ctx();
         create_webhook_subscription(&ctx, "t".into(), "https://old.url".into(), "ticket.created".into(), "".into());
-        let id = ctx.db.webhook_subscriptions().iter().next().unwrap().id.clone();
+        let id = ctx.db.webhook_subscriptions().iter().next().expect("expected at least one webhook subscriptions record").id.clone();
         update_webhook_subscription(&ctx, id.clone(), "https://new.url".into(),
             "customer.*".into(), "new_secret".into(), false);
-        let updated = ctx.db.webhook_subscriptions().id().find(&id).unwrap();
+        let updated = ctx.db.webhook_subscriptions().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.url, "https://new.url");
         assert_eq!(updated.events, "customer.*");
         assert!(!updated.active);
@@ -723,7 +723,7 @@ mod tests {
         let ctx = test_ctx();
         create_webhook_subscription(&ctx, "t".into(), "https://del.url".into(), "a".into(), "".into());
         assert_eq!(ctx.db.webhook_subscriptions().iter().count(), 1);
-        let id = ctx.db.webhook_subscriptions().iter().next().unwrap().id.clone();
+        let id = ctx.db.webhook_subscriptions().iter().next().expect("expected at least one webhook subscriptions record").id.clone();
         delete_webhook_subscription(&ctx, id);
         assert_eq!(ctx.db.webhook_subscriptions().iter().count(), 0);
     }
@@ -751,9 +751,9 @@ mod tests {
     fn test_update_recurring_invoice_rule() {
         let ctx = test_ctx();
         create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Old".into(), "monthly".into(), 1, 15, "[]".into(), 1000);
-        let id = ctx.db.recurring_invoice_rules().iter().next().unwrap().id.clone();
+        let id = ctx.db.recurring_invoice_rules().iter().next().expect("expected at least one recurring invoice rules record").id.clone();
         update_recurring_invoice_rule(&ctx, id.clone(), "New Name".into(), "weekly".into(), 2, 30, r#"[{"desc":"X"}]"#.into(), 2000, "paused".into());
-        let updated = ctx.db.recurring_invoice_rules().id().find(&id).unwrap();
+        let updated = ctx.db.recurring_invoice_rules().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.name, "New Name");
         assert_eq!(updated.frequency, "weekly");
         assert_eq!(updated.status, "paused");
@@ -764,7 +764,7 @@ mod tests {
         let ctx = test_ctx();
         create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Del".into(), "m".into(), 1, 15, "[]".into(), 1000);
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
-        let id = ctx.db.recurring_invoice_rules().iter().next().unwrap().id.clone();
+        let id = ctx.db.recurring_invoice_rules().iter().next().expect("expected at least one recurring invoice rules record").id.clone();
         delete_recurring_invoice_rule(&ctx, id);
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 0);
     }
@@ -795,11 +795,11 @@ mod tests {
         let methods: Vec<SavedPaymentMethod> = ctx.db.saved_payment_methods().iter().collect();
         assert_eq!(methods.len(), 2);
         // First method was default, now set second as default
-        let second = methods.iter().find(|m| m.last4 == "2222").unwrap();
+        let second = methods.iter().find(|m| m.last4 == "2222").expect("expected matching record");
         set_default_payment_method(&ctx, second.id.clone(), "cust_1".into());
         let updated_methods: Vec<SavedPaymentMethod> = ctx.db.saved_payment_methods().iter().collect();
-        let first = updated_methods.iter().find(|m| m.last4 == "1111").unwrap();
-        let second2 = updated_methods.iter().find(|m| m.last4 == "2222").unwrap();
+        let first = updated_methods.iter().find(|m| m.last4 == "1111").expect("expected matching record");
+        let second2 = updated_methods.iter().find(|m| m.last4 == "2222").expect("expected matching record");
         assert!(!first.is_default);
         assert!(second2.is_default);
     }
@@ -809,7 +809,7 @@ mod tests {
         let ctx = test_ctx();
         save_payment_method(&ctx, "t".into(), "c1".into(), "pm_d".into(), "V".into(), "0000".into(), 1, 2025);
         assert_eq!(ctx.db.saved_payment_methods().iter().count(), 1);
-        let id = ctx.db.saved_payment_methods().iter().next().unwrap().id.clone();
+        let id = ctx.db.saved_payment_methods().iter().next().expect("expected at least one saved payment methods record").id.clone();
         delete_payment_method(&ctx, id);
         assert_eq!(ctx.db.saved_payment_methods().iter().count(), 0);
     }
@@ -836,10 +836,10 @@ mod tests {
     fn test_update_scheduled_report() {
         let ctx = test_ctx();
         create_scheduled_report(&ctx, "t".into(), "Old".into(), "rev".into(), "d".into(), "{}".into(), "[]".into(), "{}".into(), 1000);
-        let id = ctx.db.scheduled_reports().iter().next().unwrap().id.clone();
+        let id = ctx.db.scheduled_reports().iter().next().expect("expected at least one scheduled reports record").id.clone();
         update_scheduled_report(&ctx, id.clone(), "New Name".into(), "expenses".into(), "monthly".into(),
             r#"{"day":1}"#.into(), r#"["b@t.com"]"#.into(), r#"{"x":1}"#.into(), 2000, false);
-        let updated = ctx.db.scheduled_reports().id().find(&id).unwrap();
+        let updated = ctx.db.scheduled_reports().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.name, "New Name");
         assert_eq!(updated.report_type, "expenses");
         assert!(!updated.enabled);
@@ -850,7 +850,7 @@ mod tests {
         let ctx = test_ctx();
         create_scheduled_report(&ctx, "t".into(), "Del".into(), "r".into(), "d".into(), "{}".into(), "[]".into(), "{}".into(), 1000);
         assert_eq!(ctx.db.scheduled_reports().iter().count(), 1);
-        let id = ctx.db.scheduled_reports().iter().next().unwrap().id.clone();
+        let id = ctx.db.scheduled_reports().iter().next().expect("expected at least one scheduled reports record").id.clone();
         delete_scheduled_report(&ctx, id);
         assert_eq!(ctx.db.scheduled_reports().iter().count(), 0);
     }
@@ -859,10 +859,10 @@ mod tests {
     fn test_mark_report_run() {
         let ctx = test_ctx();
         create_scheduled_report(&ctx, "t".into(), "R".into(), "r".into(), "d".into(), "{}".into(), "[]".into(), "{}".into(), 1000);
-        let id = ctx.db.scheduled_reports().iter().next().unwrap().id.clone();
-        assert_eq!(ctx.db.scheduled_reports().id().find(&id).unwrap().last_run_at, 0);
+        let id = ctx.db.scheduled_reports().iter().next().expect("expected at least one scheduled reports record").id.clone();
+        assert_eq!(ctx.db.scheduled_reports().id().find(&id).expect("expected record to exist").last_run_at, 0);
         mark_report_run(&ctx, id.clone(), 2000);
-        let updated = ctx.db.scheduled_reports().id().find(&id).unwrap();
+        let updated = ctx.db.scheduled_reports().id().find(&id).expect("expected record to exist");
         assert!(updated.last_run_at > 0);
         assert_eq!(updated.next_run_at, 2000);
     }
@@ -871,10 +871,10 @@ mod tests {
     fn test_mark_report_error() {
         let ctx = test_ctx();
         create_scheduled_report(&ctx, "t".into(), "Err".into(), "r".into(), "d".into(), "{}".into(), "[]".into(), "{}".into(), 1000);
-        let id = ctx.db.scheduled_reports().iter().next().unwrap().id.clone();
-        assert!(ctx.db.scheduled_reports().id().find(&id).unwrap().last_error.is_empty());
+        let id = ctx.db.scheduled_reports().iter().next().expect("expected at least one scheduled reports record").id.clone();
+        assert!(ctx.db.scheduled_reports().id().find(&id).expect("expected record to exist").last_error.is_empty());
         mark_report_error(&ctx, id.clone(), "API timeout".into());
-        assert_eq!(ctx.db.scheduled_reports().id().find(&id).unwrap().last_error, "API timeout");
+        assert_eq!(ctx.db.scheduled_reports().id().find(&id).expect("expected record to exist").last_error, "API timeout");
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -899,10 +899,10 @@ mod tests {
     fn test_update_invoice_status() {
         let ctx = test_ctx();
         create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
-        let id = ctx.db.invoices().iter().next().unwrap().id.clone();
-        assert_eq!(ctx.db.invoices().id().find(&id).unwrap().status, "draft");
+        let id = ctx.db.invoices().iter().next().expect("expected at least one invoices record").id.clone();
+        assert_eq!(ctx.db.invoices().id().find(&id).expect("expected record to exist").status, "draft");
         update_invoice_status(&ctx, id.clone(), "sent".into());
-        assert_eq!(ctx.db.invoices().id().find(&id).unwrap().status, "sent");
+        assert_eq!(ctx.db.invoices().id().find(&id).expect("expected record to exist").status, "sent");
     }
 
     #[test]
@@ -914,10 +914,10 @@ mod tests {
         // with an overdue due_date by using the raw insert pattern via the table accessor
         create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(),
             now - 86400000, "USD".into()); // due yesterday
-        let id = ctx.db.invoices().iter().next().unwrap().id.clone();
+        let id = ctx.db.invoices().iter().next().expect("expected at least one invoices record").id.clone();
         update_invoice_status(&ctx, id.clone(), "sent".into());
         mark_overdue_invoices(&ctx);
-        let updated = ctx.db.invoices().id().find(&id).unwrap();
+        let updated = ctx.db.invoices().id().find(&id).expect("expected record to exist");
         assert_eq!(updated.status, "overdue");
     }
 
@@ -925,7 +925,7 @@ mod tests {
     fn test_add_invoice_line_item() {
         let ctx = test_ctx();
         create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
-        let inv_id = ctx.db.invoices().iter().next().unwrap().id.clone();
+        let inv_id = ctx.db.invoices().iter().next().expect("expected at least one invoices record").id.clone();
         add_invoice_line_item(&ctx, inv_id.clone(), "service".into(), "Labor".into(), 2.0, 75.0);
         let items: Vec<InvoiceLineItem> = ctx.db.invoice_line_items().iter().collect();
         assert_eq!(items.len(), 1);
@@ -935,7 +935,7 @@ mod tests {
         assert!((item.total - 150.0).abs() < 0.01);
 
         // Verify invoice totals recalculated
-        let inv = ctx.db.invoices().id().find(&inv_id).unwrap();
+        let inv = ctx.db.invoices().id().find(&inv_id).expect("expected record to exist");
         assert!((inv.subtotal - 150.0).abs() < 0.01);
         assert!((inv.total - 150.0).abs() < 0.01);
     }
@@ -944,10 +944,10 @@ mod tests {
     fn test_delete_invoice_line_item() {
         let ctx = test_ctx();
         create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
-        let inv_id = ctx.db.invoices().iter().next().unwrap().id.clone();
+        let inv_id = ctx.db.invoices().iter().next().expect("expected at least one invoices record").id.clone();
         add_invoice_line_item(&ctx, inv_id.clone(), "s".into(), "Item".into(), 1.0, 10.0);
         assert_eq!(ctx.db.invoice_line_items().iter().count(), 1);
-        let li_id = ctx.db.invoice_line_items().iter().next().unwrap().id.clone();
+        let li_id = ctx.db.invoice_line_items().iter().next().expect("expected at least one invoice line items record").id.clone();
         delete_invoice_line_item(&ctx, li_id);
         assert_eq!(ctx.db.invoice_line_items().iter().count(), 0);
     }
@@ -957,7 +957,7 @@ mod tests {
         let ctx = test_ctx();
         create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
         assert_eq!(ctx.db.invoices().iter().count(), 1);
-        let id = ctx.db.invoices().iter().next().unwrap().id.clone();
+        let id = ctx.db.invoices().iter().next().expect("expected at least one invoices record").id.clone();
         delete_invoice(&ctx, id);
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
@@ -966,10 +966,10 @@ mod tests {
     fn test_set_invoice_tax_rate() {
         let ctx = test_ctx();
         create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
-        let inv_id = ctx.db.invoices().iter().next().unwrap().id.clone();
+        let inv_id = ctx.db.invoices().iter().next().expect("expected at least one invoices record").id.clone();
         add_invoice_line_item(&ctx, inv_id.clone(), "s".into(), "Item".into(), 1.0, 100.0);
         set_invoice_tax_rate(&ctx, inv_id.clone(), 8.875);
-        let inv = ctx.db.invoices().id().find(&inv_id).unwrap();
+        let inv = ctx.db.invoices().id().find(&inv_id).expect("expected record to exist");
         assert!((inv.tax_rate - 8.875).abs() < 0.001);
         assert!((inv.tax_amount - 8.875).abs() < 0.001); // 100 * 8.875 / 100
         assert!((inv.total - 108.875).abs() < 0.001);
@@ -996,17 +996,17 @@ mod tests {
     fn test_update_estimate_status() {
         let ctx = test_ctx();
         create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into());
-        let id = ctx.db.estimates().iter().next().unwrap().id.clone();
-        assert_eq!(ctx.db.estimates().id().find(&id).unwrap().status, "draft");
+        let id = ctx.db.estimates().iter().next().expect("expected at least one estimates record").id.clone();
+        assert_eq!(ctx.db.estimates().id().find(&id).expect("expected record to exist").status, "draft");
         update_estimate_status(&ctx, id.clone(), "approved".into());
-        assert_eq!(ctx.db.estimates().id().find(&id).unwrap().status, "approved");
+        assert_eq!(ctx.db.estimates().id().find(&id).expect("expected record to exist").status, "approved");
     }
 
     #[test]
     fn test_add_estimate_line_item() {
         let ctx = test_ctx();
         create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into());
-        let est_id = ctx.db.estimates().iter().next().unwrap().id.clone();
+        let est_id = ctx.db.estimates().iter().next().expect("expected at least one estimates record").id.clone();
         add_estimate_line_item(&ctx, est_id.clone(), "part".into(), "Screen".into(), 1.0, 89.99);
         let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().collect();
         assert_eq!(items.len(), 1);
@@ -1015,7 +1015,7 @@ mod tests {
         assert!((item.total - 89.99).abs() < 0.01);
 
         // Verify estimate totals
-        let est = ctx.db.estimates().id().find(&est_id).unwrap();
+        let est = ctx.db.estimates().id().find(&est_id).expect("expected record to exist");
         assert!((est.subtotal - 89.99).abs() < 0.01);
         assert!((est.total - 89.99).abs() < 0.01);
     }
@@ -1025,7 +1025,7 @@ mod tests {
         let ctx = test_ctx();
         create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into());
         assert_eq!(ctx.db.estimates().iter().count(), 1);
-        let id = ctx.db.estimates().iter().next().unwrap().id.clone();
+        let id = ctx.db.estimates().iter().next().expect("expected at least one estimates record").id.clone();
         delete_estimate(&ctx, id);
         assert_eq!(ctx.db.estimates().iter().count(), 0);
     }
@@ -1034,7 +1034,7 @@ mod tests {
     fn test_convert_estimate_to_invoice() {
         let ctx = test_ctx();
         create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "Convert me".into(), 1000, "USD".into());
-        let est_id = ctx.db.estimates().iter().next().unwrap().id.clone();
+        let est_id = ctx.db.estimates().iter().next().expect("expected at least one estimates record").id.clone();
         // Add line items
         add_estimate_line_item(&ctx, est_id.clone(), "service".into(), "Repair".into(), 1.0, 200.0);
         add_estimate_line_item(&ctx, est_id.clone(), "part".into(), "Part".into(), 2.0, 25.0);
@@ -1046,13 +1046,13 @@ mod tests {
         convert_estimate_to_invoice(&ctx, est_id.clone());
 
         // Estimate should be approved
-        let est = ctx.db.estimates().id().find(&est_id).unwrap();
+        let est = ctx.db.estimates().id().find(&est_id).expect("expected record to exist");
         assert_eq!(est.status, "approved");
         assert!(!est.invoice_id.is_empty());
 
         // Invoice should exist
         assert_eq!(ctx.db.invoices().iter().count(), 1);
-        let inv = ctx.db.invoices().iter().next().unwrap();
+        let inv = ctx.db.invoices().iter().next().expect("expected at least one invoices record");
         assert_eq!(inv.customer_id, "c1");
         assert!((inv.subtotal - 250.0).abs() < 0.01);
 
@@ -1082,7 +1082,7 @@ mod tests {
         let ctx = test_ctx();
         // These should all be no-ops, not panics
         create_tenant(&ctx, "Isolated".into(), "isolated".into());
-        let _ = ctx.db.tenants().iter().next().unwrap().id.clone();
+        let _ = ctx.db.tenants().iter().next().expect("expected at least one tenants record").id.clone();
 
         delete_customer(&ctx, "cust_nope".into());
         delete_payment(&ctx, "pmt_nope".into());
@@ -1172,10 +1172,10 @@ mod tests {
         let ctx = test_ctx();
         create_product(&ctx, "t_pq".into(), "Widget".into(), "WDG".into(),
             "".into(), "".into(), "Parts".into(), 10.0, 5.0, 50.0, 5.0, "A1".into());
-        let pid = ctx.db.products().iter().next().unwrap().id.clone();
-        assert_eq!(ctx.db.products().id().find(&pid).unwrap().quantity_on_hand, 50.0);
+        let pid = ctx.db.products().iter().next().expect("expected at least one products record").id.clone();
+        assert_eq!(ctx.db.products().id().find(&pid).expect("expected record to exist").quantity_on_hand, 50.0);
         update_product_quantity(&ctx, pid.clone(), 30.0);
-        let updated = ctx.db.products().id().find(&pid).unwrap();
+        let updated = ctx.db.products().id().find(&pid).expect("expected record to exist");
         assert_eq!(updated.quantity_on_hand, 30.0);
         assert_eq!(updated.quantity_available, 30.0);
     }
@@ -1214,20 +1214,20 @@ mod tests {
     fn test_po_submit_for_approval() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "Vendor Co".into(), "Urgent".into(), "USD".into());
-        let po = ctx.db.purchase_order().iter().next().unwrap();
+        let po = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record");
         let poid = po.id.clone();
         assert_eq!(po.status, "draft");
         submit_for_approval(&ctx, poid.clone());
-        assert_eq!(ctx.db.purchase_order().id().find(&poid).unwrap().status, "pending_approval");
+        assert_eq!(ctx.db.purchase_order().id().find(&poid).expect("expected record to exist").status, "pending_approval");
     }
 
     #[test]
     fn test_po_submit_for_approval_from_non_draft_is_noop() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         submit_for_approval(&ctx, poid.clone());
-        assert_eq!(ctx.db.purchase_order().id().find(&poid).unwrap().status, "pending_approval");
+        assert_eq!(ctx.db.purchase_order().id().find(&poid).expect("expected record to exist").status, "pending_approval");
         // Second submit should be no-op (already pending_approval)
         submit_for_approval(&ctx, poid);
         // No crash = success
@@ -1237,10 +1237,10 @@ mod tests {
     fn test_po_approve() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         submit_for_approval(&ctx, poid.clone());
         approve_po(&ctx, poid.clone(), "user_admin".into());
-        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        let po = ctx.db.purchase_order().id().find(&poid).expect("expected record to exist");
         assert_eq!(po.status, "approved");
         assert_eq!(po.approved_by, "user_admin");
         assert!(po.approved_at > 0);
@@ -1250,53 +1250,53 @@ mod tests {
     fn test_po_approve_from_draft_is_noop() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         approve_po(&ctx, poid, "user_admin".into());
         // Should stay draft
-        assert_eq!(ctx.db.purchase_order().iter().next().unwrap().status, "draft");
+        assert_eq!(ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").status, "draft");
     }
 
     #[test]
     fn test_po_reject() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         submit_for_approval(&ctx, poid.clone());
         reject_po(&ctx, poid.clone());
-        assert_eq!(ctx.db.purchase_order().id().find(&poid).unwrap().status, "draft");
+        assert_eq!(ctx.db.purchase_order().id().find(&poid).expect("expected record to exist").status, "draft");
     }
 
     #[test]
     fn test_po_reject_from_draft_is_noop() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         reject_po(&ctx, poid);
         // Should stay draft
-        assert_eq!(ctx.db.purchase_order().iter().next().unwrap().status, "draft");
+        assert_eq!(ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").status, "draft");
     }
 
     #[test]
     fn test_po_add_and_delete_line_item() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         // Add a line item
         add_po_line_item(&ctx, poid.clone(), "prod_1".into(), "Cable".into(), 10.0, 5.0);
         use crate::purchase_order::purchase_order_line_item;
         assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 1);
-        let item = ctx.db.purchase_order_line_item().iter().next().unwrap();
+        let item = ctx.db.purchase_order_line_item().iter().next().expect("expected at least one purchase order line item record");
         assert_eq!(item.description, "Cable");
         assert!((item.total - 50.0).abs() < 0.01);
         // PO totals should be recalculated
-        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        let po = ctx.db.purchase_order().id().find(&poid).expect("expected record to exist");
         assert!((po.subtotal - 50.0).abs() < 0.01);
         // Delete the line item
         let item_id = item.id.clone();
         delete_po_line_item(&ctx, poid.clone(), item_id);
         assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 0);
         // PO should recalc to zero
-        let po2 = ctx.db.purchase_order().id().find(&poid).unwrap();
+        let po2 = ctx.db.purchase_order().id().find(&poid).expect("expected record to exist");
         assert!((po2.subtotal - 0.0).abs() < 0.01);
     }
 
@@ -1306,30 +1306,30 @@ mod tests {
         // Create a product to receive against
         create_product(&ctx, "t_rcv".into(), "RAM Stick".into(), "RAM-8GB".into(),
             "".into(), "".into(), "Parts".into(), 49.99, 25.0, 5.0, 2.0, "C3".into());
-        let prod = ctx.db.products().iter().next().unwrap();
+        let prod = ctx.db.products().iter().next().expect("expected at least one products record");
         let pid = prod.id.clone();
         assert_eq!(prod.quantity_on_hand, 5.0);
         // Create PO and add line item referencing the product
         create_purchase_order(&ctx, "t_rcv".into(), "MemSupplier".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         add_po_line_item(&ctx, poid.clone(), pid.clone(), "8GB DDR4".into(), 10.0, 30.0);
-        let item = ctx.db.purchase_order_line_item().iter().next().unwrap();
+        let item = ctx.db.purchase_order_line_item().iter().next().expect("expected at least one purchase order line item record");
         let item_id = item.id.clone();
         assert_eq!(item.received_quantity, 0.0);
         // Receive 5 units
         receive_po_item(&ctx, item_id.clone(), 5.0);
         // Line item should show received
-        let updated_item = ctx.db.purchase_order_line_item().id().find(&item_id).unwrap();
+        let updated_item = ctx.db.purchase_order_line_item().id().find(&item_id).expect("expected record to exist");
         assert_eq!(updated_item.received_quantity, 5.0);
         // Product stock should increase
-        let updated_prod = ctx.db.products().id().find(&pid).unwrap();
+        let updated_prod = ctx.db.products().id().find(&pid).expect("expected record to exist");
         assert_eq!(updated_prod.quantity_on_hand, 10.0);
         // Inventory adjustment should be created
         assert_eq!(ctx.db.inventory_adjustment().iter().count(), 1);
-        let adj = ctx.db.inventory_adjustment().iter().next().unwrap();
+        let adj = ctx.db.inventory_adjustment().iter().next().expect("expected at least one inventory adjustment record");
         assert_eq!(adj.reason, "received");
         // PO status should be "partial"
-        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        let po = ctx.db.purchase_order().id().find(&poid).expect("expected record to exist");
         assert_eq!(po.status, "partial");
     }
 
@@ -1338,14 +1338,14 @@ mod tests {
         let ctx = test_ctx();
         create_product(&ctx, "t".into(), "P".into(), "P".into(), "".into(),
             "".into(), "".into(), 1.0, 0.5, 0.0, 0.0, "".into());
-        let pid = ctx.db.products().iter().next().unwrap().id.clone();
+        let pid = ctx.db.products().iter().next().expect("expected at least one products record").id.clone();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         add_po_line_item(&ctx, poid.clone(), pid, "Item".into(), 3.0, 10.0);
-        let item_id = ctx.db.purchase_order_line_item().iter().next().unwrap().id.clone();
+        let item_id = ctx.db.purchase_order_line_item().iter().next().expect("expected at least one purchase order line item record").id.clone();
         receive_po_item(&ctx, item_id, 3.0);
         // PO status should be "received" when fully received
-        let po = ctx.db.purchase_order().id().find(&poid).unwrap();
+        let po = ctx.db.purchase_order().id().find(&poid).expect("expected record to exist");
         assert_eq!(po.status, "received");
     }
 
@@ -1353,7 +1353,7 @@ mod tests {
     fn test_delete_purchase_order() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
-        let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let poid = ctx.db.purchase_order().iter().next().expect("expected at least one purchase order record").id.clone();
         // Add line items
         add_po_line_item(&ctx, poid.clone(), "p1".into(), "Item A".into(), 2.0, 10.0);
         add_po_line_item(&ctx, poid.clone(), "p2".into(), "Item B".into(), 1.0, 20.0);
@@ -1372,11 +1372,11 @@ mod tests {
     fn test_delete_ticket_timer() {
         let ctx = test_ctx();
         create_ticket(&ctx, "t_tmr".into(), "c1".into(), "Timer test delete".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
-        let tid = ctx.db.ticket().iter().next().unwrap().id.clone();
+        let tid = ctx.db.ticket().iter().next().expect("expected at least one ticket record").id.clone();
         start_ticket_timer(&ctx, tid, "user_1".into());
         use crate::ticket::ticket_timer;
         assert_eq!(ctx.db.ticket_timer().iter().count(), 1);
-        let timer_id = ctx.db.ticket_timer().iter().next().unwrap().id.clone();
+        let timer_id = ctx.db.ticket_timer().iter().next().expect("expected at least one ticket timer record").id.clone();
         delete_ticket_timer(&ctx, timer_id);
         assert_eq!(ctx.db.ticket_timer().iter().count(), 0);
     }
@@ -1396,10 +1396,10 @@ mod tests {
     fn test_set_user_pin() {
         let ctx = test_ctx();
         create_user(&ctx, "pin_user".into(), "pin@test.com".into(), "front_desk".into());
-        let uid = ctx.db.user().iter().next().unwrap().id.clone();
-        assert!(ctx.db.user().id().find(&uid).unwrap().pin.is_empty());
+        let uid = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
+        assert!(ctx.db.user().id().find(&uid).expect("expected record to exist").pin.is_empty());
         set_user_pin(&ctx, uid.clone(), "4321".into());
-        assert_eq!(ctx.db.user().id().find(&uid).unwrap().pin, "4321");
+        assert_eq!(ctx.db.user().id().find(&uid).expect("expected record to exist").pin, "4321");
     }
 
     #[test]
@@ -1413,7 +1413,7 @@ mod tests {
     fn test_upsert_user_settings_create() {
         let ctx = test_ctx();
         create_user(&ctx, "settings_test".into(), "s@test.com".into(), "tech".into());
-        let uid = ctx.db.user().iter().next().unwrap().id.clone();
+        let uid = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
         upsert_user_settings(&ctx, uid.clone(), "dark".into(), "in_progress".into());
         use crate::user::user_settings;
         let settings: Vec<UserSettings> = ctx.db.user_settings().iter().collect();
@@ -1430,13 +1430,13 @@ mod tests {
     fn test_upsert_user_settings_update() {
         let ctx = test_ctx();
         create_user(&ctx, "upd_test".into(), "upd@test.com".into(), "admin".into());
-        let uid = ctx.db.user().iter().next().unwrap().id.clone();
+        let uid = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
         upsert_user_settings(&ctx, uid.clone(), "light".into(), "new".into());
-        let original = ctx.db.user_settings().user_id().find(&uid).unwrap();
+        let original = ctx.db.user_settings().user_id().find(&uid).expect("expected record to exist");
         assert_eq!(original.theme, "light");
         // Update
         upsert_user_settings(&ctx, uid.clone(), "dark".into(), "in_progress".into());
-        let updated = ctx.db.user_settings().user_id().find(&uid).unwrap();
+        let updated = ctx.db.user_settings().user_id().find(&uid).expect("expected record to exist");
         assert_eq!(updated.theme, "dark");
         assert_eq!(updated.default_ticket_status, "in_progress");
         assert_eq!(updated.user_id, uid);
@@ -1448,7 +1448,7 @@ mod tests {
     fn test_delete_user_settings() {
         let ctx = test_ctx();
         create_user(&ctx, "del_settings".into(), "ds@test.com".into(), "tech".into());
-        let uid = ctx.db.user().iter().next().unwrap().id.clone();
+        let uid = ctx.db.user().iter().next().expect("expected at least one user record").id.clone();
         upsert_user_settings(&ctx, uid.clone(), "dark".into(), "new".into());
         assert_eq!(ctx.db.user_settings().iter().count(), 1);
         delete_user_settings(&ctx, uid);
@@ -1473,18 +1473,18 @@ mod tests {
         generate_recurring_invoices(&ctx);
         // Should have created 1 invoice
         assert_eq!(ctx.db.invoices().iter().count(), 1);
-        let inv = ctx.db.invoices().iter().next().unwrap();
+        let inv = ctx.db.invoices().iter().next().expect("expected at least one invoices record");
         assert_eq!(inv.tenant_id, "t_gr");
         assert_eq!(inv.customer_id, "cust_1");
         assert!(inv.notes.contains("Monthly Rent"));
         // Line items should be copied
         assert_eq!(ctx.db.invoice_line_items().iter().count(), 1);
-        let li = ctx.db.invoice_line_items().iter().next().unwrap();
+        let li = ctx.db.invoice_line_items().iter().next().expect("expected at least one invoice line items record");
         assert_eq!(li.description, "Monthly rent");
         assert!((li.total - 500.0).abs() < 0.01);
         // Rule's next_generation_date should be updated
         use crate::recurring_invoice_rules;
-        let rule = ctx.db.recurring_invoice_rules().iter().next().unwrap();
+        let rule = ctx.db.recurring_invoice_rules().iter().next().expect("expected at least one recurring invoice rules record");
         assert!(rule.next_generation_date > now - 1000);
         assert_eq!(rule.last_generated_date, now);
     }
@@ -1507,7 +1507,7 @@ mod tests {
         create_recurring_invoice_rule(&ctx, "t".into(), "c1".into(), "Paused".into(),
             "monthly".into(), 1, 15, "[]".into(), now - 1000);
         // Pause it
-        let id = ctx.db.recurring_invoice_rules().iter().next().unwrap().id.clone();
+        let id = ctx.db.recurring_invoice_rules().iter().next().expect("expected at least one recurring invoice rules record").id.clone();
         update_recurring_invoice_rule(&ctx, id, "Paused".into(), "monthly".into(), 1, 15, "[]".into(), now - 1000, "paused".into());
         generate_recurring_invoices(&ctx);
         assert_eq!(ctx.db.invoices().iter().count(), 0);

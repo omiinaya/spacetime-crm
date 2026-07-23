@@ -49,7 +49,7 @@ mod tests {
             "555-0102".into(),
         );
 
-        let c = ctx.db.customer().iter().next().unwrap();
+        let c = ctx.db.customer().iter().next().expect("expected at least one customer record");
         let original_id = c.id.clone();
         let original_created = c.created_at;
 
@@ -71,7 +71,7 @@ mod tests {
             String::new(),
         );
 
-        let updated = ctx.db.customer().id().find(&original_id).unwrap();
+        let updated = ctx.db.customer().id().find(&original_id).expect("expected record to exist");
         assert_eq!(updated.first_name, "Robert");
         assert_eq!(updated.email, "robert@test.com");
         assert_eq!(updated.phone, "555-0199");
@@ -94,7 +94,7 @@ mod tests {
             "555-0103".into(),
         );
 
-        let c = ctx.db.customer().iter().next().unwrap();
+        let c = ctx.db.customer().iter().next().expect("expected at least one customer record");
         delete_customer(&ctx, c.id.clone());
         assert_eq!(ctx.db.customer().iter().count(), 0);
     }
@@ -112,13 +112,13 @@ mod tests {
             "555-0104".into(),
         );
 
-        let c = ctx.db.customer().iter().next().unwrap();
+        let c = ctx.db.customer().iter().next().expect("expected at least one customer record");
         assert!(c.portal_password_hash.is_empty());
 
         let hash = "bcrypt_hash_here".to_string();
         set_customer_password(&ctx, c.id.clone(), hash.clone());
 
-        let updated = ctx.db.customer().id().find(&c.id).unwrap();
+        let updated = ctx.db.customer().id().find(&c.id).expect("expected record to exist");
         assert_eq!(updated.portal_password_hash, hash);
     }
 
