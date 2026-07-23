@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import secrets
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
@@ -16,6 +18,29 @@ from config import settings
 from log_config import configure_logging
 
 
+# ── Background scheduler ───────────────────────────────────
+
+_scheduler_tasks: list[asyncio.Task] = []
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start background scheduler tasks on startup, clean up on shutdown."""
+    from scheduler import SCHEDULED_TASKS
+
+    for name, (coro, interval) in SCHEDULED_TASKS.items():
+        task = asyncio.create_task(coro(interval), name=f"scheduler:{name}")
+        _scheduler_tasks.append(task)
+        print(f"[scheduler] Started: {name} (every {interval}s)")
+
+    yield
+
+    for task in _scheduler_tasks:
+        task.cancel()
+    await asyncio.gather(*_scheduler_tasks, return_exceptions=True)
+    print("[scheduler] All tasks stopped")
+
+
 # Generate a default signing key on startup if none configured
 if settings.jwt_secret == "set-via-environment-variable":  # pragma: allowlist secret
     settings.jwt_secret = secrets.token_hex(32)  # nosec - auto-generated on startup
@@ -23,7 +48,7 @@ if settings.jwt_secret == "set-via-environment-variable":  # pragma: allowlist s
 # Initialize structured logging
 configure_logging()
 
-app = FastAPI(title="SpacetimeCRM")
+app = FastAPI(title="SpacetimeCRM", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
