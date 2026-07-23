@@ -49,3 +49,64 @@ pub fn record_payment(
 pub fn delete_payment(ctx: &ReducerContext, id: String) {
     ctx.db.payment().id().delete(&id);
 }
+
+// ─── Tests ────────────────────────────────────────────────────
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_ctx() -> ReducerContext {
+        ReducerContext::__dummy()
+    }
+
+    #[test]
+    fn test_record_payment() {
+        let ctx = test_ctx();
+        record_payment(
+            &ctx,
+            "t_1".into(),
+            "inv_1".into(),
+            "cust_1".into(),
+            150.00,
+            "cash".into(),
+            "REF-001".into(),
+            "Walk-in".into(),
+            "USD".into(),
+        );
+        let payments: Vec<Payment> = ctx.db.payment().iter().collect();
+        assert_eq!(payments.len(), 1);
+        let p = &payments[0];
+        assert!(p.id.starts_with("pmt_"));
+        assert_eq!(p.amount, 150.00);
+        assert_eq!(p.method, "cash");
+        assert_eq!(p.reference, "REF-001");
+        assert_eq!(p.currency, "USD");
+    }
+
+    #[test]
+    fn test_delete_payment() {
+        let ctx = test_ctx();
+        record_payment(&ctx, "t_1".into(), "inv_1".into(), "c_1".into(), 50.0, "card".into(), "".into(), "".into(), "USD".into());
+        assert_eq!(ctx.db.payment().iter().count(), 1);
+        let id = ctx.db.payment().iter().next().unwrap().id.clone();
+        delete_payment(&ctx, id);
+        assert_eq!(ctx.db.payment().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_payment_multiple_currencies() {
+        let ctx = test_ctx();
+        record_payment(&ctx, "t_1".into(), "inv_1".into(), "c_1".into(), 100.0, "cash".into(), "".into(), "".into(), "USD".into());
+        record_payment(&ctx, "t_1".into(), "inv_2".into(), "c_1".into(), 200.0, "wire".into(), "".into(), "".into(), "EUR".into());
+        assert_eq!(ctx.db.payment().iter().count(), 2);
+        let eur: Vec<Payment> = ctx.db.payment().iter().filter(|p| p.currency == "EUR").collect();
+        assert_eq!(eur.len(), 1);
+    }
+
+    #[test]
+    fn test_delete_nonexistent_payment() {
+        let ctx = test_ctx();
+        delete_payment(&ctx, "pmt_nonexistent".into());
+        assert_eq!(ctx.db.payment().iter().count(), 0);
+    }
+}
