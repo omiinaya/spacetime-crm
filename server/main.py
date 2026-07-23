@@ -1,7 +1,9 @@
 """SpacetimeCRM — FastAPI application entry point."""
 from __future__ import annotations
 
+import asyncio
 import secrets
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
@@ -13,11 +15,35 @@ from fastapi.responses import FileResponse
 from config import settings
 from helpers import logger
 
+
+# ── Background scheduler ───────────────────────────────────
+
+_scheduler_tasks: list[asyncio.Task] = []
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start background scheduler tasks on startup, clean up on shutdown."""
+    from scheduler import SCHEDULED_TASKS
+
+    for name, (coro, interval) in SCHEDULED_TASKS.items():
+        task = asyncio.create_task(coro(interval), name=f"scheduler:{name}")
+        _scheduler_tasks.append(task)
+        print(f"[scheduler] Started: {name} (every {interval}s)")
+
+    yield
+
+    for task in _scheduler_tasks:
+        task.cancel()
+    await asyncio.gather(*_scheduler_tasks, return_exceptions=True)
+    print("[scheduler] All tasks stopped")
+
+
 # Generate a default JWT secret on startup if none configured
 if settings.jwt_secret == "change-me-to-a-random-secret":
     settings.jwt_secret = secrets.token_hex(32)
 
-app = FastAPI(title="SpacetimeCRM")
+app = FastAPI(title="SpacetimeCRM", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
