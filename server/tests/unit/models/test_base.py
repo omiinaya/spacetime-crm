@@ -55,3 +55,66 @@ class TestBaseModel:
         assert m.count == 42
         assert m.enabled is True
         assert m.tags == ["a", "b"]
+
+    def test_strips_nested_html(self) -> None:
+        from models.base import BaseModel
+
+        class _Model(BaseModel):
+            name: str = Field(..., max_length=200)
+
+        m = _Model(name="<div><span><b>John</b></span></div>")
+        assert "<" not in m.name
+        assert ">" not in m.name
+        assert m.name == "John"
+
+    def test_strips_multiple_tags(self) -> None:
+        from models.base import BaseModel
+
+        class _Model(BaseModel):
+            name: str = Field(..., max_length=200)
+
+        m = _Model(name="<p>Hello</p><p>World</p>")
+        assert "<" not in m.name
+        assert "Hello" in m.name
+        assert "World" in m.name
+
+    def test_empty_string_preserved(self) -> None:
+        from models.base import BaseModel
+
+        class _Model(BaseModel):
+            name: str = Field(default="")
+
+        m = _Model(name="")
+        assert m.name == ""
+
+    def test_no_html_unchanged(self) -> None:
+        from models.base import BaseModel
+
+        class _Model(BaseModel):
+            name: str = Field(..., max_length=200)
+
+        m = _Model(name="Plain text name")
+        assert m.name == "Plain text name"
+
+    def test_strips_html_from_optional_field(self) -> None:
+        from models.base import BaseModel
+        from typing import Optional
+
+        class _Model(BaseModel):
+            title: Optional[str] = None
+
+        m = _Model(title="<script>x</script>Report")
+        assert m.title is not None
+        assert "<script>" not in m.title
+        assert m.title == "xReport"
+
+    def test_strips_html_from_list_of_strings(self) -> None:
+        """SanitizedModel only strips HTML from str fields, not list items."""
+        from models.base import BaseModel
+
+        class _Model(BaseModel):
+            tags: list[str] = []
+
+        m = _Model(tags=["<b>tag1</b>", "plain", "<i>tag3</i>"])
+        # List items are NOT sanitized — only top-level str fields are
+        assert m.tags == ["<b>tag1</b>", "plain", "<i>tag3</i>"]
