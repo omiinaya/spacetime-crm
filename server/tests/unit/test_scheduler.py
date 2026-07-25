@@ -69,7 +69,9 @@ class TestHttpClient:
 class BaseSchedulerTest:
     """Common helpers for scheduler task tests."""
 
-    def _run_one_iteration(self, task_func, interval: int = 0) -> tuple[AsyncMock, MagicMock]:
+    def _run_one_iteration(
+        self, task_func, interval: int = 0
+    ) -> tuple[AsyncMock, MagicMock]:
         """Run a single iteration of a periodic task by making the second
         asyncio.sleep call raise CancelledError to break the loop.
 
@@ -103,9 +105,7 @@ class BaseSchedulerTest:
     ) -> AsyncMock:
         """Run one iteration and return the mock client for assertions."""
         mock_client = MagicMock()
-        method_mock = (
-            AsyncMock()
-        )  # will be set on mock_client.{method}
+        method_mock = AsyncMock()  # will be set on mock_client.{method}
         if expected_method.upper() == "POST":
             mock_client.post = AsyncMock()
             method_mock = mock_client.post
@@ -168,7 +168,10 @@ class TestOverdueCheck(BaseSchedulerTest):
         from scheduler import overdue_check
 
         mock_client = self._run_and_expect(
-            overdue_check, 0, "/api/invoices/send-overdue-reminders", "POST",
+            overdue_check,
+            0,
+            "/api/invoices/send-overdue-reminders",
+            "POST",
             mock_json={"notified": 2},
         )
         mock_client.post.assert_any_await("/api/invoices/send-overdue-reminders")
@@ -178,7 +181,9 @@ class TestOverdueCheck(BaseSchedulerTest):
         from scheduler import overdue_check
 
         mock_client = MagicMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.post = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
         mock_http = MagicMock(return_value=mock_client)
         mock_sleep = AsyncMock()
@@ -198,7 +203,9 @@ class TestOverdueCheck(BaseSchedulerTest):
 
         mock_http = MagicMock(return_value=mock_client)
         mock_sleep = AsyncMock()
-        mock_sleep.side_effect = asyncio.CancelledError()  # CancelledError on first sleep
+        mock_sleep.side_effect = (
+            asyncio.CancelledError()
+        )  # CancelledError on first sleep
 
         with patch("scheduler._http", mock_http):
             with patch("scheduler.asyncio.sleep", mock_sleep):
@@ -237,8 +244,10 @@ class TestRecurringInvoices(BaseSchedulerTest):
         from scheduler import recurring_invoices
 
         self._run_and_expect(
-            recurring_invoices, 0,
-            "/api/recurring-invoices/generate", "POST",
+            recurring_invoices,
+            0,
+            "/api/recurring-invoices/generate",
+            "POST",
             mock_json={"generated": 3},
         )
 
@@ -262,9 +271,7 @@ class TestRecurringInvoices(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(recurring_invoices(0))
 
-        mock_logger.info.assert_any_call(
-            "[scheduler:recurring] Generated 3 invoices"
-        )
+        mock_logger.info.assert_any_call("[scheduler:recurring] Generated 3 invoices")
 
     def test_logs_no_invoices_due(self) -> None:
         """Should log debug when no invoices are due."""
@@ -337,8 +344,10 @@ class TestAppointmentReminders(BaseSchedulerTest):
         from scheduler import appointment_reminders
 
         self._run_and_expect(
-            appointment_reminders, 0,
-            "/api/appointments/send-reminders", "POST",
+            appointment_reminders,
+            0,
+            "/api/appointments/send-reminders",
+            "POST",
             mock_json={"sent": 2},
         )
 
@@ -362,9 +371,7 @@ class TestAppointmentReminders(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(appointment_reminders(0))
 
-        mock_logger.info.assert_any_call(
-            "[scheduler:appointments] Sent 4 reminders"
-        )
+        mock_logger.info.assert_any_call("[scheduler:appointments] Sent 4 reminders")
 
     def test_handles_connect_error(self) -> None:
         """Should not crash on ConnectError."""
@@ -428,8 +435,10 @@ class TestLowStockAlerts(BaseSchedulerTest):
         from scheduler import low_stock_alerts
 
         self._run_and_expect(
-            low_stock_alerts, 0,
-            "/api/products/low-stock", "GET",
+            low_stock_alerts,
+            0,
+            "/api/products/low-stock",
+            "GET",
             mock_json=[],
         )
 
@@ -547,8 +556,10 @@ class TestLogCleanup(BaseSchedulerTest):
         from scheduler import log_cleanup
 
         self._run_and_expect(
-            log_cleanup, 0,
-            "/api/audit-logs/cleanup?days=90", "DELETE",
+            log_cleanup,
+            0,
+            "/api/audit-logs/cleanup?days=90",
+            "DELETE",
             mock_json={"deleted": 42},
         )
 
@@ -682,5 +693,196 @@ class TestScheduledTasksConfig:
         import asyncio as _asyncio
 
         for name, (func, interval) in SCHEDULED_TASKS.items():
-            assert _asyncio.iscoroutinefunction(func), f"{name} is not a coroutine function"
+            assert _asyncio.iscoroutinefunction(func), (
+                f"{name} is not a coroutine function"
+            )
             assert isinstance(interval, int), f"{name} interval is not an int"
+
+
+# ===================================================================
+# Exception handling coverage
+# ===================================================================
+
+
+class TestOverdueCheckExceptions(BaseSchedulerTest):
+    """Additional exception handling for overdue_check."""
+
+    def test_trigger_overdue_check_non_200(self) -> None:
+        """Should log warning when trigger-overdue-check returns non-200."""
+        from scheduler import overdue_check
+
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        mock_client.post.return_value = mock_resp
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(overdue_check(0))
+
+        mock_logger.warning.assert_any_call(
+            "[scheduler:overdue] trigger-overdue-check returned 500"
+        )
+
+    def test_send_overdue_reminders_non_200(self) -> None:
+        """Should log warning when send-overdue-reminders returns non-200."""
+        from scheduler import overdue_check
+
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock()
+
+        # First call (trigger-overdue-check) returns 200, second (send-reminders) returns 404
+        resp_ok = MagicMock()
+        resp_ok.status_code = 200
+        resp_ok.json.return_value = {"overdue_count": 0, "overdue_total": 0.0}
+        resp_err = MagicMock()
+        resp_err.status_code = 404
+        mock_client.post.side_effect = [resp_ok, resp_err]
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(overdue_check(0))
+
+        mock_logger.warning.assert_any_call(
+            "[scheduler:overdue] send-overdue-reminders returned 404"
+        )
+
+    def test_general_exception(self) -> None:
+        """Should catch and log general exceptions without crashing."""
+        from scheduler import overdue_check
+
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock(side_effect=ValueError("Unexpected error"))
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(overdue_check(0))
+
+        mock_logger.error.assert_called()
+
+
+class TestRecurringInvoicesExceptions(BaseSchedulerTest):
+    """Additional exception handling for recurring_invoices."""
+
+    def test_general_exception(self) -> None:
+        """Should catch and log general exceptions without crashing."""
+        from scheduler import recurring_invoices
+
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock(side_effect=ValueError("Unexpected error"))
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(recurring_invoices(0))
+
+        mock_logger.error.assert_called()
+
+
+class TestAppointmentRemindersExceptions(BaseSchedulerTest):
+    """Additional exception handling for appointment_reminders."""
+
+    def test_general_exception(self) -> None:
+        """Should catch and log general exceptions without crashing."""
+        from scheduler import appointment_reminders
+
+        mock_client = MagicMock()
+        mock_client.post = AsyncMock(side_effect=ValueError("Unexpected error"))
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(appointment_reminders(0))
+
+        mock_logger.error.assert_called()
+
+
+class TestLowStockAlertsExceptions(BaseSchedulerTest):
+    """Additional exception handling for low_stock_alerts."""
+
+    def test_non_200_response(self) -> None:
+        """Should log debug when low-stock endpoint returns non-200."""
+        from scheduler import low_stock_alerts
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        mock_client.get.return_value = mock_resp
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(low_stock_alerts(0))
+
+        mock_logger.debug.assert_any_call(
+            "[scheduler:lowstock] No low-stock endpoint or empty"
+        )
+
+    def test_general_exception(self) -> None:
+        """Should catch and log general exceptions without crashing."""
+        from scheduler import low_stock_alerts
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(side_effect=ValueError("Unexpected error"))
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(low_stock_alerts(0))
+
+        mock_logger.error.assert_called()
+
+
+class TestLogCleanupExceptions(BaseSchedulerTest):
+    """Additional exception handling for log_cleanup."""
+
+    def test_general_exception(self) -> None:
+        """Should catch and log general exceptions without crashing."""
+        from scheduler import log_cleanup
+
+        mock_client = MagicMock()
+        mock_client.delete = AsyncMock(side_effect=ValueError("Unexpected error"))
+
+        mock_http = MagicMock(return_value=mock_client)
+        mock_sleep = AsyncMock()
+        mock_sleep.side_effect = [None, asyncio.CancelledError()]
+
+        with patch("scheduler._http", mock_http):
+            with patch("scheduler.asyncio.sleep", mock_sleep):
+                with patch("scheduler.logger") as mock_logger:
+                    asyncio.run(log_cleanup(0))
+
+        mock_logger.error.assert_called()

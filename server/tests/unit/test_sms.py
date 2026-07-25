@@ -111,7 +111,9 @@ class TestSettings:
     def test_update_settings_adds_auth_token(self) -> None:
         import sms
 
-        sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC123", "from_number": "+1555"}))
+        sms.SETTINGS_PATH.write_text(
+            json.dumps({"account_sid": "AC123", "from_number": "+1555"})
+        )
         sms.update_settings({"auth_token": "new_token"})
         saved = json.loads(sms.SETTINGS_PATH.read_text())
         assert saved["auth_token"] == "new_token"
@@ -119,11 +121,15 @@ class TestSettings:
     def test_update_settings_does_not_overwrite_empty_token(self) -> None:
         import sms
 
-        sms.SETTINGS_PATH.write_text(json.dumps({
-            "account_sid": "AC123",
-            "auth_token": "existing_token",
-            "from_number": "+1555",
-        }))
+        sms.SETTINGS_PATH.write_text(
+            json.dumps(
+                {
+                    "account_sid": "AC123",
+                    "auth_token": "existing_token",
+                    "from_number": "+1555",
+                }
+            )
+        )
         sms.update_settings({"auth_token": ""})
         saved = json.loads(sms.SETTINGS_PATH.read_text())
         # Empty string is falsy, so should NOT overwrite
@@ -158,9 +164,14 @@ class TestSettings:
     def test_is_configured_returns_false_missing_token(self) -> None:
         import sms
 
-        sms.SETTINGS_PATH.write_text(json.dumps({
-            "account_sid": "AC123", "from_number": "+1555",
-        }))
+        sms.SETTINGS_PATH.write_text(
+            json.dumps(
+                {
+                    "account_sid": "AC123",
+                    "from_number": "+1555",
+                }
+            )
+        )
         assert sms.is_configured() is False
 
 
@@ -170,7 +181,10 @@ class TestCustomerPhone:
     def test_returns_mobile(self) -> None:
         from sms import _customer_phone
 
-        assert _customer_phone({"mobile": "+15551112222", "phone": "+15553334444"}) == "+15551112222"
+        assert (
+            _customer_phone({"mobile": "+15551112222", "phone": "+15553334444"})
+            == "+15551112222"
+        )
 
     def test_falls_back_to_phone(self) -> None:
         from sms import _customer_phone
@@ -211,9 +225,15 @@ class TestSendSms:
         """Should return False when account_sid is missing."""
         import sms
 
-        sms.SETTINGS_PATH.write_text(json.dumps({
-            "account_sid": "", "auth_token": "tok", "from_number": "+1555",
-        }))
+        sms.SETTINGS_PATH.write_text(
+            json.dumps(
+                {
+                    "account_sid": "",
+                    "auth_token": "tok",
+                    "from_number": "+1555",
+                }
+            )
+        )
         with patch("sms.logger"):
             result = await sms.send_sms("+15551234567", "Hello")
 
@@ -224,9 +244,15 @@ class TestSendSms:
         """Should return False when auth_token is missing."""
         import sms
 
-        sms.SETTINGS_PATH.write_text(json.dumps({
-            "account_sid": "AC123", "auth_token": "", "from_number": "+1555",
-        }))
+        sms.SETTINGS_PATH.write_text(
+            json.dumps(
+                {
+                    "account_sid": "AC123",
+                    "auth_token": "",
+                    "from_number": "+1555",
+                }
+            )
+        )
         with patch("sms.logger"):
             result = await sms.send_sms("+15551234567", "Hello")
 
@@ -237,9 +263,15 @@ class TestSendSms:
         """Should return False when from_number is missing."""
         import sms
 
-        sms.SETTINGS_PATH.write_text(json.dumps({
-            "account_sid": "AC123", "auth_token": "tok", "from_number": "",
-        }))
+        sms.SETTINGS_PATH.write_text(
+            json.dumps(
+                {
+                    "account_sid": "AC123",
+                    "auth_token": "tok",
+                    "from_number": "",
+                }
+            )
+        )
         with patch("sms.logger"):
             result = await sms.send_sms("+15551234567", "Hello")
 
@@ -345,7 +377,10 @@ class TestSendSms:
         assert result is True
         mock_client.post.assert_awaited_once()
         call_args = mock_client.post.call_args
-        assert call_args[0][0] == "https://api.twilio.com/2010-04-01/Accounts/AC123456789abcdef/Messages.json"
+        assert (
+            call_args[0][0]
+            == "https://api.twilio.com/2010-04-01/Accounts/AC123456789abcdef/Messages.json"
+        )
         assert call_args[1]["auth"] == ("AC123456789abcdef", "tokensecret123")
         assert call_args[1]["data"]["From"] == "+15551234567"
         assert call_args[1]["data"]["Body"] == "Hello, customer!"
@@ -427,9 +462,15 @@ class TestConnection:
         """Should return error when account_sid or auth_token missing."""
         import sms
 
-        sms.SETTINGS_PATH.write_text(json.dumps({
-            "account_sid": "", "auth_token": "", "from_number": "+1555",
-        }))
+        sms.SETTINGS_PATH.write_text(
+            json.dumps(
+                {
+                    "account_sid": "",
+                    "auth_token": "",
+                    "from_number": "+1555",
+                }
+            )
+        )
         result = await sms.test_connection()
         assert result["ok"] is False
         assert "Account SID and Auth Token required" in result["error"]
@@ -502,7 +543,13 @@ class TestNotifications:
                 mock_send.assert_called_once()
 
     def test_ticket_status_change_sends_sms(self) -> None:
-        self._assert_sms_sent("_notify_ticket_status_change", "+15551234567", 101, "Broken screen", "in_progress")
+        self._assert_sms_sent(
+            "_notify_ticket_status_change",
+            "+15551234567",
+            101,
+            "Broken screen",
+            "in_progress",
+        )
 
     def test_invoice_created_sends_sms(self) -> None:
         self._assert_sms_sent("_notify_invoice_created", "+15551234567", 201, 150.0)
@@ -511,10 +558,14 @@ class TestNotifications:
         self._assert_sms_sent("_notify_payment_received", "+15551234567", 201, 50.0)
 
     def test_appointment_created_sends_sms(self) -> None:
-        self._assert_sms_sent("_notify_appointment_created", "+15551234567", "Repair", 1710000000000)
+        self._assert_sms_sent(
+            "_notify_appointment_created", "+15551234567", "Repair", 1710000000000
+        )
 
     def test_appointment_reminder_sends_sms(self) -> None:
-        self._assert_sms_sent("_notify_appointment_reminder", "+15551234567", "Repair", 1710000000000)
+        self._assert_sms_sent(
+            "_notify_appointment_reminder", "+15551234567", "Repair", 1710000000000
+        )
 
     def test_estimate_approved_sends_sms(self) -> None:
         self._assert_sms_sent("_notify_estimate_approved", "+15551234567", 301, 250.0)
@@ -528,7 +579,9 @@ class TestNotifications:
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
             with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
-                sms._notify_ticket_status_change("+15551234567", 42, "Broken", "in_progress")
+                sms._notify_ticket_status_change(
+                    "+15551234567", 42, "Broken", "in_progress"
+                )
             body = mock_send.call_args[0][1]
             assert "Ticket #42" in body
             assert "In Progress" in body
@@ -580,7 +633,9 @@ class TestNotifications:
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
             with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
                 # 1710000000000ms = Sunday, March 10, 2024 12:00:00 AM GMT (approximately)
-                sms._notify_appointment_created("+15551234567", "Oil Change", 1710000000000)
+                sms._notify_appointment_created(
+                    "+15551234567", "Oil Change", 1710000000000
+                )
                 body = mock_send.call_args[0][1]
                 assert "Appointment scheduled" in body
                 assert "Oil Change" in body
@@ -596,3 +651,67 @@ class TestNotifications:
                 assert "overdue" in body.lower()
                 assert "$100.00" in body
                 assert "Invoice #401" in body
+
+
+class TestLoadSettingsEdgeCases:
+    """Edge cases for _load_settings not covered by the fixture-based tests."""
+
+    def test_settings_path_does_not_exist(self) -> None:
+        """Should return None when SETTINGS_PATH points to a non-existent file."""
+        import sms
+
+        # Point to a path that definitely doesn't exist
+        sms.SETTINGS_PATH = Path("/nonexistent/path/to/sms_settings.json")
+        try:
+            result = sms._load_settings()
+            assert result is None
+        finally:
+            # Restore to the temp path managed by the fixture
+            sms.SETTINGS_PATH = Path(tempfile.mkstemp(suffix=".json")[1])
+
+
+class TestPhoneNormalization:
+    """Phone number normalization edge cases."""
+
+    @pytest.mark.asyncio
+    async def test_non_standard_digit_count(self, _full_settings) -> None:
+        """Should prepend + to numbers that don't match 10 or 11 digits."""
+        import sms
+
+        sms.SETTINGS_PATH.write_text(json.dumps(_full_settings))
+
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 201
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch("sms.get_http_client", return_value=mock_client):
+            with patch("sms.logger"):
+                # 7-digit number — goes to the else branch (line 110)
+                result = await sms.send_sms("5551234", "Hello")
+
+        assert result is True
+        call_kwargs = mock_client.post.call_args[1]
+        # 7 digits → +5551234
+        assert call_kwargs["data"]["To"] == "+5551234"
+
+    @pytest.mark.asyncio
+    async def test_11_digit_not_starting_with_1(self, _full_settings) -> None:
+        """Should prepend + to 11-digit numbers not starting with 1."""
+        import sms
+
+        sms.SETTINGS_PATH.write_text(json.dumps(_full_settings))
+
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 201
+        mock_client.post = AsyncMock(return_value=mock_resp)
+
+        with patch("sms.get_http_client", return_value=mock_client):
+            with patch("sms.logger"):
+                # 11 digits starting with 2 — goes to the else branch (line 110)
+                result = await sms.send_sms("25512345678", "Hello")
+
+        assert result is True
+        call_kwargs = mock_client.post.call_args[1]
+        assert call_kwargs["data"]["To"] == "+25512345678"
