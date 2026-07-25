@@ -127,6 +127,13 @@ class TestBusinessHoursUpdate:
             saturday=DayHours(enabled=True, open="08:00", close="16:00"),
             sunday=DayHours(enabled=True, open="08:00", close="16:00"),
         )
-        for day in ("monday", "tuesday", "wednesday", "thursday", "friday",
-                     "saturday", "sunday"):
+        for day in (
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        ):
             assert getattr(m, day).enabled is True
