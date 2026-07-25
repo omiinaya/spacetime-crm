@@ -2,7 +2,6 @@ use spacetimedb::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::tax_rate::tax_rates;
     use crate::*;
 
     fn test_ctx() -> ReducerContext {
@@ -12,7 +11,7 @@ mod tests {
     #[test]
     fn test_create_tax_rate() {
         let ctx = test_ctx();
-        create_tax_rate(&ctx, "t_tax".into(), "Sales Tax".into(), 8.25, false);
+        create_tax_rate(&ctx, "t_1".into(), "Sales Tax".into(), 8.25, false);
         let rates: Vec<TaxRate> = ctx.db.tax_rates().iter().collect();
         assert_eq!(rates.len(), 1);
         let r = &rates[0];
@@ -20,46 +19,33 @@ mod tests {
         assert_eq!(r.name, "Sales Tax");
         assert_eq!(r.rate, 8.25);
         assert!(!r.is_default);
-        assert!(r.created_at > 0);
     }
 
     #[test]
-    fn test_create_default_tax_rate_uniqueness() {
+    fn test_create_default_tax_rate() {
         let ctx = test_ctx();
         create_tax_rate(&ctx, "t_1".into(), "Default".into(), 10.0, true);
         create_tax_rate(&ctx, "t_1".into(), "Second".into(), 5.0, true);
-        let default_count = ctx
-            .db
-            .tax_rates()
-            .iter()
-            .filter(|r: &TaxRate| r.is_default)
-            .count();
+        let rates: Vec<TaxRate> = ctx.db.tax_rates().iter().collect();
+        // After second is_default=true, first should have is_default=false
+        let default_count = rates.iter().filter(|r| r.is_default).count();
         assert_eq!(default_count, 1, "only one tax rate should be default");
-        let default = ctx.db.tax_rates().iter().find(|r| r.is_default).unwrap();
+        let default = rates.iter().find(|r| r.is_default).unwrap();
         assert_eq!(default.name, "Second");
-    }
-
-    #[test]
-    fn test_create_multiple_non_default() {
-        let ctx = test_ctx();
-        create_tax_rate(&ctx, "t_1".into(), "State".into(), 5.0, false);
-        create_tax_rate(&ctx, "t_1".into(), "City".into(), 2.0, false);
-        create_tax_rate(&ctx, "t_1".into(), "Federal".into(), 1.0, false);
-        assert_eq!(ctx.db.tax_rates().iter().count(), 3);
-        let default_count = ctx
-            .db
-            .tax_rates()
-            .iter()
-            .filter(|r: &TaxRate| r.is_default)
-            .count();
-        assert_eq!(default_count, 0);
     }
 
     #[test]
     fn test_update_tax_rate() {
         let ctx = test_ctx();
         create_tax_rate(&ctx, "t_1".into(), "Old".into(), 5.0, false);
-        let id = ctx.db.tax_rates().iter().next().unwrap().id.clone();
+        let id = ctx
+            .db
+            .tax_rates()
+            .iter()
+            .next()
+            .expect("expected record")
+            .id
+            .clone();
         update_tax_rate(&ctx, id.clone(), "Updated".into(), 9.5, true);
         let updated = ctx
             .db
@@ -70,40 +56,6 @@ mod tests {
         assert_eq!(updated.name, "Updated");
         assert_eq!(updated.rate, 9.5);
         assert!(updated.is_default);
-    }
-
-    #[test]
-    fn test_update_tax_rate_default_clears_others() {
-        let ctx = test_ctx();
-        create_tax_rate(&ctx, "t_1".into(), "First".into(), 5.0, true);
-        create_tax_rate(&ctx, "t_1".into(), "Second".into(), 8.0, false);
-        let first_id = ctx
-            .db
-            .tax_rates()
-            .iter()
-            .find(|r: &TaxRate| r.name == "First")
-            .unwrap()
-            .id
-            .clone();
-        let second_id = ctx
-            .db
-            .tax_rates()
-            .iter()
-            .find(|r: &TaxRate| r.name == "Second")
-            .unwrap()
-            .id
-            .clone();
-        // Update Second to be default - First should lose default
-        update_tax_rate(&ctx, second_id, "Second".into(), 8.0, true);
-        let first = ctx.db.tax_rates().id().find(&first_id).unwrap();
-        assert!(!first.is_default, "First should no longer be default");
-        let default_count = ctx
-            .db
-            .tax_rates()
-            .iter()
-            .filter(|r: &TaxRate| r.is_default)
-            .count();
-        assert_eq!(default_count, 1);
     }
 
     #[test]

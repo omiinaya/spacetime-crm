@@ -17,11 +17,11 @@ pub mod custom_field;
 #[cfg(test)]
 pub mod custom_field_test;
 pub mod customer;
-#[cfg(test)]
-pub mod customer_import_test;
 pub mod customer_geolocation;
 #[cfg(test)]
 pub mod customer_geolocation_test;
+#[cfg(test)]
+pub mod customer_import_test;
 #[cfg(test)]
 pub mod customer_test;
 pub mod estimate;
@@ -36,6 +36,8 @@ pub mod invoice_test;
 #[cfg(test)]
 pub mod lib_test;
 pub mod payment;
+#[cfg(test)]
+pub mod payment_test;
 pub mod pos;
 #[cfg(test)]
 pub mod pos_test;
@@ -43,6 +45,8 @@ pub mod product;
 #[cfg(test)]
 pub mod product_test;
 pub mod purchase_order;
+#[cfg(test)]
+pub mod purchase_order_test;
 pub mod recurring_invoice_rule;
 #[cfg(test)]
 pub mod recurring_invoice_test;
@@ -55,11 +59,23 @@ pub mod scheduled_report;
 #[cfg(test)]
 pub mod scheduled_report_test;
 pub mod sla_config;
+#[cfg(test)]
+pub mod sla_config_test;
 pub mod tax_rate;
+#[cfg(test)]
+pub mod tax_rate_test;
 pub mod tenant;
+#[cfg(test)]
+pub mod tenant_test;
 pub mod ticket;
+#[cfg(test)]
+pub mod ticket_test;
 pub mod user;
+#[cfg(test)]
+pub mod user_test;
 pub mod webhook;
+#[cfg(test)]
+pub mod webhook_test;
 
 pub use appointment::*;
 pub use audit::*;
