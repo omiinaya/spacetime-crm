@@ -75,6 +75,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
+  // Fire-and-forget helper: register push subscription after login
+  const trySubscribePush = () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const token = getStoredToken();
+    if (!token) return;
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        reg.pushManager
+          .subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: null, // VAPID public key from server if configured
+          })
+          .then((sub) => {
+            const rawKey = sub.getKey('p256dh');
+            const rawAuth = sub.getKey('auth');
+            if (!rawKey || !rawAuth) return;
+            fetch('/api/push/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                endpoint: sub.endpoint,
+                p256dh_key: btoa(String.fromCharCode(...new Uint8Array(rawKey))),
+                auth_key: btoa(String.fromCharCode(...new Uint8Array(rawAuth))),
+                user_agent: navigator.userAgent,
+              }),
+            }).catch(() => {});
+          })
+          .catch(() => {
+            // Permission denied or push not supported — not fatal
+          });
+      })
+      .catch(() => {});
+  };
+
   const login = async (email: string, password: string) => {
     setPending2FA(null);
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -106,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const u = decodeUser(data.token);
       setUser(u);
     }
+    // Subscribe for push notifications after login
+    trySubscribePush();
   };
 
   const complete2FA = async (code: string) => {
