@@ -29,8 +29,7 @@ class TestCustomerValidation:
             timeout=10,
         )
         assert resp.status_code == 422, (
-            f"Expected 422 for empty first_name, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 422 for empty first_name, got {resp.status_code}: {resp.text[:200]}"
         )
 
     def test_create_customer_missing_required(self, test_admin_headers: dict):
@@ -42,8 +41,7 @@ class TestCustomerValidation:
             timeout=10,
         )
         assert resp.status_code == 422, (
-            f"Expected 422 for missing required fields, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 422 for missing required fields, got {resp.status_code}: {resp.text[:200]}"
         )
 
 
@@ -62,8 +60,7 @@ class TestInvoiceValidation:
             timeout=10,
         )
         assert resp.status_code == 422, (
-            f"Expected 422 for missing customer_id, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 422 for missing customer_id, got {resp.status_code}: {resp.text[:200]}"
         )
 
 
@@ -83,8 +80,7 @@ class TestNotFound:
             timeout=10,
         )
         assert resp.status_code == 404, (
-            f"Expected 404 for nonexistent invoice PDF, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 404 for nonexistent invoice PDF, got {resp.status_code}: {resp.text[:200]}"
         )
 
 
@@ -98,17 +94,14 @@ class TestAuthentication:
             timeout=10,
         )
         assert resp.status_code == 401, (
-            f"Expected 401 for unauthenticated request, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 401 for unauthenticated request, got {resp.status_code}: {resp.text[:200]}"
         )
 
 
 class TestTicketBoundary:
     """Ticket creation with boundary/invalid values."""
 
-    def test_create_ticket_invalid_priority(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_create_ticket_invalid_priority(self, test_admin_headers: dict, session_suffix: str):
         """POST /api/tickets with invalid priority is accepted (model has no enum validation).
 
         The TicketCreate model defines priority as a plain str with no enum

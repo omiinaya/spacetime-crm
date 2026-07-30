@@ -65,6 +65,20 @@ async def list_tickets(
     return {"tickets": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@router.get("/api/tickets/{ticket_id}")
+async def get_ticket(
+    ticket_id: str,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+):
+    """Get a single ticket by ID."""
+    rows = await _sql(
+        f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND tenant_id = '{user['tenant_id']}'"
+    )
+    if not rows:
+        raise HTTPException(404, "Ticket not found")
+    return {"ticket": rows[0]}
+
+
 @router.post("/api/tickets")
 async def create_ticket(
     body: TicketCreate,
