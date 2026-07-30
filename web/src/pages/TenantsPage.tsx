@@ -68,8 +68,8 @@ export default function TenantsPage() {
     try {
       const data = await api.tenants.list();
       setTenants(data.tenants || []);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -83,8 +83,8 @@ export default function TenantsPage() {
     try {
       const data = await api.tenants.get(tenantId);
       setMembers(data.tenant?.members || []);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -105,8 +105,8 @@ export default function TenantsPage() {
       setNewName("");
       setNewSlug("");
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -127,8 +127,8 @@ export default function TenantsPage() {
           slug: editSlug.trim(),
         });
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -142,8 +142,8 @@ export default function TenantsPage() {
         setMembers([]);
       }
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -159,8 +159,8 @@ export default function TenantsPage() {
       setMemberUsername("");
       setMemberRole("user");
       await loadMembers(selected.id);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -170,8 +170,8 @@ export default function TenantsPage() {
       await api.tenants.removeMember(selected.id, memberId);
       toast.success("Member removed");
       await loadMembers(selected.id);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -182,8 +182,8 @@ export default function TenantsPage() {
       toast.success(`Migrated: ${result.users_migrated} users assigned`);
       await load();
       await refreshTenant();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error((e as Error).message);
     } finally {
       setMigrating(false);
     }

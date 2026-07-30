@@ -35,15 +35,15 @@ export default function ResetPasswordPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.message || "Failed to reset password");
+        throw new Error((err as Error)?.message || "Failed to reset password");
       }
 
       toast.success("Password reset successfully. Redirecting to login...");
       setTimeout(() => {
         window.location.href = "/";
       }, 2000);
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Something went wrong");
     } finally {
       setBusy(false);
     }

@@ -80,8 +80,8 @@ export default function PinSection() {
       setPin("");
       setConfirmPin("");
       setHasPin(true);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to set PIN");
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "Failed to set PIN");
     } finally {
       setBusy(false);
     }
@@ -93,8 +93,8 @@ export default function PinSection() {
       await api.auth.setPin("");
       toast.success("POS PIN removed");
       setHasPin(false);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to remove PIN");
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "Failed to remove PIN");
     } finally {
       setBusy(false);
     }

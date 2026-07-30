@@ -12,6 +12,7 @@ import {
   CheckCircle,
   ArrowRight,
   Loader2,
+  type LucideIcon,
 } from "lucide-react";
 import { api, DashboardStats, ReportsData, Invoice } from "../lib/api";
 import { Badge } from "../components/ui/badge";
@@ -108,7 +109,7 @@ export default function DashboardPage({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
-    onError: () => {},
+    onError: () => toast.error("Failed to claim ticket"),
   });
 
   useEffect(() => {
@@ -121,7 +122,7 @@ export default function DashboardPage({
   const summaryCards: {
     label: string;
     value: string | number;
-    icon: any;
+    icon: LucideIcon;
     color: string;
     link: PageId;
   }[] = [

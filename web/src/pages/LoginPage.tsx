@@ -16,8 +16,8 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(email, password);
-    } catch (err: any) {
-      setError(err.message || "Login failed");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Login failed");
     } finally {
       setBusy(false);
     }
@@ -29,8 +29,8 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await complete2FA(code);
-    } catch (err: any) {
-      setError(err.message || "Verification failed");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Verification failed");
     } finally {
       setBusy(false);
     }

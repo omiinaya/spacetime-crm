@@ -151,6 +151,7 @@ export default function TicketsPage() {
         setTimerSeconds(0);
       }
     } catch {
+      toast.error("Failed to load timers");
       setTimers([]);
     }
   };
@@ -239,6 +240,7 @@ export default function TicketsPage() {
       const res = await api.checklist.ticket.list(ticketId);
       setChecklist(res.items);
     } catch {
+      toast.error("Failed to load checklist");
       setChecklist([]);
     }
   };
@@ -248,6 +250,7 @@ export default function TicketsPage() {
       const res = await api.checklist.templates.list();
       setChecklistTemplates(res.templates);
     } catch {
+      toast.error("Failed to load templates");
       setChecklistTemplates([]);
     }
   };

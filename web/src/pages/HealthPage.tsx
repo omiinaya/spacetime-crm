@@ -55,8 +55,8 @@ export default function HealthPage() {
       ]);
       setHealth(h);
       setReady(r);
-    } catch (e: any) {
-      setError(e?.message || "Health check failed");
+    } catch (e: unknown) {
+      setError((e as Error)?.message || "Health check failed");
     } finally {
       setLoading(false);
     }

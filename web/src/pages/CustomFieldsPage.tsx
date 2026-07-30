@@ -306,8 +306,8 @@ function FieldForm({
       }
       queryClient.invalidateQueries({ queryKey: ["custom-fields"] });
       onSave();
-    } catch (e: any) {
-      setError(e?.message || "Failed to save");
+    } catch (e: unknown) {
+      setError((e as Error)?.message || "Failed to save");
     } finally {
       setSaving(false);
     }

@@ -114,8 +114,8 @@ export default function PortalInvoicesPage() {
     try {
       const res = await portalApi.payments.createCheckoutSession(invoiceId);
       window.location.href = res.url;
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to initiate Stripe payment");
+    } catch (e: unknown) {
+      toast.error((e as Error)?.message || "Failed to initiate Stripe payment");
     } finally {
       setStripeLoading(null);
     }
@@ -138,8 +138,8 @@ export default function PortalInvoicesPage() {
       } else {
         toast.error("Payment failed");
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Card payment failed");
+    } catch (e: unknown) {
+      toast.error((e as Error)?.message || "Card payment failed");
     } finally {
       setCardPaying(null);
     }
