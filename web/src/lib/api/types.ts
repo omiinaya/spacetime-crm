@@ -281,6 +281,21 @@ export interface DashboardStats {
   estimate_item_type_breakdown: { item_type: string; count: number; total: number }[];
 }
 
+export interface GiftCard {
+  id: string;
+  code: string;
+  tenant_id: string;
+  customer_id: string;
+  customer_name: string;
+  initial_balance: number;
+  remaining_balance: number;
+  created_by: string;
+  created_at: number;
+  expires_at: number;
+  notes: string;
+  active: boolean;
+}
+
 export interface MailSettings {
   host: string;
   port: number;

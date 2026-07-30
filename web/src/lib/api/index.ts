@@ -23,6 +23,7 @@ import { webhooks } from './webhooks';
 import { pos } from './pos';
 import { auth } from './auth';
 import { customFields } from './custom-fields';
+import { giftCards } from './gift-cards';
 
 // Combined API client object (mirrors the original api.ts export)
 export const api = {
@@ -53,4 +54,5 @@ export const api = {
   pos,
   auth,
   userSettings,
+  giftCards,
 };

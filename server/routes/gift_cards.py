@@ -60,7 +60,9 @@ async def create_gift_card(
         if customer_id:
             cust = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
             if cust:
-                customer_name = f"{cust[0].get('first_name', '')} {cust[0].get('last_name', '')}".strip()
+                customer_name = (
+                    f"{cust[0].get('first_name', '')} {cust[0].get('last_name', '')}".strip()
+                )
         if not customer_name:
             customer_name = "Anonymous"
 
@@ -68,16 +70,19 @@ async def create_gift_card(
     expires_at = body.get("expires_at", 0)
     notes = body.get("notes", "")
 
-    await _call("create_gift_card", [
-        code,
-        user["tenant_id"],
-        customer_id,
-        customer_name,
-        amount,
-        user["id"],
-        expires_at,
-        notes,
-    ])
+    await _call(
+        "create_gift_card",
+        [
+            code,
+            user["tenant_id"],
+            customer_id,
+            customer_name,
+            amount,
+            user["id"],
+            expires_at,
+            notes,
+        ],
+    )
     await _log_audit(user, "create", "gift_card", code, f"amount={amount}")
 
     # Return the newly created gift card
@@ -99,16 +104,22 @@ async def redeem_gift_card(
     if amount <= 0:
         raise HTTPException(400, "Redemption amount must be positive")
 
-    rows = await _sql(f"SELECT * FROM gift_cards WHERE code = '{code}' AND tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(
+        f"SELECT * FROM gift_cards WHERE code = '{code}' AND tenant_id = '{user['tenant_id']}'"
+    )
     if not rows:
         raise HTTPException(404, "Gift card not found")
     card = rows[0]
     if not card.get("active", True):
         raise HTTPException(400, "Gift card is no longer active")
-    if card.get("expires_at", 0) > 0 and card["expires_at"] < int(asyncio.get_event_loop().time() * 1000):
+    if card.get("expires_at", 0) > 0 and card["expires_at"] < int(
+        asyncio.get_event_loop().time() * 1000
+    ):
         raise HTTPException(400, "Gift card has expired")
     if card["remaining_balance"] < amount:
-        raise HTTPException(400, f"Insufficient balance: ${card['remaining_balance']:.2f} remaining")
+        raise HTTPException(
+            400, f"Insufficient balance: ${card['remaining_balance']:.2f} remaining"
+        )
 
     await _call("redeem_gift_card", [card["id"], amount])
     return {"ok": True, "redeemed": amount, "remaining": card["remaining_balance"] - amount}
@@ -123,7 +134,9 @@ async def lookup_gift_card(
     if not code:
         raise HTTPException(400, "Missing gift card code")
     code = code.strip().upper()
-    rows = await _sql(f"SELECT * FROM gift_cards WHERE code = '{code}' AND tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(
+        f"SELECT * FROM gift_cards WHERE code = '{code}' AND tenant_id = '{user['tenant_id']}'"
+    )
     if not rows:
         raise HTTPException(404, "Gift card not found")
     card = rows[0]
