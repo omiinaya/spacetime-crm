@@ -275,6 +275,24 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             if inv.get("status") in ("sent", "overdue", "partial")
         )
 
+        # Service vs Parts breakdown from invoice line items
+        inv_line_items = await _sql_t("SELECT * FROM invoice_line_items", tenant_id)
+        est_line_items = await _sql_t("SELECT * FROM estimate_line_items", tenant_id)
+        inv_type_breakdown: dict[str, dict[str, float]] = {}
+        for li in inv_line_items:
+            t = li.get("item_type", "other")
+            if t not in inv_type_breakdown:
+                inv_type_breakdown[t] = {"count": 0, "total": 0.0}
+            inv_type_breakdown[t]["count"] += 1
+            inv_type_breakdown[t]["total"] += float(li.get("total", 0))
+        est_type_breakdown: dict[str, dict[str, float]] = {}
+        for li in est_line_items:
+            t = li.get("item_type", "other")
+            if t not in est_type_breakdown:
+                est_type_breakdown[t] = {"count": 0, "total": 0.0}
+            est_type_breakdown[t]["count"] += 1
+            est_type_breakdown[t]["total"] += float(li.get("total", 0))
+
         return {
             "title": "Revenue Report",
             "metrics": [
@@ -285,6 +303,14 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             ],
             "chart": revenue_by_month,
             "chart_label": "Revenue by Month",
+            "invoice_item_type_breakdown": [
+                {"item_type": t, "count": v["count"], "total": round(v["total"], 2)}
+                for t, v in sorted(inv_type_breakdown.items())
+            ],
+            "estimate_item_type_breakdown": [
+                {"item_type": t, "count": v["count"], "total": round(v["total"], 2)}
+                for t, v in sorted(est_type_breakdown.items())
+            ],
         }
 
     elif report_type == "tickets":

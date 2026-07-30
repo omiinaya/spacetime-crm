@@ -277,6 +277,8 @@ export interface DashboardStats {
   monthly_revenue: number;
   revenue_target: number;
   avg_resolution_hours: number;
+  invoice_item_type_breakdown: { item_type: string; count: number; total: number }[];
+  estimate_item_type_breakdown: { item_type: string; count: number; total: number }[];
 }
 
 export interface MailSettings {

@@ -411,6 +411,64 @@ export default function DashboardPage({
 
       {/* My Tickets section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Service vs Parts Breakdown */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="w-4 h-4" /> Service vs Parts
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="h-64">
+            {stats?.invoice_item_type_breakdown && stats.invoice_item_type_breakdown.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height="80%">
+                  <PieChart>
+                    <Pie
+                      data={stats.invoice_item_type_breakdown}
+                      dataKey="total"
+                      nameKey="item_type"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                      label={(props: any) =>
+                        `${props?.item_type || props?.payload?.item_type || ''}: $${Number(props?.total || props?.payload?.total || 0).toFixed(0)}`
+                      }
+                    >
+                      {stats.invoice_item_type_breakdown.map((_entry, idx) => (
+                        <Cell
+                          key={`cell-${idx}`}
+                          fill={idx === 0 ? 'var(--color-primary)' : 'var(--color-muted-foreground)'}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--color-card)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '8px',
+                      }}
+                      formatter={(_v: any, _n: any, props: any) => [
+                        `$${Number(props?.payload?.total || 0).toFixed(2)} (${props?.payload?.count || 0} items)`,
+                        props?.payload?.item_type || '',
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex justify-center gap-4 text-xs text-muted-foreground">
+                  {stats.invoice_item_type_breakdown.map((entry) => (
+                    <span key={entry.item_type}>
+                      {entry.item_type}: ${entry.total.toFixed(0)} ({entry.count})
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                No invoice data yet
+              </div>
+            )}
+          </CardContent>
+        </Card>
         {/* My assigned tickets */}
         <Card>
           <CardHeader className="pb-3">
