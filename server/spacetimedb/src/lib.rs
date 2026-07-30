@@ -31,7 +31,8 @@ pub mod customer_import_test;
 pub mod customer_test;
 pub mod estimate;
 #[cfg(test)]
-pub mod estimate_test;
+pub mod geolocation_tool;
+pub mod gift_card;
 pub mod inventory;
 #[cfg(test)]
 pub mod inventory_adjustment_test;
