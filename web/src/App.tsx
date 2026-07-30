@@ -1,11 +1,32 @@
 import { useState, useEffect, Suspense, lazy } from "react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import {
-  LayoutDashboard, Users, Ticket, FileText, CreditCard,
-  Calendar, Package, FileCheck, ShoppingCart, BarChart3, Settings,
-  Menu, Users as UsersIcon, LogOut, ExternalLink, Sun, Moon,
-  Download, Upload, History, HeartPulse, ListOrdered, Map, ListChecks,
-  Building2, Repeat,
+  LayoutDashboard,
+  Users,
+  Ticket,
+  FileText,
+  CreditCard,
+  Calendar,
+  Package,
+  FileCheck,
+  ShoppingCart,
+  BarChart3,
+  Settings,
+  Menu,
+  Users as UsersIcon,
+  LogOut,
+  ExternalLink,
+  Sun,
+  Moon,
+  Download,
+  Upload,
+  History,
+  HeartPulse,
+  ListOrdered,
+  Map,
+  ListChecks,
+  Building2,
+  Repeat,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -24,7 +45,9 @@ const PortalLoginPage = lazy(() => import("./pages/PortalLoginPage"));
 const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
 const PortalTicketsPage = lazy(() => import("./pages/PortalTicketsPage"));
 const PortalInvoicesPage = lazy(() => import("./pages/PortalInvoicesPage"));
-const PortalAppointmentsPage = lazy(() => import("./pages/PortalAppointmentsPage"));
+const PortalAppointmentsPage = lazy(
+  () => import("./pages/PortalAppointmentsPage"),
+);
 const CustomersPage = lazy(() => import("./pages/CustomersPage"));
 const TicketsPage = lazy(() => import("./pages/TicketsPage"));
 const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
@@ -40,19 +63,39 @@ const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 const HealthPage = lazy(() => import("./pages/HealthPage"));
 const CustomFieldsPage = lazy(() => import("./pages/CustomFieldsPage"));
 const MapPage = lazy(() => import("./pages/MapPage"));
-const ChecklistTemplatesPage = lazy(() => import("./pages/ChecklistTemplatesPage"));
+const ChecklistTemplatesPage = lazy(
+  () => import("./pages/ChecklistTemplatesPage"),
+);
 const TenantsPage = lazy(() => import("./pages/TenantsPage"));
-const RecurringInvoicesPage = lazy(() => import("./pages/RecurringInvoicesPage"));
+const RecurringInvoicesPage = lazy(
+  () => import("./pages/RecurringInvoicesPage"),
+);
 const PaymentMethodsPage = lazy(() => import("./pages/PaymentMethodsPage"));
 const PosPage = lazy(() => import("./pages/PosPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 
 type PageId =
-  | "dashboard" | "customers" | "tickets" | "invoices"
-  | "payments" | "appointments" | "products" | "estimates"
-  | "purchase-orders" | "import-export" | "audit-log" | "pos"
-  | "health" | "custom-fields" | "checklist" | "map" | "reports" | "settings" | "tenants"
-  | "recurring-invoices" | "payment-methods";
+  | "dashboard"
+  | "customers"
+  | "tickets"
+  | "invoices"
+  | "payments"
+  | "appointments"
+  | "products"
+  | "estimates"
+  | "purchase-orders"
+  | "import-export"
+  | "audit-log"
+  | "pos"
+  | "health"
+  | "custom-fields"
+  | "checklist"
+  | "map"
+  | "reports"
+  | "settings"
+  | "tenants"
+  | "recurring-invoices"
+  | "payment-methods";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -89,7 +132,11 @@ const navItems: NavItem[] = [
 
 // ── Portal App ──
 
-const portalTabs: { id: PortalPage; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const portalTabs: {
+  id: PortalPage;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "tickets", label: "Tickets", icon: Ticket },
   { id: "invoices", label: "Invoices", icon: FileText },
@@ -115,16 +162,26 @@ function PortalShell() {
   const renderPortalPage = () => {
     return (
       <ErrorBoundary>
-        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
-          {(() => {
-          switch (page) {
-            case "dashboard": return <PortalDashboard />;
-            case "tickets": return <PortalTicketsPage />;
-            case "invoices": return <PortalInvoicesPage />;
-            case "appointments": return <PortalAppointmentsPage />;
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
           }
-        })()}
-      </Suspense>
+        >
+          {(() => {
+            switch (page) {
+              case "dashboard":
+                return <PortalDashboard />;
+              case "tickets":
+                return <PortalTicketsPage />;
+              case "invoices":
+                return <PortalInvoicesPage />;
+              case "appointments":
+                return <PortalAppointmentsPage />;
+            }
+          })()}
+        </Suspense>
       </ErrorBoundary>
     );
   };
@@ -144,10 +201,16 @@ function PortalShell() {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {customer.first_name} {customer.last_name}
             </span>
-            <a href="/" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+            <a
+              href="/"
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
               <ExternalLink className="h-3 w-3" /> Admin
             </a>
-            <button onClick={logout} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1">
+            <button
+              onClick={logout}
+              className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
+            >
               <LogOut className="h-3 w-3" /> Sign Out
             </button>
           </div>
@@ -164,7 +227,7 @@ function PortalShell() {
                   "flex items-center gap-2 px-4 py-2 text-sm rounded-t-md transition-colors border-b-2",
                   page === tab.id
                     ? "border-primary text-foreground font-medium"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -176,9 +239,7 @@ function PortalShell() {
       </header>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        {renderPortalPage()}
-      </main>
+      <main className="max-w-5xl mx-auto px-4 py-6">{renderPortalPage()}</main>
 
       <Toaster position="bottom-left" theme="dark" />
     </div>
@@ -196,9 +257,15 @@ function AppShell() {
 
   useEffect(() => {
     if (user) {
-      api.stats.get().then(setStats).catch(() => {});
+      api.stats
+        .get()
+        .then(setStats)
+        .catch(() => toast.error("Failed to load dashboard stats"));
       const interval = setInterval(() => {
-        api.stats.get().then(setStats).catch(() => {});
+        api.stats
+          .get()
+          .then(setStats)
+          .catch(() => toast.error("Failed to refresh dashboard stats"));
       }, 60_000);
       return () => clearInterval(interval);
     }
@@ -219,54 +286,60 @@ function AppShell() {
   const renderPage = () => {
     return (
       <ErrorBoundary>
-        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
-          {(() => {
-          switch (page) {
-            case "dashboard":
-              return <DashboardPage stats={stats} onNavigate={setPage} />;
-            case "customers":
-              return <CustomersPage />;
-            case "tickets":
-              return <TicketsPage />;
-            case "invoices":
-              return <InvoicesPage />;
-            case "recurring-invoices":
-              return <RecurringInvoicesPage />;
-            case "payments":
-              return <PaymentsPage />;
-            case "payment-methods":
-              return <PaymentMethodsPage />;
-            case "pos":
-              return <PosPage />;
-            case "appointments":
-              return <AppointmentsPage />;
-            case "products":
-              return <ProductsPage />;
-            case "estimates":
-              return <EstimatesPage />;
-            case "purchase-orders":
-              return <PurchaseOrdersPage />;
-            case "import-export":
-              return <ImportExportPage />;
-            case "audit-log":
-              return <AuditLogPage />;
-            case "health":
-              return <HealthPage />;
-            case "custom-fields":
-              return <CustomFieldsPage />;
-            case "map":
-              return <MapPage />;
-            case "checklist":
-              return <ChecklistTemplatesPage />;
-            case "reports":
-              return <ReportsPage />;
-            case "settings":
-              return <SettingsPage />;
-            case "tenants":
-              return <TenantsPage />;
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
           }
-        })()}
-      </Suspense>
+        >
+          {(() => {
+            switch (page) {
+              case "dashboard":
+                return <DashboardPage stats={stats} onNavigate={setPage} />;
+              case "customers":
+                return <CustomersPage />;
+              case "tickets":
+                return <TicketsPage />;
+              case "invoices":
+                return <InvoicesPage />;
+              case "recurring-invoices":
+                return <RecurringInvoicesPage />;
+              case "payments":
+                return <PaymentsPage />;
+              case "payment-methods":
+                return <PaymentMethodsPage />;
+              case "pos":
+                return <PosPage />;
+              case "appointments":
+                return <AppointmentsPage />;
+              case "products":
+                return <ProductsPage />;
+              case "estimates":
+                return <EstimatesPage />;
+              case "purchase-orders":
+                return <PurchaseOrdersPage />;
+              case "import-export":
+                return <ImportExportPage />;
+              case "audit-log":
+                return <AuditLogPage />;
+              case "health":
+                return <HealthPage />;
+              case "custom-fields":
+                return <CustomFieldsPage />;
+              case "map":
+                return <MapPage />;
+              case "checklist":
+                return <ChecklistTemplatesPage />;
+              case "reports":
+                return <ReportsPage />;
+              case "settings":
+                return <SettingsPage />;
+              case "tenants":
+                return <TenantsPage />;
+            }
+          })()}
+        </Suspense>
       </ErrorBoundary>
     );
   };
@@ -289,34 +362,53 @@ function AppShell() {
 
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto py-2 space-y-1 px-2">
-        {navItems.filter(item => {
-          // Role-based nav filtering
-          const role = user?.role || "";
-          if (role === "admin") return true;
-          if (role === "tech") return !["health", "custom-fields", "settings", "import-export", "audit-log"].includes(item.id);
-          // front_desk
-          return !["health", "custom-fields", "products", "purchase-orders", "reports", "settings", "import-export", "audit-log", "estimates"].includes(item.id);
-        }).map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                setPage(item.id);
-                setMobileOpen(false);
-              }}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors border-l-2",
-                page === item.id
-                  ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
-            </button>
-          );
-        })}
+        {navItems
+          .filter((item) => {
+            // Role-based nav filtering
+            const role = user?.role || "";
+            if (role === "admin") return true;
+            if (role === "tech")
+              return ![
+                "health",
+                "custom-fields",
+                "settings",
+                "import-export",
+                "audit-log",
+              ].includes(item.id);
+            // front_desk
+            return ![
+              "health",
+              "custom-fields",
+              "products",
+              "purchase-orders",
+              "reports",
+              "settings",
+              "import-export",
+              "audit-log",
+              "estimates",
+            ].includes(item.id);
+          })
+          .map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setPage(item.id);
+                  setMobileOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors border-l-2",
+                  page === item.id
+                    ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
       </div>
 
       {/* Portal link + Logout */}
@@ -332,7 +424,11 @@ function AppShell() {
           onClick={toggleTheme}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
           <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
         </button>
         <button
@@ -360,7 +456,7 @@ function AppShell() {
       <aside
         className={cn(
           "fixed md:relative z-50 md:z-0 w-64 h-full bg-[var(--color-sidebar)] border-r border-border transition-transform md:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {sidebar}
@@ -390,17 +486,24 @@ function AppShell() {
 // ── Root ──
 
 export default function App() {
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+  const pathname =
+    typeof window !== "undefined" ? window.location.pathname : "/";
 
   // Standalone auth pages
   if (pathname === "/forgot-password") {
     return (
       <QueryProvider>
-      <ErrorBoundary>
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
-        <ForgotPasswordPage />
-      </Suspense>
-      </ErrorBoundary>
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            }
+          >
+            <ForgotPasswordPage />
+          </Suspense>
+        </ErrorBoundary>
       </QueryProvider>
     );
   }
@@ -408,11 +511,17 @@ export default function App() {
   if (pathname === "/reset-password") {
     return (
       <QueryProvider>
-      <ErrorBoundary>
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
-        <ResetPasswordPage />
-      </Suspense>
-      </ErrorBoundary>
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center bg-background">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            }
+          >
+            <ResetPasswordPage />
+          </Suspense>
+        </ErrorBoundary>
       </QueryProvider>
     );
   }
@@ -422,18 +531,18 @@ export default function App() {
   if (isPortal) {
     return (
       <QueryProvider>
-      <PortalAuthProvider>
-        <PortalShell />
-      </PortalAuthProvider>
+        <PortalAuthProvider>
+          <PortalShell />
+        </PortalAuthProvider>
       </QueryProvider>
     );
   }
 
   return (
     <QueryProvider>
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </QueryProvider>
   );
 }
