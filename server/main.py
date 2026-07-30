@@ -1,4 +1,5 @@
 """SpacetimeCRM — FastAPI application entry point."""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,7 +14,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from config import settings
-from helpers import logger
 
 
 # ── Background scheduler ───────────────────────────────────
@@ -54,17 +54,19 @@ app.add_middleware(
 )
 
 # ── Route registration ────────────────────────────────────────
-from rate_limit import limiter
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from rate_limit import limiter  # noqa: E402
+from slowapi import _rate_limit_exceeded_handler  # noqa: E402
+from slowapi.errors import RateLimitExceeded  # noqa: E402
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-from handlers import register_exception_handlers
+from handlers import register_exception_handlers  # noqa: E402
+
 register_exception_handlers(app)
 
-from routes import register_routers
+from routes import register_routers  # noqa: E402
+
 register_routers(app)
 
 # ── SPA static files ──────────────────────────────────────────
@@ -74,7 +76,9 @@ STATIC_DIR = ROOT / "web" / "dist"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 if (STATIC_DIR / "assets").exists():
-    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
+    app.mount(
+        "/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets"
+    )
 
 
 @app.get("/{full_path:path}")

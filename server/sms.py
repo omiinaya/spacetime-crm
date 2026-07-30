@@ -1,6 +1,7 @@
 """SMS notification utility for SpacetimeCRM.
 Uses Twilio REST API with configurable settings stored in a JSON file.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -8,10 +9,9 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from client import get_http_client
-import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +41,22 @@ def get_settings() -> Optional[dict]:
     return {
         "account_sid": settings.get("account_sid", ""),
         "from_number": settings.get("from_number", ""),
-        "configured": bool(settings.get("account_sid") and settings.get("auth_token") and settings.get("from_number")),
+        "configured": bool(
+            settings.get("account_sid")
+            and settings.get("auth_token")
+            and settings.get("from_number")
+        ),
     }
 
 
 def update_settings(data: dict) -> dict:
     current = _load_settings() or {}
-    current.update({
-        "account_sid": data.get("account_sid", current.get("account_sid", "")),
-        "from_number": data.get("from_number", current.get("from_number", "")),
-    })
+    current.update(
+        {
+            "account_sid": data.get("account_sid", current.get("account_sid", "")),
+            "from_number": data.get("from_number", current.get("from_number", "")),
+        }
+    )
     if "auth_token" in data and data["auth_token"]:
         current["auth_token"] = data["auth_token"]
     _save_settings(current)
@@ -61,7 +67,11 @@ def is_configured() -> bool:
     settings = _load_settings()
     if not settings:
         return False
-    return bool(settings.get("account_sid") and settings.get("auth_token") and settings.get("from_number"))
+    return bool(
+        settings.get("account_sid")
+        and settings.get("auth_token")
+        and settings.get("from_number")
+    )
 
 
 def _customer_phone(customer: Optional[dict]) -> Optional[str]:
@@ -160,15 +170,21 @@ async def test_connection() -> dict:
 
 # ── Notification templates ──
 
-def _notify_ticket_status_change(phone: str, ticket_number: int, title: str, status: str) -> None:
+
+def _notify_ticket_status_change(
+    phone: str, ticket_number: int, title: str, status: str
+) -> None:
     """Send ticket status SMS notification. Fire-and-forget."""
     status_labels = {
-        "new": "New", "in_progress": "In Progress",
-        "waiting_parts": "Waiting for Parts", "waiting_customer": "Waiting for Customer",
-        "resolved": "Resolved", "closed": "Closed",
+        "new": "New",
+        "in_progress": "In Progress",
+        "waiting_parts": "Waiting for Parts",
+        "waiting_customer": "Waiting for Customer",
+        "resolved": "Resolved",
+        "closed": "Closed",
     }
     status_label = status_labels.get(status, status)
-    body = f"Ticket #{ticket_number} — {status_label}: \"{title[:40]}\""
+    body = f'Ticket #{ticket_number} — {status_label}: "{title[:40]}"'
     asyncio.ensure_future(send_sms(phone, body))
 
 
@@ -180,7 +196,9 @@ def _notify_invoice_created(phone: str, invoice_number: int, total: float) -> No
 
 def _notify_payment_received(phone: str, invoice_number: int, amount: float) -> None:
     """Send payment confirmation SMS."""
-    body = f"Payment of ${amount:.2f} received for Invoice #{invoice_number}. Thank you!"
+    body = (
+        f"Payment of ${amount:.2f} received for Invoice #{invoice_number}. Thank you!"
+    )
     asyncio.ensure_future(send_sms(phone, body))
 
 

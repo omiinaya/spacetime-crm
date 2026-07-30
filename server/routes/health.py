@@ -1,12 +1,11 @@
 """Health check routes."""
+
 from __future__ import annotations
 
-import httpx
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from config import settings
-from helpers import get_current_user
 from client import get_http_client
 from helpers import logger
 
@@ -69,5 +68,5 @@ async def health_ready():
         if resp.status_code < 500:
             return {"status": "ok"}
     except Exception:
-        pass
+        logger.error("health_ready: STDB query failed")
     return {"status": "unavailable"}

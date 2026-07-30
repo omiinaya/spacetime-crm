@@ -9,9 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from unittest.mock import ANY, patch
-
-import pytest
+from unittest.mock import patch
 
 
 class TestJsonFormatter:
@@ -299,7 +297,6 @@ class TestConfigureLogging:
         """Structured mode output should be valid JSON."""
         with patch("log_config.STRUCTURED", True):
             from log_config import configure_logging
-            from log_config import JsonFormatter
 
             logger = configure_logging("test_structured_json")
             handler = logger.handlers[0]

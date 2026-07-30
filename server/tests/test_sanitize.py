@@ -1,5 +1,5 @@
 """Tests for input sanitization (XSS protection)."""
-import pytest
+
 from sanitize import strip_html, SanitizedModel, _SKIP_SANITIZE
 from pydantic import Field
 
@@ -45,7 +45,7 @@ class TestSanitizedModel:
     def test_strips_html_from_name(self):
         m = _TestModel(name="<script>alert(1)</script>John", bio="Hello")
         assert "<script>" not in m.name
-        assert m.name == 'alert(1)John'
+        assert m.name == "alert(1)John"
 
     def test_preserves_password_field(self):
         m = _TestModel(name="John", password="pass<word>")

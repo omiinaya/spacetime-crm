@@ -9,9 +9,17 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
+# Functions under test — extracted from a single large file into two helpers modules
+from routes.report_helpers import (
+    _build_report_data,
+    _filter_rows,
+    _generate_and_deliver,
+)
+from routes.report_schedules_helpers import _calc_next_run, _render_report_email
 
 
 # ===================================================================
@@ -24,7 +32,6 @@ class TestCalcNextRun:
 
     def test_daily_same_day_future(self) -> None:
         """Daily schedule where target time is later today."""
-        from routes.report_helpers import _calc_next_run
 
         # 2024-06-15 06:00:00 UTC → 1718445600000ms, target hour 8
         dt = datetime(2024, 6, 15, 6, 0, 0)
@@ -35,7 +42,6 @@ class TestCalcNextRun:
 
     def test_daily_target_passed(self) -> None:
         """Daily schedule where target time has already passed today."""
-        from routes.report_helpers import _calc_next_run
 
         dt = datetime(2024, 6, 15, 10, 0, 0)  # 10 AM, past 8 AM target
         ms = int(dt.timestamp() * 1000)
@@ -45,7 +51,6 @@ class TestCalcNextRun:
 
     def test_weekly_monday(self) -> None:
         """Weekly schedule for Monday (0) when today is Thursday (3)."""
-        from routes.report_helpers import _calc_next_run
 
         # 2024-06-13 is Thursday (weekday 3), target Monday (0)
         dt = datetime(2024, 6, 13, 6, 0, 0)
@@ -58,7 +63,6 @@ class TestCalcNextRun:
 
     def test_weekly_same_day_before(self) -> None:
         """Weekly schedule on same day but before the target time."""
-        from routes.report_helpers import _calc_next_run
 
         # 2024-06-17 is Monday (0). At 6 AM, target 8 AM same day.
         dt = datetime(2024, 6, 17, 6, 0, 0)
@@ -71,7 +75,6 @@ class TestCalcNextRun:
 
     def test_weekly_same_day_passed(self) -> None:
         """Weekly schedule on same day but after target time — skip to next week."""
-        from routes.report_helpers import _calc_next_run
 
         dt = datetime(2024, 6, 17, 10, 0, 0)  # Monday 10 AM, past 8 AM
         ms = int(dt.timestamp() * 1000)
@@ -83,7 +86,6 @@ class TestCalcNextRun:
 
     def test_monthly(self) -> None:
         """Monthly schedule on the 15th."""
-        from routes.report_helpers import _calc_next_run
 
         dt = datetime(2024, 6, 10, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
@@ -95,7 +97,6 @@ class TestCalcNextRun:
 
     def test_monthly_target_passed(self) -> None:
         """Monthly schedule where target day has passed — next month."""
-        from routes.report_helpers import _calc_next_run
 
         dt = datetime(2024, 6, 20, 6, 0, 0)  # past the 15th
         ms = int(dt.timestamp() * 1000)
@@ -107,7 +108,6 @@ class TestCalcNextRun:
 
     def test_monthly_caps_at_28(self) -> None:
         """Monthly schedule should cap day_of_month at 28."""
-        from routes.report_helpers import _calc_next_run
 
         dt = datetime(2024, 1, 15, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
@@ -119,7 +119,6 @@ class TestCalcNextRun:
 
     def test_monthly_rolls_to_january(self) -> None:
         """Monthly schedule rolling from December to January."""
-        from routes.report_helpers import _calc_next_run
 
         dt = datetime(2024, 12, 20, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
@@ -131,7 +130,6 @@ class TestCalcNextRun:
 
     def test_unknown_frequency_defaults_to_tomorrow(self) -> None:
         """Unknown frequency should default to +1 day."""
-        from routes.report_helpers import _calc_next_run
 
         dt = datetime(2024, 6, 15, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
@@ -149,7 +147,6 @@ class TestFilterRows:
     """Case-insensitive row filtering."""
 
     def test_matches_field(self) -> None:
-        from routes.report_helpers import _filter_rows
 
         rows = [
             {"status": "Open", "title": "Fix printer"},
@@ -160,26 +157,22 @@ class TestFilterRows:
         assert result[0]["title"] == "Fix printer"
 
     def test_no_match(self) -> None:
-        from routes.report_helpers import _filter_rows
 
         rows = [{"status": "closed", "title": "Done"}]
         result = _filter_rows(rows, "status", "open")
         assert result == []
 
     def test_empty_rows(self) -> None:
-        from routes.report_helpers import _filter_rows
 
         assert _filter_rows([], "status", "open") == []
 
     def test_case_insensitive(self) -> None:
-        from routes.report_helpers import _filter_rows
 
         rows = [{"status": "OPEN"}, {"status": "Open"}, {"status": "open"}]
         result = _filter_rows(rows, "status", "open")
         assert len(result) == 3
 
     def test_field_not_in_row(self) -> None:
-        from routes.report_helpers import _filter_rows
 
         rows = [{"name": "Alice", "status": "open"}, {"name": "Bob"}]
         result = _filter_rows(rows, "status", "open")
@@ -187,7 +180,6 @@ class TestFilterRows:
         assert result[0]["name"] == "Alice"
 
     def test_none_field(self) -> None:
-        from routes.report_helpers import _filter_rows
 
         rows = [{"status": None}, {"status": "open"}]
         # str(None) == "None", matching status value "none"
@@ -210,7 +202,6 @@ class TestRenderReportEmail:
     """HTML email rendering for each report type."""
 
     def test_revenue_summary(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {
             "type": "revenue",
@@ -227,7 +218,6 @@ class TestRenderReportEmail:
         assert "last_30_days" in html
 
     def test_tickets_summary(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {
             "type": "tickets",
@@ -243,7 +233,6 @@ class TestRenderReportEmail:
         assert "TCK-001" in html
 
     def test_payments_summary(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {
             "type": "payments",
@@ -258,7 +247,6 @@ class TestRenderReportEmail:
         assert "8" in html
 
     def test_inventory_summary(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {
             "type": "inventory",
@@ -273,7 +261,6 @@ class TestRenderReportEmail:
         assert "3" in html
 
     def test_products_summary(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {
             "type": "products",
@@ -287,7 +274,6 @@ class TestRenderReportEmail:
         assert "0" in html
 
     def test_unknown_type_has_no_summary(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {"type": "unknown", "rows": []}
         html = _render_report_email("unknown", "Unknown Report", data)
@@ -296,7 +282,6 @@ class TestRenderReportEmail:
         assert "Unknown Report" in html  # title present
 
     def test_empty_rows(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {
             "type": "revenue",
@@ -311,7 +296,6 @@ class TestRenderReportEmail:
         assert "</table>" in html
 
     def test_none_values_in_rows(self) -> None:
-        from routes.report_helpers import _render_report_email
 
         data = {
             "type": "revenue",
@@ -595,9 +579,7 @@ class TestGenerateAndDeliver:
 
         with (
             patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql,
-            patch(
-                "routes.report_helpers.send_email", new_callable=AsyncMock
-            ) as mock_send,
+            patch("routes.report_helpers.send_email", new_callable=AsyncMock),
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
             mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]
@@ -657,9 +639,7 @@ class TestGenerateAndDeliver:
 
         with (
             patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql,
-            patch(
-                "routes.report_helpers.send_email", new_callable=AsyncMock
-            ) as mock_send,
+            patch("routes.report_helpers.send_email", new_callable=AsyncMock),
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
             mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]
@@ -668,13 +648,5 @@ class TestGenerateAndDeliver:
 
         assert result["sent"] == 2
         assert result["failed"] == 0
-
-
-# Import the functions under test at module level for cleaner test usage
-from routes.report_helpers import (  # noqa: E402
-    _build_report_data,
-    _calc_next_run,
-    _filter_rows,
-    _generate_and_deliver,
-    _render_report_email,
-)
+        # No errors
+        assert len(result.get("errors", [])) == 0

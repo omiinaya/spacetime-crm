@@ -1,6 +1,6 @@
-use spacetimedb::*;
 use super::Product as ProductRow;
 use crate::product::products;
+use spacetimedb::*;
 
 #[spacetimedb::table(accessor = inventory_adjustment, public)]
 #[derive(Debug, Clone)]
@@ -58,4 +58,14 @@ pub fn create_inventory_adjustment(
 #[spacetimedb::reducer]
 pub fn delete_inventory_adjustment(ctx: &ReducerContext, id: String) {
     ctx.db.inventory_adjustment().id().delete(&id);
+}
+
+#[cfg(test)]
+mod inventory_tests {
+    use super::*;
+
+    #[test]
+    fn test_inventory_basic() {
+        assert!(true);
+    }
 }

@@ -37,7 +37,9 @@ describe("Button", () => {
 
   it("renders with different sizes", () => {
     const { rerender } = render(<Button size="sm">Small</Button>);
-    expect(screen.getByRole("button")).toHaveClass("h-8 rounded-md px-3 text-xs");
+    expect(screen.getByRole("button")).toHaveClass(
+      "h-8 rounded-md px-3 text-xs",
+    );
 
     rerender(<Button size="lg">Large</Button>);
     expect(screen.getByRole("button")).toHaveClass("h-10 rounded-md px-8");
@@ -56,7 +58,15 @@ describe("Button", () => {
   it("fires onClick when clicked", async () => {
     const user = userEvent.setup();
     let clicked = false;
-    render(<Button onClick={() => { clicked = true; }}>Click</Button>);
+    render(
+      <Button
+        onClick={() => {
+          clicked = true;
+        }}
+      >
+        Click
+      </Button>,
+    );
     await user.click(screen.getByRole("button"));
     expect(clicked).toBe(true);
   });

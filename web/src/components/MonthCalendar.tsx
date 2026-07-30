@@ -63,8 +63,18 @@ export default function MonthCalendar({
   const today = new Date();
 
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   return (
@@ -91,7 +101,10 @@ export default function MonthCalendar({
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 mb-1">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <div key={d} className="text-center text-[10px] text-muted-foreground font-medium py-1">
+          <div
+            key={d}
+            className="text-center text-[10px] text-muted-foreground font-medium py-1"
+          >
             {d}
           </div>
         ))}
@@ -121,14 +134,16 @@ export default function MonthCalendar({
                     isSelected
                       ? "bg-primary/20 border border-primary/50"
                       : isToday
-                      ? "bg-muted/50 border border-border/50"
-                      : "hover:bg-muted/30 border border-transparent"
+                        ? "bg-muted/50 border border-border/50"
+                        : "hover:bg-muted/30 border border-transparent",
                   )}
                 >
                   <span
                     className={cn(
                       "font-medium",
-                      isToday && !isSelected ? "text-primary" : "text-foreground"
+                      isToday && !isSelected
+                        ? "text-primary"
+                        : "text-foreground",
                     )}
                   >
                     {day}
@@ -143,10 +158,10 @@ export default function MonthCalendar({
                             ev.status === "completed"
                               ? "bg-success"
                               : ev.status === "cancelled"
-                              ? "bg-destructive"
-                              : ev.status === "confirmed"
-                              ? "bg-primary"
-                              : "bg-muted-foreground/50"
+                                ? "bg-destructive"
+                                : ev.status === "confirmed"
+                                  ? "bg-primary"
+                                  : "bg-muted-foreground/50",
                           )}
                         />
                       ))}

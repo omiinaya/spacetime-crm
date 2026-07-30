@@ -188,13 +188,6 @@ class TestModuleStructure:
     def test_module_has_all_expected_names(self) -> None:
         """All expected public and private names should be importable."""
         from helpers import (
-            STATUS_LABELS,
-            STATUS_CSS,
-            CUSTOMER_SENSITIVE_FIELDS,
-            TEMPLATE_DIR,
-            jinja_env,
-            security,
-            logger,
             _sql,
             _sql_t,
             _paginated,
@@ -294,9 +287,7 @@ class TestSqlEdgeCases:
         mock_client = MagicMock()
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = [
-            {"rows": [["v1"]], "schema": {}}
-        ]
+        mock_resp.json.return_value = [{"rows": [["v1"]], "schema": {}}]
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch("helpers.get_http_client", return_value=mock_client):
@@ -314,8 +305,7 @@ class TestPaginatedEdgeCases:
     async def test_max_fetch_zero_fetches_all(self) -> None:
         """When max_fetch=0 (falsy), should fetch all rows."""
         mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"}
-            for i in range(1, 6)
+            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 6)
         ]
 
         async def fake_sql(query: str) -> list[dict]:
@@ -338,8 +328,7 @@ class TestPaginatedEdgeCases:
     async def test_max_fetch_limits_fetch(self) -> None:
         """When max_fetch < total, should only fetch max_fetch rows."""
         mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"}
-            for i in range(1, 11)
+            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 11)
         ]
 
         async def fake_sql(query: str) -> list[dict]:
@@ -363,9 +352,7 @@ class TestPaginatedEdgeCases:
     async def test_empty_result_set(self) -> None:
         """Should handle zero rows gracefully."""
         with patch("helpers._sql", new_callable=AsyncMock) as mock_sql:
-            mock_sql.side_effect = (
-                lambda q: [{"cnt": 0}] if "count(*)" in q else []
-            )
+            mock_sql.side_effect = lambda q: [{"cnt": 0}] if "count(*)" in q else []
             from helpers import _paginated
 
             rows, total = await _paginated(tenant_id="t-1", table="invoice")
@@ -377,8 +364,7 @@ class TestPaginatedEdgeCases:
     async def test_ascending_order(self) -> None:
         """Should sort ascending when order_desc=False."""
         mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"}
-            for i in range(1, 6)
+            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 6)
         ]
 
         async def fake_sql(query: str) -> list[dict]:
@@ -403,8 +389,7 @@ class TestPaginatedEdgeCases:
     async def test_offset_beyond_total(self) -> None:
         """Offset beyond total should return empty list."""
         mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"}
-            for i in range(1, 4)
+            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 4)
         ]
 
         async def fake_sql(query: str) -> list[dict]:

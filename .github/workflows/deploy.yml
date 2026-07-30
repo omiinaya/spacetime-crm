@@ -1,0 +1,40 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deploy environment"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    branches:
+      - main
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == "main" && "production" || "staging" }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine environment
+        run: |
+          echo "DEPLOY_ENV=${{ github.ref_name == "main" && "production" || "staging" }}" >> $GITHUB_ENV
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /opt/spacetime-crm
+            git pull origin ${{ github.ref_name }}
+            docker compose -f deploy/docker-compose.prod.yml build --pull
+            docker compose -f deploy/docker-compose.prod.yml up -d

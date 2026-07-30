@@ -24,7 +24,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <div>Child content</div>
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
     expect(screen.getByText("Child content")).toBeInTheDocument();
   });
@@ -33,12 +33,14 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <BrokenComponent shouldThrow />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(screen.getByText("Render error!")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /try again/i }),
+    ).toBeInTheDocument();
   });
 
   it("recovers after clicking Try Again", async () => {
@@ -47,7 +49,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <BrokenComponent shouldThrow />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
@@ -56,7 +58,7 @@ describe("ErrorBoundary", () => {
     render(
       <ErrorBoundary>
         <BrokenComponent />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     );
 
     await user.click(screen.getByRole("button", { name: /try again/i }));

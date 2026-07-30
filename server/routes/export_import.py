@@ -1,4 +1,5 @@
 """CSV Export/Import routes."""
+
 from __future__ import annotations
 
 import csv
@@ -7,8 +8,9 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 
 from helpers import (
-    _sql, _call, _log_audit,
-    require_role, logger,
+    _sql,
+    _call,
+    require_role,
 )
 
 router = APIRouter()
@@ -28,11 +30,15 @@ ENTITY_TABLE_MAP = {
 
 
 @router.get("/api/export/{entity}")
-async def export_csv(entity: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def export_csv(
+    entity: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     """Export all records of an entity type as CSV. Downloads as attachment."""
     table = ENTITY_TABLE_MAP.get(entity)
     if not table:
-        raise HTTPException(400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}")
+        raise HTTPException(
+            400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}"
+        )
 
     rows = await _sql(f"SELECT * FROM {table}")
     if not rows:
@@ -58,7 +64,9 @@ async def export_csv(entity: str, user: dict = Depends(require_role("admin", "te
 
 
 @router.post("/api/import/customers")
-async def import_customers_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
+async def import_customers_csv(
+    file: UploadFile = File(...), user: dict = Depends(require_role("admin"))
+):
     """Import customers from CSV.
     Required: first_name, last_name. Optional: email, phone, etc.
     If id column provided, uses import_customer reducer to preserve IDs.
@@ -95,14 +103,32 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
                 cid = row["id"].strip()
                 created_at = int(row.get("created_at", now_ms) or now_ms)
                 updated_at = int(row.get("updated_at", now_ms) or now_ms)
-                await _call("import_customer", [
-                    user["tenant_id"],
-                    cid, fn, ln, email, phone, mobile, addr1, addr2,
-                    city, state, zipc, company, notes, tags,
-                    created_at, updated_at,
-                ])
+                await _call(
+                    "import_customer",
+                    [
+                        user["tenant_id"],
+                        cid,
+                        fn,
+                        ln,
+                        email,
+                        phone,
+                        mobile,
+                        addr1,
+                        addr2,
+                        city,
+                        state,
+                        zipc,
+                        company,
+                        notes,
+                        tags,
+                        created_at,
+                        updated_at,
+                    ],
+                )
             else:
-                await _call("create_customer", [user["tenant_id"], fn, ln, email, phone])
+                await _call(
+                    "create_customer", [user["tenant_id"], fn, ln, email, phone]
+                )
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")
@@ -111,7 +137,9 @@ async def import_customers_csv(file: UploadFile = File(...), user: dict = Depend
 
 
 @router.post("/api/import/products")
-async def import_products_csv(file: UploadFile = File(...), user: dict = Depends(require_role("admin"))):
+async def import_products_csv(
+    file: UploadFile = File(...), user: dict = Depends(require_role("admin"))
+):
     """Import products from CSV.
     Required: name. Optional: sku, barcode, description, category, price, cost,
     quantity_on_hand, quantity_committed, min_stock, location, active.
@@ -142,19 +170,54 @@ async def import_products_csv(file: UploadFile = File(...), user: dict = Depends
             qc = float(row.get("quantity_committed", 0) or 0)
             min_stock = float(row.get("min_stock", 0) or 0)
             location = row.get("location", "").strip()
-            active = (row.get("active", "true") or "true").strip().lower() in ("true", "1", "yes")
+            active = (row.get("active", "true") or "true").strip().lower() in (
+                "true",
+                "1",
+                "yes",
+            )
 
             if has_id and row.get("id", "").strip():
                 pid = row["id"].strip()
                 created_at = int(row.get("created_at", now_ms) or now_ms)
                 updated_at = int(row.get("updated_at", now_ms) or now_ms)
-                await _call("import_product", [
-                    user["tenant_id"],
-                    pid, name, sku, barcode, desc, category, price, cost,
-                    qoh, qc, min_stock, location, active, created_at, updated_at,
-                ])
+                await _call(
+                    "import_product",
+                    [
+                        user["tenant_id"],
+                        pid,
+                        name,
+                        sku,
+                        barcode,
+                        desc,
+                        category,
+                        price,
+                        cost,
+                        qoh,
+                        qc,
+                        min_stock,
+                        location,
+                        active,
+                        created_at,
+                        updated_at,
+                    ],
+                )
             else:
-                await _call("create_product", [user["tenant_id"], name, sku, barcode, desc, category, price, cost, qoh, min_stock, location])
+                await _call(
+                    "create_product",
+                    [
+                        user["tenant_id"],
+                        name,
+                        sku,
+                        barcode,
+                        desc,
+                        category,
+                        price,
+                        cost,
+                        qoh,
+                        min_stock,
+                        location,
+                    ],
+                )
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")

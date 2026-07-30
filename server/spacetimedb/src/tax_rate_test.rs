@@ -30,7 +30,10 @@ mod tests {
         // After second is_default=true, first should have is_default=false
         let default_count = rates.iter().filter(|r| r.is_default).count();
         assert_eq!(default_count, 1, "only one tax rate should be default");
-        let default = rates.iter().find(|r| r.is_default).unwrap();
+        let default = rates
+            .iter()
+            .find(|r| r.is_default)
+            .expect("a default tax rate should exist");
         assert_eq!(default.name, "Second");
     }
 
@@ -63,7 +66,14 @@ mod tests {
         let ctx = test_ctx();
         create_tax_rate(&ctx, "t_1".into(), "Del".into(), 5.0, false);
         assert_eq!(ctx.db.tax_rates().iter().count(), 1);
-        let id = ctx.db.tax_rates().iter().next().unwrap().id.clone();
+        let id = ctx
+            .db
+            .tax_rates()
+            .iter()
+            .next()
+            .expect("a tax rate should exist")
+            .id
+            .clone();
         delete_tax_rate(&ctx, id);
         assert_eq!(ctx.db.tax_rates().iter().count(), 0);
     }

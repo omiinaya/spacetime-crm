@@ -112,7 +112,6 @@ class TestSaveSettings:
     """_save_settings() — writing to the JSON file."""
 
     def test_save_writes_json(self) -> None:
-        from business_hours import _load_settings
         from business_hours import _save_settings
         from business_hours import SETTINGS_PATH
 

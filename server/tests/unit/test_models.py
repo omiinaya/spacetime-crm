@@ -271,9 +271,7 @@ class TestCustomerCreate:
 
     def test_tags_max_length(self) -> None:
         with pytest.raises(ValidationError):
-            models.CustomerCreate(
-                first_name="Alice", last_name="Smith", tags="x" * 501
-            )
+            models.CustomerCreate(first_name="Alice", last_name="Smith", tags="x" * 501)
 
     def test_missing_first_name_raises(self) -> None:
         with pytest.raises(ValidationError):
@@ -536,9 +534,7 @@ class TestBulkInvoiceStatusUpdate:
 
     def test_too_many_invoice_ids_raises(self) -> None:
         with pytest.raises(ValidationError):
-            models.BulkInvoiceStatusUpdate(
-                invoice_ids=["inv"] * 501, status="paid"
-            )
+            models.BulkInvoiceStatusUpdate(invoice_ids=["inv"] * 501, status="paid")
 
     def test_empty_status_raises(self) -> None:
         with pytest.raises(ValidationError):
@@ -586,15 +582,11 @@ class TestPaymentCreate:
 
     def test_amount_zero_raises(self) -> None:
         with pytest.raises(ValidationError):
-            models.PaymentCreate(
-                invoice_id="inv-001", customer_id="c-001", amount=0
-            )
+            models.PaymentCreate(invoice_id="inv-001", customer_id="c-001", amount=0)
 
     def test_amount_negative_raises(self) -> None:
         with pytest.raises(ValidationError):
-            models.PaymentCreate(
-                invoice_id="inv-001", customer_id="c-001", amount=-50
-            )
+            models.PaymentCreate(invoice_id="inv-001", customer_id="c-001", amount=-50)
 
     def test_missing_invoice_id_raises(self) -> None:
         with pytest.raises(ValidationError):
@@ -618,9 +610,7 @@ class TestPaymentCreate:
             )
 
     def test_defaults_applied(self) -> None:
-        m = models.PaymentCreate(
-            invoice_id="inv-001", customer_id="c-001", amount=100
-        )
+        m = models.PaymentCreate(invoice_id="inv-001", customer_id="c-001", amount=100)
         assert m.method == "cash"
         assert m.currency == "USD"
         assert m.reference == ""
@@ -1351,15 +1341,11 @@ class TestInventoryAdjustmentCreate:
 
     def test_reason_max_length(self) -> None:
         with pytest.raises(ValidationError):
-            models.InventoryAdjustmentCreate(
-                quantity_change=10, reason="x" * 101
-            )
+            models.InventoryAdjustmentCreate(quantity_change=10, reason="x" * 101)
 
     def test_reference_id_max_length(self) -> None:
         with pytest.raises(ValidationError):
-            models.InventoryAdjustmentCreate(
-                quantity_change=10, reference_id="x" * 256
-            )
+            models.InventoryAdjustmentCreate(quantity_change=10, reference_id="x" * 256)
 
     def test_defaults_applied(self) -> None:
         m = models.InventoryAdjustmentCreate(quantity_change=10)
@@ -1911,9 +1897,7 @@ class TestWebhookSubscriptionCreate:
 
     def test_events_empty_raises(self) -> None:
         with pytest.raises(ValidationError):
-            models.WebhookSubscriptionCreate(
-                url="https://example.com/hook", events=""
-            )
+            models.WebhookSubscriptionCreate(url="https://example.com/hook", events="")
 
     def test_defaults_applied(self) -> None:
         m = models.WebhookSubscriptionCreate(

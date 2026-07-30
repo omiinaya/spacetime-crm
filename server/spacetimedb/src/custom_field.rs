@@ -41,19 +41,21 @@ pub fn create_custom_field_definition(
     active: bool,
 ) {
     let now = now_ms(ctx);
-    ctx.db.custom_field_definitions().insert(CustomFieldDefinition {
-        id,
-        tenant_id,
-        entity_type,
-        label,
-        field_type,
-        options,
-        sort_order,
-        required,
-        active,
-        created_at: now,
-        updated_at: now,
-    });
+    ctx.db
+        .custom_field_definitions()
+        .insert(CustomFieldDefinition {
+            id,
+            tenant_id,
+            entity_type,
+            label,
+            field_type,
+            options,
+            sort_order,
+            required,
+            active,
+            created_at: now,
+            updated_at: now,
+        });
 }
 
 #[spacetimedb::reducer]
@@ -68,16 +70,19 @@ pub fn update_custom_field_definition(
     active: bool,
 ) {
     if let Some(f) = ctx.db.custom_field_definitions().id().find(&id) {
-        ctx.db.custom_field_definitions().id().update(CustomFieldDefinition {
-            label,
-            field_type,
-            options,
-            sort_order,
-            required,
-            active,
-            updated_at: now_ms(ctx),
-            ..f
-        });
+        ctx.db
+            .custom_field_definitions()
+            .id()
+            .update(CustomFieldDefinition {
+                label,
+                field_type,
+                options,
+                sort_order,
+                required,
+                active,
+                updated_at: now_ms(ctx),
+                ..f
+            });
     }
 }
 
@@ -128,7 +133,11 @@ pub fn set_custom_field_value(
             ..existing_val
         });
     } else {
-        let id = format!("cfv_{}_{}", now, ctx.sender().to_hex().chars().take(8).collect::<String>());
+        let id = format!(
+            "cfv_{}_{}",
+            now,
+            ctx.sender().to_hex().chars().take(8).collect::<String>()
+        );
         ctx.db.custom_field_values().insert(CustomFieldValue {
             id,
             tenant_id,

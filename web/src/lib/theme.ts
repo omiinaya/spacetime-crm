@@ -8,12 +8,18 @@ function getStoredTheme(): Theme | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "dark" || stored === "light") return stored;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
 function storeTheme(theme: Theme) {
-  try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function useTheme() {

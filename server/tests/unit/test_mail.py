@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -153,7 +152,9 @@ class TestSendEmail:
     def test_not_configured_empty_sender(self) -> None:
         import mail
 
-        mail.SETTINGS_PATH.write_text(json.dumps({"host": "smtp.com", "sender_email": ""}))
+        mail.SETTINGS_PATH.write_text(
+            json.dumps({"host": "smtp.com", "sender_email": ""})
+        )
         result = mail.send_email("to@test.com", "Sub", "<p>Body</p>")
         assert result is False
 
@@ -167,7 +168,9 @@ class TestSendEmail:
             instance = MagicMock()
             mock_smtp.return_value.__enter__.return_value = instance
 
-            result = mail.send_email("to@test.com", "Hello", "<html><body>Test</body></html>")
+            result = mail.send_email(
+                "to@test.com", "Hello", "<html><body>Test</body></html>"
+            )
 
         assert result is True
         instance.ehlo.assert_called()
@@ -234,7 +237,9 @@ class TestSendEmail:
 
         with patch("mail.smtplib.SMTP") as mock_smtp:
             instance = MagicMock()
-            instance.send_message.side_effect = ConnectionRefusedError("Connection refused")
+            instance.send_message.side_effect = ConnectionRefusedError(
+                "Connection refused"
+            )
             mock_smtp.return_value.__enter__.return_value = instance
             with patch("mail.logger") as mock_logger:
                 result = mail.send_email("to@test.com", "Hello", "<p>Body</p>")
@@ -251,7 +256,9 @@ class TestSendEmail:
         with patch("mail.smtplib.SMTP") as mock_smtp:
             instance = MagicMock()
             mock_smtp.return_value.__enter__.return_value = instance
-            mail.send_email("to@test.com", "Hello", "<p>HTML</p>", text_body="Plain text")
+            mail.send_email(
+                "to@test.com", "Hello", "<p>HTML</p>", text_body="Plain text"
+            )
 
         msg = instance.send_message.call_args[0][0]
         payload_types = [p.get_content_type() for p in msg.get_payload()]
@@ -392,34 +399,60 @@ class TestNotifications:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
             self._check_notification(
-                "_notify_ticket_status_change", "cust@test.com", 101, "Screen broken", "in_progress", "http://link"
+                "_notify_ticket_status_change",
+                "cust@test.com",
+                101,
+                "Screen broken",
+                "in_progress",
+                "http://link",
             )
 
     def test_invoice_created(self) -> None:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
-            self._check_notification("_notify_invoice_created", "cust@test.com", 201, 150.0, "http://link")
+            self._check_notification(
+                "_notify_invoice_created", "cust@test.com", 201, 150.0, "http://link"
+            )
 
     def test_payment_received(self) -> None:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
-            self._check_notification("_notify_payment_received", "cust@test.com", 201, 50.0, "http://link")
+            self._check_notification(
+                "_notify_payment_received", "cust@test.com", 201, 50.0, "http://link"
+            )
 
     def test_appointment_created(self) -> None:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
-            self._check_notification("_notify_appointment_created", "cust@test.com", "Repair", 1710000000000, "http://link")
+            self._check_notification(
+                "_notify_appointment_created",
+                "cust@test.com",
+                "Repair",
+                1710000000000,
+                "http://link",
+            )
 
     def test_estimate_approved(self) -> None:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
-            self._check_notification("_notify_estimate_approved", "cust@test.com", 301, 250.0, "http://link")
+            self._check_notification(
+                "_notify_estimate_approved", "cust@test.com", 301, 250.0, "http://link"
+            )
 
     def test_low_stock(self) -> None:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
             self._check_notification(
-                "_notify_low_stock", "admin@test.com", [{"name": "Widget", "sku": "WGT", "quantity_on_hand": 2, "min_stock": 5}]
+                "_notify_low_stock",
+                "admin@test.com",
+                [
+                    {
+                        "name": "Widget",
+                        "sku": "WGT",
+                        "quantity_on_hand": 2,
+                        "min_stock": 5,
+                    }
+                ],
             )
 
     def test_low_stock_empty_list(self) -> None:
@@ -433,12 +466,25 @@ class TestNotifications:
     def test_appointment_reminder(self) -> None:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
-            self._check_notification("_notify_appointment_reminder", "cust@test.com", "Repair", 1710000000000, "http://link")
+            self._check_notification(
+                "_notify_appointment_reminder",
+                "cust@test.com",
+                "Repair",
+                1710000000000,
+                "http://link",
+            )
 
     def test_overdue_reminder(self) -> None:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
-            self._check_notification("_notify_overdue_reminder", "cust@test.com", 401, 100.0, "2025-01-15", "http://link")
+            self._check_notification(
+                "_notify_overdue_reminder",
+                "cust@test.com",
+                401,
+                100.0,
+                "2025-01-15",
+                "http://link",
+            )
 
     def test_customer_email(self) -> None:
         from mail import _customer_email
@@ -458,7 +504,9 @@ class TestNotifications:
             mock_jinja.get_template.return_value = mock_template
 
             with patch.object(mail, "send_email") as mock_send:
-                mail._notify_ticket_status_change("a@b.com", 1, "Test", "new", "http://link")
+                mail._notify_ticket_status_change(
+                    "a@b.com", 1, "Test", "new", "http://link"
+                )
                 mock_jinja.get_template.assert_called_with("email/ticket_status.html")
                 mock_send.assert_called_once()
 
@@ -469,7 +517,9 @@ class TestNotifications:
         with patch("mail.jinja_env") as mock_jinja:
             mock_jinja.get_template.return_value.render.return_value = "<html/>"
             with patch.object(mail, "send_email") as mock_send:
-                mail._notify_ticket_status_change("a@b.com", 42, "Broken", "in_progress", "http://link")
+                mail._notify_ticket_status_change(
+                    "a@b.com", 42, "Broken", "in_progress", "http://link"
+                )
                 subject = mock_send.call_args[0][1]
                 assert "Ticket #42" in subject
                 assert "In Progress" in subject

@@ -6,8 +6,12 @@ import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
 import {
-  ChevronDown, ChevronUp, CreditCard, ExternalLink,
-  Star, CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
+  ExternalLink,
+  Star,
+  CheckCircle2,
 } from "lucide-react";
 
 interface SavedCard {
@@ -21,7 +25,10 @@ interface SavedCard {
   is_default: boolean;
 }
 
-const statusColors: Record<string, "outline" | "default" | "success" | "destructive"> = {
+const statusColors: Record<
+  string,
+  "outline" | "default" | "success" | "destructive"
+> = {
   draft: "outline",
   sent: "default",
   partial: "default",
@@ -52,11 +59,16 @@ export default function PortalInvoicesPage() {
     try {
       const res = await portalApi.invoices.list();
       setInvoices(res.invoices);
-    } catch { toast.error("Failed to load invoices"); }
-    finally { setLoading(false); }
+    } catch {
+      toast.error("Failed to load invoices");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const toggleDetail = async (id: string) => {
     if (expanded === id) {
@@ -74,19 +86,27 @@ export default function PortalInvoicesPage() {
       setDetail(invRes.invoice);
       setPayAmount(invRes.invoice.balance_due ?? invRes.invoice.total);
       setSavedCards(pmRes.payment_methods || []);
-    } catch { toast.error("Failed to load invoice details"); }
+    } catch {
+      toast.error("Failed to load invoice details");
+    }
   };
 
   const handlePayment = async (invoiceId: string) => {
-    if (payAmount <= 0) { toast.error("Amount must be > 0"); return; }
+    if (payAmount <= 0) {
+      toast.error("Amount must be > 0");
+      return;
+    }
     setPaying(true);
     try {
       await portalApi.payments.create(invoiceId, payAmount, "card");
       toast.success("Payment recorded");
       const res = await portalApi.invoices.get(invoiceId);
       setDetail(res.invoice);
-    } catch { toast.error("Payment failed"); }
-    finally { setPaying(false); }
+    } catch {
+      toast.error("Payment failed");
+    } finally {
+      setPaying(false);
+    }
   };
 
   const handleStripeCheckout = async (invoiceId: string) => {
@@ -101,10 +121,16 @@ export default function PortalInvoicesPage() {
     }
   };
 
-  const handlePayWithSavedCard = async (invoiceId: string, paymentMethodId: string) => {
+  const handlePayWithSavedCard = async (
+    invoiceId: string,
+    paymentMethodId: string,
+  ) => {
     setCardPaying(paymentMethodId);
     try {
-      const res = await portalApi.payments.payWithSavedCard(invoiceId, paymentMethodId);
+      const res = await portalApi.payments.payWithSavedCard(
+        invoiceId,
+        paymentMethodId,
+      );
       if (res.ok) {
         toast.success("Payment successful!");
         const invRes = await portalApi.invoices.get(invoiceId);
@@ -122,28 +148,42 @@ export default function PortalInvoicesPage() {
   const needsPayment = (inv: PortalInvoice) =>
     inv.status !== "paid" && inv.status !== "cancelled";
 
-  const hasBalance = (inv: PortalInvoice) =>
-    (inv.balance_due ?? inv.total) > 0;
+  const hasBalance = (inv: PortalInvoice) => (inv.balance_due ?? inv.total) > 0;
 
   return (
     <div>
       <h1 className="text-2xl font-bold">My Invoices</h1>
-      <p className="text-sm text-muted-foreground mt-1">View and pay your invoices</p>
+      <p className="text-sm text-muted-foreground mt-1">
+        View and pay your invoices
+      </p>
 
       <div className="space-y-2 mt-4">
         {invoices.map((inv) => (
           <Card key={inv.id}>
             <CardContent className="pt-4">
-              <div className="flex items-start justify-between cursor-pointer" onClick={() => toggleDetail(inv.id)}>
+              <div
+                className="flex items-start justify-between cursor-pointer"
+                onClick={() => toggleDetail(inv.id)}
+              >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">#{inv.invoice_number}</span>
-                    <Badge variant={statusColors[inv.status] || "outline"}>{inv.status}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      #{inv.invoice_number}
+                    </span>
+                    <Badge variant={statusColors[inv.status] || "outline"}>
+                      {inv.status}
+                    </Badge>
                   </div>
                   <p className="font-medium mt-1">${inv.total.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(inv.created_at).toLocaleDateString()}
+                  </p>
                 </div>
-                {expanded === inv.id ? <ChevronUp className="h-4 w-4 mt-1" /> : <ChevronDown className="h-4 w-4 mt-1" />}
+                {expanded === inv.id ? (
+                  <ChevronUp className="h-4 w-4 mt-1" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 mt-1" />
+                )}
               </div>
 
               {expanded === inv.id && detail && (
@@ -153,9 +193,15 @@ export default function PortalInvoicesPage() {
                     <div>
                       <p className="text-sm font-semibold mb-2">Items</p>
                       {detail.line_items.map((item) => (
-                        <div key={item.id} className="flex justify-between text-sm py-1 border-b border-muted last:border-0">
+                        <div
+                          key={item.id}
+                          className="flex justify-between text-sm py-1 border-b border-muted last:border-0"
+                        >
                           <span>{item.description}</span>
-                          <span className="text-muted-foreground">{item.quantity} × ${item.unit_price.toFixed(2)} = ${item.total.toFixed(2)}</span>
+                          <span className="text-muted-foreground">
+                            {item.quantity} × ${item.unit_price.toFixed(2)} = $
+                            {item.total.toFixed(2)}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -163,19 +209,30 @@ export default function PortalInvoicesPage() {
 
                   {/* Summary */}
                   <div className="text-sm space-y-1">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>${detail.subtotal.toFixed(2)}</span></div>
-                    {detail.tax_amount > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span>${detail.tax_amount.toFixed(2)}</span></div>}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>${detail.subtotal.toFixed(2)}</span>
+                    </div>
+                    {detail.tax_amount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tax</span>
+                        <span>${detail.tax_amount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-bold text-base border-t pt-1">
-                      <span>Total</span><span>${detail.total.toFixed(2)}</span>
+                      <span>Total</span>
+                      <span>${detail.total.toFixed(2)}</span>
                     </div>
                     {detail.total_paid != null && detail.total_paid > 0 && (
                       <div className="flex justify-between text-green-600">
-                        <span>Paid</span><span>-${detail.total_paid.toFixed(2)}</span>
+                        <span>Paid</span>
+                        <span>-${detail.total_paid.toFixed(2)}</span>
                       </div>
                     )}
                     {detail.balance_due != null && detail.balance_due > 0 && (
                       <div className="flex justify-between font-bold text-red-500">
-                        <span>Balance Due</span><span>${detail.balance_due.toFixed(2)}</span>
+                        <span>Balance Due</span>
+                        <span>${detail.balance_due.toFixed(2)}</span>
                       </div>
                     )}
                   </div>
@@ -183,10 +240,18 @@ export default function PortalInvoicesPage() {
                   {/* Payments history */}
                   {detail.payments && detail.payments.length > 0 && (
                     <div>
-                      <p className="text-sm font-semibold mb-1">Payment History</p>
+                      <p className="text-sm font-semibold mb-1">
+                        Payment History
+                      </p>
                       {detail.payments.map((p) => (
-                        <div key={p.id} className="flex justify-between text-sm py-1">
-                          <span className="text-muted-foreground">{p.method} — {new Date(p.created_at).toLocaleDateString()}</span>
+                        <div
+                          key={p.id}
+                          className="flex justify-between text-sm py-1"
+                        >
+                          <span className="text-muted-foreground">
+                            {p.method} —{" "}
+                            {new Date(p.created_at).toLocaleDateString()}
+                          </span>
                           <span>${p.amount.toFixed(2)}</span>
                         </div>
                       ))}
@@ -208,7 +273,8 @@ export default function PortalInvoicesPage() {
                           </p>
                           {savedCards.map((card) => {
                             const last4 = card.last_4 || card.last4 || "";
-                            const isPaying = cardPaying === card.stripe_payment_method_id;
+                            const isPaying =
+                              cardPaying === card.stripe_payment_method_id;
                             return (
                               <Button
                                 key={card.id}
@@ -217,7 +283,10 @@ export default function PortalInvoicesPage() {
                                 className="w-full justify-start gap-2 h-auto py-2.5"
                                 disabled={isPaying}
                                 onClick={() =>
-                                  handlePayWithSavedCard(inv.id, card.stripe_payment_method_id)
+                                  handlePayWithSavedCard(
+                                    inv.id,
+                                    card.stripe_payment_method_id,
+                                  )
                                 }
                               >
                                 <CreditCard className="h-4 w-4 shrink-0" />
@@ -230,10 +299,15 @@ export default function PortalInvoicesPage() {
                                   <Star className="h-3 w-3 text-yellow-500 ml-auto" />
                                 )}
                                 {isPaying ? (
-                                  <span className="ml-auto text-xs animate-pulse">Paying...</span>
+                                  <span className="ml-auto text-xs animate-pulse">
+                                    Paying...
+                                  </span>
                                 ) : (
                                   <span className="ml-auto text-xs font-medium text-primary">
-                                    Pay ${(detail.balance_due ?? detail.total).toFixed(2)}
+                                    Pay $
+                                    {(
+                                      detail.balance_due ?? detail.total
+                                    ).toFixed(2)}
                                   </span>
                                 )}
                               </Button>
@@ -259,7 +333,9 @@ export default function PortalInvoicesPage() {
                         <Button
                           size="sm"
                           className="w-full"
-                          variant={savedCards.length > 0 ? "outline" : "default"}
+                          variant={
+                            savedCards.length > 0 ? "outline" : "default"
+                          }
                           onClick={() => handleStripeCheckout(inv.id)}
                           disabled={stripeLoading === inv.id}
                         >
@@ -268,7 +344,11 @@ export default function PortalInvoicesPage() {
                           ) : (
                             <>
                               <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                              Pay ${(detail.balance_due ?? detail.total).toFixed(2)} with Card
+                              Pay $
+                              {(detail.balance_due ?? detail.total).toFixed(
+                                2,
+                              )}{" "}
+                              with Card
                             </>
                           )}
                         </Button>
@@ -284,15 +364,28 @@ export default function PortalInvoicesPage() {
                           <span className="w-full border-t border-muted" />
                         </div>
                         <div className="relative flex justify-center text-xs">
-                          <span className="bg-muted/30 px-2 text-muted-foreground">or record manually</span>
+                          <span className="bg-muted/30 px-2 text-muted-foreground">
+                            or record manually
+                          </span>
                         </div>
                       </div>
 
                       <div className="flex gap-2 items-center">
                         <span className="text-sm">$</span>
-                        <Input type="number" className="w-32" step="0.01" min={0.01}
-                          value={payAmount} onChange={(e) => setPayAmount(Number(e.target.value))} />
-                        <Button size="sm" variant="outline" onClick={() => handlePayment(inv.id)} disabled={paying || payAmount <= 0}>
+                        <Input
+                          type="number"
+                          className="w-32"
+                          step="0.01"
+                          min={0.01}
+                          value={payAmount}
+                          onChange={(e) => setPayAmount(Number(e.target.value))}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePayment(inv.id)}
+                          disabled={paying || payAmount <= 0}
+                        >
                           {paying ? "Processing..." : "Record Payment"}
                         </Button>
                       </div>
@@ -312,7 +405,9 @@ export default function PortalInvoicesPage() {
           </Card>
         ))}
         {!loading && invoices.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-8">No invoices yet</p>
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No invoices yet
+          </p>
         )}
       </div>
     </div>

@@ -33,7 +33,7 @@ class TestSignPayload:
     def test_sign_different_secrets_different_signatures(self) -> None:
         from webhooks import _sign_payload
 
-        payload = b'the same payload'
+        payload = b"the same payload"
         sig1 = _sign_payload(payload, "secret-1")
         sig2 = _sign_payload(payload, "secret-2")
         assert sig1 != sig2
@@ -68,7 +68,9 @@ class TestDeliver:
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            result = await _deliver("https://example.com/hook", "test.event", {"key": "val"}, "secret")
+            result = await _deliver(
+                "https://example.com/hook", "test.event", {"key": "val"}, "secret"
+            )
 
         assert result["ok"] is True
         assert result["status_code"] == 200
@@ -85,7 +87,9 @@ class TestDeliver:
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            await _deliver("https://example.com/hook", "ticket.created", {"id": "t-1"}, "sec-123")
+            await _deliver(
+                "https://example.com/hook", "ticket.created", {"id": "t-1"}, "sec-123"
+            )
 
         call_kwargs = mock_client.post.call_args[1]
         assert call_kwargs["headers"]["Content-Type"] == "application/json"
@@ -104,7 +108,9 @@ class TestDeliver:
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            result = await _deliver("https://example.com/hook", "test.event", {}, "secret", max_retries=3)
+            result = await _deliver(
+                "https://example.com/hook", "test.event", {}, "secret", max_retries=3
+            )
 
         assert result["ok"] is False
         assert result["status_code"] == 400
@@ -121,7 +127,9 @@ class TestDeliver:
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            result = await _deliver("https://example.com/hook", "test.event", {}, "secret", max_retries=2)
+            result = await _deliver(
+                "https://example.com/hook", "test.event", {}, "secret", max_retries=2
+            )
 
         assert result["ok"] is False
         assert result["attempt"] == 2  # Retried once after first failure
@@ -136,7 +144,9 @@ class TestDeliver:
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            result = await _deliver("https://example.com/hook", "test.event", {}, "secret", max_retries=2)
+            result = await _deliver(
+                "https://example.com/hook", "test.event", {}, "secret", max_retries=2
+            )
 
         assert result["ok"] is False
         assert result["attempt"] == 2
@@ -146,12 +156,16 @@ class TestDeliver:
     async def test_request_error_retries(self) -> None:
         """Should retry on httpx request errors."""
         mock_client = MagicMock()
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.post = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            result = await _deliver("https://example.com/hook", "test.event", {}, "secret", max_retries=2)
+            result = await _deliver(
+                "https://example.com/hook", "test.event", {}, "secret", max_retries=2
+            )
 
         assert result["ok"] is False
         assert result["attempt"] == 2
@@ -169,7 +183,9 @@ class TestDeliver:
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            result = await _deliver("https://example.com/hook", "test.event", {}, "secret", max_retries=2)
+            result = await _deliver(
+                "https://example.com/hook", "test.event", {}, "secret", max_retries=2
+            )
 
         assert result["ok"] is True
         assert result["attempt"] == 2
@@ -182,18 +198,43 @@ class TestFireEvent:
     @pytest.fixture
     def subscriptions(self) -> list[dict]:
         return [
-            {"id": "wh-1", "url": "https://hooks.example.com/1", "events": "customer.created,ticket.created", "secret": "sec-1", "active": True},
-            {"id": "wh-2", "url": "https://hooks.example.com/2", "events": "invoice.created", "secret": "sec-2", "active": True},
-            {"id": "wh-3", "url": "https://hooks.example.com/3", "events": "customer.created", "secret": "sec-3", "active": False},
+            {
+                "id": "wh-1",
+                "url": "https://hooks.example.com/1",
+                "events": "customer.created,ticket.created",
+                "secret": "sec-1",
+                "active": True,
+            },
+            {
+                "id": "wh-2",
+                "url": "https://hooks.example.com/2",
+                "events": "invoice.created",
+                "secret": "sec-2",
+                "active": True,
+            },
+            {
+                "id": "wh-3",
+                "url": "https://hooks.example.com/3",
+                "events": "customer.created",
+                "secret": "sec-3",
+                "active": False,
+            },
         ]
 
     @pytest.mark.asyncio
-    async def test_fires_only_matching_active_subscriptions(self, subscriptions) -> None:
+    async def test_fires_only_matching_active_subscriptions(
+        self, subscriptions
+    ) -> None:
         """Should fire only to active subscriptions that subscribe to the event."""
         from webhooks import fire_event
 
         with patch("webhooks._deliver", new_callable=AsyncMock) as mock_deliver:
-            mock_deliver.return_value = {"ok": True, "status_code": 200, "attempt": 1, "error": None}
+            mock_deliver.return_value = {
+                "ok": True,
+                "status_code": 200,
+                "attempt": 1,
+                "error": None,
+            }
             results = await fire_event("customer.created", {"id": "c-1"}, subscriptions)
 
         # Should fire to wh-1 (active, matches) but not wh-2 (no match) or wh-3 (inactive)
@@ -215,14 +256,31 @@ class TestFireEvent:
     async def test_fires_multiple_matching_subscriptions(self) -> None:
         """Should fire to all active subscriptions that match the event."""
         subs = [
-            {"id": "wh-a", "url": "https://a.com/hook", "events": "ticket.created", "secret": "s1", "active": True},
-            {"id": "wh-b", "url": "https://b.com/hook", "events": "ticket.created", "secret": "s2", "active": True},
+            {
+                "id": "wh-a",
+                "url": "https://a.com/hook",
+                "events": "ticket.created",
+                "secret": "s1",
+                "active": True,
+            },
+            {
+                "id": "wh-b",
+                "url": "https://b.com/hook",
+                "events": "ticket.created",
+                "secret": "s2",
+                "active": True,
+            },
         ]
 
         from webhooks import fire_event
 
         with patch("webhooks._deliver", new_callable=AsyncMock) as mock_deliver:
-            mock_deliver.return_value = {"ok": True, "status_code": 200, "attempt": 1, "error": None}
+            mock_deliver.return_value = {
+                "ok": True,
+                "status_code": 200,
+                "attempt": 1,
+                "error": None,
+            }
             results = await fire_event("ticket.created", {"id": "t-1"}, subs)
 
         assert len(results) == 2
@@ -231,7 +289,13 @@ class TestFireEvent:
     async def test_inactive_subscription_skipped(self) -> None:
         """Should skip inactive subscriptions."""
         subs = [
-            {"id": "wh-inactive", "url": "https://x.com/hook", "events": "test.event", "secret": "s", "active": False},
+            {
+                "id": "wh-inactive",
+                "url": "https://x.com/hook",
+                "events": "test.event",
+                "secret": "s",
+                "active": False,
+            },
         ]
 
         from webhooks import fire_event
@@ -258,9 +322,16 @@ class TestFireEvent:
         from webhooks import fire_event
 
         with patch("webhooks._deliver", new_callable=AsyncMock) as mock_deliver:
-            mock_deliver.return_value = {"ok": False, "status_code": 500, "attempt": 3, "error": "HTTP 500"}
+            mock_deliver.return_value = {
+                "ok": False,
+                "status_code": 500,
+                "attempt": 3,
+                "error": "HTTP 500",
+            }
             with patch("webhooks.logger") as mock_logger:
-                results = await fire_event("customer.created", {"id": "c-1"}, subscriptions)
+                results = await fire_event(
+                    "customer.created", {"id": "c-1"}, subscriptions
+                )
 
         assert len(results) == 1
         assert results[0]["ok"] is False
@@ -270,13 +341,24 @@ class TestFireEvent:
     async def test_deliver_result_includes_subscription_id_and_url(self) -> None:
         """Delivery result should include subscription_id and url."""
         subs = [
-            {"id": "wh-1", "url": "https://example.com/hook", "events": "test.event", "secret": "s", "active": True},
+            {
+                "id": "wh-1",
+                "url": "https://example.com/hook",
+                "events": "test.event",
+                "secret": "s",
+                "active": True,
+            },
         ]
 
         from webhooks import fire_event
 
         with patch("webhooks._deliver", new_callable=AsyncMock) as mock_deliver:
-            mock_deliver.return_value = {"ok": True, "status_code": 200, "attempt": 1, "error": None}
+            mock_deliver.return_value = {
+                "ok": True,
+                "status_code": 200,
+                "attempt": 1,
+                "error": None,
+            }
             results = await fire_event("test.event", {"hello": "world"}, subs)
 
         assert results[0]["subscription_id"] == "wh-1"

@@ -52,6 +52,21 @@ def _stdb_write(query: str) -> None:
         pass
 
 
+def _stdb_call(reducer: str, args: list[str]) -> None:
+    """Call a STDB reducer via the HTTP /call endpoint.
+
+    This is the ONLY way to execute reducers (SQL SELECT does NOT work).
+    """
+    resp = httpx.post(
+        f"{STDB_CALL_URL}/{reducer}",
+        json=args,
+        timeout=30,
+    )
+    assert resp.status_code == 200, (
+        f"STDB call '{reducer}' failed ({resp.status_code}): {resp.text[:200]}"
+    )
+
+
 def unique_suffix() -> str:
     """Return a short unique string for creating unique test entities."""
     return uuid.uuid4().hex[:8]

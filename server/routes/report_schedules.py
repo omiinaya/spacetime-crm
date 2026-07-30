@@ -1,4 +1,5 @@
 """Report schedule management — saved reports with scheduled email delivery."""
+
 from __future__ import annotations
 
 import json
@@ -7,8 +8,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sql, _sql_t, _call, _log_audit,
-    require_role, _safe_id, logger,
+    _sql,
+    _sql_t,
+    _call,
+    _log_audit,
+    require_role,
+    _safe_id,
+    logger,
 )
 from models import ScheduledReportCreate, ScheduledReportUpdate
 from mail import send_email
@@ -29,32 +35,54 @@ async def list_schedules(
     rows = await _sql_t("SELECT * FROM scheduled_reports", user["tenant_id"])
     rows.sort(key=lambda r: r.get("next_run_at", 0))
     total = len(rows)
-    return {"schedules": rows[offset:offset + limit], "total": total, "offset": offset, "limit": limit}
+    return {
+        "schedules": rows[offset : offset + limit],
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+    }
 
 
 @router.post("/api/report-schedules")
-async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))):
+async def create_schedule(
+    body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))
+):
     """Create a new scheduled report."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     next_run_at = _calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
 
-    result = await _call("create_scheduled_report", [
-        user["tenant_id"],
-        body.name,
-        body.report_type,
-        body.schedule_frequency,
-        json.dumps(body.schedule_config),
-        json.dumps(body.recipients if isinstance(body.recipients, list) else [body.recipients]),
-        json.dumps(body.filters),
-        next_run_at,
-    ])
+    result = await _call(
+        "create_scheduled_report",
+        [
+            user["tenant_id"],
+            body.name,
+            body.report_type,
+            body.schedule_frequency,
+            json.dumps(body.schedule_config),
+            json.dumps(
+                body.recipients
+                if isinstance(body.recipients, list)
+                else [body.recipients]
+            ),
+            json.dumps(body.filters),
+            next_run_at,
+        ],
+    )
 
     await _log_audit(user, "create", "scheduled_report", "", body.name)
-    return {"ok": True, "id": result.get("id", "") if isinstance(result, dict) else "", "next_run_at": next_run_at}
+    return {
+        "ok": True,
+        "id": result.get("id", "") if isinstance(result, dict) else "",
+        "next_run_at": next_run_at,
+    }
 
 
 @router.put("/api/report-schedules/{schedule_id}")
-async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: dict = Depends(require_role("admin"))):
+async def update_schedule(
+    schedule_id: str,
+    body: ScheduledReportUpdate,
+    user: dict = Depends(require_role("admin")),
+):
     """Update an existing scheduled report."""
     _safe_id(schedule_id)
     existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
@@ -70,21 +98,34 @@ async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: d
     recipients_raw = body.recipients
     filters = body.filters
 
-    recipients = recipients_raw if isinstance(recipients_raw, list) else [recipients_raw]
+    recipients = (
+        recipients_raw if isinstance(recipients_raw, list) else [recipients_raw]
+    )
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     next_run_at = _calc_next_run(schedule_frequency, schedule_config, now_ms)
 
-    await _call("update_scheduled_report", [
-        schedule_id, name, report_type, schedule_frequency,
-        json.dumps(schedule_config), json.dumps(recipients),
-        json.dumps(filters), next_run_at, enabled,
-    ])
+    await _call(
+        "update_scheduled_report",
+        [
+            schedule_id,
+            name,
+            report_type,
+            schedule_frequency,
+            json.dumps(schedule_config),
+            json.dumps(recipients),
+            json.dumps(filters),
+            next_run_at,
+            enabled,
+        ],
+    )
     await _log_audit(user, "update", "scheduled_report", schedule_id, name)
     return {"ok": True}
 
 
 @router.delete("/api/report-schedules/{schedule_id}")
-async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("admin"))):
+async def delete_schedule(
+    schedule_id: str, user: dict = Depends(require_role("admin"))
+):
     """Delete a scheduled report."""
     _safe_id(schedule_id)
     await _call("delete_scheduled_report", [schedule_id])
@@ -96,10 +137,14 @@ async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("a
 
 
 @router.post("/api/report-schedules/{schedule_id}/run-now")
-async def run_schedule_now(schedule_id: str, user: dict = Depends(require_role("admin", "tech"))):
+async def run_schedule_now(
+    schedule_id: str, user: dict = Depends(require_role("admin", "tech"))
+):
     """Generate and deliver a scheduled report immediately."""
     _safe_id(schedule_id)
-    schedules = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
+    schedules = await _sql(
+        f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'"
+    )
     if not schedules:
         raise HTTPException(404, "Schedule not found")
 
@@ -112,11 +157,15 @@ async def check_due_schedules(user: dict = Depends(require_role("admin"))):
     """Find all enabled schedules past their next_run_at. Call from cron."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     all_rows = await _sql_t("SELECT * FROM scheduled_reports", user["tenant_id"])
-    rows = [r for r in all_rows if r.get("enabled") and r.get("next_run_at", 0) <= now_ms]
+    rows = [
+        r for r in all_rows if r.get("enabled") and r.get("next_run_at", 0) <= now_ms
+    ]
     results = []
     for schedule in rows:
         result = await _generate_and_deliver(schedule, user)
-        results.append({"id": schedule["id"], "name": schedule["name"], "result": result})
+        results.append(
+            {"id": schedule["id"], "name": schedule["name"], "result": result}
+        )
     return {"processed": len(results), "results": results}
 
 
@@ -135,7 +184,9 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
         report_data = await _build_report_data(report_type, tenant_id, filters)
 
         # 2. Render HTML email
-        html = _render_report_email(report_type, schedule.get("name", "Report"), report_data)
+        html = _render_report_email(
+            report_type, schedule.get("name", "Report"), report_data
+        )
 
         # 3. Send to each recipient
         sent_count = 0
@@ -144,7 +195,11 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
             if not email or "@" not in email:
                 continue
             try:
-                ok = send_email(email, f"📊 Scheduled Report: {schedule.get('name', 'Report')}", html)
+                ok = send_email(
+                    email,
+                    f"📊 Scheduled Report: {schedule.get('name', 'Report')}",
+                    html,
+                )
                 if ok:
                     sent_count += 1
                 else:
@@ -161,7 +216,12 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
         )
         await _call("mark_report_run", [schedule["id"], next_run])
 
-        return {"ok": True, "sent": sent_count, "total": len(recipients), "errors": errors}
+        return {
+            "ok": True,
+            "sent": sent_count,
+            "total": len(recipients),
+            "errors": errors,
+        }
     except Exception as e:
         logger.error("Report generation failed for %s: %s", schedule.get("name"), e)
         await _call("mark_report_error", [schedule["id"], str(e)[:500]])
@@ -187,7 +247,9 @@ def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
         next_dt += timedelta(days=days_ahead)
     elif frequency == "monthly":
         day_of_month = min(config.get("day_of_month", 1), 28)
-        next_dt = dt.replace(day=day_of_month, hour=hour, minute=minute, second=0, microsecond=0)
+        next_dt = dt.replace(
+            day=day_of_month, hour=hour, minute=minute, second=0, microsecond=0
+        )
         if next_dt <= dt:
             if next_dt.month == 12:
                 next_dt = next_dt.replace(year=next_dt.year + 1, month=1)
@@ -199,7 +261,9 @@ def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
     return int(next_dt.timestamp() * 1000)
 
 
-async def _build_report_data(report_type: str, tenant_id: str, filters: dict) -> dict[str, Any]:
+async def _build_report_data(
+    report_type: str, tenant_id: str, filters: dict
+) -> dict[str, Any]:
     """Query STDB and build report data for a given report type."""
     now = datetime.utcnow()
 
@@ -224,13 +288,18 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
                 for p in payments
                 if ms_ts <= p.get("created_at", 0) < ms_end_ts
             )
-            revenue_by_month.append({"label": ms.strftime("%b %y"), "value": round(month_rev, 2)})
+            revenue_by_month.append(
+                {"label": ms.strftime("%b %y"), "value": round(month_rev, 2)}
+            )
 
         total_paid = sum(float(p.get("amount", 0)) for p in payments)
-        total_sent = sum(1 for inv in invoices if inv.get("status") not in ("draft", "cancelled"))
+        total_sent = sum(
+            1 for inv in invoices if inv.get("status") not in ("draft", "cancelled")
+        )
         total_paid_count = sum(1 for inv in invoices if inv.get("status") == "paid")
         outstanding = sum(
-            float(inv.get("total", 0)) for inv in invoices
+            float(inv.get("total", 0))
+            for inv in invoices
             if inv.get("status") in ("sent", "overdue", "partial")
         )
 
@@ -256,19 +325,34 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
         for t in tickets:
             s = t.get("status", "unknown")
             status_counts[s] = status_counts.get(s, 0) + 1
-        ticket_by_status = [{"label": s.capitalize(), "value": c} for s, c in sorted(status_counts.items())]
+        ticket_by_status = [
+            {"label": s.capitalize(), "value": c}
+            for s, c in sorted(status_counts.items())
+        ]
 
-        open_count = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
-        resolved_count = sum(1 for t in tickets if t.get("status") in ("resolved", "closed"))
+        open_count = sum(
+            1 for t in tickets if t.get("status") not in ("resolved", "closed")
+        )
+        resolved_count = sum(
+            1 for t in tickets if t.get("status") in ("resolved", "closed")
+        )
         total_tickets = len(tickets)
 
         resolution_times = []
         for t in tickets:
             created = t.get("created_at", 0)
             updated = t.get("updated_at", 0)
-            if created and updated > created and t.get("status") in ("resolved", "closed"):
+            if (
+                created
+                and updated > created
+                and t.get("status") in ("resolved", "closed")
+            ):
                 resolution_times.append((updated - created) / (1000 * 3600))
-        avg_resolution = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
+        avg_resolution = (
+            round(sum(resolution_times) / len(resolution_times), 1)
+            if resolution_times
+            else 0
+        )
 
         # Tech productivity
         tech_counts: dict[str, int] = {}
@@ -329,21 +413,35 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             if inv.get("status") == "paid":
                 total_rev += float(inv.get("total", 0))
 
-        inv_by_status = [{"label": s.capitalize(), "value": c} for s, c in sorted(status_counts.items())]
+        inv_by_status = [
+            {"label": s.capitalize(), "value": c}
+            for s, c in sorted(status_counts.items())
+        ]
         outstanding = sum(
-            float(inv.get("total", 0)) for inv in invoices
+            float(inv.get("total", 0))
+            for inv in invoices
             if inv.get("status") in ("sent", "overdue", "partial")
         )
 
-        total_sent_inv = sum(1 for inv in invoices if inv.get("status") in ("sent", "overdue", "partial"))
+        total_sent_inv = sum(
+            1 for inv in invoices if inv.get("status") in ("sent", "overdue", "partial")
+        )
         overdue_count = status_counts.get("overdue", 0)
         # On-the-fly detection for sent/partial past-due
         now_ms_inv = int(now.timestamp() * 1000)
         for inv in invoices:
-            if inv.get("status") in ("sent", "partial") and inv.get("due_date", 0) > 0 and inv.get("due_date", 0) < now_ms_inv:
+            if (
+                inv.get("status") in ("sent", "partial")
+                and inv.get("due_date", 0) > 0
+                and inv.get("due_date", 0) < now_ms_inv
+            ):
                 overdue_count += 1
                 total_sent_inv += 1
-        overdue_rate = round((overdue_count / total_sent_inv * 100), 1) if total_sent_inv > 0 else 0
+        overdue_rate = (
+            round((overdue_count / total_sent_inv * 100), 1)
+            if total_sent_inv > 0
+            else 0
+        )
 
         return {
             "title": "Invoice Report",
@@ -351,7 +449,10 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
                 {"label": "Total Invoices", "value": str(len(invoices))},
                 {"label": "Total Collected", "value": f"${total_rev:,.2f}"},
                 {"label": "Outstanding", "value": f"${outstanding:,.2f}"},
-                {"label": "Overdue Rate", "value": f"{overdue_rate}% ({overdue_count})"},
+                {
+                    "label": "Overdue Rate",
+                    "value": f"{overdue_rate}% ({overdue_count})",
+                },
             ],
             "chart": inv_by_status,
             "chart_label": "Invoices by Status",
@@ -366,10 +467,16 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             ms_end = ms + timedelta(days=30)
             ms_ts = int(ms.timestamp() * 1000)
             ms_end_ts = int(ms_end.timestamp() * 1000)
-            appt_by_month.append({
-                "label": ms.strftime("%b %y"),
-                "value": sum(1 for a in appointments if ms_ts <= a.get("start_time", 0) < ms_end_ts),
-            })
+            appt_by_month.append(
+                {
+                    "label": ms.strftime("%b %y"),
+                    "value": sum(
+                        1
+                        for a in appointments
+                        if ms_ts <= a.get("start_time", 0) < ms_end_ts
+                    ),
+                }
+            )
 
         status_counts: dict[str, int] = {}
         for a in appointments:
@@ -406,7 +513,11 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
                 tech_data_map[uid]["resolved"] += 1
             created = t.get("created_at", 0)
             updated = t.get("updated_at", 0)
-            if created and updated > created and t.get("status") in ("resolved", "closed"):
+            if (
+                created
+                and updated > created
+                and t.get("status") in ("resolved", "closed")
+            ):
                 tech_data_map[uid]["hours"] += (updated - created) / (1000 * 3600)
 
         tech_data = [
@@ -426,7 +537,10 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "metrics": [
                 {"label": "Total Tickets", "value": str(total_assigned)},
                 {"label": "Resolved/Closed", "value": str(total_resolved)},
-                {"label": "Resolution Rate", "value": f"{round(total_resolved / total_assigned * 100, 1) if total_assigned else 0}%"},
+                {
+                    "label": "Resolution Rate",
+                    "value": f"{round(total_resolved / total_assigned * 100, 1) if total_assigned else 0}%",
+                },
                 {"label": "Active Techs", "value": str(len(tech_counts))},
             ],
             "chart": tech_data,
@@ -441,7 +555,9 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
         for inv in invoices:
             cid = inv.get("customer_id", "")
             if inv.get("status") == "paid":
-                customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
+                customer_revenue[cid] = customer_revenue.get(cid, 0) + float(
+                    inv.get("total", 0)
+                )
 
         top_customers = [
             {
@@ -456,8 +572,16 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "title": "Customer Report",
             "metrics": [
                 {"label": "Total Customers", "value": str(len(customers))},
-                {"label": "Active (with invoices)", "value": str(len(set(inv.get("customer_id", "") for inv in invoices)))},
-                {"label": "Avg Revenue/Customer", "value": f"${round(sum(customer_revenue.values()) / len(customer_revenue), 2) if customer_revenue else 0}"},
+                {
+                    "label": "Active (with invoices)",
+                    "value": str(
+                        len(set(inv.get("customer_id", "") for inv in invoices))
+                    ),
+                },
+                {
+                    "label": "Avg Revenue/Customer",
+                    "value": f"${round(sum(customer_revenue.values()) / len(customer_revenue), 2) if customer_revenue else 0}",
+                },
             ],
             "chart": top_customers[:10],
             "chart_label": "Top Customers by Revenue",
@@ -482,7 +606,7 @@ def _render_report_email(report_type: str, name: str, data: dict) -> str:
             f'<span style="width:80px;font-size:11px;color:#666;text-align:right;padding-right:8px">{c["label"]}</span>'
             f'<div style="flex:1;background:#f0f0f0;border-radius:4px;overflow:hidden;height:20px">'
             f'<div style="width:{max(c["value"] / max_val * 100, 5)}%;background:#6366f1;height:20px;border-radius:4px;text-align:right;padding-right:4px;line-height:20px;font-size:10px;color:#fff;min-width:fit-content">'
-            f'{c["value"]}</div></div></div>'
+            f"{c['value']}</div></div></div>"
             for c in data["chart"]
         )
         chart_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart_label", "")}</h3>{bars}'
@@ -495,7 +619,7 @@ def _render_report_email(report_type: str, name: str, data: dict) -> str:
             f'<span style="width:120px;font-size:11px;color:#666;text-align:right;padding-right:8px">{c["label"]}</span>'
             f'<div style="flex:1;background:#f0f0f0;border-radius:4px;overflow:hidden;height:20px">'
             f'<div style="width:{max(c["value"] / max_val * 100, 5)}%;background:#22c55e;height:20px;border-radius:4px;text-align:right;padding-right:4px;line-height:20px;font-size:10px;color:#fff">'
-            f'{c["value"]}</div></div></div>'
+            f"{c['value']}</div></div></div>"
             for c in data["chart2"]
         )
         chart2_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart2_label", "")}</h3>{bars2}'

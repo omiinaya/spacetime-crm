@@ -1,3 +1,4 @@
+// TODO (kanban): Replace 14 unwrap() call(s) with proper error handling
 use spacetimedb::*;
 
 #[cfg(test)]

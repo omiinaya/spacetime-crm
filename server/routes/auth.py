@@ -1,4 +1,5 @@
 """Auth routes — login, me, set-password, refresh-tenant, 2FA/TOTP."""
+
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
@@ -6,19 +7,25 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from config import settings
 from helpers import (
-    _sql, _call, require_role, get_current_user, logger,
+    _sql,
+    _call,
+    get_current_user,
+    logger,
 )
 from models import (
-    LoginRequest, SetPasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
-    Setup2FARequest, CompleteLoginRequest, Disable2FARequest,
-    SetPinRequest, PosLoginRequest,
+    LoginRequest,
+    SetPasswordRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    Setup2FARequest,
+    CompleteLoginRequest,
+    Disable2FARequest,
+    SetPinRequest,
+    PosLoginRequest,
 )
 from rate_limit import limiter
 
 import pyotp
-import base64
-import os
-import json
 from mail import send_email as _send_email
 
 router = APIRouter()
@@ -120,11 +127,13 @@ async def login(request: Request, login_data: LoginRequest):
     # No 2FA — return full token
     tenant_id = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
+        )
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
-        pass
+        logger.error("login: tenant lookup failed")
 
     token = _make_full_token(user, tenant_id, now)
 
@@ -167,11 +176,13 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
     now = datetime.utcnow()
     tenant_id = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
+        )
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
-        pass
+        logger.error("complete_login: tenant lookup failed")
 
     token = _make_full_token(user, tenant_id, now)
 
@@ -193,11 +204,13 @@ async def auth_me(user: dict = Depends(get_current_user)):
     tenant_info = {}
     if user.get("tenant_id"):
         try:
-            trows = await _sql(f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'")
+            trows = await _sql(
+                f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'"
+            )
             if trows:
                 tenant_info = trows[0]
         except Exception:
-            pass
+            logger.error("auth_me: tenant info lookup failed")
 
     # Check 2FA status and PIN from DB (JWT doesn't contain pin)
     totp_enabled = False
@@ -208,7 +221,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
             totp_enabled = rows[0].get("totp_enabled", False)
             has_pin = bool(rows[0].get("pin", ""))
     except Exception:
-        pass
+        logger.error("auth_me: user totp/pin lookup failed")
 
     result = {
         "id": user["id"],
@@ -229,7 +242,9 @@ async def setup_2fa(user: dict = Depends(get_current_user)):
     # Check if already enabled
     rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
     if rows and rows[0].get("totp_enabled", False):
-        raise HTTPException(400, "2FA is already enabled. Disable it first to re-setup.")
+        raise HTTPException(
+            400, "2FA is already enabled. Disable it first to re-setup."
+        )
 
     # Generate new secret
     secret = pyotp.random_base32()
@@ -291,18 +306,22 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
     """Refresh the JWT token with latest tenant_id from DB."""
     tid = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
+        )
         if tm_rows:
             tid = tm_rows[0]["tenant_id"]
     except Exception:
-        pass
+        logger.error("refresh_token_tenant: tenant lookup failed")
     now = datetime.utcnow()
     token = _make_full_token(user, tid, now)
     return {"token": token, "tenant_id": tid}
 
 
 @router.post("/api/auth/set-password")
-async def set_password(body: SetPasswordRequest, user: dict = Depends(get_current_user)):
+async def set_password(
+    body: SetPasswordRequest, user: dict = Depends(get_current_user)
+):
     """Set/change password for current user."""
     pw = body.password
     if len(pw) < 6:
@@ -353,11 +372,13 @@ async def pos_login(request: Request, body: PosLoginRequest):
     now = datetime.utcnow()
     tenant_id = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
+        )
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
-        pass
+        logger.error("pos_login: tenant lookup failed")
 
     token = _make_full_token(user, tenant_id, now)
     return {
@@ -400,7 +421,10 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 
     if user is None:
         logger.info("Password reset requested for unknown email: %s", email)
-        return {"ok": True, "message": "If that email exists, a reset link has been sent."}
+        return {
+            "ok": True,
+            "message": "If that email exists, a reset link has been sent.",
+        }
 
     now = datetime.utcnow()
     token = jwt.encode(

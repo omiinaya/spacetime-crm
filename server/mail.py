@@ -1,6 +1,7 @@
 """Email notification utility for SpacetimeCRM.
 Uses smtplib with configurable SMTP settings stored in a JSON file.
 """
+
 import json
 import logging
 import smtplib
@@ -50,21 +51,27 @@ def get_settings() -> Optional[dict]:
 
 def update_settings(data: dict) -> dict:
     current = _load_settings() or {}
-    current.update({
-        "host": data.get("host", current.get("host", "")),
-        "port": data.get("port", current.get("port", 587)),
-        "username": data.get("username", current.get("username", "")),
-        "use_tls": data.get("use_tls", current.get("use_tls", True)),
-        "sender_name": data.get("sender_name", current.get("sender_name", "SpacetimeCRM")),
-        "sender_email": data.get("sender_email", current.get("sender_email", "")),
-    })
+    current.update(
+        {
+            "host": data.get("host", current.get("host", "")),
+            "port": data.get("port", current.get("port", 587)),
+            "username": data.get("username", current.get("username", "")),
+            "use_tls": data.get("use_tls", current.get("use_tls", True)),
+            "sender_name": data.get(
+                "sender_name", current.get("sender_name", "SpacetimeCRM")
+            ),
+            "sender_email": data.get("sender_email", current.get("sender_email", "")),
+        }
+    )
     if "password" in data:
         current["password"] = data["password"]
     _save_settings(current)
     return get_settings()
 
 
-def send_email(to: str, subject: str, html_body: str, text_body: Optional[str] = None) -> bool:
+def send_email(
+    to: str, subject: str, html_body: str, text_body: Optional[str] = None
+) -> bool:
     """Send an email via configured SMTP. Returns True on success."""
     settings = _load_settings()
     if not settings:
@@ -141,7 +148,6 @@ def test_connection() -> dict:
         if use_tls:
             with smtplib.SMTP(host, port, timeout=10) as server:
                 server.ehlo()
-                status = server.ehlo_resp  # pylint: disable=maybe-no-member
                 server.starttls(context=context)
                 server.ehlo()
                 if username:
@@ -159,9 +165,12 @@ def test_connection() -> dict:
 # ── Notification templates ──
 
 _STATUS_LABELS = {
-    "new": "New", "in_progress": "In Progress",
-    "waiting_parts": "Waiting for Parts", "waiting_customer": "Waiting for Customer",
-    "resolved": "Resolved", "closed": "Closed",
+    "new": "New",
+    "in_progress": "In Progress",
+    "waiting_parts": "Waiting for Parts",
+    "waiting_customer": "Waiting for Customer",
+    "resolved": "Resolved",
+    "closed": "Closed",
 }
 
 
@@ -172,45 +181,66 @@ def _customer_email(customer: Optional[dict]) -> Optional[str]:
     return customer.get("email") or None
 
 
-def _notify_ticket_status_change(customer_email: str, ticket_number: int, title: str, status: str, link: str) -> None:
+def _notify_ticket_status_change(
+    customer_email: str, ticket_number: int, title: str, status: str, link: str
+) -> None:
     """Send ticket status notification."""
     status_label = _STATUS_LABELS.get(status, status)
     html = jinja_env.get_template("email/ticket_status.html").render(
-        ticket_number=ticket_number, title=title, status_label=status_label, link=link,
+        ticket_number=ticket_number,
+        title=title,
+        status_label=status_label,
+        link=link,
     )
     send_email(customer_email, f"Ticket #{ticket_number} — {status_label}", html)
 
 
-def _notify_invoice_created(customer_email: str, invoice_number: int, total: float, link: str) -> None:
+def _notify_invoice_created(
+    customer_email: str, invoice_number: int, total: float, link: str
+) -> None:
     """Send invoice notification."""
     html = jinja_env.get_template("email/invoice_created.html").render(
-        invoice_number=invoice_number, total=f"{total:.2f}", link=link,
+        invoice_number=invoice_number,
+        total=f"{total:.2f}",
+        link=link,
     )
     send_email(customer_email, f"Invoice #{invoice_number} — ${total:.2f}", html)
 
 
-def _notify_appointment_created(customer_email: str, title: str, start_time: int, link: str) -> None:
+def _notify_appointment_created(
+    customer_email: str, title: str, start_time: int, link: str
+) -> None:
     """Send appointment notification."""
     dt = datetime.fromtimestamp(start_time / 1000)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     html = jinja_env.get_template("email/appointment_created.html").render(
-        title=title, date_str=date_str, link=link,
+        title=title,
+        date_str=date_str,
+        link=link,
     )
     send_email(customer_email, f"Appointment: {title}", html)
 
 
-def _notify_payment_received(customer_email: str, invoice_number: int, amount: float, link: str) -> None:
+def _notify_payment_received(
+    customer_email: str, invoice_number: int, amount: float, link: str
+) -> None:
     """Send payment confirmation."""
     html = jinja_env.get_template("email/payment_received.html").render(
-        amount=f"{amount:.2f}", invoice_number=invoice_number, link=link,
+        amount=f"{amount:.2f}",
+        invoice_number=invoice_number,
+        link=link,
     )
     send_email(customer_email, f"Payment Received — Invoice #{invoice_number}", html)
 
 
-def _notify_estimate_approved(customer_email: str, estimate_number: int, total: float, link: str) -> None:
+def _notify_estimate_approved(
+    customer_email: str, estimate_number: int, total: float, link: str
+) -> None:
     """Send estimate approved notification."""
     html = jinja_env.get_template("email/estimate_approved.html").render(
-        estimate_number=estimate_number, total=f"{total:.2f}", link=link,
+        estimate_number=estimate_number,
+        total=f"{total:.2f}",
+        link=link,
     )
     send_email(customer_email, f"Estimate #{estimate_number} Approved", html)
 
@@ -220,30 +250,50 @@ def _notify_low_stock(admin_email: str, products: list[dict]) -> None:
     if not products:
         return
     items = [
-        {"name": p.get("name", "?"), "sku": p.get("sku", "-"),
-         "qty": f"{p.get('quantity_on_hand', 0):.0f}", "min": f"{p.get('min_stock', 0):.0f}"}
+        {
+            "name": p.get("name", "?"),
+            "sku": p.get("sku", "-"),
+            "qty": f"{p.get('quantity_on_hand', 0):.0f}",
+            "min": f"{p.get('min_stock', 0):.0f}",
+        }
         for p in products
     ]
     html = jinja_env.get_template("email/low_stock.html").render(
-        products=items, count=len(products),
+        products=items,
+        count=len(products),
     )
-    send_email(admin_email, f"⚠️ Low Stock Alert — {len(products)} product(s) below threshold", html)
+    send_email(
+        admin_email,
+        f"⚠️ Low Stock Alert — {len(products)} product(s) below threshold",
+        html,
+    )
 
 
-def _notify_appointment_reminder(customer_email: str, title: str, start_time: int, link: str) -> None:
+def _notify_appointment_reminder(
+    customer_email: str, title: str, start_time: int, link: str
+) -> None:
     """Send appointment reminder email (24h before)."""
     dt = datetime.fromtimestamp(start_time / 1000)
     date_str = dt.strftime("%A, %B %d at %I:%M %p")
     html = jinja_env.get_template("email/appointment_reminder.html").render(
-        title=title, date_str=date_str, link=link,
+        title=title,
+        date_str=date_str,
+        link=link,
     )
     send_email(customer_email, f"Reminder: {title} — Tomorrow", html)
 
 
-def _notify_overdue_reminder(customer_email: str, invoice_number: int, total: float, due_date: str, link: str) -> None:
+def _notify_overdue_reminder(
+    customer_email: str, invoice_number: int, total: float, due_date: str, link: str
+) -> None:
     """Send overdue invoice reminder email."""
     html = jinja_env.get_template("email/overdue_reminder.html").render(
-        invoice_number=invoice_number, total=f"{total:.2f}",
-        customer_name="Valued Customer", due_date=due_date, link=link,
+        invoice_number=invoice_number,
+        total=f"{total:.2f}",
+        customer_name="Valued Customer",
+        due_date=due_date,
+        link=link,
     )
-    send_email(customer_email, f"Overdue Invoice #{invoice_number} — ${total:.2f}", html)
+    send_email(
+        customer_email, f"Overdue Invoice #{invoice_number} — ${total:.2f}", html
+    )

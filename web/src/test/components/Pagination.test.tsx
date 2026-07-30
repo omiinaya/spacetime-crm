@@ -15,7 +15,7 @@ describe("Pagination", () => {
         onPrev={() => {}}
         onNext={() => {}}
         onGoToPage={() => {}}
-      />
+      />,
     );
     expect(screen.getByText("100 total")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe("Pagination", () => {
         onPrev={() => {}}
         onNext={() => {}}
         onGoToPage={() => {}}
-      />
+      />,
     );
     expect(container.innerHTML).toBe("");
   });
@@ -49,7 +49,7 @@ describe("Pagination", () => {
         onPrev={() => {}}
         onNext={() => {}}
         onGoToPage={() => {}}
-      />
+      />,
     );
     const buttons = screen.getAllByRole("button");
     expect(buttons[0]).toBeDisabled();
@@ -66,7 +66,7 @@ describe("Pagination", () => {
         onPrev={() => {}}
         onNext={() => {}}
         onGoToPage={() => {}}
-      />
+      />,
     );
     const buttons = screen.getAllByRole("button");
     expect(buttons[buttons.length - 1]).toBeDisabled();
@@ -83,9 +83,11 @@ describe("Pagination", () => {
         hasPrev={false}
         hasNext={true}
         onPrev={() => {}}
-        onNext={() => { nextCalled = true; }}
+        onNext={() => {
+          nextCalled = true;
+        }}
         onGoToPage={() => {}}
-      />
+      />,
     );
     const buttons = screen.getAllByRole("button");
     await user.click(buttons[buttons.length - 1]);
@@ -102,10 +104,12 @@ describe("Pagination", () => {
         total={100}
         hasPrev={true}
         hasNext={true}
-        onPrev={() => { prevCalled = true; }}
+        onPrev={() => {
+          prevCalled = true;
+        }}
         onNext={() => {}}
         onGoToPage={() => {}}
-      />
+      />,
     );
     const buttons = screen.getAllByRole("button");
     await user.click(buttons[0]);
@@ -124,10 +128,14 @@ describe("Pagination", () => {
         hasNext={true}
         onPrev={() => {}}
         onNext={() => {}}
-        onGoToPage={(p) => { gotoPage = p; }}
-      />
+        onGoToPage={(p) => {
+          gotoPage = p;
+        }}
+      />,
     );
-    const pageBtns = screen.getAllByRole("button").filter(b => !b.querySelector("svg"));
+    const pageBtns = screen
+      .getAllByRole("button")
+      .filter((b) => !b.querySelector("svg"));
     await user.click(pageBtns[1]);
     expect(gotoPage).toBe(2);
   });
@@ -143,7 +151,7 @@ describe("Pagination", () => {
         onPrev={() => {}}
         onNext={() => {}}
         onGoToPage={() => {}}
-      />
+      />,
     );
     const ellipses = screen.getAllByText("...");
     expect(ellipses.length).toBeGreaterThanOrEqual(1);

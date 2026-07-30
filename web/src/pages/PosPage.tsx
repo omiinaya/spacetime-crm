@@ -1,14 +1,40 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, POSCounterSale, POSCounterSaleDetail, POSCounterSaleLineItem, POSAddItemPayload } from "../lib/api";
+import {
+  api,
+  POSCounterSale,
+  POSCounterSaleDetail,
+  POSCounterSaleLineItem,
+  POSAddItemPayload,
+} from "../lib/api";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import {
-  ShoppingCart, Printer, Search, X, Plus, Minus,
-  DollarSign, Receipt, RotateCcw, Trash2, CreditCard,
-  Banknote, Loader2, ArrowLeft, Check, FileDown, Lock, Unlock,
+  ShoppingCart,
+  Printer,
+  Search,
+  X,
+  Plus,
+  Minus,
+  DollarSign,
+  Receipt,
+  RotateCcw,
+  Trash2,
+  CreditCard,
+  Banknote,
+  Loader2,
+  ArrowLeft,
+  Check,
+  FileDown,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
@@ -63,38 +89,41 @@ export default function PosPage() {
   }, [token]);
 
   // ── PIN verification ──
-  const handlePinSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pinInput || pinInput.length < 4) {
-      setPinError("PIN must be at least 4 digits");
-      return;
-    }
-    if (!user) {
-      setPinError("Not authenticated");
-      return;
-    }
-    setPinVerifying(true);
-    setPinError("");
-    try {
-      await api.auth.posLogin(user.id, pinInput);
-      setPinVerified(true);
-      setLocked(false);
-      setPinInput("");
+  const handlePinSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!pinInput || pinInput.length < 4) {
+        setPinError("PIN must be at least 4 digits");
+        return;
+      }
+      if (!user) {
+        setPinError("Not authenticated");
+        return;
+      }
+      setPinVerifying(true);
       setPinError("");
-    } catch (err: any) {
-      setPinError("Invalid PIN — try again");
-      setPinInput("");
-      pinRef.current?.focus();
-    } finally {
-      setPinVerifying(false);
-    }
-  }, [pinInput, user]);
+      try {
+        await api.auth.posLogin(user.id, pinInput);
+        setPinVerified(true);
+        setLocked(false);
+        setPinInput("");
+        setPinError("");
+      } catch (err: any) {
+        setPinError("Invalid PIN — try again");
+        setPinInput("");
+        pinRef.current?.focus();
+      } finally {
+        setPinVerifying(false);
+      }
+    },
+    [pinInput, user],
+  );
 
   // ── Product search ──
   const { data: searchResults } = useQuery({
     queryKey: ["pos-products", searchQuery],
     queryFn: () =>
-      api.products.list(searchQuery, 0, 20).then((r) => r.products),
+      api.products.list(searchQuery, undefined, 0, 20).then((r) => r.products),
     enabled: searchQuery.length >= 1,
   });
 
@@ -186,34 +215,45 @@ export default function PosPage() {
     setMode("receipt");
     queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
     toast.success(`Sale complete — Receipt #${detailRes.sale.receipt_number}`);
-  }, [cart, customerName, paymentMethod, amountTendered, taxRate, discount, queryClient]);
+  }, [
+    cart,
+    customerName,
+    paymentMethod,
+    amountTendered,
+    taxRate,
+    discount,
+    queryClient,
+  ]);
 
   // ── Add to cart from search result ──
-  const addToCart = useCallback((product: { id: string; name: string; sku: string; price: number }) => {
-    setCart((prev) => {
-      const existing = prev.find((c) => c.product_id === product.id);
-      if (existing) {
-        return prev.map((c) =>
-          c.product_id === product.id
-            ? { ...c, quantity: c.quantity + 1 }
-            : c
-        );
-      }
-      return [
-        ...prev,
-        {
-          product_id: product.id,
-          product_name: product.name,
-          sku: product.sku || "",
-          quantity: 1,
-          unit_price: product.price,
-        },
-      ];
-    });
-    setSearchQuery("");
-    scanRef.current?.focus();
-    toast(`${product.name} added`);
-  }, []);
+  const addToCart = useCallback(
+    (product: { id: string; name: string; sku: string; price: number }) => {
+      setCart((prev) => {
+        const existing = prev.find((c) => c.product_id === product.id);
+        if (existing) {
+          return prev.map((c) =>
+            c.product_id === product.id
+              ? { ...c, quantity: c.quantity + 1 }
+              : c,
+          );
+        }
+        return [
+          ...prev,
+          {
+            product_id: product.id,
+            product_name: product.name,
+            sku: product.sku || "",
+            quantity: 1,
+            unit_price: product.price,
+          },
+        ];
+      });
+      setSearchQuery("");
+      scanRef.current?.focus();
+      toast(`${product.name} added`);
+    },
+    [],
+  );
 
   // ── Update cart quantity ──
   const updateQty = useCallback((productId: string, delta: number) => {
@@ -222,9 +262,9 @@ export default function PosPage() {
         .map((c) =>
           c.product_id === productId
             ? { ...c, quantity: Math.max(0, c.quantity + delta) }
-            : c
+            : c,
         )
-        .filter((c) => c.quantity > 0)
+        .filter((c) => c.quantity > 0),
     );
   }, []);
 
@@ -246,23 +286,28 @@ export default function PosPage() {
         scanBuffer = "";
         if (!barcode) return;
 
-        api.products.byBarcode(barcode).then((res) => {
-          addToCart(res.product);
-        }).catch(() => {
-          // Not found by exact barcode — fall back to SKU search
-          api.products.list(barcode, 0, 5).then((res) => {
-            const found = res.products.find((p) => p.sku === barcode);
-            if (found) {
-              addToCart(found);
-            } else {
-              toast.error(`No product found: ${barcode}`);
-            }
+        api.products
+          .byBarcode(barcode)
+          .then((res) => {
+            addToCart(res.product);
+          })
+          .catch(() => {
+            // Not found by exact barcode — fall back to SKU search
+            api.products.list(barcode, undefined, 0, 5).then((res) => {
+              const found = res.products.find((p) => p.sku === barcode);
+              if (found) {
+                addToCart(found);
+              } else {
+                toast.error(`No product found: ${barcode}`);
+              }
+            });
           });
-        });
       } else if (e.key.length === 1) {
         scanBuffer += e.key;
         clearTimeout(scanTimer);
-        scanTimer = setTimeout(() => { scanBuffer = ""; }, 200);
+        scanTimer = setTimeout(() => {
+          scanBuffer = "";
+        }, 200);
       }
     };
 
@@ -322,7 +367,9 @@ export default function PosPage() {
                 disabled={pinVerifying}
               />
               {pinError && (
-                <p className="text-sm text-destructive text-center">{pinError}</p>
+                <p className="text-sm text-destructive text-center">
+                  {pinError}
+                </p>
               )}
               <Button
                 type="submit"
@@ -331,9 +378,15 @@ export default function PosPage() {
                 disabled={pinInput.length < 4 || pinVerifying}
               >
                 {pinVerifying ? (
-                  <><Loader2 className="w-4 h-4 animate-spin mr-2" />Verifying...</>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Verifying...
+                  </>
                 ) : (
-                  <><Unlock className="w-4 h-4 mr-2" />Unlock POS</>
+                  <>
+                    <Unlock className="w-4 h-4 mr-2" />
+                    Unlock POS
+                  </>
                 )}
               </Button>
             </form>
@@ -349,15 +402,29 @@ export default function PosPage() {
     return (
       <div className="p-4 max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => { setMode("sale"); setLastReceipt(null); }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setMode("sale");
+              setLastReceipt(null);
+            }}
+          >
             <ArrowLeft className="w-4 h-4 mr-1" /> New Sale
           </Button>
           <h2 className="text-lg font-bold">Receipt #{sale.receipt_number}</h2>
-          {sale.status === "refunded" && <Badge variant="destructive">Refunded</Badge>}
+          {sale.status === "refunded" && (
+            <Badge variant="destructive">Refunded</Badge>
+          )}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-1" /> Print
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setLocked(true)} title="Lock POS terminal">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocked(true)}
+            title="Lock POS terminal"
+          >
             <Lock className="w-4 h-4" />
           </Button>
           <a
@@ -369,21 +436,36 @@ export default function PosPage() {
             <FileDown className="w-4 h-4 mr-1" /> PDF
           </a>
           {sale.status !== "refunded" && sale.status !== "voided" && (
-            <Button variant="outline" size="sm" className="text-red-500 border-red-500/30 hover:bg-red-500/10" disabled={refunding} onClick={async () => {
-              if (!confirm("Refund this sale? This cannot be undone.")) return;
-              setRefunding(true);
-              try {
-                await api.pos.refund(sale.id);
-                setLastReceipt({ ...lastReceipt, sale: { ...sale, status: "refunded", refunded_at: Date.now() } });
-                queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
-                toast.success("Sale refunded");
-              } catch (e) {
-                toast.error("Failed to refund");
-              } finally {
-                setRefunding(false);
-              }
-            }}>
-              <RotateCcw className="w-4 h-4 mr-1" /> {refunding ? "Refunding..." : "Refund"}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+              disabled={refunding}
+              onClick={async () => {
+                if (!confirm("Refund this sale? This cannot be undone."))
+                  return;
+                setRefunding(true);
+                try {
+                  await api.pos.refund(sale.id);
+                  setLastReceipt({
+                    ...lastReceipt,
+                    sale: {
+                      ...sale,
+                      status: "refunded",
+                      refunded_at: Date.now(),
+                    },
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
+                  toast.success("Sale refunded");
+                } catch (e) {
+                  toast.error("Failed to refund");
+                } finally {
+                  setRefunding(false);
+                }
+              }}
+            >
+              <RotateCcw className="w-4 h-4 mr-1" />{" "}
+              {refunding ? "Refunding..." : "Refund"}
             </Button>
           )}
         </div>
@@ -394,11 +476,15 @@ export default function PosPage() {
               <h3 className="text-xl font-bold">SpacetimeCRM</h3>
               <p className="text-sm text-muted-foreground">Counter Sale</p>
               <p className="text-xs text-muted-foreground">
-                Receipt #{sale.receipt_number} &middot; {new Date(sale.created_at).toLocaleString()}
+                Receipt #{sale.receipt_number} &middot;{" "}
+                {new Date(sale.created_at).toLocaleString()}
               </p>
             </div>
 
-            <p className="text-sm mb-3"><span className="text-muted-foreground">Customer:</span> {sale.customer_name}</p>
+            <p className="text-sm mb-3">
+              <span className="text-muted-foreground">Customer:</span>{" "}
+              {sale.customer_name}
+            </p>
 
             <table className="w-full text-sm mb-4">
               <thead>
@@ -414,8 +500,12 @@ export default function PosPage() {
                   <tr key={item.id} className="border-b border-dashed">
                     <td className="py-1">{item.product_name}</td>
                     <td className="py-1 text-right">{item.quantity}</td>
-                    <td className="py-1 text-right">${item.unit_price.toFixed(2)}</td>
-                    <td className="py-1 text-right font-medium">${item.total.toFixed(2)}</td>
+                    <td className="py-1 text-right">
+                      ${item.unit_price.toFixed(2)}
+                    </td>
+                    <td className="py-1 text-right font-medium">
+                      ${item.total.toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -472,43 +562,68 @@ export default function PosPage() {
           <Button variant="outline" size="sm" onClick={() => setMode("sale")}>
             <ShoppingCart className="w-4 h-4 mr-1" /> New Sale
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setLocked(true)} title="Lock POS terminal">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocked(true)}
+            title="Lock POS terminal"
+          >
             <Lock className="w-4 h-4" />
           </Button>
         </div>
 
         {loadingHistory ? (
-          <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          <div className="flex justify-center py-10">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
         ) : (
           <div className="grid gap-3">
             {salesHistory?.map((sale) => (
-              <Card key={sale.id} className="hover:bg-accent/50 cursor-pointer" onClick={async () => {
-                const detail = await api.pos.get(sale.id);
-                setLastReceipt({ sale: detail.sale, items: detail.sale.line_items });
-                setMode("receipt");
-              }}>
+              <Card
+                key={sale.id}
+                className="hover:bg-accent/50 cursor-pointer"
+                onClick={async () => {
+                  const detail = await api.pos.get(sale.id);
+                  setLastReceipt({
+                    sale: detail.sale,
+                    items: detail.sale.line_items,
+                  });
+                  setMode("receipt");
+                }}
+              >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <p className="font-medium flex items-center gap-2">
                       Receipt #{sale.receipt_number}
                       {sale.status === "refunded" && (
-                        <Badge variant="destructive" className="text-xs">Refunded</Badge>
+                        <Badge variant="destructive" className="text-xs">
+                          Refunded
+                        </Badge>
                       )}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {sale.customer_name} &middot; {new Date(sale.created_at).toLocaleDateString()}
+                      {sale.customer_name} &middot;{" "}
+                      {new Date(sale.created_at).toLocaleDateString()}
                     </p>
-                    <p className="text-xs text-muted-foreground">{sale.items_count} item(s)</p>
+                    <p className="text-xs text-muted-foreground">
+                      {sale.items_count} item(s)
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold">${sale.total.toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{sale.payment_method}</p>
+                    <p className="text-lg font-bold">
+                      ${sale.total.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {sale.payment_method}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
             ))}
             {(!salesHistory || salesHistory.length === 0) && (
-              <p className="text-center text-muted-foreground py-10">No sales yet</p>
+              <p className="text-center text-muted-foreground py-10">
+                No sales yet
+              </p>
             )}
           </div>
         )}
@@ -524,10 +639,19 @@ export default function PosPage() {
           <ShoppingCart className="w-5 h-5" /> Point of Sale
         </h2>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setMode("history")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMode("history")}
+          >
             <Receipt className="w-4 h-4 mr-1" /> History
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setLocked(true)} title="Lock POS terminal">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocked(true)}
+            title="Lock POS terminal"
+          >
             <Lock className="w-4 h-4" />
           </Button>
         </div>
@@ -558,7 +682,9 @@ export default function PosPage() {
               {searchQuery.length >= 1 && searchResults && (
                 <div className="mt-2 border rounded-lg divide-y max-h-60 overflow-y-auto">
                   {searchResults.length === 0 ? (
-                    <p className="p-3 text-sm text-muted-foreground">No products found</p>
+                    <p className="p-3 text-sm text-muted-foreground">
+                      No products found
+                    </p>
                   ) : (
                     searchResults.slice(0, 10).map((product) => (
                       <div
@@ -569,12 +695,19 @@ export default function PosPage() {
                         <div>
                           <p className="font-medium">{product.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {product.sku} &middot; Stock: {product.quantity_on_hand ?? 0}
+                            {product.sku} &middot; Stock:{" "}
+                            {product.quantity_on_hand ?? 0}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold">${product.price.toFixed(2)}</p>
-                          <Button size="icon" variant="ghost" className="w-7 h-7">
+                          <p className="font-semibold">
+                            ${product.price.toFixed(2)}
+                          </p>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="w-7 h-7"
+                          >
                             <Plus className="w-3 h-3" />
                           </Button>
                         </div>
@@ -594,7 +727,9 @@ export default function PosPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="relative">
-                  <label className="text-xs text-muted-foreground mb-1 block">Customer</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    Customer
+                  </label>
                   <Input
                     value={customerSearch}
                     onChange={(e) => {
@@ -606,30 +741,46 @@ export default function PosPage() {
                     }}
                     placeholder="Search customers..."
                   />
-                  {customerSearch.length >= 1 && customerResults && customerResults.length > 0 && (
-                    <div className="absolute z-50 top-full left-0 right-0 bg-card border rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
-                      {customerResults.map((c) => (
-                        <div
-                          key={c.id}
-                          className="flex items-center justify-between p-2 hover:bg-accent cursor-pointer text-sm"
-                          onClick={() => {
-                            setCustomerId(c.id);
-                            setCustomerName(`${c.first_name} ${c.last_name}`.trim());
-                            setCustomerSearch("");
-                          }}
-                        >
-                          <span className="font-medium">{(c.first_name && c.last_name) ? `${c.first_name} ${c.last_name}` : c.email || "Unknown"}</span>
-                          <span className="text-xs text-muted-foreground">{c.email || c.phone || ""}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {customerSearch.length > 0 && customerResults && customerResults.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">No customers found</p>
-                  )}
+                  {customerSearch.length >= 1 &&
+                    customerResults &&
+                    customerResults.length > 0 && (
+                      <div className="absolute z-50 top-full left-0 right-0 bg-card border rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
+                        {customerResults.map((c) => (
+                          <div
+                            key={c.id}
+                            className="flex items-center justify-between p-2 hover:bg-accent cursor-pointer text-sm"
+                            onClick={() => {
+                              setCustomerId(c.id);
+                              setCustomerName(
+                                `${c.first_name} ${c.last_name}`.trim(),
+                              );
+                              setCustomerSearch("");
+                            }}
+                          >
+                            <span className="font-medium">
+                              {c.first_name && c.last_name
+                                ? `${c.first_name} ${c.last_name}`
+                                : c.email || "Unknown"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {c.email || c.phone || ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  {customerSearch.length > 0 &&
+                    customerResults &&
+                    customerResults.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        No customers found
+                      </p>
+                    )}
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Tax Rate %</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    Tax Rate %
+                  </label>
                   <Input
                     value={taxRate}
                     onChange={(e) => setTaxRate(e.target.value)}
@@ -638,7 +789,9 @@ export default function PosPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Discount $</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    Discount $
+                  </label>
                   <Input
                     value={discount}
                     onChange={(e) => setDiscount(e.target.value)}
@@ -647,7 +800,9 @@ export default function PosPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Payment</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    Payment
+                  </label>
                   <div className="flex gap-1">
                     <Button
                       size="sm"
@@ -689,9 +844,14 @@ export default function PosPage() {
                   </p>
                 ) : (
                   cart.map((item) => (
-                    <div key={item.product_id} className="flex items-center justify-between border rounded-lg p-2">
+                    <div
+                      key={item.product_id}
+                      className="flex items-center justify-between border rounded-lg p-2"
+                    >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.product_name}</p>
+                        <p className="text-sm font-medium truncate">
+                          {item.product_name}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           ${item.unit_price.toFixed(2)}
                         </p>
@@ -705,7 +865,9 @@ export default function PosPage() {
                         >
                           <Minus className="w-3 h-3" />
                         </Button>
-                        <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                        <span className="w-6 text-center text-sm font-medium">
+                          {item.quantity}
+                        </span>
                         <Button
                           size="icon"
                           variant="ghost"
@@ -722,7 +884,9 @@ export default function PosPage() {
                         size="icon"
                         variant="ghost"
                         className="w-6 h-6 ml-1 text-red-500"
-                        onClick={() => updateQty(item.product_id, -item.quantity)}
+                        onClick={() =>
+                          updateQty(item.product_id, -item.quantity)
+                        }
                       >
                         <X className="w-3 h-3" />
                       </Button>
@@ -767,7 +931,9 @@ export default function PosPage() {
                 {tendered > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>Change:</span>
-                    <span className={`font-bold ${changeDue > 0 ? "text-green-600" : ""}`}>
+                    <span
+                      className={`font-bold ${changeDue > 0 ? "text-green-600" : ""}`}
+                    >
                       ${changeDue.toFixed(2)}
                     </span>
                   </div>
@@ -778,10 +944,14 @@ export default function PosPage() {
               <Button
                 className="w-full mt-4"
                 size="lg"
-                disabled={cart.length === 0 || createMutation.isPending || addItemMutation.isPending}
+                disabled={
+                  cart.length === 0 ||
+                  createMutation.isPending ||
+                  addItemMutation.isPending
+                }
                 onClick={handleSaleComplete}
               >
-                {(createMutation.isPending || addItemMutation.isPending) ? (
+                {createMutation.isPending || addItemMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : (
                   <Check className="w-4 h-4 mr-2" />

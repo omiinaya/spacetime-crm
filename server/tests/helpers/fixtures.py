@@ -12,6 +12,7 @@ from tests.helpers.db import (
     ADMIN_PW,
     _stdb_sql,
     _stdb_write,
+    _stdb_call,
     _cleanup_by_suffix,
     _cleanup_tracked,
     _track_entity,
@@ -193,7 +194,7 @@ def isolated_tenant(
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
+    _stdb_call("set_user_password", [admin_user_id, hashed])
 
     # Log in as the test admin to get a token
     resp = httpx.post(
@@ -292,7 +293,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     easy session-level cleanup and identification.
     Pass 'email' in overrides to use a specific email instead.
     """
-    from tests.helpers.db import unique_suffix, _track_entity
+    from tests.helpers.db import unique_suffix
 
     suf = unique_suffix()
     prefix = f"{session_suffix}-" if session_suffix else ""

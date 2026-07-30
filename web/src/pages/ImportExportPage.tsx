@@ -1,6 +1,13 @@
 import { useState, useRef } from "react";
 import { api } from "../lib/api";
-import { Download, Upload, FileUp, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import {
+  Download,
+  Upload,
+  FileUp,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
@@ -19,10 +26,15 @@ const ENTITIES = [
 
 export default function ImportExportPage() {
   const [exportEntity, setExportEntity] = useState("customers");
-  const [importType, setImportType] = useState<"customers" | "products">("customers");
+  const [importType, setImportType] = useState<"customers" | "products">(
+    "customers",
+  );
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ imported: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{
+    imported: number;
+    errors: string[];
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
@@ -67,10 +79,10 @@ export default function ImportExportPage() {
         <div className="flex items-center gap-3 flex-wrap">
           <select
             value={exportEntity}
-            onChange={e => setExportEntity(e.target.value)}
+            onChange={(e) => setExportEntity(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
           >
-            {ENTITIES.map(e => (
+            {ENTITIES.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.label}
               </option>
@@ -90,13 +102,14 @@ export default function ImportExportPage() {
           Import Data
         </h2>
         <p className="text-sm text-slate-400 mb-4">
-          Upload a CSV file to bulk-import customers or products. The first row must contain column headers.
+          Upload a CSV file to bulk-import customers or products. The first row
+          must contain column headers.
         </p>
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3 flex-wrap">
             <select
               value={importType}
-              onChange={e => {
+              onChange={(e) => {
                 setImportType(e.target.value as "customers" | "products");
                 setResult(null);
               }}
@@ -138,7 +151,9 @@ export default function ImportExportPage() {
 
           {/* ── Import Result ── */}
           {result && (
-            <div className={`mt-3 p-3 rounded border ${result.errors.length > 0 ? "border-amber-700 bg-amber-900/20" : "border-green-700 bg-green-900/20"}`}>
+            <div
+              className={`mt-3 p-3 rounded border ${result.errors.length > 0 ? "border-amber-700 bg-amber-900/20" : "border-green-700 bg-green-900/20"}`}
+            >
               <div className="flex items-center gap-2 mb-1">
                 {result.errors.length > 0 ? (
                   <AlertCircle className="w-4 h-4 text-amber-400" />
@@ -146,13 +161,16 @@ export default function ImportExportPage() {
                   <CheckCircle className="w-4 h-4 text-green-400" />
                 )}
                 <span className="font-medium">
-                  Imported {result.imported} record{result.imported !== 1 ? "s" : ""}
+                  Imported {result.imported} record
+                  {result.imported !== 1 ? "s" : ""}
                 </span>
               </div>
               {result.errors.length > 0 && (
                 <ul className="mt-2 text-sm text-amber-300 space-y-1 max-h-40 overflow-y-auto">
                   {result.errors.map((err, i) => (
-                    <li key={i} className="font-mono text-xs">{err}</li>
+                    <li key={i} className="font-mono text-xs">
+                      {err}
+                    </li>
                   ))}
                 </ul>
               )}

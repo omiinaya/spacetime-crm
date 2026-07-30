@@ -94,7 +94,12 @@ pub fn add_counter_sale_item(
 ) {
     let id = super::make_id("psl", ctx);
     let total = quantity * unit_price;
-    let sort = ctx.db.counter_sale_line_item().iter().filter(|i| i.sale_id == sale_id).count() as u32;
+    let sort = ctx
+        .db
+        .counter_sale_line_item()
+        .iter()
+        .filter(|i| i.sale_id == sale_id)
+        .count() as u32;
     ctx.db.counter_sale_line_item().insert(CounterSaleLineItem {
         id,
         tenant_id,

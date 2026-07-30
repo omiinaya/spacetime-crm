@@ -92,10 +92,23 @@ mod tests {
             .expect("ticket exists")
             .id
             .clone();
-        assert_eq!(ctx.db.ticket().id().find(&id).unwrap().status, "new");
+        assert_eq!(
+            ctx.db
+                .ticket()
+                .id()
+                .find(&id)
+                .expect("ticket exists")
+                .status,
+            "new"
+        );
         update_ticket_status(&ctx, id.clone(), "in_progress".into());
         assert_eq!(
-            ctx.db.ticket().id().find(&id).unwrap().status,
+            ctx.db
+                .ticket()
+                .id()
+                .find(&id)
+                .expect("ticket exists")
+                .status,
             "in_progress"
         );
     }
@@ -122,10 +135,23 @@ mod tests {
             .expect("ticket exists")
             .id
             .clone();
-        assert_eq!(ctx.db.ticket().id().find(&id).unwrap().assigned_user_id, "");
+        assert_eq!(
+            ctx.db
+                .ticket()
+                .id()
+                .find(&id)
+                .expect("ticket exists")
+                .assigned_user_id,
+            ""
+        );
         assign_ticket(&ctx, id.clone(), "user_42".into());
         assert_eq!(
-            ctx.db.ticket().id().find(&id).unwrap().assigned_user_id,
+            ctx.db
+                .ticket()
+                .id()
+                .find(&id)
+                .expect("ticket exists")
+                .assigned_user_id,
             "user_42"
         );
     }
@@ -340,7 +366,7 @@ mod tests {
             "".into(),
             "low".into(),
         );
-        let t = ctx.db.ticket().iter().next().unwrap();
+        let t = ctx.db.ticket().iter().next().expect("ticket exists");
         assert_eq!(t.device_imei, "");
         assert_eq!(t.device_password, "");
         assert_eq!(t.assigned_user_id, "");

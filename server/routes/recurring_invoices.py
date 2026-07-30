@@ -1,4 +1,5 @@
 """Recurring invoice routes."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,8 +7,12 @@ import json
 from fastapi import APIRouter, Depends
 
 from helpers import (
-    _sql, _call, _sort, _log_audit, _fire_webhook,
-    require_role, logger,
+    _sql,
+    _call,
+    _sort,
+    _log_audit,
+    _fire_webhook,
+    require_role,
 )
 from models import RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
 
@@ -28,7 +33,9 @@ async def list_recurring_rules(user: dict = Depends(require_role("admin", "tech"
         )
         if cust:
             c = cust[0]
-            r["customer_name"] = f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+            r["customer_name"] = (
+                f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+            )
         else:
             r["customer_name"] = "—"
     return {"rules": result}
@@ -40,26 +47,32 @@ async def create_recurring_rule(
     user: dict = Depends(require_role("admin", "tech")),
 ):
     """Create a recurring invoice rule."""
-    line_items_json = json.dumps(
-        [li.model_dump() for li in body.line_items]
+    line_items_json = json.dumps([li.model_dump() for li in body.line_items])
+    await _call(
+        "create_recurring_invoice_rule",
+        [
+            user["tenant_id"],
+            body.customer_id,
+            body.name,
+            body.frequency,
+            body.interval_count,
+            body.due_date_days,
+            line_items_json,
+            body.next_generation_date,
+        ],
     )
-    await _call("create_recurring_invoice_rule", [
-        user["tenant_id"],
-        body.customer_id,
-        body.name,
-        body.frequency,
-        body.interval_count,
-        body.due_date_days,
-        line_items_json,
-        body.next_generation_date,
-    ])
     await _log_audit(user, "create", "recurring_invoice_rule", body.name)
-    asyncio.ensure_future(_fire_webhook("recurring_invoice_rule.created", {
-        "entity_type": "recurring_invoice_rule",
-        "name": body.name,
-        "customer_id": body.customer_id,
-        "frequency": body.frequency,
-    }))
+    asyncio.ensure_future(
+        _fire_webhook(
+            "recurring_invoice_rule.created",
+            {
+                "entity_type": "recurring_invoice_rule",
+                "name": body.name,
+                "customer_id": body.customer_id,
+                "frequency": body.frequency,
+            },
+        )
+    )
     return {"ok": True}
 
 
@@ -70,19 +83,20 @@ async def update_recurring_rule(
     user: dict = Depends(require_role("admin", "tech")),
 ):
     """Update a recurring invoice rule."""
-    line_items_json = json.dumps(
-        [li.model_dump() for li in body.line_items]
+    line_items_json = json.dumps([li.model_dump() for li in body.line_items])
+    await _call(
+        "update_recurring_invoice_rule",
+        [
+            rule_id,
+            body.name,
+            body.frequency,
+            body.interval_count,
+            body.due_date_days,
+            line_items_json,
+            body.next_generation_date,
+            body.status,
+        ],
     )
-    await _call("update_recurring_invoice_rule", [
-        rule_id,
-        body.name,
-        body.frequency,
-        body.interval_count,
-        body.due_date_days,
-        line_items_json,
-        body.next_generation_date,
-        body.status,
-    ])
     await _log_audit(user, "update", "recurring_invoice_rule", rule_id)
     return {"ok": True}
 
@@ -106,4 +120,3 @@ async def generate_recurring_invoices(
     await _call("generate_recurring_invoices", [])
     await _log_audit(user, "generate", "recurring_invoices", "manual trigger")
     return {"ok": True}
-

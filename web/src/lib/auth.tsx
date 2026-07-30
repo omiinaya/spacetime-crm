@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 const API_BASE = "/api";
 
@@ -39,7 +45,13 @@ function clearToken() {
 function decodeUser(token: string): AuthUser | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return { id: payload.sub, name: payload.name, email: payload.email, role: payload.role, tenant_id: payload.tenant_id || "" };
+    return {
+      id: payload.sub,
+      name: payload.name,
+      email: payload.email,
+      role: payload.role,
+      tenant_id: payload.tenant_id || "",
+    };
   } catch {
     return null;
   }
@@ -49,7 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pending2FA, setPending2FA] = useState<{ tempToken: string; user: Partial<AuthUser> } | null>(null);
+  const [pending2FA, setPending2FA] = useState<{
+    tempToken: string;
+    user: Partial<AuthUser>;
+  } | null>(null);
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -150,7 +165,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, complete2FA, logout, refreshTenant, pending2FA }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        complete2FA,
+        logout,
+        refreshTenant,
+        pending2FA,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -169,7 +195,10 @@ export function authHeaders(token: string | null): Record<string, string> {
 }
 
 /** Check if the current user has one of the given roles. */
-export function hasRole(user: { role?: string } | null, ...roles: string[]): boolean {
+export function hasRole(
+  user: { role?: string } | null,
+  ...roles: string[]
+): boolean {
   if (!user) return false;
   return roles.includes(user.role || "");
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect, Suspense, lazy } from "react";
-import { Toaster, toast } from "sonner";
+import { useState, useEffect, Suspense, lazy } from 'react';
+import { Toaster, toast } from 'sonner';
 import {
   LayoutDashboard,
   Users,
@@ -27,77 +27,71 @@ import {
   ListChecks,
   Building2,
   Repeat,
-} from "lucide-react";
-import { cn } from "./lib/utils";
-import { api, DashboardStats } from "./lib/api";
-import { Badge } from "./components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
-import { Button } from "./components/ui/button";
-import { AuthProvider, useAuth, hasRole } from "./lib/auth";
-import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
-import { useTheme } from "./lib/theme";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { QueryProvider } from "./lib/query-client";
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
-const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const PortalLoginPage = lazy(() => import("./pages/PortalLoginPage"));
-const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
-const PortalTicketsPage = lazy(() => import("./pages/PortalTicketsPage"));
-const PortalInvoicesPage = lazy(() => import("./pages/PortalInvoicesPage"));
-const PortalAppointmentsPage = lazy(
-  () => import("./pages/PortalAppointmentsPage"),
-);
-const CustomersPage = lazy(() => import("./pages/CustomersPage"));
-const TicketsPage = lazy(() => import("./pages/TicketsPage"));
-const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
-const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
-const AppointmentsPage = lazy(() => import("./pages/AppointmentsPage"));
-const ProductsPage = lazy(() => import("./pages/ProductsPage"));
-const EstimatesPage = lazy(() => import("./pages/EstimatesPage"));
-const PurchaseOrdersPage = lazy(() => import("./pages/PurchaseOrdersPage"));
-const ReportsPage = lazy(() => import("./pages/ReportsPage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const ImportExportPage = lazy(() => import("./pages/ImportExportPage"));
-const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
-const HealthPage = lazy(() => import("./pages/HealthPage"));
-const CustomFieldsPage = lazy(() => import("./pages/CustomFieldsPage"));
-const MapPage = lazy(() => import("./pages/MapPage"));
-const ChecklistTemplatesPage = lazy(
-  () => import("./pages/ChecklistTemplatesPage"),
-);
-const TenantsPage = lazy(() => import("./pages/TenantsPage"));
-const RecurringInvoicesPage = lazy(
-  () => import("./pages/RecurringInvoicesPage"),
-);
-const PaymentMethodsPage = lazy(() => import("./pages/PaymentMethodsPage"));
-const PosPage = lazy(() => import("./pages/PosPage"));
-const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+} from 'lucide-react';
+import { cn } from './lib/utils';
+import { api, DashboardStats } from './lib/api';
+import { Badge } from './components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
+import { Button } from './components/ui/button';
+import { AuthProvider, useAuth, hasRole } from './lib/auth';
+import { PortalAuthProvider, usePortalAuth } from './lib/portal-auth';
+import { useTheme } from './lib/theme';
+import ErrorBoundary from './components/ErrorBoundary';
+import { QueryProvider } from './lib/query-client';
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const PortalLoginPage = lazy(() => import('./pages/PortalLoginPage'));
+const PortalDashboard = lazy(() => import('./pages/PortalDashboard'));
+const PortalTicketsPage = lazy(() => import('./pages/PortalTicketsPage'));
+const PortalInvoicesPage = lazy(() => import('./pages/PortalInvoicesPage'));
+const PortalAppointmentsPage = lazy(() => import('./pages/PortalAppointmentsPage'));
+const CustomersPage = lazy(() => import('./pages/CustomersPage'));
+const TicketsPage = lazy(() => import('./pages/TicketsPage'));
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
+const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage'));
+const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const EstimatesPage = lazy(() => import('./pages/EstimatesPage'));
+const PurchaseOrdersPage = lazy(() => import('./pages/PurchaseOrdersPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ImportExportPage = lazy(() => import('./pages/ImportExportPage'));
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage'));
+const HealthPage = lazy(() => import('./pages/HealthPage'));
+const CustomFieldsPage = lazy(() => import('./pages/CustomFieldsPage'));
+const MapPage = lazy(() => import('./pages/MapPage'));
+const ChecklistTemplatesPage = lazy(() => import('./pages/ChecklistTemplatesPage'));
+const TenantsPage = lazy(() => import('./pages/TenantsPage'));
+const RecurringInvoicesPage = lazy(() => import('./pages/RecurringInvoicesPage'));
+const PaymentMethodsPage = lazy(() => import('./pages/PaymentMethodsPage'));
+const PosPage = lazy(() => import('./pages/PosPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 
 type PageId =
-  | "dashboard"
-  | "customers"
-  | "tickets"
-  | "invoices"
-  | "payments"
-  | "appointments"
-  | "products"
-  | "estimates"
-  | "purchase-orders"
-  | "import-export"
-  | "audit-log"
-  | "pos"
-  | "health"
-  | "custom-fields"
-  | "checklist"
-  | "map"
-  | "reports"
-  | "settings"
-  | "tenants"
-  | "recurring-invoices"
-  | "payment-methods";
+  | 'dashboard'
+  | 'customers'
+  | 'tickets'
+  | 'invoices'
+  | 'payments'
+  | 'appointments'
+  | 'products'
+  | 'estimates'
+  | 'purchase-orders'
+  | 'import-export'
+  | 'audit-log'
+  | 'pos'
+  | 'health'
+  | 'custom-fields'
+  | 'checklist'
+  | 'map'
+  | 'reports'
+  | 'settings'
+  | 'tenants'
+  | 'recurring-invoices'
+  | 'payment-methods';
 
-type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
+type PortalPage = 'dashboard' | 'tickets' | 'invoices' | 'appointments';
 
 interface NavItem {
   id: PageId;
@@ -107,27 +101,27 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "customers", label: "Customers", icon: Users },
-  { id: "map", label: "Map", icon: Map },
-  { id: "tickets", label: "Tickets", icon: Ticket },
-  { id: "invoices", label: "Invoices", icon: FileText },
-  { id: "recurring-invoices", label: "Recurring", icon: Repeat },
-  { id: "payments", label: "Payments", icon: CreditCard },
-  { id: "payment-methods", label: "Payment Methods", icon: CreditCard },
-  { id: "appointments", label: "Appointments", icon: Calendar },
-  { id: "products", label: "Products", icon: Package },
-  { id: "estimates", label: "Estimates", icon: FileCheck },
-  { id: "purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
-  { id: "pos", label: "POS", icon: CreditCard },
-  { id: "import-export", label: "Import/Export", icon: Download },
-  { id: "custom-fields", label: "Custom Fields", icon: ListOrdered },
-  { id: "checklist", label: "Checklists", icon: ListChecks },
-  { id: "health", label: "Health", icon: HeartPulse },
-  { id: "audit-log", label: "Audit Log", icon: History },
-  { id: "reports", label: "Reports", icon: BarChart3 },
-  { id: "settings", label: "Settings", icon: Settings },
-  { id: "tenants", label: "Tenants", icon: Building2 },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'customers', label: 'Customers', icon: Users },
+  { id: 'map', label: 'Map', icon: Map },
+  { id: 'tickets', label: 'Tickets', icon: Ticket },
+  { id: 'invoices', label: 'Invoices', icon: FileText },
+  { id: 'recurring-invoices', label: 'Recurring', icon: Repeat },
+  { id: 'payments', label: 'Payments', icon: CreditCard },
+  { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard },
+  { id: 'appointments', label: 'Appointments', icon: Calendar },
+  { id: 'products', label: 'Products', icon: Package },
+  { id: 'estimates', label: 'Estimates', icon: FileCheck },
+  { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+  { id: 'pos', label: 'POS', icon: CreditCard },
+  { id: 'import-export', label: 'Import/Export', icon: Download },
+  { id: 'custom-fields', label: 'Custom Fields', icon: ListOrdered },
+  { id: 'checklist', label: 'Checklists', icon: ListChecks },
+  { id: 'health', label: 'Health', icon: HeartPulse },
+  { id: 'audit-log', label: 'Audit Log', icon: History },
+  { id: 'reports', label: 'Reports', icon: BarChart3 },
+  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'tenants', label: 'Tenants', icon: Building2 },
 ];
 
 // ── Portal App ──
@@ -137,15 +131,15 @@ const portalTabs: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "tickets", label: "Tickets", icon: Ticket },
-  { id: "invoices", label: "Invoices", icon: FileText },
-  { id: "appointments", label: "Appointments", icon: Calendar },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'tickets', label: 'Tickets', icon: Ticket },
+  { id: 'invoices', label: 'Invoices', icon: FileText },
+  { id: 'appointments', label: 'Appointments', icon: Calendar },
 ];
 
 function PortalShell() {
   const { customer, logout, loading } = usePortalAuth();
-  const [page, setPage] = useState<PortalPage>("dashboard");
+  const [page, setPage] = useState<PortalPage>('dashboard');
 
   if (loading) {
     return (
@@ -171,13 +165,13 @@ function PortalShell() {
         >
           {(() => {
             switch (page) {
-              case "dashboard":
+              case 'dashboard':
                 return <PortalDashboard />;
-              case "tickets":
+              case 'tickets':
                 return <PortalTicketsPage />;
-              case "invoices":
+              case 'invoices':
                 return <PortalInvoicesPage />;
-              case "appointments":
+              case 'appointments':
                 return <PortalAppointmentsPage />;
             }
           })()}
@@ -224,10 +218,10 @@ function PortalShell() {
                 key={tab.id}
                 onClick={() => setPage(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm rounded-t-md transition-colors border-b-2",
+                  'flex items-center gap-2 px-4 py-2 text-sm rounded-t-md transition-colors border-b-2',
                   page === tab.id
-                    ? "border-primary text-foreground font-medium"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
+                    ? 'border-primary text-foreground font-medium'
+                    : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -250,7 +244,7 @@ function PortalShell() {
 
 function AppShell() {
   const { user, logout, loading } = useAuth();
-  const [page, setPage] = useState<PageId>("dashboard");
+  const [page, setPage] = useState<PageId>('dashboard');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const { theme, toggleTheme } = useTheme();
@@ -260,12 +254,12 @@ function AppShell() {
       api.stats
         .get()
         .then(setStats)
-        .catch(() => toast.error("Failed to load dashboard stats"));
+        .catch(() => toast.error('Failed to load dashboard stats'));
       const interval = setInterval(() => {
         api.stats
           .get()
           .then(setStats)
-          .catch(() => toast.error("Failed to refresh dashboard stats"));
+          .catch(() => toast.error('Failed to refresh dashboard stats'));
       }, 60_000);
       return () => clearInterval(interval);
     }
@@ -295,47 +289,47 @@ function AppShell() {
         >
           {(() => {
             switch (page) {
-              case "dashboard":
+              case 'dashboard':
                 return <DashboardPage stats={stats} onNavigate={setPage} />;
-              case "customers":
+              case 'customers':
                 return <CustomersPage />;
-              case "tickets":
+              case 'tickets':
                 return <TicketsPage />;
-              case "invoices":
+              case 'invoices':
                 return <InvoicesPage />;
-              case "recurring-invoices":
+              case 'recurring-invoices':
                 return <RecurringInvoicesPage />;
-              case "payments":
+              case 'payments':
                 return <PaymentsPage />;
-              case "payment-methods":
+              case 'payment-methods':
                 return <PaymentMethodsPage />;
-              case "pos":
+              case 'pos':
                 return <PosPage />;
-              case "appointments":
+              case 'appointments':
                 return <AppointmentsPage />;
-              case "products":
+              case 'products':
                 return <ProductsPage />;
-              case "estimates":
+              case 'estimates':
                 return <EstimatesPage />;
-              case "purchase-orders":
+              case 'purchase-orders':
                 return <PurchaseOrdersPage />;
-              case "import-export":
+              case 'import-export':
                 return <ImportExportPage />;
-              case "audit-log":
+              case 'audit-log':
                 return <AuditLogPage />;
-              case "health":
+              case 'health':
                 return <HealthPage />;
-              case "custom-fields":
+              case 'custom-fields':
                 return <CustomFieldsPage />;
-              case "map":
+              case 'map':
                 return <MapPage />;
-              case "checklist":
+              case 'checklist':
                 return <ChecklistTemplatesPage />;
-              case "reports":
+              case 'reports':
                 return <ReportsPage />;
-              case "settings":
+              case 'settings':
                 return <SettingsPage />;
-              case "tenants":
+              case 'tenants':
                 return <TenantsPage />;
             }
           })()}
@@ -365,27 +359,27 @@ function AppShell() {
         {navItems
           .filter((item) => {
             // Role-based nav filtering
-            const role = user?.role || "";
-            if (role === "admin") return true;
-            if (role === "tech")
+            const role = user?.role || '';
+            if (role === 'admin') return true;
+            if (role === 'tech')
               return ![
-                "health",
-                "custom-fields",
-                "settings",
-                "import-export",
-                "audit-log",
+                'health',
+                'custom-fields',
+                'settings',
+                'import-export',
+                'audit-log',
               ].includes(item.id);
             // front_desk
             return ![
-              "health",
-              "custom-fields",
-              "products",
-              "purchase-orders",
-              "reports",
-              "settings",
-              "import-export",
-              "audit-log",
-              "estimates",
+              'health',
+              'custom-fields',
+              'products',
+              'purchase-orders',
+              'reports',
+              'settings',
+              'import-export',
+              'audit-log',
+              'estimates',
             ].includes(item.id);
           })
           .map((item) => {
@@ -398,10 +392,10 @@ function AppShell() {
                   setMobileOpen(false);
                 }}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors border-l-2",
+                  'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors border-l-2',
                   page === item.id
-                    ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent",
+                    ? 'bg-primary/10 text-foreground font-medium border-l-2 border-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent',
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -424,12 +418,8 @@ function AppShell() {
           onClick={toggleTheme}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
-          {theme === "dark" ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Moon className="h-4 w-4" />
-          )}
-          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
         <button
           onClick={logout}
@@ -455,8 +445,8 @@ function AppShell() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed md:relative z-50 md:z-0 w-64 h-full bg-[var(--color-sidebar)] border-r border-border transition-transform md:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          'fixed md:relative z-50 md:z-0 w-64 h-full bg-[var(--color-sidebar)] border-r border-border transition-transform md:translate-x-0',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {sidebar}
@@ -473,9 +463,7 @@ function AppShell() {
         </header>
 
         {/* Page content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
-          {renderPage()}
-        </div>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">{renderPage()}</div>
       </main>
 
       <Toaster position="bottom-left" theme="dark" />
@@ -486,11 +474,10 @@ function AppShell() {
 // ── Root ──
 
 export default function App() {
-  const pathname =
-    typeof window !== "undefined" ? window.location.pathname : "/";
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
 
   // Standalone auth pages
-  if (pathname === "/forgot-password") {
+  if (pathname === '/forgot-password') {
     return (
       <QueryProvider>
         <ErrorBoundary>
@@ -508,7 +495,7 @@ export default function App() {
     );
   }
 
-  if (pathname === "/reset-password") {
+  if (pathname === '/reset-password') {
     return (
       <QueryProvider>
         <ErrorBoundary>
@@ -526,7 +513,7 @@ export default function App() {
     );
   }
 
-  const isPortal = pathname.startsWith("/portal");
+  const isPortal = pathname.startsWith('/portal');
 
   if (isPortal) {
     return (

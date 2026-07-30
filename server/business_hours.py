@@ -3,6 +3,7 @@
 Stores shop operating hours in a local JSON file.
 Defaults: Mon-Fri 9am-6pm, closed Sat-Sun.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,16 +16,24 @@ logger = logging.getLogger(__name__)
 SETTINGS_PATH = Path(__file__).resolve().parent / "business_hours_settings.json"
 
 DEFAULT_HOURS = {
-    "monday":    {"enabled": True,  "open": "09:00", "close": "18:00"},
-    "tuesday":   {"enabled": True,  "open": "09:00", "close": "18:00"},
-    "wednesday": {"enabled": True,  "open": "09:00", "close": "18:00"},
-    "thursday":  {"enabled": True,  "open": "09:00", "close": "18:00"},
-    "friday":    {"enabled": True,  "open": "09:00", "close": "18:00"},
-    "saturday":  {"enabled": False, "open": "10:00", "close": "14:00"},
-    "sunday":    {"enabled": False, "open": "10:00", "close": "14:00"},
+    "monday": {"enabled": True, "open": "09:00", "close": "18:00"},
+    "tuesday": {"enabled": True, "open": "09:00", "close": "18:00"},
+    "wednesday": {"enabled": True, "open": "09:00", "close": "18:00"},
+    "thursday": {"enabled": True, "open": "09:00", "close": "18:00"},
+    "friday": {"enabled": True, "open": "09:00", "close": "18:00"},
+    "saturday": {"enabled": False, "open": "10:00", "close": "14:00"},
+    "sunday": {"enabled": False, "open": "10:00", "close": "14:00"},
 }
 
-DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+DAY_NAMES = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 
 def _load_settings() -> Optional[dict]:
@@ -53,7 +62,9 @@ def get_settings() -> Optional[dict]:
 
 def update_settings(data: dict) -> dict:
     """Save business hours. Data should be a dict keyed by day name."""
-    hours = {day: {"enabled": False, "open": "09:00", "close": "18:00"} for day in DAY_NAMES}
+    hours = {
+        day: {"enabled": False, "open": "09:00", "close": "18:00"} for day in DAY_NAMES
+    }
     for day in DAY_NAMES:
         if day in data:
             entry = data[day]

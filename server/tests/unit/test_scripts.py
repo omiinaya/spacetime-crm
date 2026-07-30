@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import subprocess
 from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, patch
@@ -615,7 +614,6 @@ class TestStartTestBackend:
             pass
 
         import contextlib
-        from scripts import start_test_backend as _real_stb
 
         with contextlib.ExitStack() as ctx_stack:
             patchers = {}

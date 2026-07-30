@@ -43,9 +43,12 @@ it("renders health data when API responds", async () => {
   render(<HealthPage />);
 
   // Wait for the first card badge to appear (multiple "ok" badges exist)
-  await waitFor(() => {
-    expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
-  }, { timeout: 3000 });
+  await waitFor(
+    () => {
+      expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
+    },
+    { timeout: 3000 },
+  );
 
   // Both health endpoints were called
   const calls = mock.calls();
@@ -58,10 +61,13 @@ it("shows error card when API fails", async () => {
   mock.pushFail(500);
   render(<HealthPage />);
 
-  await waitFor(() => {
-    // apiFetch throws "API 500: ...", HealthPage shows the error message
-    expect(screen.getByText(/API 500/i)).toBeInTheDocument();
-  }, { timeout: 3000 });
+  await waitFor(
+    () => {
+      // apiFetch throws "API 500: ...", HealthPage shows the error message
+      expect(screen.getByText(/API 500/i)).toBeInTheDocument();
+    },
+    { timeout: 3000 },
+  );
 });
 
 it("shows unknown status when fields are missing", async () => {
@@ -69,7 +75,9 @@ it("shows unknown status when fields are missing", async () => {
   mock.push({ status: "ok" });
   render(<HealthPage />);
 
-  const unknowns = await waitFor(() => screen.findAllByText("unknown"), { timeout: 3000 });
+  const unknowns = await waitFor(() => screen.findAllByText("unknown"), {
+    timeout: 3000,
+  });
   expect(unknowns.length).toBeGreaterThanOrEqual(1);
 });
 
@@ -80,9 +88,12 @@ it("renders readiness probe when ready data arrives", async () => {
   mock.push({ status: "ok" });
   render(<HealthPage />);
 
-  await waitFor(() => {
-    expect(screen.getByText(/All systems operational/i)).toBeInTheDocument();
-  }, { timeout: 3000 });
+  await waitFor(
+    () => {
+      expect(screen.getByText(/All systems operational/i)).toBeInTheDocument();
+    },
+    { timeout: 3000 },
+  );
 });
 
 it("shows degraded message when readiness fails", async () => {
@@ -90,9 +101,12 @@ it("shows degraded message when readiness fails", async () => {
   mock.push({ status: "unavailable" });
   render(<HealthPage />);
 
-  await waitFor(() => {
-    expect(screen.getByText(/STDB is not reachable/i)).toBeInTheDocument();
-  }, { timeout: 3000 });
+  await waitFor(
+    () => {
+      expect(screen.getByText(/STDB is not reachable/i)).toBeInTheDocument();
+    },
+    { timeout: 3000 },
+  );
 });
 
 // ── Refresh button ──
@@ -102,9 +116,12 @@ it("re-fetches when Refresh button is clicked", async () => {
   mock.push({ status: "ok" });
   render(<HealthPage />);
 
-  await waitFor(() => {
-    expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
-  }, { timeout: 3000 });
+  await waitFor(
+    () => {
+      expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
+    },
+    { timeout: 3000 },
+  );
   const initialCount = mock.calls().length;
 
   // Refresh again – push two more responses

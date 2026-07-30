@@ -2,14 +2,17 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
 import { api } from "../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import {
-  Plus, Edit2, Trash2, GripVertical, Save, X,
-} from "lucide-react";
+import { Plus, Edit2, Trash2, GripVertical, Save, X } from "lucide-react";
 
 interface FieldDef {
   id: string;
@@ -24,8 +27,23 @@ interface FieldDef {
   updated_at: number;
 }
 
-const ENTITY_TYPES = ["customer", "ticket", "invoice", "product", "estimate", "purchase_order"];
-const FIELD_TYPES = ["text", "number", "date", "select", "multiselect", "checkbox", "textarea"];
+const ENTITY_TYPES = [
+  "customer",
+  "ticket",
+  "invoice",
+  "product",
+  "estimate",
+  "purchase_order",
+];
+const FIELD_TYPES = [
+  "text",
+  "number",
+  "date",
+  "select",
+  "multiselect",
+  "checkbox",
+  "textarea",
+];
 
 const entityColor = (t: string) => {
   const m: Record<string, string> = {
@@ -48,7 +66,7 @@ export default function CustomFieldsPage() {
     queryKey: ["custom-fields", filterEntity ?? ""],
     queryFn: async () => {
       const res = await api.customFields.definitions.list(
-        filterEntity || undefined
+        filterEntity || undefined,
       );
       return res.definitions ?? [];
     },
@@ -62,7 +80,8 @@ export default function CustomFieldsPage() {
   });
 
   const handleDelete = (id: string, label: string) => {
-    if (!confirm(`Delete custom field "${label}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete custom field "${label}"? This cannot be undone.`))
+      return;
     deleteMutation.mutate(id);
   };
 
@@ -75,14 +94,23 @@ export default function CustomFieldsPage() {
             Define custom data fields for customers, tickets, invoices, and more
           </p>
         </div>
-        <Button onClick={() => { setCreating(true); setEditing(null); }}>
+        <Button
+          onClick={() => {
+            setCreating(true);
+            setEditing(null);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" /> Add Field
         </Button>
       </div>
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
-        <Button variant={filterEntity === "" ? "default" : "outline"} size="sm" onClick={() => setFilterEntity("")}>
+        <Button
+          variant={filterEntity === "" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilterEntity("")}
+        >
           All
         </Button>
         {ENTITY_TYPES.map((et) => (
@@ -101,46 +129,88 @@ export default function CustomFieldsPage() {
       {(creating || editing) && (
         <FieldForm
           initial={editing}
-          onSave={() => { setCreating(false); setEditing(null); }}
-          onCancel={() => { setCreating(false); setEditing(null); }}
+          onSave={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+          onCancel={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
         />
       )}
 
       {/* List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Field Definitions ({definitions.length})</CardTitle>
+          <CardTitle className="text-sm">
+            Field Definitions ({definitions.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : definitions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No custom fields defined yet. Click "Add Field" to create one.</p>
+            <p className="text-sm text-muted-foreground">
+              No custom fields defined yet. Click "Add Field" to create one.
+            </p>
           ) : (
             <div className="space-y-2">
               {definitions
                 .sort((a, b) => a.sort_order - b.sort_order)
                 .map((f) => (
-                  <div key={f.id} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                  <div
+                    key={f.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  >
                     <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{f.label}</span>
-                        {f.required && <Badge variant="outline" className="text-xs">required</Badge>}
-                        {!f.active && <Badge variant="outline" className="text-xs text-muted-foreground">inactive</Badge>}
+                        {f.required && (
+                          <Badge variant="outline" className="text-xs">
+                            required
+                          </Badge>
+                        )}
+                        {!f.active && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-muted-foreground"
+                          >
+                            inactive
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className={entityColor(f.entity_type)}>
+                        <Badge
+                          variant="outline"
+                          className={entityColor(f.entity_type)}
+                        >
                           {f.entity_type}
                         </Badge>
-                        <Badge variant="outline" className="text-xs">{f.field_type}</Badge>
-                        <span className="text-xs text-muted-foreground">order: {f.sort_order}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {f.field_type}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          order: {f.sort_order}
+                        </span>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => { setEditing(f); setCreating(false); }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditing(f);
+                        setCreating(false);
+                      }}
+                    >
                       <Edit2 className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(f.id, f.label)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(f.id, f.label)}
+                    >
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
@@ -162,12 +232,18 @@ function FieldForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const [entityType, setEntityType] = useState(initial?.entity_type || "customer");
+  const [entityType, setEntityType] = useState(
+    initial?.entity_type || "customer",
+  );
   const [label, setLabel] = useState(initial?.label || "");
   const [fieldType, setFieldType] = useState(initial?.field_type || "text");
   const [optionsStr, setOptionsStr] = useState(() => {
     if (!initial?.options) return "";
-    try { return JSON.parse(initial.options).join("\n"); } catch { return initial.options; }
+    try {
+      return JSON.parse(initial.options).join("\n");
+    } catch {
+      return initial.options;
+    }
   });
   const [sortOrder, setSortOrder] = useState(initial?.sort_order ?? 0);
   const [required, setRequired] = useState(initial?.required ?? false);
@@ -188,7 +264,10 @@ function FieldForm({
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: {
+    mutationFn: ({
+      id,
+      data,
+    }: {
       id: string;
       data: {
         label: string;
@@ -202,7 +281,10 @@ function FieldForm({
   });
 
   const handleSave = async () => {
-    if (!label.trim()) { setError("Label is required"); return; }
+    if (!label.trim()) {
+      setError("Label is required");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -253,7 +335,9 @@ function FieldForm({
               onChange={(e) => setEntityType(e.target.value)}
             >
               {ENTITY_TYPES.map((et) => (
-                <option key={et} value={et}>{et.charAt(0).toUpperCase() + et.slice(1).replace("_", " ")}</option>
+                <option key={et} value={et}>
+                  {et.charAt(0).toUpperCase() + et.slice(1).replace("_", " ")}
+                </option>
               ))}
             </select>
           </div>
@@ -265,7 +349,9 @@ function FieldForm({
               onChange={(e) => setFieldType(e.target.value)}
             >
               {FIELD_TYPES.map((ft) => (
-                <option key={ft} value={ft}>{ft}</option>
+                <option key={ft} value={ft}>
+                  {ft}
+                </option>
               ))}
             </select>
           </div>
@@ -273,7 +359,11 @@ function FieldForm({
 
         <div className="space-y-1">
           <Label>Label</Label>
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Serial Number" />
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Serial Number"
+          />
         </div>
 
         {(fieldType === "select" || fieldType === "multiselect") && (
@@ -320,9 +410,12 @@ function FieldForm({
         </div>
 
         <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
           <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />{saving ? "Saving..." : "Save"}
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </CardContent>

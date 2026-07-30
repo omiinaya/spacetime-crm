@@ -4,9 +4,9 @@ Uses the isolated tenant admin for user creation so a failed 2FA test
 never affects the global admin. All test users are created within the
 isolated tenant scope and cleaned up at module end.
 """
+
 import pyotp
 import httpx
-import time
 import pytest
 from .conftest import SERVER_URL, assert_ok, _track_entity
 
@@ -29,7 +29,8 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     resp = httpx.post(
         f"{SERVER_URL}/api/users",
         json={"name": name, "email": email, "role": "admin"},
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     assert resp.status_code == 200, f"Create 2FA test user failed: {resp.text[:200]}"
 
@@ -37,19 +38,36 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     list_resp = httpx.get(
         f"{SERVER_URL}/api/users",
         params={"limit": 500},
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     users = list_resp.json().get("users", [])
     uid = next((u["id"] for u in users if u.get("email") == email), None)
     assert uid, f"Could not find user ID for {email}"
     _track_entity("user", uid)
 
+    # Set password for the test user
+    import bcrypt
+    from .conftest import STDB_CALL_URL
+
+    hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    call_resp = httpx.post(
+        f"{STDB_CALL_URL}/set_user_password",
+        json=[uid, hashed],
+        timeout=30,
+    )
+    assert call_resp.status_code == 200, (
+        f"Failed to set password: {call_resp.text[:200]}"
+    )
+
     yield email, pw, uid
 
     # --- Cleanup ---
     # Delete the test user (regardless of 2FA state)
     try:
-        httpx.delete(f"{SERVER_URL}/api/users/{uid}", headers=test_admin_headers, timeout=10)
+        httpx.delete(
+            f"{SERVER_URL}/api/users/{uid}", headers=test_admin_headers, timeout=10
+        )
     except Exception:
         pass
 
@@ -74,10 +92,21 @@ def _disable_2fa_user(email: str, pw: str, secret: str, admin_headers: dict) -> 
             )
             if complete.status_code != 200:
                 return
-            h2 = {"Authorization": f"Bearer {complete.json()['token']}", "Content-Type": "application/json"}
+            h2 = {
+                "Authorization": f"Bearer {complete.json()['token']}",
+                "Content-Type": "application/json",
+            }
         else:
-            h2 = {"Authorization": f"Bearer {data2['token']}", "Content-Type": "application/json"}
-        httpx.post(f"{SERVER_URL}/api/auth/disable-2fa", json={"code": totp.now()}, headers=h2, timeout=10)
+            h2 = {
+                "Authorization": f"Bearer {data2['token']}",
+                "Content-Type": "application/json",
+            }
+        httpx.post(
+            f"{SERVER_URL}/api/auth/disable-2fa",
+            json={"code": totp.now()},
+            headers=h2,
+            timeout=10,
+        )
     except Exception:
         pass
 
@@ -94,7 +123,10 @@ def test_setup_returns_secret(_2fa_user, test_admin_headers: dict):
         timeout=10,
     )
     assert r.status_code == 200
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     resp = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10)
     data = assert_ok(resp)
@@ -113,14 +145,19 @@ def test_verify_valid_code_enables_2fa(_2fa_user, test_admin_headers: dict):
         json={"email": email, "password": pw},
         timeout=10,
     )
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
     totp = pyotp.TOTP(secret)
     code = totp.now()
 
-    resp = httpx.post(f"{SERVER_URL}/api/auth/verify-2fa", json={"code": code}, headers=h, timeout=10)
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/verify-2fa", json={"code": code}, headers=h, timeout=10
+    )
     assert_ok(resp)
 
     me_req = httpx.get(f"{SERVER_URL}/api/auth/me", headers=h, timeout=10)
@@ -139,12 +176,20 @@ def test_verify_invalid_code_fails(_2fa_user, test_admin_headers: dict):
         json={"email": email, "password": pw},
         timeout=10,
     )
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
 
-    resp = httpx.post(f"{SERVER_URL}/api/auth/verify-2fa", json={"code": "000000"}, headers=h, timeout=10)
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/verify-2fa",
+        json={"code": "000000"},
+        headers=h,
+        timeout=10,
+    )
     assert resp.status_code == 401
 
     # Cleanup
@@ -160,12 +205,20 @@ def test_double_setup_fails_after_enable(_2fa_user, test_admin_headers: dict):
         json={"email": email, "password": pw},
         timeout=10,
     )
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
     totp = pyotp.TOTP(secret)
-    httpx.post(f"{SERVER_URL}/api/auth/verify-2fa", json={"code": totp.now()}, headers=h, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/auth/verify-2fa",
+        json={"code": totp.now()},
+        headers=h,
+        timeout=10,
+    )
 
     resp = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10)
     assert resp.status_code == 400
@@ -183,12 +236,20 @@ def test_login_requires_2fa_when_enabled(_2fa_user, test_admin_headers: dict):
         json={"email": email, "password": pw},
         timeout=10,
     )
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
     totp = pyotp.TOTP(secret)
-    httpx.post(f"{SERVER_URL}/api/auth/verify-2fa", json={"code": totp.now()}, headers=h, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/auth/verify-2fa",
+        json={"code": totp.now()},
+        headers=h,
+        timeout=10,
+    )
 
     login = httpx.post(
         f"{SERVER_URL}/api/auth/login",
@@ -213,12 +274,20 @@ def test_complete_login_with_valid_code(_2fa_user, test_admin_headers: dict):
         json={"email": email, "password": pw},
         timeout=10,
     )
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
     totp = pyotp.TOTP(secret)
-    httpx.post(f"{SERVER_URL}/api/auth/verify-2fa", json={"code": totp.now()}, headers=h, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/auth/verify-2fa",
+        json={"code": totp.now()},
+        headers=h,
+        timeout=10,
+    )
 
     login = httpx.post(
         f"{SERVER_URL}/api/auth/login",
@@ -247,12 +316,20 @@ def test_complete_login_with_invalid_code_fails(_2fa_user, test_admin_headers: d
         json={"email": email, "password": pw},
         timeout=10,
     )
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
     totp = pyotp.TOTP(secret)
-    httpx.post(f"{SERVER_URL}/api/auth/verify-2fa", json={"code": totp.now()}, headers=h, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/auth/verify-2fa",
+        json={"code": totp.now()},
+        headers=h,
+        timeout=10,
+    )
 
     login = httpx.post(
         f"{SERVER_URL}/api/auth/login",
@@ -279,12 +356,20 @@ def test_disable_with_valid_code(_2fa_user, test_admin_headers: dict):
         json={"email": email, "password": pw},
         timeout=10,
     )
-    h = {"Authorization": f"Bearer {r.json()['token']}", "Content-Type": "application/json"}
+    h = {
+        "Authorization": f"Bearer {r.json()['token']}",
+        "Content-Type": "application/json",
+    }
 
     setup = httpx.post(f"{SERVER_URL}/api/auth/setup-2fa", headers=h, timeout=10).json()
     secret = setup["secret"]
     totp = pyotp.TOTP(secret)
-    httpx.post(f"{SERVER_URL}/api/auth/verify-2fa", json={"code": totp.now()}, headers=h, timeout=10)
+    httpx.post(
+        f"{SERVER_URL}/api/auth/verify-2fa",
+        json={"code": totp.now()},
+        headers=h,
+        timeout=10,
+    )
 
     # Login + complete 2FA challenge
     login2 = httpx.post(
@@ -297,7 +382,10 @@ def test_disable_with_valid_code(_2fa_user, test_admin_headers: dict):
         json={"temp_token": login2["temp_token"], "code": totp.now()},
         timeout=10,
     ).json()
-    h2 = {"Authorization": f"Bearer {complete['token']}", "Content-Type": "application/json"}
+    h2 = {
+        "Authorization": f"Bearer {complete['token']}",
+        "Content-Type": "application/json",
+    }
     resp = httpx.post(
         f"{SERVER_URL}/api/auth/disable-2fa",
         json={"code": totp.now()},

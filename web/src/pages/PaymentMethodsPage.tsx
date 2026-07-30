@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, Customer } from "../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { CreditCard, Plus, Trash2, Star } from "lucide-react";
@@ -124,10 +129,17 @@ export default function PaymentMethodsPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium capitalize">{pm.brand}</span>
-                        <span className="font-mono">**** {pm.last_4 || pm.last4 || ""}</span>
+                        <span className="font-medium capitalize">
+                          {pm.brand}
+                        </span>
+                        <span className="font-mono">
+                          **** {pm.last_4 || pm.last4 || ""}
+                        </span>
                         {pm.is_default && (
-                          <Badge variant="success" className="flex items-center gap-1">
+                          <Badge
+                            variant="success"
+                            className="flex items-center gap-1"
+                          >
                             <Star className="h-3 w-3" /> Default
                           </Badge>
                         )}

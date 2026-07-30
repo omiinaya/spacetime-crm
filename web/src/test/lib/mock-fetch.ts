@@ -40,17 +40,23 @@ export function mockFetch(): FetchMock {
 
   return {
     push(body: unknown) {
-      queue.push(() => new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }));
+      queue.push(
+        () =>
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      );
     },
     pushFail(status: number, body?: string) {
-      queue.push(() => new Response(body ?? "{}", {
-        status,
-        statusText: "Error",
-        headers: { "content-type": "application/json" },
-      }));
+      queue.push(
+        () =>
+          new Response(body ?? "{}", {
+            status,
+            statusText: "Error",
+            headers: { "content-type": "application/json" },
+          }),
+      );
     },
     calls: () => [...calls],
     reset: () => {

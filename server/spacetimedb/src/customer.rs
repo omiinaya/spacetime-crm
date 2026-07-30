@@ -26,7 +26,14 @@ pub struct Customer {
 }
 
 #[spacetimedb::reducer]
-pub fn create_customer(ctx: &ReducerContext, tenant_id: String, first_name: String, last_name: String, email: String, phone: String) {
+pub fn create_customer(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    first_name: String,
+    last_name: String,
+    email: String,
+    phone: String,
+) {
     let id = super::make_id("cust", ctx);
     let now = super::now_ms(ctx);
     ctx.db.customer().insert(Customer {
@@ -93,7 +100,10 @@ pub fn update_customer(
 #[spacetimedb::reducer]
 pub fn set_customer_password(ctx: &ReducerContext, id: String, password_hash: String) {
     if let Some(c) = ctx.db.customer().id().find(&id) {
-        ctx.db.customer().id().update(Customer { portal_password_hash: password_hash, ..c });
+        ctx.db.customer().id().update(Customer {
+            portal_password_hash: password_hash,
+            ..c
+        });
     }
 }
 

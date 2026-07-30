@@ -11,12 +11,16 @@ describe("Badge", () => {
 
   it("renders with secondary variant", () => {
     render(<Badge variant="secondary">Draft</Badge>);
-    expect(screen.getByText("Draft")).toHaveClass("bg-secondary text-secondary-foreground");
+    expect(screen.getByText("Draft")).toHaveClass(
+      "bg-secondary text-secondary-foreground",
+    );
   });
 
   it("renders with destructive variant", () => {
     render(<Badge variant="destructive">Deleted</Badge>);
-    expect(screen.getByText("Deleted")).toHaveClass("bg-destructive text-destructive-foreground");
+    expect(screen.getByText("Deleted")).toHaveClass(
+      "bg-destructive text-destructive-foreground",
+    );
   });
 
   it("renders with outline variant", () => {

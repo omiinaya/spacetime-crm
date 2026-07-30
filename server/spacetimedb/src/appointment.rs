@@ -23,7 +23,19 @@ pub struct Appointment {
 }
 
 #[spacetimedb::reducer]
-pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: String, ticket_id: String, title: String, description: String, start_time: u64, end_time: u64, all_day: bool, series_id: String, recurrence_rule: String) {
+pub fn create_appointment(
+    ctx: &ReducerContext,
+    tenant_id: String,
+    customer_id: String,
+    ticket_id: String,
+    title: String,
+    description: String,
+    start_time: u64,
+    end_time: u64,
+    all_day: bool,
+    series_id: String,
+    recurrence_rule: String,
+) {
     let id = super::make_id("appt", ctx);
     let now = super::now_ms(ctx);
     ctx.db.appointment().insert(Appointment {
@@ -48,12 +60,22 @@ pub fn create_appointment(ctx: &ReducerContext, tenant_id: String, customer_id: 
 #[spacetimedb::reducer]
 pub fn set_recurrence(ctx: &ReducerContext, id: String, recurrence_rule: String) {
     if let Some(a) = ctx.db.appointment().id().find(&id) {
-        ctx.db.appointment().id().update(Appointment { recurrence_rule, updated_at: super::now_ms(ctx), ..a });
+        ctx.db.appointment().id().update(Appointment {
+            recurrence_rule,
+            updated_at: super::now_ms(ctx),
+            ..a
+        });
     }
 }
 
 #[spacetimedb::reducer]
-pub fn generate_next_occurrence(ctx: &ReducerContext, series_id: String, start_time: u64, end_time: u64, recurrence_rule: String) {
+pub fn generate_next_occurrence(
+    ctx: &ReducerContext,
+    series_id: String,
+    start_time: u64,
+    end_time: u64,
+    recurrence_rule: String,
+) {
     let id = super::make_id("appt", ctx);
     let now = super::now_ms(ctx);
     if let Some(parent) = ctx.db.appointment().id().find(&series_id) {
@@ -80,7 +102,11 @@ pub fn generate_next_occurrence(ctx: &ReducerContext, series_id: String, start_t
 #[spacetimedb::reducer]
 pub fn update_appointment_status(ctx: &ReducerContext, id: String, status: String) {
     if let Some(a) = ctx.db.appointment().id().find(&id) {
-        ctx.db.appointment().id().update(Appointment { status, updated_at: super::now_ms(ctx), ..a });
+        ctx.db.appointment().id().update(Appointment {
+            status,
+            updated_at: super::now_ms(ctx),
+            ..a
+        });
     }
 }
 

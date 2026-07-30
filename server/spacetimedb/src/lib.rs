@@ -2,6 +2,11 @@
 
 use spacetimedb::*;
 
+// FFI stub implementations for native test builds (non-WASM).
+// Provides an in-memory datastore so tests using ReducerContext::__dummy() can run.
+#[cfg(all(test, not(target_arch = "wasm32")))]
+pub mod test_stubs;
+
 pub mod appointment;
 #[cfg(test)]
 pub mod appointment_test;

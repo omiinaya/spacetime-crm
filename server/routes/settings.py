@@ -1,14 +1,27 @@
 """Settings routes — Mail + SMS."""
-from fastapi import APIRouter, Depends, HTTPException, Request
+
+from fastapi import APIRouter, Depends, Request
 
 from helpers import (
-    require_role, logger,
+    require_role,
 )
 from models import MailSettingsUpdate, SMSSettingsUpdate, BusinessHoursUpdate
 from rate_limit import limiter
-from business_hours import get_settings as _bh_get, DEFAULT_HOURS, update_settings as _bh_update
-from mail import get_settings as _mail_get, update_settings as _mail_update, test_connection as _mail_test
-from sms import get_settings as _sms_get, update_settings as _sms_update, test_connection as _sms_test
+from business_hours import (
+    get_settings as _bh_get,
+    DEFAULT_HOURS,
+    update_settings as _bh_update,
+)
+from mail import (
+    get_settings as _mail_get,
+    update_settings as _mail_update,
+    test_connection as _mail_test,
+)
+from sms import (
+    get_settings as _sms_get,
+    update_settings as _sms_update,
+    test_connection as _sms_test,
+)
 
 router = APIRouter()
 
@@ -24,7 +37,11 @@ async def mail_settings_get(user: dict = Depends(require_role("admin"))):
 
 @router.post("/api/settings/mail")
 @limiter.limit("30/minute")
-async def mail_settings_save(request: Request, body: MailSettingsUpdate, user: dict = Depends(require_role("admin"))):
+async def mail_settings_save(
+    request: Request,
+    body: MailSettingsUpdate,
+    user: dict = Depends(require_role("admin")),
+):
     """Save mail settings."""
     data = {
         "host": body.smtp_host,
@@ -41,7 +58,9 @@ async def mail_settings_save(request: Request, body: MailSettingsUpdate, user: d
 
 @router.post("/api/settings/mail/test")
 @limiter.limit("10/minute")
-async def mail_settings_test(request: Request, user: dict = Depends(require_role("admin"))):
+async def mail_settings_test(
+    request: Request, user: dict = Depends(require_role("admin"))
+):
     """Test SMTP connection with current settings."""
     result = _mail_test()
     return result
@@ -58,7 +77,11 @@ async def sms_settings_get(user: dict = Depends(require_role("admin"))):
 
 @router.post("/api/settings/sms")
 @limiter.limit("30/minute")
-async def sms_settings_save(request: Request, body: SMSSettingsUpdate, user: dict = Depends(require_role("admin"))):
+async def sms_settings_save(
+    request: Request,
+    body: SMSSettingsUpdate,
+    user: dict = Depends(require_role("admin")),
+):
     """Save SMS settings."""
     _sms_update(body.model_dump())
     return {"ok": True}
@@ -66,7 +89,9 @@ async def sms_settings_save(request: Request, body: SMSSettingsUpdate, user: dic
 
 @router.post("/api/settings/sms/test")
 @limiter.limit("10/minute")
-async def sms_settings_test(request: Request, user: dict = Depends(require_role("admin"))):
+async def sms_settings_test(
+    request: Request, user: dict = Depends(require_role("admin"))
+):
     """Test SMS connection with current settings."""
     result = _sms_test()
     return result
@@ -76,7 +101,9 @@ async def sms_settings_test(request: Request, user: dict = Depends(require_role(
 
 
 @router.get("/api/settings/business-hours")
-async def business_hours_get(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def business_hours_get(
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+):
     """Get current business hours."""
     settings = _bh_get()
     if settings is None:
@@ -86,7 +113,11 @@ async def business_hours_get(user: dict = Depends(require_role("admin", "tech", 
 
 @router.post("/api/settings/business-hours")
 @limiter.limit("30/minute")
-async def business_hours_save(request: Request, body: BusinessHoursUpdate, user: dict = Depends(require_role("admin"))):
+async def business_hours_save(
+    request: Request,
+    body: BusinessHoursUpdate,
+    user: dict = Depends(require_role("admin")),
+):
     """Save business hours."""
     data = body.model_dump()
     result = _bh_update(data)

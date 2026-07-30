@@ -11,7 +11,9 @@ import LoginPage from "@/pages/LoginPage";
 const mockLogin = vi.fn();
 vi.mock("@/lib/auth", () => ({
   useAuth: () => ({ login: mockLogin }),
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
   hasRole: () => true,
 }));
 
@@ -26,8 +28,12 @@ it("renders the login page with brand and form", () => {
 
   expect(screen.getByText("SpacetimeCRM")).toBeInTheDocument();
   expect(screen.getByText("Sign in to your account")).toBeInTheDocument();
-  expect(screen.getByPlaceholderText("admin@repairshop.com")).toBeInTheDocument();
-  expect(screen.getByPlaceholderText("Enter your password")).toBeInTheDocument();
+  expect(
+    screen.getByPlaceholderText("admin@repairshop.com"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByPlaceholderText("Enter your password"),
+  ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
 });
 
@@ -44,8 +50,14 @@ it("calls login with email and password on submit", async () => {
   const user = userEvent.setup();
   render(<LoginPage />);
 
-  await user.type(screen.getByPlaceholderText("admin@repairshop.com"), "test@example.com");
-  await user.type(screen.getByPlaceholderText("Enter your password"), "mypassword");
+  await user.type(
+    screen.getByPlaceholderText("admin@repairshop.com"),
+    "test@example.com",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Enter your password"),
+    "mypassword",
+  );
   await user.click(screen.getByRole("button", { name: /sign in/i }));
 
   expect(mockLogin).toHaveBeenCalledWith("test@example.com", "mypassword");
@@ -58,11 +70,19 @@ it("shows 'Signing in…' while login is in progress", async () => {
   const user = userEvent.setup();
   render(<LoginPage />);
 
-  await user.type(screen.getByPlaceholderText("admin@repairshop.com"), "a@b.com");
-  await user.type(screen.getByPlaceholderText("Enter your password"), "pass123");
+  await user.type(
+    screen.getByPlaceholderText("admin@repairshop.com"),
+    "a@b.com",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Enter your password"),
+    "pass123",
+  );
   await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-  expect(screen.getByRole("button", { name: /signing in/i })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /signing in/i }),
+  ).toBeInTheDocument();
 });
 
 it("disables submit button while loading", async () => {
@@ -71,8 +91,14 @@ it("disables submit button while loading", async () => {
   const user = userEvent.setup();
   render(<LoginPage />);
 
-  await user.type(screen.getByPlaceholderText("admin@repairshop.com"), "a@b.com");
-  await user.type(screen.getByPlaceholderText("Enter your password"), "pass123");
+  await user.type(
+    screen.getByPlaceholderText("admin@repairshop.com"),
+    "a@b.com",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Enter your password"),
+    "pass123",
+  );
   await user.click(screen.getByRole("button", { name: /sign in/i }));
 
   expect(screen.getByRole("button", { name: /signing in/i })).toBeDisabled();
@@ -86,8 +112,14 @@ it("shows error message when login fails", async () => {
   const user = userEvent.setup();
   render(<LoginPage />);
 
-  await user.type(screen.getByPlaceholderText("admin@repairshop.com"), "bad@user.com");
-  await user.type(screen.getByPlaceholderText("Enter your password"), "wrongpass");
+  await user.type(
+    screen.getByPlaceholderText("admin@repairshop.com"),
+    "bad@user.com",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Enter your password"),
+    "wrongpass",
+  );
   await user.click(screen.getByRole("button", { name: /sign in/i }));
 
   await waitFor(() => {
@@ -101,7 +133,10 @@ it("shows generic error when login throws a non-Error", async () => {
   const user = userEvent.setup();
   render(<LoginPage />);
 
-  await user.type(screen.getByPlaceholderText("admin@repairshop.com"), "a@b.com");
+  await user.type(
+    screen.getByPlaceholderText("admin@repairshop.com"),
+    "a@b.com",
+  );
   await user.type(screen.getByPlaceholderText("Enter your password"), "pass");
   await user.click(screen.getByRole("button", { name: /sign in/i }));
 

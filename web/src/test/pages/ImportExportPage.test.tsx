@@ -6,11 +6,13 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ImportExportPage from "@/pages/ImportExportPage";
 
-const { mockExportCsv, mockImportCustomers, mockImportProducts } = vi.hoisted(() => ({
-  mockExportCsv: vi.fn(),
-  mockImportCustomers: vi.fn(),
-  mockImportProducts: vi.fn(),
-}));
+const { mockExportCsv, mockImportCustomers, mockImportProducts } = vi.hoisted(
+  () => ({
+    mockExportCsv: vi.fn(),
+    mockImportCustomers: vi.fn(),
+    mockImportProducts: vi.fn(),
+  }),
+);
 
 // Mock api module so we can control export/import in each test
 vi.mock("@/lib/api", () => ({
@@ -85,7 +87,9 @@ it("shows selected file name after choosing a file", async () => {
   const user = userEvent.setup();
   render(<ImportExportPage />);
 
-  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
   const file = new File(["a,b,c\n1,2,3"], "test.csv", { type: "text/csv" });
   await user.upload(input, file);
 
@@ -105,7 +109,9 @@ it("enables import button after file is selected", async () => {
   const user = userEvent.setup();
   render(<ImportExportPage />);
 
-  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
   const file = new File(["a,b,c\n1,2,3"], "test.csv", { type: "text/csv" });
   await user.upload(input, file);
 
@@ -121,7 +127,9 @@ it("shows successful import result", async () => {
   const user = userEvent.setup();
   render(<ImportExportPage />);
 
-  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
   const file = new File(["a,b,c\n1,2,3"], "test.csv", { type: "text/csv" });
   await user.upload(input, file);
 
@@ -141,7 +149,9 @@ it("shows errors when import returns errors", async () => {
   const user = userEvent.setup();
   render(<ImportExportPage />);
 
-  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
   const file = new File(["a,b,c\n1,2,3"], "test.csv", { type: "text/csv" });
   await user.upload(input, file);
 
@@ -160,7 +170,9 @@ it("shows error result when import API fails", async () => {
   const user = userEvent.setup();
   render(<ImportExportPage />);
 
-  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
   const file = new File(["a,b,c\n1,2,3"], "test.csv", { type: "text/csv" });
   await user.upload(input, file);
 
@@ -180,7 +192,9 @@ it("shows 'Importing…' while import is in progress", async () => {
   const user = userEvent.setup();
   render(<ImportExportPage />);
 
-  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  const input = document.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
   const file = new File(["a,b,c\n1,2,3"], "test.csv", { type: "text/csv" });
   await user.upload(input, file);
 

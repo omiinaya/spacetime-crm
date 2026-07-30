@@ -1,19 +1,24 @@
 """Dashboard stats + Reports + Audit Log routes."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from helpers import (
-    _sql, _sql_t, _paginated, _call, _sort, _log_audit,
-    require_role, get_current_user, logger,
+    _sql,
+    _sql_t,
+    _paginated,
+    require_role,
 )
 
 router = APIRouter()
 
 
 @router.get("/api/stats")
-async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def dashboard_stats(
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+):
     all_customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
     all_invoices = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
@@ -21,44 +26,87 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
     all_appointments = await _sql_t("SELECT * FROM appointment", user["tenant_id"])
     total_customers = len(all_customers)
     total_tickets = len(all_tickets)
-    open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
-    revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") == "paid")
-    pending_revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") not in ("paid", "cancelled"))
-    upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
+    open_tickets = sum(
+        1 for t in all_tickets if t.get("status") not in ("resolved", "closed")
+    )
+    revenue = sum(
+        float(i.get("total", 0)) for i in all_invoices if i.get("status") == "paid"
+    )
+    pending_revenue = sum(
+        float(i.get("total", 0))
+        for i in all_invoices
+        if i.get("status") not in ("paid", "cancelled")
+    )
+    upcoming_appointments = sum(
+        1 for a in all_appointments if a.get("start_time", 0) > 0
+    )
 
     # Overdue invoices — detect on-the-fly from SQL
     now = int(datetime.utcnow().timestamp() * 1000)
-    sent_partial = [i for i in all_invoices if i.get("status") in ("sent", "partial") and i.get("due_date", 0) > 0 and i.get("due_date", 0) < now]
+    sent_partial = [
+        i
+        for i in all_invoices
+        if i.get("status") in ("sent", "partial")
+        and i.get("due_date", 0) > 0
+        and i.get("due_date", 0) < now
+    ]
     overdue_invoices = [i for i in all_invoices if i.get("status") == "overdue"]
     # Also include invoices that are past due but not yet marked overdue (detect on-the-fly)
     combined_overdue = overdue_invoices + sent_partial
     combined_overdue.sort(key=lambda x: x.get("due_date", 0))
-    overdue_invoices_total = round(sum(float(i.get("total", 0)) for i in combined_overdue), 2)
+    overdue_invoices_total = round(
+        sum(float(i.get("total", 0)) for i in combined_overdue), 2
+    )
     overdue_invoices_sorted = combined_overdue[:5]
 
     # Today's appointments
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
-    day_start_ms = int(datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+    day_start_ms = int(
+        datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        * 1000
+    )
     day_end_ms = day_start_ms + 86400000
-    today_appts = [a for a in all_appointments if day_start_ms <= a.get("start_time", 0) < day_end_ms and a.get("status") not in ("cancelled",)]
+    today_appts = [
+        a
+        for a in all_appointments
+        if day_start_ms <= a.get("start_time", 0) < day_end_ms
+        and a.get("status") not in ("cancelled",)
+    ]
     today_appts_sorted = sorted(today_appts, key=lambda x: x.get("start_time", 0))[:10]
 
     # My assigned tickets for dashboard personalization
-    my_tickets = [t for t in all_tickets if t.get("assigned_user_id") == user["id"] and t.get("status") not in ("resolved", "closed")]
+    my_tickets = [
+        t
+        for t in all_tickets
+        if t.get("assigned_user_id") == user["id"]
+        and t.get("status") not in ("resolved", "closed")
+    ]
 
     # Priority breakdown for my tickets
-    my_ticket_counts = {"all": len(my_tickets), "urgent": 0, "high": 0, "medium": 0, "low": 0}
+    my_ticket_counts = {
+        "all": len(my_tickets),
+        "urgent": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+    }
     for t in my_tickets:
         prio = t.get("priority", "medium")
         if prio in my_ticket_counts:
             my_ticket_counts[prio] += 1
 
     # Recent 5 my tickets for the dashboard card
-    my_recent = sorted(my_tickets, key=lambda x: x.get("created_at", 0), reverse=True)[:5]
+    my_recent = sorted(my_tickets, key=lambda x: x.get("created_at", 0), reverse=True)[
+        :5
+    ]
 
     # Monthly revenue vs target
     now_ms_month = int(datetime.utcnow().timestamp() * 1000)
-    month_start_ms = int(datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000)
+    month_start_ms = int(
+        datetime.utcnow()
+        .replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        .timestamp()
+        * 1000
+    )
     monthly_revenue = sum(
         float(p.get("amount", 0))
         for p in all_payments
@@ -74,7 +122,11 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
         updated = t.get("updated_at", 0)
         if created and updated > created and t.get("status") in ("resolved", "closed"):
             resolution_times.append((updated - created) / (1000 * 3600))
-    avg_resolution_hours = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
+    avg_resolution_hours = (
+        round(sum(resolution_times) / len(resolution_times), 1)
+        if resolution_times
+        else 0
+    )
 
     return {
         "total_customers": total_customers,
@@ -96,7 +148,9 @@ async def dashboard_stats(user: dict = Depends(require_role("admin", "tech", "fr
 
 
 @router.get("/api/reports")
-async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def get_reports(
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+):
     """Reporting data for charts."""
     now = datetime.utcnow()
     all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
@@ -116,21 +170,27 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
             for p in all_payments
             if month_start_ts <= p.get("created_at", 0) < month_end_ts
         )
-        revenue_by_month.append({"month": month_label, "revenue": round(month_revenue, 2)})
+        revenue_by_month.append(
+            {"month": month_label, "revenue": round(month_revenue, 2)}
+        )
 
     # Ticket counts by status
     status_counts: dict[str, int] = {}
     for t in all_tickets:
         s = t.get("status", "unknown")
         status_counts[s] = status_counts.get(s, 0) + 1
-    ticket_by_status = [{"status": s, "count": c} for s, c in sorted(status_counts.items())]
+    ticket_by_status = [
+        {"status": s, "count": c} for s, c in sorted(status_counts.items())
+    ]
 
     # Invoice by status
     inv_status_counts: dict[str, int] = {}
     for inv in all_invoices:
         s = inv.get("status", "draft")
         inv_status_counts[s] = inv_status_counts.get(s, 0) + 1
-    invoice_by_status = [{"status": s, "count": c} for s, c in sorted(inv_status_counts.items())]
+    invoice_by_status = [
+        {"status": s, "count": c} for s, c in sorted(inv_status_counts.items())
+    ]
 
     # Appointments by month (next 3 + past 9)
     appt_by_month = []
@@ -140,18 +200,24 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
         month_count = sum(
-            1 for a in all_appointments
+            1
+            for a in all_appointments
             if month_start_ts <= a.get("start_time", 0) < month_end_ts
         )
         appt_by_month.append({"month": month_label, "appointments": month_count})
 
     total_revenue = sum(float(p.get("amount", 0)) for p in all_payments)
     total_tickets = len(all_tickets)
-    open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
-    total_sent = sum(1 for inv in all_invoices if inv.get("status") not in ("draft", "cancelled"))
+    open_tickets = sum(
+        1 for t in all_tickets if t.get("status") not in ("resolved", "closed")
+    )
+    total_sent = sum(
+        1 for inv in all_invoices if inv.get("status") not in ("draft", "cancelled")
+    )
     total_paid = sum(1 for inv in all_invoices if inv.get("status") == "paid")
     outstanding_revenue = sum(
-        float(inv.get("total", 0)) for inv in all_invoices
+        float(inv.get("total", 0))
+        for inv in all_invoices
         if inv.get("status") in ("sent", "overdue", "partial")
     )
 
@@ -161,7 +227,11 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         updated = t.get("updated_at", 0)
         if created and updated > created and t.get("status") in ("resolved", "closed"):
             resolution_times.append((updated - created) / (1000 * 3600))
-    avg_resolution_hours = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
+    avg_resolution_hours = (
+        round(sum(resolution_times) / len(resolution_times), 1)
+        if resolution_times
+        else 0
+    )
 
     # SLA breach rate
     sla_targets = {"urgent": 4, "high": 24, "medium": 72, "low": 120}
@@ -182,18 +252,30 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
                 breached[priority] = breached.get(priority, 0) + 1
 
     sla_breach_count = sum(breached.values())
-    sla_breach_rate = round((sla_breach_count / total_open * 100), 1) if total_open > 0 else 0
+    sla_breach_rate = (
+        round((sla_breach_count / total_open * 100), 1) if total_open > 0 else 0
+    )
 
     # Overdue invoice rate
-    total_sent_invoices = sum(1 for inv in all_invoices if inv.get("status") in ("sent", "overdue", "partial"))
+    total_sent_invoices = sum(
+        1 for inv in all_invoices if inv.get("status") in ("sent", "overdue", "partial")
+    )
     overdue_invoices = sum(1 for inv in all_invoices if inv.get("status") == "overdue")
     # Also check on-the-fly overdue
     now_ms_inv = int(now.timestamp() * 1000)
     for inv in all_invoices:
-        if inv.get("status") in ("sent", "partial") and inv.get("due_date", 0) > 0 and inv.get("due_date", 0) < now_ms_inv:
+        if (
+            inv.get("status") in ("sent", "partial")
+            and inv.get("due_date", 0) > 0
+            and inv.get("due_date", 0) < now_ms_inv
+        ):
             overdue_invoices += 1
             total_sent_invoices += 1
-    overdue_rate = round((overdue_invoices / total_sent_invoices * 100), 1) if total_sent_invoices > 0 else 0
+    overdue_rate = (
+        round((overdue_invoices / total_sent_invoices * 100), 1)
+        if total_sent_invoices > 0
+        else 0
+    )
 
     tech_ticket_map: dict[str, int] = {}
     for t in all_tickets:
@@ -211,7 +293,9 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
     for inv in all_invoices:
         cid = inv.get("customer_id", "")
         if inv.get("status") == "paid":
-            customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
+            customer_revenue[cid] = customer_revenue.get(cid, 0) + float(
+                inv.get("total", 0)
+            )
     all_customers = await _sql("SELECT id, first_name, last_name FROM customer")
     cust_name_map = {
         c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
@@ -231,7 +315,8 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
         month_count = sum(
-            1 for c in all_customers
+            1
+            for c in all_customers
             if month_start_ts <= c.get("created_at", 0) < month_end_ts
         )
         customers_by_month.append({"month": month_label, "new_customers": month_count})
@@ -262,6 +347,7 @@ async def get_reports(user: dict = Depends(require_role("admin", "tech", "front_
 
 # ── AUDIT LOG ──
 
+
 @router.get("/api/audit-log")
 async def get_audit_log(
     offset: int = 0,
@@ -277,9 +363,12 @@ async def get_audit_log(
     if action:
         where += (" AND " if where else "") + f"action = '{action}'"
     rows, total = await _paginated(
-        "", "audit_log",
-        offset=offset, limit=limit,
+        "",
+        "audit_log",
+        offset=offset,
+        limit=limit,
         where_extra=where,
-        order_by="created_at", order_desc=True,
+        order_by="created_at",
+        order_desc=True,
     )
     return {"entries": rows, "total": total, "offset": offset, "limit": limit}

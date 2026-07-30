@@ -6,10 +6,8 @@ httpx.AsyncClient with connection pooling.
 
 from __future__ import annotations
 
-from unittest.mock import patch
 
 import httpx
-import pytest
 
 
 class TestGetHttpClient:

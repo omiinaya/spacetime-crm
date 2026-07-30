@@ -2,12 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
-import pytest
-
-from .base import BaseSchedulerTest
-
 
 class TestScheduledTasksConfig:
     """SCHEDULED_TASKS dictionary."""

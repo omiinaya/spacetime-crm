@@ -31,7 +31,9 @@ DB_NAME = "spacetime-crm"
 STDB_SERVER = f"http://{STDB_HOST}:{STDB_PORT}"
 CALL_URL = f"{STDB_SERVER}/v1/database/{DB_NAME}/call"
 MODULE_DIR = Path(__file__).resolve().parent.parent / "server" / "spacetimedb"
-WASM_FILE = MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
+WASM_FILE = (
+    MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
+)
 
 
 def confirm():
@@ -92,13 +94,26 @@ def main():
     # Step 2: Re-publish module
     if not WASM_FILE.exists():
         print(f"\n❌ STDB module wasm not found at: {WASM_FILE}")
-        print("   Build it first: cd server/spacetimedb && cargo build --release --target wasm32-unknown-unknown")
+        print(
+            "   Build it first: cd server/spacetimedb && cargo build --release --target wasm32-unknown-unknown"
+        )
         sys.exit(1)
 
     print(f"\n📦 Publishing STDB module '{DB_NAME}'...")
     result = subprocess.run(
-        ["spacetime", "publish", "--server", STDB_SERVER, "-y", DB_NAME, "-f", str(WASM_FILE)],
-        capture_output=True, text=True, timeout=120,
+        [
+            "spacetime",
+            "publish",
+            "--server",
+            STDB_SERVER,
+            "-y",
+            DB_NAME,
+            "-f",
+            str(WASM_FILE),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     if result.returncode != 0:
         print(f"❌ Publish failed: {result.stderr.strip()}")
@@ -108,7 +123,7 @@ def main():
     # Step 3: Restore tables (in order — parent first)
     restore_order = [
         ("customer", "import_customer"),
-        ("user", None),         # no import reducer; needs manual add
+        ("user", None),  # no import reducer; needs manual add
         ("product", "import_product"),
         ("tax_rate", None),
         ("ticket", None),
@@ -163,8 +178,14 @@ def main():
                 skipped += 1
 
         status = "✅" if table_ok else "⚠️"
-        print(f"  {status} {table_name}: {len(rows)} rows restored" +
-              (f" ({import_reducer})" if import_reducer else " [no import reducer — skipped]"))
+        print(
+            f"  {status} {table_name}: {len(rows)} rows restored"
+            + (
+                f" ({import_reducer})"
+                if import_reducer
+                else " [no import reducer — skipped]"
+            )
+        )
 
     if skipped:
         print(f"\n⚠️  {skipped} rows skipped (tables without import reducers).")

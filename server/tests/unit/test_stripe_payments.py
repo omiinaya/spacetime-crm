@@ -83,9 +83,12 @@ class TestCreateCheckoutSession:
         from stripe_payments import create_checkout_session
 
         result = await create_checkout_session(
-            invoice_id="inv-1", invoice_number=100,
-            customer_id="cust-1", customer_email="test@test.com",
-            amount=50.0, line_items_desc="Test invoice",
+            invoice_id="inv-1",
+            invoice_number=100,
+            customer_id="cust-1",
+            customer_email="test@test.com",
+            amount=50.0,
+            line_items_desc="Test invoice",
         )
 
         assert result is None
@@ -105,9 +108,12 @@ class TestCreateCheckoutSession:
                 from stripe_payments import create_checkout_session
 
                 result = await create_checkout_session(
-                    invoice_id="inv-1", invoice_number=100,
-                    customer_id="cust-1", customer_email="test@test.com",
-                    amount=50.0, line_items_desc="Invoice for May",
+                    invoice_id="inv-1",
+                    invoice_number=100,
+                    customer_id="cust-1",
+                    customer_email="test@test.com",
+                    amount=50.0,
+                    line_items_desc="Invoice for May",
                 )
 
         assert result == {
@@ -130,13 +136,18 @@ class TestCreateCheckoutSession:
                 from stripe_payments import create_checkout_session
 
                 await create_checkout_session(
-                    invoice_id="inv-1", invoice_number=100,
-                    customer_id="cust-1", customer_email="test@test.com",
-                    amount=99.99, line_items_desc="",
+                    invoice_id="inv-1",
+                    invoice_number=100,
+                    customer_id="cust-1",
+                    customer_email="test@test.com",
+                    amount=99.99,
+                    line_items_desc="",
                 )
 
         call_kwargs = mock_session_class.create.call_args[1]
-        assert call_kwargs["line_items"][0]["price_data"]["unit_amount"] == 9999  # $99.99 in cents
+        assert (
+            call_kwargs["line_items"][0]["price_data"]["unit_amount"] == 9999
+        )  # $99.99 in cents
         assert call_kwargs["metadata"]["invoice_id"] == "inv-1"
         assert call_kwargs["metadata"]["customer_id"] == "cust-1"
 
@@ -155,13 +166,19 @@ class TestCreateCheckoutSession:
                 from stripe_payments import create_checkout_session
 
                 await create_checkout_session(
-                    invoice_id="inv-2", invoice_number=101,
-                    customer_id="cust-2", customer_email="a@b.com",
-                    amount=25.0, line_items_desc="Desc",
+                    invoice_id="inv-2",
+                    invoice_number=101,
+                    customer_id="cust-2",
+                    customer_email="a@b.com",
+                    amount=25.0,
+                    line_items_desc="Desc",
                 )
 
         call_kwargs = mock_session_class.create.call_args[1]
-        assert "http://localhost:8723/portal/invoices?session_id={CHECKOUT_SESSION_ID}" in call_kwargs["success_url"]
+        assert (
+            "http://localhost:8723/portal/invoices?session_id={CHECKOUT_SESSION_ID}"
+            in call_kwargs["success_url"]
+        )
         assert "http://localhost:8723/portal/invoices" in call_kwargs["cancel_url"]
 
     @pytest.mark.asyncio
@@ -176,9 +193,12 @@ class TestCreateCheckoutSession:
                 from stripe_payments import create_checkout_session
 
                 result = await create_checkout_session(
-                    invoice_id="inv-3", invoice_number=102,
-                    customer_id="cust-3", customer_email="a@b.com",
-                    amount=10.0, line_items_desc="",
+                    invoice_id="inv-3",
+                    invoice_number=102,
+                    customer_id="cust-3",
+                    customer_email="a@b.com",
+                    amount=10.0,
+                    line_items_desc="",
                 )
 
         assert result is None
@@ -199,9 +219,12 @@ class TestCreateCheckoutSession:
                 from stripe_payments import create_checkout_session
 
                 await create_checkout_session(
-                    invoice_id="inv-4", invoice_number=200,
-                    customer_id="cust-4", customer_email="a@b.com",
-                    amount=10.0, line_items_desc="",
+                    invoice_id="inv-4",
+                    invoice_number=200,
+                    customer_id="cust-4",
+                    customer_email="a@b.com",
+                    amount=10.0,
+                    line_items_desc="",
                 )
 
         call_kwargs = mock_session_class.create.call_args[1]
@@ -232,7 +255,9 @@ class TestVerifyWebhook:
             "data": {"object": {"id": "pi_456"}},
         }
 
-        with patch.object(stripe_lib.Webhook, "construct_event", return_value=mock_event):
+        with patch.object(
+            stripe_lib.Webhook, "construct_event", return_value=mock_event
+        ):
             from stripe_payments import verify_webhook
 
             result = await verify_webhook(b'{"test": true}', "tsec_abc")
@@ -249,7 +274,11 @@ class TestVerifyWebhook:
         import stripe as stripe_lib
         from stripe import StripeError
 
-        with patch.object(stripe_lib.Webhook, "construct_event", side_effect=StripeError("Invalid signature")):
+        with patch.object(
+            stripe_lib.Webhook,
+            "construct_event",
+            side_effect=StripeError("Invalid signature"),
+        ):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import verify_webhook
 
@@ -263,7 +292,11 @@ class TestVerifyWebhook:
         """Should return None when ValueError occurs (invalid payload)."""
         import stripe as stripe_lib
 
-        with patch.object(stripe_lib.Webhook, "construct_event", side_effect=ValueError("Invalid payload")):
+        with patch.object(
+            stripe_lib.Webhook,
+            "construct_event",
+            side_effect=ValueError("Invalid payload"),
+        ):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import verify_webhook
 
@@ -285,13 +318,17 @@ class TestCreateSetupIntent:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_creates_setup_intent_successfully(self, _configured_settings) -> None:
+    async def test_creates_setup_intent_successfully(
+        self, _configured_settings
+    ) -> None:
         """Should return client_secret and id on success."""
         mock_intent = MagicMock()
         mock_intent.client_secret = "seti_1_secret_abc"
         mock_intent.id = "seti_1"
 
-        with patch("stripe_payments.stripe_lib.SetupIntent.create", return_value=mock_intent):
+        with patch(
+            "stripe_payments.stripe_lib.SetupIntent.create", return_value=mock_intent
+        ):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_setup_intent
 
@@ -322,7 +359,10 @@ class TestCreateSetupIntent:
         """Should return None when StripeError occurs."""
         from stripe import StripeError
 
-        with patch("stripe_payments.stripe_lib.SetupIntent.create", side_effect=StripeError("Setup failed")):
+        with patch(
+            "stripe_payments.stripe_lib.SetupIntent.create",
+            side_effect=StripeError("Setup failed"),
+        ):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import create_setup_intent
 
@@ -341,27 +381,35 @@ class TestCreatePaymentIntent:
         from stripe_payments import create_payment_intent
 
         result = await create_payment_intent(
-            invoice_id="inv-1", invoice_number=100,
-            customer_email="a@b.com", amount=50.0,
+            invoice_id="inv-1",
+            invoice_number=100,
+            customer_email="a@b.com",
+            amount=50.0,
             payment_method_id="pm_123",
         )
 
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_creates_payment_intent_successfully(self, _configured_settings) -> None:
+    async def test_creates_payment_intent_successfully(
+        self, _configured_settings
+    ) -> None:
         """Should return payment_intent_id and status on success."""
         mock_intent = MagicMock()
         mock_intent.id = "pi_abc123"
         mock_intent.status = "succeeded"
 
-        with patch("stripe_payments.stripe_lib.PaymentIntent.create", return_value=mock_intent):
+        with patch(
+            "stripe_payments.stripe_lib.PaymentIntent.create", return_value=mock_intent
+        ):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_payment_intent
 
                 result = await create_payment_intent(
-                    invoice_id="inv-1", invoice_number=100,
-                    customer_email="a@b.com", amount=50.0,
+                    invoice_id="inv-1",
+                    invoice_number=100,
+                    customer_email="a@b.com",
+                    amount=50.0,
                     payment_method_id="pm_123",
                 )
 
@@ -384,8 +432,10 @@ class TestCreatePaymentIntent:
                 from stripe_payments import create_payment_intent
 
                 await create_payment_intent(
-                    invoice_id="inv-2", invoice_number=200,
-                    customer_email="cust@test.com", amount=99.99,
+                    invoice_id="inv-2",
+                    invoice_number=200,
+                    customer_email="cust@test.com",
+                    amount=99.99,
                     payment_method_id="pm_456",
                 )
 
@@ -404,13 +454,18 @@ class TestCreatePaymentIntent:
         """Should return empty dict when StripeError occurs."""
         from stripe import StripeError
 
-        with patch("stripe_payments.stripe_lib.PaymentIntent.create", side_effect=StripeError("Card declined")):
+        with patch(
+            "stripe_payments.stripe_lib.PaymentIntent.create",
+            side_effect=StripeError("Card declined"),
+        ):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import create_payment_intent
 
                 result = await create_payment_intent(
-                    invoice_id="inv-1", invoice_number=100,
-                    customer_email="a@b.com", amount=50.0,
+                    invoice_id="inv-1",
+                    invoice_number=100,
+                    customer_email="a@b.com",
+                    amount=50.0,
                     payment_method_id="pm_bad",
                 )
 

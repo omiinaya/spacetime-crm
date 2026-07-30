@@ -17,5 +17,20 @@ web/.auth/
 # SpacetimeDB config dir that sometimes gets created literally
 ~/
 
+# Backup and temp files
+*.bak
+*.orig
+*~
+
+# Coverage artifacts
+.coverage
+htmlcov/
+.coverage.*
+
+# Cache dirs
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
 # Virtual environment
 server/.venv/

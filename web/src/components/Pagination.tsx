@@ -47,9 +47,7 @@ export default function Pagination({
 
   return (
     <div className="flex items-center justify-between pt-4 pb-2">
-      <div className="text-sm text-muted-foreground">
-        {total} total
-      </div>
+      <div className="text-sm text-muted-foreground">{total} total</div>
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
@@ -75,7 +73,7 @@ export default function Pagination({
             >
               {p}
             </Button>
-          )
+          ),
         )}
         <Button
           variant="outline"

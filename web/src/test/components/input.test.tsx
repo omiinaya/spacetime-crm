@@ -18,7 +18,14 @@ describe("Input", () => {
   it("accepts value and onChange", async () => {
     const user = userEvent.setup();
     let value = "";
-    render(<Input placeholder="type here" onChange={(e) => { value = e.target.value; }} />);
+    render(
+      <Input
+        placeholder="type here"
+        onChange={(e) => {
+          value = e.target.value;
+        }}
+      />,
+    );
     const input = screen.getByPlaceholderText("type here");
     await user.type(input, "hello");
     expect(value).toBe("hello");

@@ -1,12 +1,15 @@
 """Settings (mail/SMS) routes — get/save/test."""
+
 import httpx
-import pytest
 from .conftest import (
-    SERVER_URL, assert_ok,
-    save_mail_settings, restore_mail_settings,
-    save_sms_settings, restore_sms_settings,
-    save_user_settings, restore_user_settings,
-    test_admin_headers,
+    SERVER_URL,
+    assert_ok,
+    save_mail_settings,
+    restore_mail_settings,
+    save_sms_settings,
+    restore_sms_settings,
+    save_user_settings,
+    restore_user_settings,
 )
 
 
@@ -14,7 +17,9 @@ class TestMailSettings:
     """Mail configuration read, write, test."""
 
     def test_get_mail_settings(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/settings/mail", headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/settings/mail", headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         assert "configured" in data
 
@@ -33,12 +38,17 @@ class TestMailSettings:
                     "smtp_from_name": "CRM",
                     "smtp_tls": True,
                 },
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
             # Verify saved
-            r2 = httpx.get(f"{SERVER_URL}/api/settings/mail", headers=test_admin_headers, timeout=10)
+            r2 = httpx.get(
+                f"{SERVER_URL}/api/settings/mail",
+                headers=test_admin_headers,
+                timeout=10,
+            )
             data = r2.json()
             if data.get("configured") and data.get("settings"):
                 assert "mail.example.com" in str(data["settings"])
@@ -48,7 +58,11 @@ class TestMailSettings:
 
     def test_mail_test_no_connection(self, test_admin_headers: dict):
         """Test endpoint should return gracefully without a real SMTP server."""
-        resp = httpx.post(f"{SERVER_URL}/api/settings/mail/test", headers=test_admin_headers, timeout=15)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/settings/mail/test",
+            headers=test_admin_headers,
+            timeout=15,
+        )
         # Should return something (success or error), not crash
         assert resp.status_code < 500, resp.text[:200]
 
@@ -57,7 +71,9 @@ class TestSMSSettings:
     """SMS configuration read, write, test."""
 
     def test_get_sms_settings(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         assert "configured" in data
 
@@ -72,12 +88,15 @@ class TestSMSSettings:
                     "twilio_auth_token": "tok_test456",
                     "twilio_from_number": "+15551234567",
                 },
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
             # Verify
-            r2 = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10)
+            r2 = httpx.get(
+                f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10
+            )
             assert r2.status_code == 200
         finally:
             # Always restore original settings
@@ -85,7 +104,11 @@ class TestSMSSettings:
 
     def test_sms_test_no_connection(self, test_admin_headers: dict):
         """Test endpoint should return without crashing — may fail without creds."""
-        resp = httpx.post(f"{SERVER_URL}/api/settings/sms/test", headers=test_admin_headers, timeout=15)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/settings/sms/test",
+            headers=test_admin_headers,
+            timeout=15,
+        )
         # Twilio not configured, may return 5xx — just verify it doesn't hang
         assert resp.elapsed.total_seconds() < 10, "Test endpoint timed out"
 
@@ -107,7 +130,9 @@ class TestUserSettings:
 
     def test_get_user_settings_default(self, test_admin_headers: dict):
         """GET user settings returns null when not yet set."""
-        resp = httpx.get(f"{SERVER_URL}/api/users/settings", headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/users/settings", headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         assert "settings" in data
 
@@ -119,12 +144,17 @@ class TestUserSettings:
             resp = httpx.put(
                 f"{SERVER_URL}/api/users/settings",
                 json=payload,
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
             # Verify saved
-            r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=test_admin_headers, timeout=10)
+            r2 = httpx.get(
+                f"{SERVER_URL}/api/users/settings",
+                headers=test_admin_headers,
+                timeout=10,
+            )
             data = assert_ok(r2)
             assert data["settings"] is not None
             assert data["settings"]["theme"] == "dark"
@@ -140,11 +170,16 @@ class TestUserSettings:
             resp = httpx.put(
                 f"{SERVER_URL}/api/users/settings",
                 json=payload,
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
-            r2 = httpx.get(f"{SERVER_URL}/api/users/settings", headers=test_admin_headers, timeout=10)
+            r2 = httpx.get(
+                f"{SERVER_URL}/api/users/settings",
+                headers=test_admin_headers,
+                timeout=10,
+            )
             data = assert_ok(r2)
             assert data["settings"]["theme"] == "light"
         finally:
@@ -155,5 +190,9 @@ class TestUserSettings:
         resp = client.get("/api/users/settings", timeout=10)
         assert resp.status_code in (401, 403)
 
-        resp = client.put("/api/users/settings", json={"theme": "dark", "default_ticket_status": "new"}, timeout=10)
+        resp = client.put(
+            "/api/users/settings",
+            json={"theme": "dark", "default_ticket_status": "new"},
+            timeout=10,
+        )
         assert resp.status_code in (401, 403)

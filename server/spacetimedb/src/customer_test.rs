@@ -49,7 +49,12 @@ mod tests {
             "555-0102".into(),
         );
 
-        let c = ctx.db.customer().iter().next().expect("expected at least one customer record");
+        let c = ctx
+            .db
+            .customer()
+            .iter()
+            .next()
+            .expect("expected at least one customer record");
         let original_id = c.id.clone();
         let original_created = c.created_at;
 
@@ -71,7 +76,12 @@ mod tests {
             String::new(),
         );
 
-        let updated = ctx.db.customer().id().find(&original_id).expect("expected record to exist");
+        let updated = ctx
+            .db
+            .customer()
+            .id()
+            .find(&original_id)
+            .expect("expected record to exist");
         assert_eq!(updated.first_name, "Robert");
         assert_eq!(updated.email, "robert@test.com");
         assert_eq!(updated.phone, "555-0199");
@@ -94,7 +104,12 @@ mod tests {
             "555-0103".into(),
         );
 
-        let c = ctx.db.customer().iter().next().expect("expected at least one customer record");
+        let c = ctx
+            .db
+            .customer()
+            .iter()
+            .next()
+            .expect("expected at least one customer record");
         delete_customer(&ctx, c.id.clone());
         assert_eq!(ctx.db.customer().iter().count(), 0);
     }
@@ -112,13 +127,23 @@ mod tests {
             "555-0104".into(),
         );
 
-        let c = ctx.db.customer().iter().next().expect("expected at least one customer record");
+        let c = ctx
+            .db
+            .customer()
+            .iter()
+            .next()
+            .expect("expected at least one customer record");
         assert!(c.portal_password_hash.is_empty());
 
         let hash = "bcrypt_hash_here".to_string();
         set_customer_password(&ctx, c.id.clone(), hash.clone());
 
-        let updated = ctx.db.customer().id().find(&c.id).expect("expected record to exist");
+        let updated = ctx
+            .db
+            .customer()
+            .id()
+            .find(&c.id)
+            .expect("expected record to exist");
         assert_eq!(updated.portal_password_hash, hash);
     }
 
@@ -175,12 +200,22 @@ mod tests {
             "555-1002".into(),
         );
 
-        let tenants: Vec<String> = ctx.db.customer().iter().map(|c| c.tenant_id.clone()).collect();
+        let tenants: Vec<String> = ctx
+            .db
+            .customer()
+            .iter()
+            .map(|c| c.tenant_id.clone())
+            .collect();
         assert_eq!(tenants.len(), 2);
         assert!(tenants.contains(&"tenant_a".to_string()));
         assert!(tenants.contains(&"tenant_b".to_string()));
 
-        let tenant_a_only: Vec<Customer> = ctx.db.customer().iter().filter(|c| c.tenant_id == "tenant_a").collect();
+        let tenant_a_only: Vec<Customer> = ctx
+            .db
+            .customer()
+            .iter()
+            .filter(|c| c.tenant_id == "tenant_a")
+            .collect();
         assert_eq!(tenant_a_only.len(), 1);
         assert_eq!(tenant_a_only[0].email, "alice@a.com");
     }

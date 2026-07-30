@@ -1,12 +1,14 @@
 """Dashboard stats, reports, and audit log tests."""
+
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, test_admin_headers
+from .conftest import SERVER_URL, assert_ok
 
 
 class TestDashboard:
     def test_stats(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/stats", headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/stats", headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         assert "total_customers" in data
         assert "total_tickets" in data
@@ -19,7 +21,9 @@ class TestDashboard:
         assert "overdue_invoices" in data
 
     def test_reports(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/reports", headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/reports", headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         assert "revenue_by_month" in data
         assert "ticket_by_status" in data
@@ -31,7 +35,9 @@ class TestDashboard:
         assert "total_revenue" in data["totals"]
 
     def test_audit_log(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/audit-log", headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/audit-log", headers=test_admin_headers, timeout=10
+        )
         data = assert_ok(resp)
         assert "entries" in data
         assert "total" in data
@@ -39,14 +45,24 @@ class TestDashboard:
         assert "limit" in data
 
     def test_audit_log_filtered_by_entity(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/audit-log", params={"entity": "customer"}, headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/audit-log",
+            params={"entity": "customer"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
         data = assert_ok(resp)
         for entry in data["entries"]:
             if entry.get("entity"):
                 assert entry["entity"] == "customer"
 
     def test_audit_log_filtered_by_action(self, test_admin_headers: dict):
-        resp = httpx.get(f"{SERVER_URL}/api/audit-log", params={"action": "create"}, headers=test_admin_headers, timeout=10)
+        resp = httpx.get(
+            f"{SERVER_URL}/api/audit-log",
+            params={"action": "create"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
         data = assert_ok(resp)
         for entry in data["entries"]:
             if entry.get("action"):

@@ -6,8 +6,31 @@ import { History, Filter, RefreshCw } from "lucide-react";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
-const ENTITY_OPTIONS = ["", "customer", "ticket", "invoice", "payment", "appointment", "product", "estimate", "purchase_order", "user", "tax_rate", "line_item", "adjustment"];
-const ACTION_OPTIONS = ["", "create", "update", "delete", "assign", "update_status", "convert", "receive"];
+const ENTITY_OPTIONS = [
+  "",
+  "customer",
+  "ticket",
+  "invoice",
+  "payment",
+  "appointment",
+  "product",
+  "estimate",
+  "purchase_order",
+  "user",
+  "tax_rate",
+  "line_item",
+  "adjustment",
+];
+const ACTION_OPTIONS = [
+  "",
+  "create",
+  "update",
+  "delete",
+  "assign",
+  "update_status",
+  "convert",
+  "receive",
+];
 
 function formatTime(ms: number) {
   const d = new Date(ms);
@@ -26,7 +49,9 @@ function actionBadge(action: string) {
   };
   const cls = colors[action] || "bg-slate-700 text-slate-300 border-slate-600";
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-mono border ${cls}`}>
+    <span
+      className={`inline-block px-2 py-0.5 rounded text-xs font-mono border ${cls}`}
+    >
       {action}
     </span>
   );
@@ -37,8 +62,16 @@ export default function AuditLogPage() {
   const [actionFilter, setActionFilter] = useState("");
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["audit-log", { entity: entityFilter || undefined, action: actionFilter || undefined }],
-    queryFn: () => api.auditLog.list(200, entityFilter || undefined, actionFilter || undefined),
+    queryKey: [
+      "audit-log",
+      { entity: entityFilter || undefined, action: actionFilter || undefined },
+    ],
+    queryFn: () =>
+      api.auditLog.list(
+        200,
+        entityFilter || undefined,
+        actionFilter || undefined,
+      ),
   });
 
   const entries = data?.entries ?? [];
@@ -50,7 +83,11 @@ export default function AuditLogPage() {
           <History className="w-6 h-6 text-blue-400" />
           Audit Log
         </h1>
-        <Button onClick={() => refetch()} variant="secondary" className="flex items-center gap-2">
+        <Button
+          onClick={() => refetch()}
+          variant="secondary"
+          className="flex items-center gap-2"
+        >
           <RefreshCw className="w-4 h-4" />
           Refresh
         </Button>
@@ -62,22 +99,26 @@ export default function AuditLogPage() {
           <Filter className="w-4 h-4 text-slate-400" />
           <select
             value={entityFilter}
-            onChange={e => setEntityFilter(e.target.value)}
+            onChange={(e) => setEntityFilter(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
           >
             <option value="">All entities</option>
-            {ENTITY_OPTIONS.filter(Boolean).map(e => (
-              <option key={e} value={e}>{e.replace("_", " ")}</option>
+            {ENTITY_OPTIONS.filter(Boolean).map((e) => (
+              <option key={e} value={e}>
+                {e.replace("_", " ")}
+              </option>
             ))}
           </select>
           <select
             value={actionFilter}
-            onChange={e => setActionFilter(e.target.value)}
+            onChange={(e) => setActionFilter(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
           >
             <option value="">All actions</option>
-            {ACTION_OPTIONS.filter(Boolean).map(a => (
-              <option key={a} value={a}>{a}</option>
+            {ACTION_OPTIONS.filter(Boolean).map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
             ))}
           </select>
         </div>
@@ -88,28 +129,45 @@ export default function AuditLogPage() {
         {isLoading ? (
           <div className="p-8 text-center text-slate-400">Loading...</div>
         ) : entries.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">No audit log entries yet.</div>
+          <div className="p-8 text-center text-slate-400">
+            No audit log entries yet.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-800/50">
-                  <th className="text-left px-4 py-3 font-medium text-slate-400">Time</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-400">User</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-400">Action</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-400">Entity</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-400">ID / Detail</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-400">
+                    Time
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-400">
+                    User
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-400">
+                    Action
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-400">
+                    Entity
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-400">
+                    ID / Detail
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map((e: any) => (
-                  <tr key={e.id} className="border-b border-slate-800 hover:bg-slate-800/30">
+                  <tr
+                    key={e.id}
+                    className="border-b border-slate-800 hover:bg-slate-800/30"
+                  >
                     <td className="px-4 py-3 text-slate-400 whitespace-nowrap font-mono text-xs">
                       {formatTime(e.created_at)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="font-medium">{e.user_name}</span>
-                      <span className="text-slate-500 text-xs ml-2 font-mono">{e.user_id?.slice(0, 12)}…</span>
+                      <span className="text-slate-500 text-xs ml-2 font-mono">
+                        {e.user_id?.slice(0, 12)}…
+                      </span>
                     </td>
                     <td className="px-4 py-3">{actionBadge(e.action)}</td>
                     <td className="px-4 py-3">
@@ -117,7 +175,11 @@ export default function AuditLogPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-400 max-w-xs truncate font-mono text-xs">
                       {e.entity_id}
-                      {e.details && <span className="text-slate-500 ml-2">| {e.details}</span>}
+                      {e.details && (
+                        <span className="text-slate-500 ml-2">
+                          | {e.details}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 
 describe("Card", () => {
   it("renders with default classes", () => {
@@ -18,7 +25,9 @@ describe("Card", () => {
 describe("CardHeader", () => {
   it("renders with flex layout", () => {
     render(<CardHeader>Header</CardHeader>);
-    expect(screen.getByText("Header")).toHaveClass("flex flex-col space-y-1.5 p-4");
+    expect(screen.getByText("Header")).toHaveClass(
+      "flex flex-col space-y-1.5 p-4",
+    );
   });
 });
 
@@ -48,6 +57,8 @@ describe("CardContent", () => {
 describe("CardFooter", () => {
   it("renders with flex and padding", () => {
     render(<CardFooter>Footer</CardFooter>);
-    expect(screen.getByText("Footer")).toHaveClass("flex items-center p-4 pt-0");
+    expect(screen.getByText("Footer")).toHaveClass(
+      "flex items-center p-4 pt-0",
+    );
   });
 });

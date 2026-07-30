@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode, createElement } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  createElement,
+} from "react";
 
 const API_BASE = "/api";
 
@@ -87,7 +94,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   return createElement(
     PortalAuthContext.Provider,
     { value: { customer, token, loading, login, logout, setPassword } },
-    children
+    children,
   );
 }
 
@@ -97,7 +104,10 @@ export function usePortalAuth() {
   return ctx;
 }
 
-export function portalApiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export function portalApiFetch<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
   return fetch(`${API_BASE}${path}`, {
     headers: {
@@ -195,7 +205,8 @@ export const portalApi = {
   },
   tickets: {
     list: () => portalApiFetch<{ tickets: PortalTicket[] }>("/portal/tickets"),
-    get: (id: string) => portalApiFetch<{ ticket: PortalTicket }>(`/portal/tickets/${id}`),
+    get: (id: string) =>
+      portalApiFetch<{ ticket: PortalTicket }>(`/portal/tickets/${id}`),
     addNote: (id: string, content: string) =>
       portalApiFetch<{ ok: boolean }>(`/portal/tickets/${id}/notes`, {
         method: "POST",
@@ -203,8 +214,10 @@ export const portalApi = {
       }),
   },
   invoices: {
-    list: () => portalApiFetch<{ invoices: PortalInvoice[] }>("/portal/invoices"),
-    get: (id: string) => portalApiFetch<{ invoice: PortalInvoice }>(`/portal/invoices/${id}`),
+    list: () =>
+      portalApiFetch<{ invoices: PortalInvoice[] }>("/portal/invoices"),
+    get: (id: string) =>
+      portalApiFetch<{ invoice: PortalInvoice }>(`/portal/invoices/${id}`),
   },
   payments: {
     create: (invoiceId: string, amount: number, method: string) =>
@@ -218,7 +231,7 @@ export const portalApi = {
         {
           method: "POST",
           body: JSON.stringify({ invoice_id: invoiceId }),
-        }
+        },
       ),
     payWithSavedCard: (invoiceId: string, paymentMethodId: string) =>
       portalApiFetch<{ ok: boolean; payment_intent_id?: string }>(
@@ -229,11 +242,16 @@ export const portalApi = {
             invoice_id: invoiceId,
             payment_method_id: paymentMethodId,
           }),
-        }
+        },
       ),
   },
   appointments: {
-    list: () => portalApiFetch<{ appointments: PortalAppointment[]; upcoming: PortalAppointment[]; past: PortalAppointment[] }>("/portal/appointments"),
+    list: () =>
+      portalApiFetch<{
+        appointments: PortalAppointment[];
+        upcoming: PortalAppointment[];
+        past: PortalAppointment[];
+      }>("/portal/appointments"),
   },
   paymentMethods: {
     list: () =>

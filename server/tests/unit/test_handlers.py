@@ -12,7 +12,6 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 
@@ -30,6 +29,7 @@ class TestRegisterExceptionHandlers:
                 def decorator(func):
                     handlers[exc_type] = func
                     return func
+
                 return decorator
 
         app = MockApp()
@@ -52,6 +52,7 @@ class TestRegisterExceptionHandlers:
                 def decorator(func):
                     call_args.append((exc_type, func))
                     return func
+
                 return decorator
 
         app = TrackingApp()
@@ -79,6 +80,7 @@ class TestRequestValidationHandler:
                 def decorator(func):
                     handlers[exc_type] = func
                     return func
+
                 return decorator
 
         register_exception_handlers(MockApp())
@@ -101,8 +103,16 @@ class TestRequestValidationHandler:
         request = MagicMock(spec=Request)
         exc = MagicMock(spec=RequestValidationError)
         exc.errors.return_value = [
-            {"loc": ("body", "email"), "msg": "field required", "type": "value_error.missing"},
-            {"loc": ("body", "age"), "msg": "Input should be a valid integer", "type": "int_parsing"},
+            {
+                "loc": ("body", "email"),
+                "msg": "field required",
+                "type": "value_error.missing",
+            },
+            {
+                "loc": ("body", "age"),
+                "msg": "Input should be a valid integer",
+                "type": "int_parsing",
+            },
         ]
 
         response = await _handler(request, exc)
@@ -133,7 +143,9 @@ class TestRequestValidationHandler:
         """Should call exc.errors() to get error details."""
         request = MagicMock(spec=Request)
         exc = MagicMock(spec=RequestValidationError)
-        exc.errors.return_value = [{"loc": ("query", "page"), "msg": "Invalid", "type": "value_error"}]
+        exc.errors.return_value = [
+            {"loc": ("query", "page"), "msg": "Invalid", "type": "value_error"}
+        ]
 
         await _handler(request, exc)
         exc.errors.assert_called_once()
@@ -153,6 +165,7 @@ class TestPydanticValidationHandler:
                 def decorator(func):
                     handlers[exc_type] = func
                     return func
+
                 return decorator
 
         register_exception_handlers(MockApp())
@@ -210,6 +223,7 @@ class TestHTTPExceptionHandler:
                 def decorator(func):
                     handlers[exc_type] = func
                     return func
+
                 return decorator
 
         register_exception_handlers(MockApp())
@@ -261,7 +275,9 @@ class TestHTTPExceptionHandler:
     async def test_includes_headers(self, _handler) -> None:
         """Should forward headers from the exception."""
         request = MagicMock(spec=Request)
-        exc = HTTPException(status_code=429, detail="Too Many Requests", headers={"Retry-After": "120"})
+        exc = HTTPException(
+            status_code=429, detail="Too Many Requests", headers={"Retry-After": "120"}
+        )
 
         response = await _handler(request, exc)
 
@@ -276,8 +292,12 @@ class TestHTTPExceptionHandler:
 
         response = await _handler(request, exc)
         # JSONResponse adds Content-Type, but no custom headers
-        custom_headers = {k: v for k, v in response.headers.items() if k.lower() != "content-type"}
-        assert not custom_headers or "retry-after" not in {k.lower() for k in response.headers}
+        custom_headers = {
+            k: v for k, v in response.headers.items() if k.lower() != "content-type"
+        }
+        assert not custom_headers or "retry-after" not in {
+            k.lower() for k in response.headers
+        }
 
 
 class TestUnhandledExceptionHandler:
@@ -294,6 +314,7 @@ class TestUnhandledExceptionHandler:
                 def decorator(func):
                     handlers[exc_type] = func
                     return func
+
                 return decorator
 
         register_exception_handlers(MockApp())

@@ -3,6 +3,7 @@
 Verifies each route module can be imported without errors and exports
 the expected router object.
 """
+
 from __future__ import annotations
 
 

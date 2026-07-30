@@ -6,6 +6,7 @@ The parent conftest.py at server/tests/ has session-scoped fixtures (admin_token
 isolated_tenant, etc.) that try to hit a live server and fail when it's not running.
 We override them here with no-op stubs so pytest never attempts the live calls.
 """
+
 from __future__ import annotations
 
 import pytest

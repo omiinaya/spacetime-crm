@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
-import pytest
-
-from .base import BaseSchedulerTest, _reset_client
 
 
 class TestHttpClient:

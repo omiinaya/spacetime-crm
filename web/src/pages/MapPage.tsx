@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import {
-  MapContainer, TileLayer, Marker, Popup, useMap,
-} from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { api, CustomerGeoLocation } from "../lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { MapPin, Navigation, Loader2, AlertCircle } from "lucide-react";
 import "leaflet/dist/leaflet.css";
@@ -21,10 +24,10 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 function AutoFitBounds({ locations }: { locations: CustomerGeoLocation[] }) {
   const map = useMap();
   useEffect(() => {
-    const withCoords = locations.filter(l => l.latitude && l.longitude);
+    const withCoords = locations.filter((l) => l.latitude && l.longitude);
     if (withCoords.length === 0) return;
     const bounds = L.latLngBounds(
-      withCoords.map(l => [l.latitude!, l.longitude!] as [number, number])
+      withCoords.map((l) => [l.latitude!, l.longitude!] as [number, number]),
     );
     map.fitBounds(bounds, { padding: [50, 50] });
   }, [locations, map]);
@@ -51,7 +54,9 @@ export default function MapPage() {
     }
   };
 
-  useEffect(() => { loadLocations(); }, []);
+  useEffect(() => {
+    loadLocations();
+  }, []);
 
   const handleGeocodeAll = async () => {
     setGeocoding(true);
@@ -77,8 +82,10 @@ export default function MapPage() {
     }
   };
 
-  const withCoords = locations.filter(l => l.latitude && l.longitude);
-  const withoutCoords = locations.filter(l => !l.has_location && (l.address_line1 || l.city));
+  const withCoords = locations.filter((l) => l.latitude && l.longitude);
+  const withoutCoords = locations.filter(
+    (l) => !l.has_location && (l.address_line1 || l.city),
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -99,7 +106,9 @@ export default function MapPage() {
             onClick={loadLocations}
             disabled={loading}
           >
-            <Loader2 className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+            <Loader2
+              className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button
@@ -145,13 +154,20 @@ export default function MapPage() {
                 />
                 <AutoFitBounds locations={locations} />
                 {withCoords.map((loc) => (
-                  <Marker key={loc.id} position={[loc.latitude!, loc.longitude!]}>
+                  <Marker
+                    key={loc.id}
+                    position={[loc.latitude!, loc.longitude!]}
+                  >
                     <Popup>
                       <div className="text-sm min-w-[180px]">
                         <p className="font-semibold text-base">{loc.name}</p>
-                        {loc.company && <p className="text-muted-foreground">{loc.company}</p>}
+                        {loc.company && (
+                          <p className="text-muted-foreground">{loc.company}</p>
+                        )}
                         {loc.address && <p className="mt-1">{loc.address}</p>}
-                        {loc.email && <p className="text-xs mt-1">{loc.email}</p>}
+                        {loc.email && (
+                          <p className="text-xs mt-1">{loc.email}</p>
+                        )}
                         {loc.phone && <p className="text-xs">{loc.phone}</p>}
                       </div>
                     </Popup>
@@ -163,7 +179,9 @@ export default function MapPage() {
                 <div className="text-center">
                   <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No customer locations yet</p>
-                  <p className="text-xs mt-1">Geocode customers with addresses to see them on the map</p>
+                  <p className="text-xs mt-1">
+                    Geocode customers with addresses to see them on the map
+                  </p>
                 </div>
               </div>
             )}
@@ -175,19 +193,27 @@ export default function MapPage() {
               Customers without location
             </h3>
             {withoutCoords.length === 0 ? (
-              <p className="text-sm text-muted-foreground">All customers geocoded! 🎉</p>
+              <p className="text-sm text-muted-foreground">
+                All customers geocoded! 🎉
+              </p>
             ) : (
               withoutCoords.slice(0, 50).map((loc) => (
                 <Card key={loc.id} className="border-border/50">
                   <CardContent className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{loc.name}</p>
+                        <p className="text-sm font-medium truncate">
+                          {loc.name}
+                        </p>
                         {loc.address && (
-                          <p className="text-xs text-muted-foreground truncate">{loc.address}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {loc.address}
+                          </p>
                         )}
                         {!loc.address && (
-                          <p className="text-xs text-destructive">No address on file</p>
+                          <p className="text-xs text-destructive">
+                            No address on file
+                          </p>
                         )}
                       </div>
                       {loc.address && (

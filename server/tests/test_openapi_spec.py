@@ -12,7 +12,7 @@ Validates the auto-generated OpenAPI schema and endpoint contracts:
 import json
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, assert_unauthorized, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, assert_unauthorized
 
 
 # ── Helpers ──────────────────────────────────────────────────────
@@ -21,7 +21,9 @@ from .conftest import SERVER_URL, assert_ok, assert_unauthorized, test_admin_hea
 def get_openapi_schema() -> dict:
     """Fetch the auto-generated OpenAPI spec from the running server."""
     resp = httpx.get(f"{SERVER_URL}/openapi.json", timeout=10)
-    assert resp.status_code == 200, f"Failed to fetch OpenAPI schema: {resp.status_code}"
+    assert resp.status_code == 200, (
+        f"Failed to fetch OpenAPI schema: {resp.status_code}"
+    )
     return resp.json()
 
 
@@ -48,8 +50,13 @@ def requires_auth(schema: dict, path: str, method: str) -> bool:
     if "security" in path_item:
         return True
     # Public endpoints
-    public_prefixes = ("/api/health", "/api/auth/login", "/api/auth/forgot-password",
-                       "/api/auth/reset-password", "/api/webhooks/stripe")
+    public_prefixes = (
+        "/api/health",
+        "/api/auth/login",
+        "/api/auth/forgot-password",
+        "/api/auth/reset-password",
+        "/api/webhooks/stripe",
+    )
     return not any(path.startswith(p) for p in public_prefixes)
 
 
@@ -105,6 +112,7 @@ class TestOpenAPISchema:
                 if method in ("parameters",):
                     continue
                 assert "responses" in op, f"{method.upper()} {path} has no responses"
+
 
 # ── Tests: Auth Enforcement ──────────────────────────────────────
 
@@ -288,21 +296,30 @@ class TestCORSContract:
 
     def test_cors_preflight_succeeds(self, client: httpx.Client):
         """OPTIONS preflight succeeds for API paths."""
-        resp = client.options("/api/customers", headers={
-            "Origin": "http://localhost:5185",
-            "Access-Control-Request-Method": "GET",
-        })
-        assert resp.status_code in (200, 204), f"CORS preflight failed: {resp.status_code}"
+        resp = client.options(
+            "/api/customers",
+            headers={
+                "Origin": "http://localhost:5185",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert resp.status_code in (200, 204), (
+            f"CORS preflight failed: {resp.status_code}"
+        )
 
     def test_cors_allows_all_methods(self, client: httpx.Client):
         """OPTIONS returns permissive Access-Control-Allow-Methods."""
-        resp = client.options("/api/customers", headers={
-            "Origin": "http://localhost:5185",
-            "Access-Control-Request-Method": "GET",
-        })
+        resp = client.options(
+            "/api/customers",
+            headers={
+                "Origin": "http://localhost:5185",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
         methods = resp.headers.get("access-control-allow-methods", "")
         assert methods, "Missing Access-Control-Allow-Methods"
         assert "*" in methods or "GET" in methods, f"Unexpected methods: {methods}"
+
 
 # ── Tests: Schema Coverage (route ↔ OpenAPI match) ────────────────
 
@@ -314,6 +331,7 @@ class TestSchemaCoverage:
         """Scrape route files to find all registered (method, path) pairs."""
         import ast
         import os
+
         routes_dir = os.path.join(os.path.dirname(__file__), "..", "routes")
         routes: set[tuple[str, str]] = set()
         for fname in sorted(os.listdir(routes_dir)):
@@ -327,14 +345,18 @@ class TestSchemaCoverage:
                     continue
             for node in ast.walk(tree):
                 if isinstance(node, ast.Call):
-                    if (isinstance(node.func, ast.Attribute)
-                            and isinstance(node.func.value, ast.Name)
-                            and node.func.value.id in ("router", "app")
-                            and node.func.attr in ("get", "post", "put", "patch", "delete")):
+                    if (
+                        isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in ("router", "app")
+                        and node.func.attr in ("get", "post", "put", "patch", "delete")
+                    ):
                         method = node.func.attr.upper()
                         if node.args:
                             path_literal = node.args[0]
-                            if isinstance(path_literal, ast.Constant) and isinstance(path_literal.value, str):
+                            if isinstance(path_literal, ast.Constant) and isinstance(
+                                path_literal.value, str
+                            ):
                                 routes.add((method, path_literal.value))
         return routes
 
@@ -359,6 +381,7 @@ class TestSchemaCoverage:
         """Every OpenAPI path (except SPA fallback) has a corresponding route handler."""
         import ast
         import os
+
         routes_dir = os.path.join(os.path.dirname(__file__), "..", "routes")
         registered: set[str] = set()
         for fname in sorted(os.listdir(routes_dir)):
@@ -372,13 +395,17 @@ class TestSchemaCoverage:
                     continue
             for node in ast.walk(tree):
                 if isinstance(node, ast.Call):
-                    if (isinstance(node.func, ast.Attribute)
-                            and isinstance(node.func.value, ast.Name)
-                            and node.func.value.id in ("router", "app")
-                            and node.func.attr in ("get", "post", "put", "patch", "delete")):
+                    if (
+                        isinstance(node.func, ast.Attribute)
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in ("router", "app")
+                        and node.func.attr in ("get", "post", "put", "patch", "delete")
+                    ):
                         if node.args:
                             path_literal = node.args[0]
-                            if isinstance(path_literal, ast.Constant) and isinstance(path_literal.value, str):
+                            if isinstance(path_literal, ast.Constant) and isinstance(
+                                path_literal.value, str
+                            ):
                                 registered.add(path_literal.value)
         schema = get_openapi_schema()
         orphan = []

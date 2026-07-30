@@ -19,7 +19,7 @@ describe("AuthProvider", () => {
     render(
       <AuthProvider>
         <TestConsumer />
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     // After initial render + effect, should be loaded with no user
@@ -33,7 +33,9 @@ describe("AuthProvider", () => {
 describe("useAuth", () => {
   it("throws when used outside AuthProvider", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => render(<TestConsumer />)).toThrow("useAuth must be used within AuthProvider");
+    expect(() => render(<TestConsumer />)).toThrow(
+      "useAuth must be used within AuthProvider",
+    );
     spy.mockRestore();
   });
 });

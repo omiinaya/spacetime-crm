@@ -6,7 +6,7 @@ The health endpoint test requires mocking the STDB HTTP client.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 import main
 
@@ -94,11 +94,15 @@ class TestLifespan:
         original_tasks = list(main._scheduler_tasks)
         main._scheduler_tasks.clear()
 
-        with patch("scheduler.SCHEDULED_TASKS", {
-            "test_task": (lambda i: asyncio.sleep(0), 100),
-        }):
+        with patch(
+            "scheduler.SCHEDULED_TASKS",
+            {
+                "test_task": (lambda i: asyncio.sleep(0), 100),
+            },
+        ):
             with patch.object(asyncio, "create_task", mock_create_task):
                 with patch("builtins.print"):
+
                     async def run_lifespan():
                         async with main.lifespan(main.app):
                             pass
@@ -137,6 +141,7 @@ class TestLifespan:
         try:
             with patch("builtins.print"):
                 with patch("asyncio.gather", new_callable=AsyncMock) as mock_gather:
+
                     async def run_lifespan():
                         async with main.lifespan(main.app):
                             pass
@@ -208,12 +213,10 @@ class TestModuleStructure:
 
     def test_cors_middleware_added(self) -> None:
         """Should have CORS middleware configured."""
-        middleware_types = [
-            type(m.cls) if hasattr(m, "cls") else type(m)
-            for m in main.app.user_middleware
-        ]
-        # Check that CORSMiddleware is in the middleware stack
         from fastapi.middleware.cors import CORSMiddleware
+
+        # Verify at least one middleware is attached
+        assert len(main.app.user_middleware) > 0
 
         found = False
         for m in main.app.user_middleware:

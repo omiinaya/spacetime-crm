@@ -21,9 +21,7 @@ interface UsePaginationReturn {
   reset: () => void;
 }
 
-export function usePagination(
-  initialLimit: number = 25
-): UsePaginationReturn {
+export function usePagination(initialLimit: number = 25): UsePaginationReturn {
   const [state, setState] = useState<PaginationState>({
     offset: 0,
     limit: initialLimit,
@@ -31,7 +29,8 @@ export function usePagination(
   });
 
   const page = state.limit > 0 ? Math.floor(state.offset / state.limit) + 1 : 1;
-  const totalPages = state.limit > 0 ? Math.max(1, Math.ceil(state.total / state.limit)) : 1;
+  const totalPages =
+    state.limit > 0 ? Math.max(1, Math.ceil(state.total / state.limit)) : 1;
   const hasNext = state.offset + state.limit < state.total;
   const hasPrev = state.offset > 0;
 

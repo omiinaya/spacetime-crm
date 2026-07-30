@@ -129,7 +129,9 @@ class TestComputedUrlProperties:
     def test_stdb_urls_with_all_custom(self) -> None:
         from config import Settings
 
-        s = Settings(stdb_host="10.0.0.1", stdb_port=5000, stdb_db="production", _env_file=None)
+        s = Settings(
+            stdb_host="10.0.0.1", stdb_port=5000, stdb_db="production", _env_file=None
+        )
         assert s.stdb_sql_url == "http://10.0.0.1:5000/v1/database/production/sql"
         assert s.stdb_call_url == "http://10.0.0.1:5000/v1/database/production/call"
 
@@ -173,4 +175,6 @@ class TestEnvVarOverrides:
 
         s = Settings()
         assert s.stdb_sql_url == "http://staging.local:4000/v1/database/staging-crm/sql"
-        assert s.stdb_call_url == "http://staging.local:4000/v1/database/staging-crm/call"
+        assert (
+            s.stdb_call_url == "http://staging.local:4000/v1/database/staging-crm/call"
+        )
