@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../lib/query-client';
 import { api, AuditLogEntry } from '../lib/api';
 import { History, Filter, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { toast } from 'sonner';
 
 const ENTITY_OPTIONS = [
   '',
@@ -59,13 +60,17 @@ export default function AuditLogPage() {
   const [entityFilter, setEntityFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('');
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: [
       'audit-log',
       { entity: entityFilter || undefined, action: actionFilter || undefined },
     ],
     queryFn: () => api.auditLog.list(200, entityFilter || undefined, actionFilter || undefined),
   });
+
+  useEffect(() => {
+    if (error) toast.error('Failed to load audit log');
+  }, [error]);
 
   const entries = data?.entries ?? [];
 

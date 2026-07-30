@@ -71,6 +71,7 @@ export default function DashboardPage({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
+    onError: () => toast.error('Failed to update appointment status'),
   });
 
   const markPaid = useMutation({
@@ -86,6 +87,7 @@ export default function DashboardPage({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
+    onError: () => toast.error('Failed to mark invoice as paid'),
   });
 
   const claimTicket = useMutation({
