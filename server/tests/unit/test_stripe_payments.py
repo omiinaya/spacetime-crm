@@ -358,7 +358,9 @@ class TestCreateSetupIntent:
         """Should return None when StripeError occurs."""
         from stripe import StripeError
 
-        with patch.object(stripe_lib.SetupIntent, "create", side_effect=StripeError("Setup failed")):
+        with patch.object(
+            stripe_lib.SetupIntent, "create", side_effect=StripeError("Setup failed")
+        ):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import create_setup_intent
 
@@ -446,7 +448,9 @@ class TestCreatePaymentIntent:
         """Should return empty dict when StripeError occurs."""
         from stripe import StripeError
 
-        with patch.object(stripe_lib.PaymentIntent, "create", side_effect=StripeError("Card declined")):
+        with patch.object(
+            stripe_lib.PaymentIntent, "create", side_effect=StripeError("Card declined")
+        ):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import create_payment_intent
 
