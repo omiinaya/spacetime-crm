@@ -5,7 +5,6 @@ from __future__ import annotations
 import bcrypt
 import httpx
 import pytest
-
 from tests.helpers.db import (
     _CREATED_ENTITIES,
     ADMIN_EMAIL,

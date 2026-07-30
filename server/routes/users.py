@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from helpers import (
     _call,
     _log_audit,
@@ -35,6 +35,10 @@ async def list_users(
 
 @router.post("/api/users")
 async def create_user(body: UserCreate, user: dict = Depends(require_role("admin"))):
+    # Check for duplicate email
+    existing = await _sql(f"SELECT id FROM \"user\" WHERE email = '{body.email}'")
+    if existing:
+        raise HTTPException(400, f"User with email '{body.email}' already exists")
     await _call(
         "create_user",
         [
@@ -44,7 +48,10 @@ async def create_user(body: UserCreate, user: dict = Depends(require_role("admin
         ],
     )
     await _log_audit(user, "create", "user", body.email, f"role={body.role}")
-    return {"ok": True}
+    # Return the newly created user's ID
+    rows = await _sql(f"SELECT id FROM \"user\" WHERE email = '{body.email}'")
+    new_id = rows[0]["id"] if rows else ""
+    return {"ok": True, "id": new_id}
 
 
 @router.get("/api/users/settings")

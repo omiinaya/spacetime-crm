@@ -112,8 +112,8 @@ def _create_portal_ticket(customer_id: str, admin_headers: dict, tag: str = "") 
         timeout=10,
     )
     data = assert_ok(resp)
-    if "ticket" in data:
-        tid = data["ticket"]["id"]
+    if "id" in data:
+        tid = data["id"]
         _track_entity("ticket", tid)
         return tid
     return ""
@@ -133,8 +133,8 @@ def _create_portal_invoice(customer_id: str, admin_headers: dict, tag: str = "")
         timeout=10,
     )
     data = assert_ok(resp)
-    if "invoice" in data:
-        inv_id = data["invoice"]["id"]
+    if "id" in data:
+        inv_id = data["id"]
         _track_entity("invoice", inv_id)
         return inv_id
     return ""

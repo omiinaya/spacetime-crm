@@ -16,7 +16,7 @@ def is_configured() -> bool:
 def init_stripe() -> None:
     """Initialize the Stripe client with the configured API key."""
     if settings.stripe_secret_key:
-        import stripe as stripe_lib  # noqa: F811
+        import stripe as stripe_lib
 
         stripe_lib.api_key = settings.stripe_secret_key
 

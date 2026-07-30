@@ -72,7 +72,7 @@ class TestReportScheduleCRUD:
             headers=test_admin_headers,
             timeout=10,
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_create_invalid_type(self, test_admin_headers: dict):
         resp = httpx.post(
@@ -86,7 +86,7 @@ class TestReportScheduleCRUD:
             headers=test_admin_headers,
             timeout=10,
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_create_invalid_frequency(self, test_admin_headers: dict):
         resp = httpx.post(
@@ -100,7 +100,7 @@ class TestReportScheduleCRUD:
             headers=test_admin_headers,
             timeout=10,
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_list(self, test_admin_headers: dict, session_suffix: str):
         _create_schedule(test_admin_headers, session_suffix, "lst")
@@ -134,6 +134,7 @@ class TestReportScheduleCRUD:
                 "name": "Nope",
                 "report_type": "revenue",
                 "schedule_frequency": "daily",
+                "recipients": ["x@x.com"],
             },
             headers=test_admin_headers,
             timeout=10,

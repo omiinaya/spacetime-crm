@@ -132,7 +132,15 @@ async def create_invoice(
             },
         )
     )
-    return {"ok": True}
+
+    # Return the newly created invoice's ID
+    recent = _sort(
+        await _sql(f"SELECT id FROM invoices WHERE tenant_id = '{user['tenant_id']}'"),
+        key="id",
+    )
+    new_id = recent[0]["id"] if recent else ""
+
+    return {"ok": True, "id": new_id}
 
 
 @router.get("/api/invoices/summary")
