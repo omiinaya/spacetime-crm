@@ -38,6 +38,7 @@ from models import (
     InvoiceTaxRateUpdate,
 )
 from pdf import html_to_pdf
+from push import send_notification_to_all_staff
 from sms import (
     _customer_phone as _sms_customer_phone,
 )
@@ -99,25 +100,30 @@ async def create_invoice(
     async def _notify():
         cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
         email = _mail_customer_email(cust[0]) if cust else None
-        if email:
-            invs = await _sql("SELECT * FROM invoices LIMIT 1")
-            if invs:
-                inv = invs[0]
-                link = f"{settings.app_url}/portal/"
-                _notify_invoice_created(
-                    email,
-                    inv.get("invoice_number", 0),
-                    float(inv.get("total", 0)),
-                    link,
-                )
+        invs = await _sql("SELECT * FROM invoices LIMIT 1")
+        inv = invs[0] if invs else None
+        if email and inv:
+            link = f"{settings.app_url}/portal/"
+            _notify_invoice_created(
+                email,
+                inv.get("invoice_number", 0),
+                float(inv.get("total", 0)),
+                link,
+            )
         phone = _sms_customer_phone(cust[0]) if cust else None
-        if phone:
-            invs = await _sql("SELECT * FROM invoices LIMIT 1")
-            if invs:
-                inv = invs[0]
-                _sms_invoice_created(
-                    phone, inv.get("invoice_number", 0), float(inv.get("total", 0))
+        if phone and inv:
+            _sms_invoice_created(
+                phone, inv.get("invoice_number", 0), float(inv.get("total", 0))
+            )
+        # Push notification to all admin staff
+        if inv:
+            asyncio.ensure_future(
+                send_notification_to_all_staff(
+                    "New Invoice Created",
+                    f"Invoice #{inv.get('invoice_number', '')} for ${float(inv.get('total', 0)):,.2f}",
+                    url="/",
                 )
+            )
 
     asyncio.ensure_future(_notify())
 

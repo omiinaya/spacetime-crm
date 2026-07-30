@@ -28,6 +28,7 @@ from models import (
     TicketStatusUpdate,
     TicketTimerStart,
 )
+from push import send_notification_to_user
 from sms import (
     _customer_phone as _sms_customer_phone,
 )
@@ -289,6 +290,17 @@ async def update_ticket_status(
             phone = _sms_customer_phone(cust[0]) if cust else None
             if phone:
                 _sms_ticket_status(phone, t.get("ticket_number", 0), t.get("title", ""), status)
+            # Push notification to assigned staff
+            assigned_id = t.get("assigned_user_id", "")
+            if assigned_id:
+                asyncio.ensure_future(
+                    send_notification_to_user(
+                        assigned_id,
+                        f"Ticket #{t.get('ticket_number', '')} {status}",
+                        f"{t.get('title', '')[:80]} — status changed to {status}",
+                        url="/",
+                    )
+                )
 
     asyncio.ensure_future(_notify())
 
