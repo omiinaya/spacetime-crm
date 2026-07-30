@@ -18,6 +18,7 @@ from routes.portal import router as portal_router
 from routes.pos import router as pos_router
 from routes.products import router as products_router
 from routes.purchase_orders import router as purchase_orders_router
+from routes.push import router as push_router
 from routes.recurring_invoices import router as recurring_invoices_router
 from routes.report_schedules import router as report_schedules_router
 from routes.settings import router as settings_router
@@ -46,6 +47,7 @@ def register_routers(app):
     app.include_router(pos_router)
     app.include_router(products_router)
     app.include_router(purchase_orders_router)
+    app.include_router(push_router)
     app.include_router(recurring_invoices_router)
     app.include_router(report_schedules_router)
     app.include_router(settings_router)

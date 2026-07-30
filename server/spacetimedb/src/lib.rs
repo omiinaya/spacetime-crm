@@ -52,6 +52,7 @@ pub mod product_test;
 pub mod purchase_order;
 #[cfg(test)]
 pub mod purchase_order_test;
+pub mod push_subscription;
 pub mod recurring_invoice_rule;
 #[cfg(test)]
 pub mod recurring_invoice_test;

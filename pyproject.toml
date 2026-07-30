@@ -23,6 +23,8 @@ dependencies = [
     "slowapi>=0.1.9",
     "python-multipart>=0.0.9",
     "sanitize>=0.0.1",
+    "pywebpush>=1.14.0",
+    "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]
