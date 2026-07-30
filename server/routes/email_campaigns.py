@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from helpers import _paginated, _sql, require_role
+from helpers import _sql, require_role
 from mail import send_email
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,11 @@ async def send_email_blast(
         # Customers with tickets in the last N days
         days = max(int(body.get("days_since_last", 30)), 1)
         cutoff = int(asyncio.get_event_loop().time() * 1000) - (days * 86400 * 1000)
-        where_clauses.append("id IN (SELECT DISTINCT customer_id FROM ticket WHERE created_at >= " + str(cutoff) + ")")
+        where_clauses.append(
+            "id IN (SELECT DISTINCT customer_id FROM ticket WHERE created_at >= "
+            + str(cutoff)
+            + ")"
+        )
         where_clauses.append("email IS NOT NULL AND email != ''")
     else:
         # 'all' — include anonymous customers with an email
@@ -82,8 +86,7 @@ async def send_email_blast(
             continue
         # Personalize the HTML body with customer name
         name = (
-            f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
-            or "Valued Customer"
+            f"{row.get('first_name', '')} {row.get('last_name', '')}".strip() or "Valued Customer"
         )
         personalized_body = html_body.replace("{{name}}", name).replace("{{email}}", email)
         ok = send_email(email, subject, personalized_body)

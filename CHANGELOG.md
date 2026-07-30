@@ -23,6 +23,15 @@ All notable changes to SpacetimeCRM will be documented in this file.
 - **Gift Cards Admin Page**: Dedicated page (`GiftCardsPage`) with create form, code lookup with full card info, filter tabs (All/Active/Voided), paginated card list with copy-to-clipboard and void actions. Accessible from sidebar navigation.
 - **Email Campaigns**: Admin-only email blast system — compose HTML emails with `{{name}}`/`{{email}}` placeholders, pre-built templates (Promotional, Service Reminder, Seasonal Greeting), customer filter (all/has-email/recent activity), test-send to a single address before full blast. Result summary with sent/failed counts and recipient preview.
 
+### Fixed
+- **Debug print in main.py**: Changed `print("[scheduler] All tasks stopped")` to proper `logger.info()` call. Added `import logging` + `logger = logging.getLogger(__name__)` to main.py.
+- **Author identity enforcement**: Corrected git repo-level user config to `omiinaya <omiinaya@gmail.com>`. Updated memory with the working pattern (`--author` flag, not env vars).
+- **Unused import in email_campaigns.py**: Removed `_paginated` import flagged by linter.
+
+### Tests
+- **Gift card unit tests**: 18 tests covering code generation (prefix, length, uniqueness, alphanumeric), create validation (rejects zero/negative, accepts valid amounts), redeem validation (missing code, invalid amount, active/inactive card, insufficient balance), and mock integration (code passed to reducer).
+- **Email campaign unit tests**: 16 tests covering validation (requires subject/body, placeholder substitution for `{{name}}`/`{{email}}`, default name fallback), send_email mock integration, customer filter SQL clause logic (all, with_email, recent activity).
+
 ## [2.0.0] — 2026-07-30
 
 ### Added

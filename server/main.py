@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -15,6 +16,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+logger = logging.getLogger(__name__)
 
 # ── Background scheduler ───────────────────────────────────
 
@@ -36,7 +39,7 @@ async def lifespan(app: FastAPI):
     for task in _scheduler_tasks:
         task.cancel()
     await asyncio.gather(*_scheduler_tasks, return_exceptions=True)
-    print("[scheduler] All tasks stopped")
+    logger.info("[scheduler] All tasks stopped")
 
 
 # Generate a default JWT secret on startup if none configured
