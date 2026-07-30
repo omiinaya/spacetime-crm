@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from helpers import (
@@ -19,6 +21,7 @@ from models import (
     ProductQuantityUpdate,
     StockTransferRequest,
 )
+from push import send_notification_to_all_staff
 
 router = APIRouter()
 
@@ -213,6 +216,13 @@ async def notify_low_stock(user: dict = Depends(require_role("admin"))):
     if not admin_email:
         return {"ok": False, "error": "Admin user has no email configured"}
     _notify_low_stock(admin_email, low_stock)
+    asyncio.ensure_future(
+        send_notification_to_all_staff(
+            "Low Stock Alert",
+            f"{len(low_stock)} product{'s' if len(low_stock) > 1 else ''} below minimum stock level",
+            url="/products",
+        )
+    )
     await _log_audit(user, "notify", "low_stock", "", f"products={len(low_stock)}")
     return {"ok": True, "count": len(low_stock), "notified": admin_email}
 

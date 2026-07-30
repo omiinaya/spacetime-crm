@@ -112,9 +112,7 @@ async def create_invoice(
             )
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone and inv:
-            _sms_invoice_created(
-                phone, inv.get("invoice_number", 0), float(inv.get("total", 0))
-            )
+            _sms_invoice_created(phone, inv.get("invoice_number", 0), float(inv.get("total", 0)))
         # Push notification to all admin staff
         if inv:
             asyncio.ensure_future(
