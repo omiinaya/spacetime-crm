@@ -437,7 +437,9 @@ export default function DashboardPage({
                       {stats.invoice_item_type_breakdown.map((_entry, idx) => (
                         <Cell
                           key={`cell-${idx}`}
-                          fill={idx === 0 ? 'var(--color-primary)' : 'var(--color-muted-foreground)'}
+                          fill={
+                            idx === 0 ? 'var(--color-primary)' : 'var(--color-muted-foreground)'
+                          }
                         />
                       ))}
                     </Pie>

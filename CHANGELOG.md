@@ -2,6 +2,22 @@
 
 All notable changes to SpacetimeCRM will be documented in this file.
 
+## [2.0.1] — 2026-07-31
+
+### Fixed
+- **Test Collection Errors**: 14 tests failing with `ModuleNotFoundError: No module named 'server'` — added `server/__init__.py` and `pythonpath` in pyproject.toml.
+- **SLA Route Capture**: `GET /api/tickets/sla-targets`, `sla-settings`, `sla-breached` were captured by `{ticket_id}` path parameter due to route ordering. Moved SLA routes before `{ticket_id}` definition.
+- **Entity Creation Return Values**: `POST /api/tickets`, `/api/invoices`, `/api/users` now return `{"ok": true, "id": "..."}` instead of just `{"ok": true}`. Portal test helpers updated to use the `id` field.
+- **Duplicate Email User Creation**: `POST /api/users` now checks for existing email in Python layer before calling STDB reducer, returning `400` instead of `502`.
+- **Report Schedule Validation Tests**: Updated expectations from `400` to `422` to match Pydantic validation behavior.
+- **Silent Error Handling**: DashboardPage appointment/payment mutations now show `toast.error()`. AuditLogPage shows toast on fetch failure.
+
+### Added
+- **Service Type Breakdown**: Revenue reports and dashboard now include invoice/estimate item type breakdown (service vs parts) displayed as PieChart card.
+- **Dependabot Configuration**: `.github/dependabot.yml` for automated Python, npm, and GitHub Actions dependency updates.
+- **EditorConfig**: `.editorconfig` for cross-editor consistency.
+- **Node Version Pin**: `web/.nvmrc` pinning Node 22.
+
 ## [2.0.0] — 2026-07-30
 
 ### Added
