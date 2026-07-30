@@ -42,7 +42,7 @@ interface InvoiceListProps {
   bulkEditMutation: UseMutationResult;
   bulkEditForm: { terms: string; notes: string };
   setBulkEditForm: (f: { terms: string; notes: string }) => void;
-  pag: { offset: number; setOffset: (o: number) => void; total: number; setTotal: (t: number) => void; reset: () => void };
+  pag: any;
   statusMutation: UseMutationResult;
   taxMutation: UseMutationResult;
   taxRates: TaxRate[];
@@ -159,7 +159,7 @@ export default function InvoiceList({
                 size="sm"
                 variant="ghost"
                 className="absolute top-1 right-1 h-6 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-950/30"
-                onClick={() => sendReminderMutation.mutate()}
+                onClick={() => sendReminderMutation.mutate(undefined as any)}
                 disabled={sendReminderMutation.isPending}
               >
                 {sendReminderMutation.isPending ? (
@@ -193,7 +193,7 @@ export default function InvoiceList({
             <option value="overdue">Overdue</option>
             <option value="cancelled">Cancelled</option>
           </Select>
-          <Button size="sm" onClick={() => bulkMutation.mutate()} disabled={bulkMutation.isPending}>
+          <Button size="sm" onClick={() => bulkMutation.mutate(undefined as any)} disabled={bulkMutation.isPending}>
             {bulkMutation.isPending ? (
               <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
             ) : null}
@@ -202,7 +202,7 @@ export default function InvoiceList({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => batchEmailMutation.mutate()}
+            onClick={() => batchEmailMutation.mutate(undefined as any)}
             disabled={batchEmailMutation.isPending}
           >
             {batchEmailMutation.isPending ? (
@@ -505,7 +505,7 @@ export default function InvoiceList({
                         />
                         <Button
                           size="sm"
-                          onClick={() => recordPaymentMutation.mutate()}
+                          onClick={() => recordPaymentMutation.mutate(undefined as any)}
                           disabled={recordPaymentMutation.isPending}
                         >
                           {recordPaymentMutation.isPending ? (
@@ -564,7 +564,7 @@ export default function InvoiceList({
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => bulkEditMutation.mutate()}
+                  onClick={() => bulkEditMutation.mutate(undefined as any)}
                   disabled={
                     bulkEditMutation.isPending || (!bulkEditForm.terms && !bulkEditForm.notes)
                   }

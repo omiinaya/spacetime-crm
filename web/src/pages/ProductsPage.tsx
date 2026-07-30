@@ -193,7 +193,7 @@ export default function ProductsPage() {
     queryKey: ['products', 'transfer-search', transferSearch],
     queryFn: async () => {
       if (!transferSearch) return { products: [] as Product[] };
-      const res = await api.products.list(transferSearch, undefined, 0, 20);
+      const res = await api.products.list(transferSearch, undefined, undefined, 0, 20);
       return res;
     },
     enabled: transferSearch.length >= 1,

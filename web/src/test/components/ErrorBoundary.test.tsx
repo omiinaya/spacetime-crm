@@ -38,13 +38,12 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     expect(screen.getByText('Render error!')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
-  it('recovers after clicking Try Again', async () => {
+  it('recovers after clicking Retry', async () => {
     const user = userEvent.setup();
-
-    render(
+    const { rerender } = render(
       <ErrorBoundary>
         <BrokenComponent shouldThrow />
       </ErrorBoundary>,
@@ -52,14 +51,15 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
 
-    // Re-render with non-throwing children
-    render(
+    // Rerender with non-throwing children — ErrorBoundary still has error state
+    rerender(
       <ErrorBoundary>
         <BrokenComponent />
       </ErrorBoundary>,
     );
 
-    await user.click(screen.getByRole('button', { name: /try again/i }));
+    // Error UI still visible, Retry button still there
+    await user.click(screen.getByRole('button', { name: /retry/i }));
 
     expect(screen.getByText('All good')).toBeInTheDocument();
   });

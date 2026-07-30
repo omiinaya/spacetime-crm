@@ -61,7 +61,8 @@ interface ProductAdjustmentProps {
   setTransferForm: (f: TransferForm) => void;
   transferSearch: string;
   setTransferSearch: (v: string) => void;
-  transferProducts: { products: { id: string; name: string; quantity_on_hand: number }[] } | undefined;
+  transferProducts:
+    { products: { id: string; name: string; quantity_on_hand: number }[] } | undefined;
   transferMutation: UseMutationResult;
   adjustments: Adjustment[];
   fmtDate: (ts: number) => string;
@@ -287,7 +288,7 @@ export default function ProductAdjustment({
             onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
           />
           <Button
-            onClick={() => transferMutation.mutate()}
+            onClick={() => transferMutation.mutate(undefined as any)}
             disabled={!transferForm.destProductId || transferMutation.isPending}
           >
             {transferMutation.isPending ? 'Transferring...' : 'Transfer'}

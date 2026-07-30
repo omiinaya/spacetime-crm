@@ -7,6 +7,7 @@ import {
   FileText,
   CreditCard,
   Calendar,
+  CalendarClock,
   Package,
   FileCheck,
   ShoppingCart,
@@ -67,6 +68,7 @@ const RecurringInvoicesPage = lazy(() => import('./pages/RecurringInvoicesPage')
 const PaymentMethodsPage = lazy(() => import('./pages/PaymentMethodsPage'));
 const PosPage = lazy(() => import('./pages/PosPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const TechnicianSchedulePage = lazy(() => import('./pages/TechnicianSchedulePage'));
 
 type PageId =
   | 'dashboard'
@@ -75,6 +77,7 @@ type PageId =
   | 'invoices'
   | 'payments'
   | 'appointments'
+  | 'tech-schedule'
   | 'products'
   | 'estimates'
   | 'purchase-orders'
@@ -110,6 +113,7 @@ const navItems: NavItem[] = [
   { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard },
   { id: 'appointments', label: 'Appointments', icon: Calendar },
+  { id: 'tech-schedule', label: 'Tech Schedule', icon: CalendarClock },
   { id: 'products', label: 'Products', icon: Package },
   { id: 'estimates', label: 'Estimates', icon: FileCheck },
   { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
@@ -307,6 +311,8 @@ function AppShell() {
                 return <PosPage />;
               case 'appointments':
                 return <AppointmentsPage />;
+              case 'tech-schedule':
+                return <TechnicianSchedulePage />;
               case 'products':
                 return <ProductsPage />;
               case 'estimates':

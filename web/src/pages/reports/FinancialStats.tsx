@@ -183,7 +183,7 @@ export default function FinancialStats({
                   border: '1px solid var(--color-border)',
                   borderRadius: '8px',
                 }}
-                formatter={(value: number) => [`$${Number(value || 0).toFixed(2)}`, 'Revenue']}
+                formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, 'Revenue']}
               />
               <Bar dataKey="revenue" fill="#22c55e" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -253,7 +253,7 @@ export default function FinancialStats({
                   border: '1px solid var(--color-border)',
                   borderRadius: '8px',
                 }}
-                formatter={(value: number) => [value, 'New Customers']}
+                formatter={(value: any) => [value, 'New Customers']}
               />
               <Bar dataKey="new_customers" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>

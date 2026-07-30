@@ -2,7 +2,13 @@ import { apiFetch, buildPaginationParams } from './client';
 import type { Product, InventoryAdjustment } from './types';
 
 export const products = {
-  list: (search?: string, category?: string, location?: string, offset?: number, limit?: number) => {
+  list: (
+    search?: string,
+    category?: string,
+    location?: string,
+    offset?: number,
+    limit?: number,
+  ) => {
     const p = new URLSearchParams();
     if (search) p.set('search', search);
     if (category) p.set('category', category);

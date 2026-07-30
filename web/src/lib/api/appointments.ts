@@ -45,4 +45,13 @@ export const appointments = {
   recurring: {
     list: () => apiFetch<{ series: Appointment[] }>('/appointments/recurring'),
   },
+  byTech: (start: number, end: number) =>
+    apiFetch<{
+      groups: {
+        user_id: string;
+        user_name: string;
+        appointments: Appointment[];
+      }[];
+      unassigned: Appointment[];
+    }>(`/appointments/by-tech?start=${start}&end=${end}`),
 };

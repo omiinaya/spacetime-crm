@@ -1,0 +1,53 @@
+#!/bin/sh
+# commit-msg hook — enforce conventional commit format
+# Installed via: make setup-git-hooks
+#
+# Format: type(scope): description
+# Types: feat, fix, chore, docs, style, refactor, test, perf, ci, build, revert
+# Examples:
+#   feat(customer): add search by email
+#   fix(invoice): correct tax calculation for discounts
+#   docs(readme): update setup instructions
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits and squash merges
+if echo "$COMMIT_MSG" | grep -qE '^(Merge|Squash) '; then
+  exit 0
+fi
+
+# Skip revert commits
+if echo "$COMMIT_MSG" | grep -qE '^revert:'; then
+  exit 0
+fi
+
+# Conventional commit pattern:
+#   type(scope): description
+#   type: description (scope optional)
+#   type!: description (breaking change)
+#   type(scope)!: description (breaking change with scope)
+PATTERN='^(feat|fix|chore|docs|style|refactor|test|perf|ci|build|revert)(\([a-zA-Z0-9._-]+\))?!?:\ .+'
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+  echo ""
+  echo "❌ Invalid commit message format!"
+  echo ""
+  echo "Conventional commit format required:"
+  echo "  type(scope): description"
+  echo ""
+  echo "Valid types: feat, fix, chore, docs, style, refactor, test, perf, ci, build, revert"
+  echo ""
+  echo "Examples:"
+  echo "  feat(customer): add search by email"
+  echo "  fix(invoice): correct tax calculation"
+  echo "  docs: update setup instructions"
+  echo "  refactor(api)!: drop deprecated v1 endpoints"
+  echo ""
+  echo "Your commit message was:"
+  echo "  $COMMIT_MSG"
+  echo ""
+  exit 1
+fi
+
+exit 0

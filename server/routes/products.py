@@ -306,8 +306,9 @@ async def stock_count_sheet(
     user: dict = Depends(require_role("admin", "tech")),
 ):
     """Generate an HTML stock count sheet for printing."""
+    from datetime import UTC, datetime
+
     from jinja2 import Environment, FileSystemLoader
-    from datetime import datetime, timezone
 
     tid = user["tenant_id"]
     rows, _ = await _paginated(tid, "products", offset=0, limit=5000, order_by="name")
@@ -323,6 +324,6 @@ async def stock_count_sheet(
         products=products,
         category=category or None,
         location=location or None,
-        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
     return HTMLResponse(content=html, media_type="text/html")

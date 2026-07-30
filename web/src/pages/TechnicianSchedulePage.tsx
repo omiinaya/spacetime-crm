@@ -16,8 +16,13 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function getStatusBadge(status: string) {
-  const cls = STATUS_COLORS[status.toLowerCase()] || 'bg-slate-500/20 text-slate-400 border-slate-500/30';
-  return <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${cls}`}>{status}</span>;
+  const cls =
+    STATUS_COLORS[status.toLowerCase()] || 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${cls}`}>
+      {status}
+    </span>
+  );
 }
 
 function fmtTime(ts: number) {
@@ -36,15 +41,23 @@ export default function TechnicianSchedulePage() {
   });
 
   const monthStart = currentMonth.getTime();
-  const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59).getTime();
+  const monthEnd = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+  ).getTime();
 
   // Fetch all staff users for the tech selector
   const { data: usersData } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const res = await api.users.list();
-      return res.users.filter((u: { role: string; active: boolean }) =>
-        (u.role === 'admin' || u.role === 'tech') && u.active !== false,
+      return res.users.filter(
+        (u: { role: string; active: boolean }) =>
+          (u.role === 'admin' || u.role === 'tech') && u.active !== false,
       );
     },
     staleTime: 60000,
@@ -61,9 +74,7 @@ export default function TechnicianSchedulePage() {
   const unassigned = data?.unassigned ?? [];
 
   // Get the selected tech's appointments
-  const selectedGroup = selectedTech
-    ? groups.find((g) => g.user_id === selectedTech)
-    : null;
+  const selectedGroup = selectedTech ? groups.find((g) => g.user_id === selectedTech) : null;
   const selectedAppts = selectedGroup?.appointments ?? [];
 
   // Group appointments by day
@@ -74,8 +85,10 @@ export default function TechnicianSchedulePage() {
     byDay[dayKey].push(appt);
   }
 
-  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  const prevMonth = () =>
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  const nextMonth = () =>
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
 
   // Show "This Month" button if not on current month
   const isCurrentMonth =
@@ -90,9 +103,7 @@ export default function TechnicianSchedulePage() {
             <CalendarClock className="h-6 w-6 text-purple-400" />
             Technician Schedule
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            View appointments by technician
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">View appointments by technician</p>
         </div>
       </div>
 
@@ -111,7 +122,13 @@ export default function TechnicianSchedulePage() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
               {!isCurrentMonth && (
-                <Button variant="outline" size="sm" onClick={() => setCurrentMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+                  }
+                >
                   This Month
                 </Button>
               )}
@@ -178,7 +195,10 @@ export default function TechnicianSchedulePage() {
                     {/* Show first few appointments */}
                     <div className="space-y-1">
                       {g.appointments.slice(0, 3).map((a) => (
-                        <div key={a.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div
+                          key={a.id}
+                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
                           <Clock className="h-3 w-3 shrink-0" />
                           <span>{fmtTime(a.start_time)}</span>
                           <span className="truncate">{a.title}</span>
@@ -221,7 +241,11 @@ export default function TechnicianSchedulePage() {
                     </h3>
                     <div className="space-y-2 ml-1">
                       {appts.map((a) => (
-                        <Card key={a.id} className="border-l-4" style={{ borderLeftColor: a.color || 'var(--color-border)' }}>
+                        <Card
+                          key={a.id}
+                          className="border-l-4"
+                          style={{ borderLeftColor: a.color || 'var(--color-border)' }}
+                        >
                           <CardContent className="p-3 flex items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
@@ -232,7 +256,8 @@ export default function TechnicianSchedulePage() {
                               </div>
                               <p className="text-sm font-medium mt-0.5 truncate">{a.title}</p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {a.description?.slice(0, 80)}{a.description?.length > 80 ? '…' : ''}
+                                {a.description?.slice(0, 80)}
+                                {a.description?.length > 80 ? '…' : ''}
                               </p>
                             </div>
                             {a.customer_id && (

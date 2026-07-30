@@ -67,6 +67,56 @@ async def list_appointments(
     return {"appointments": rows, "total": total, "offset": offset, "limit": limit}
 
 
+@router.get("/api/appointments/by-tech")
+async def get_appointments_by_tech(
+    start: int = 0,
+    end: int = 0,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+):
+    """Get appointments grouped by assigned tech for a time range."""
+    tid = user["tenant_id"]
+
+    rows = await _sql(
+        f"SELECT * FROM appointment WHERE tenant_id = '{tid}' AND start_time >= {start} AND end_time <= {end} ORDER BY start_time"
+    )
+
+    # Fetch all users to resolve names
+    user_rows = await _sql(f"SELECT id, name FROM user WHERE tenant_id = '{tid}'")
+    user_map: dict[str, str] = {u["id"]: u["name"] for u in user_rows}
+
+    # Fetch customers for appointment enrichment
+    groups: dict[str, dict] = {}
+    unassigned: list = []
+
+    for appt in rows:
+        uid = appt.get("assigned_user_id", "") or ""
+        # Enrich with customer info
+        if "customer" not in appt:
+            cust = await _sql(
+                f"SELECT first_name, last_name FROM customer WHERE id = '{appt.get('customer_id', '')}'"
+            )
+            appt["customer"] = cust[0] if cust else {}
+        appt["customer_name"] = (
+            f"{appt['customer'].get('first_name', '')} {appt['customer'].get('last_name', '')}".strip()
+        )
+
+        if uid:
+            if uid not in groups:
+                groups[uid] = {
+                    "user_id": uid,
+                    "user_name": user_map.get(uid, "Unknown"),
+                    "appointments": [],
+                }
+            groups[uid]["appointments"].append(appt)
+        else:
+            unassigned.append(appt)
+
+    return {
+        "groups": list(groups.values()),
+        "unassigned": unassigned,
+    }
+
+
 @router.get("/api/appointments/recurring")
 async def list_recurring_series(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),

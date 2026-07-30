@@ -148,8 +148,11 @@ export interface Appointment {
   color: string;
   series_id: string;
   recurrence_rule: string;
+  assigned_user_id: string;
   created_at: number;
   updated_at: number;
+  customer?: { first_name: string; last_name: string };
+  customer_name?: string;
 }
 export interface Product {
   id: string;

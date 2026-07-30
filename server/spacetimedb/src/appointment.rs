@@ -18,6 +18,7 @@ pub struct Appointment {
     pub color: String,
     pub series_id: String,
     pub recurrence_rule: String,
+    pub assigned_user_id: String,
     pub created_at: u64,
     pub updated_at: u64,
 }
@@ -35,6 +36,7 @@ pub fn create_appointment(
     all_day: bool,
     series_id: String,
     recurrence_rule: String,
+    assigned_user_id: String,
 ) {
     let id = super::make_id("appt", ctx);
     let now = super::now_ms(ctx);
@@ -52,6 +54,7 @@ pub fn create_appointment(
         color: String::new(),
         series_id,
         recurrence_rule,
+        assigned_user_id,
         created_at: now,
         updated_at: now,
     });
@@ -93,6 +96,7 @@ pub fn generate_next_occurrence(
             color: parent.color.clone(),
             series_id: series_id.clone(),
             recurrence_rule,
+            assigned_user_id: parent.assigned_user_id.clone(),
             created_at: now,
             updated_at: now,
         });

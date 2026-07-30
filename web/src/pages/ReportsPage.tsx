@@ -307,7 +307,7 @@ export default function ReportsPage() {
                     border: '1px solid var(--color-border)',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [`$${Number(value || 0).toFixed(2)}`, 'Revenue']}
+                  formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, 'Revenue']}
                 />
                 <Bar dataKey="revenue" fill="#22c55e" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -332,7 +332,7 @@ export default function ReportsPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  label={({ payload }: { payload: { status?: string; count?: number } }) => `${payload?.status || ''}: ${payload?.count || 0}`}
+                  label={(entry: any) => `${entry?.payload?.status || ''}: ${entry?.payload?.count || 0}`}
                   labelLine={true}
                 >
                   {ticket_by_status.map((entry) => (
@@ -405,15 +405,17 @@ export default function ReportsPage() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={({ payload }: { payload: { item_type?: string; total?: number } }) =>
-                      `${payload?.item_type || ''}: $${Number(payload?.total || 0).toFixed(0)}`
-                    }
+                    label={(entry: any) => `${entry?.payload?.item_type || ''}: $${Number(entry?.payload?.total || 0).toFixed(0)}`}
                     labelLine={true}
                   >
                     {invoice_item_type_breakdown.map((entry, idx) => (
                       <Cell
                         key={entry.item_type}
-                        fill={['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][idx % 6]}
+                        fill={
+                          ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][
+                            idx % 6
+                          ]
+                        }
                       />
                     ))}
                   </Pie>
@@ -423,7 +425,7 @@ export default function ReportsPage() {
                       border: '1px solid var(--color-border)',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: number, name: string) => [`$${Number(value || 0).toFixed(2)}`, name]}
+                    formatter={(value: any, name: any) => [`$${Number(value || 0).toFixed(2)}`, name]}
                   />
                   <Legend />
                 </PieChart>
@@ -545,7 +547,7 @@ export default function ReportsPage() {
                     border: '1px solid var(--color-border)',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => [value, 'New Customers']}
+                  formatter={(value: any) => [value, 'New Customers']}
                 />
                 <Bar dataKey="new_customers" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>

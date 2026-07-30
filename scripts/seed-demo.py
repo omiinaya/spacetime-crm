@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Seed demo data into SpacetimeCRM."""
 
-
 import httpx
 
 BASE = "http://localhost:8723"

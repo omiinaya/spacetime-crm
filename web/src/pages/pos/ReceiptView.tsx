@@ -68,7 +68,6 @@ export default function ReceiptView({
               try {
                 const { api } = await import('../../lib/api');
                 await api.pos.refund(sale.id);
-                setLastReceipt({
                 queryClient.invalidateQueries({ queryKey: ['pos-sales'] });
                 toast.success('Sale refunded');
               } catch (e) {
