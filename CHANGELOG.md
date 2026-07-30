@@ -21,6 +21,7 @@ All notable changes to SpacetimeCRM will be documented in this file.
 - **POS Gift Card Payment**: New "Gift Card" payment method option with real-time balance lookup. Gift card redeemed automatically on sale completion. Shows balance, insufficient-balance warning, and code entry field.
 - **POS Gift Card Sell**: "Sell Gift Card" toggle button in Sale Details panel — issue gift cards directly from the terminal with amount + optional customer name.
 - **Gift Cards Admin Page**: Dedicated page (`GiftCardsPage`) with create form, code lookup with full card info, filter tabs (All/Active/Voided), paginated card list with copy-to-clipboard and void actions. Accessible from sidebar navigation.
+- **Email Campaigns**: Admin-only email blast system — compose HTML emails with `{{name}}`/`{{email}}` placeholders, pre-built templates (Promotional, Service Reminder, Seasonal Greeting), customer filter (all/has-email/recent activity), test-send to a single address before full blast. Result summary with sent/failed counts and recipient preview.
 
 ## [2.0.0] — 2026-07-30
 

@@ -8,6 +8,7 @@ from routes.checklists import router as checklists_router
 from routes.custom_fields import router as custom_fields_router
 from routes.customers import router as customers_router
 from routes.dashboard import router as dashboard_router
+from routes.email_campaigns import router as email_campaigns_router
 from routes.estimates import router as estimates_router
 from routes.export_import import router as export_import_router
 from routes.gift_cards import router as gift_cards_router
@@ -38,6 +39,7 @@ def register_routers(app):
     app.include_router(custom_fields_router)
     app.include_router(customers_router)
     app.include_router(dashboard_router)
+    app.include_router(email_campaigns_router)
     app.include_router(estimates_router)
     app.include_router(export_import_router)
     app.include_router(gift_cards_router)
