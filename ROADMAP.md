@@ -1,11 +1,11 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** | 2026-07-30 |
-| **Overall completeness:** | ~99% |
+| **Last assessed:** | 2026-07-31 |
+| **Overall completeness:** | ~99.5% |
 | **Total endpoints:** | 102 API routes (26 route files) |
 | **Total STDB artifacts:** | 27 tables + 74 reducers |
 | **Total frontend pages:** | 23 admin + 3 auth + 5 portal = 31 pages |
-| **Total tests:** | 621 (527 backend + 94 frontend) |
+| **Total tests:** | 1,829 (1,735 backend + 94 frontend) |
 
 ---
 
@@ -383,7 +383,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | # | Item | Effort |
 |---|------|--------|
-| 1 | **Dependabot config** — `.github/dependabot.yml` for automated dep updates | 10m |
+| 1 | **Dependabot config** — `.github/dependabot.yml` for automated dep updates | 10m | ✅ Done |
 | 2 | **Docker image CI build** — GitHub workflow that builds and pushes to registry | 30m |
 | 3 | **Deployment workflow** — CI deploy to staging/production after tests pass | 1h |
 | 4 | **Commit message linting** — commitlint or similar | 15m |
@@ -405,8 +405,8 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | Area | Status | Details |
 |------|--------|---------|
-| Rust unit tests | ❌ 18 tests (compile-only) | 70 reducers, 27 tables — no runtime execution |
-| Python backend tests | ✅ 362 tests (27 files) | All 25 route + spec modules covered |
+| Rust unit tests | ✅ 134 tests (4 files) | 74 reducers, 27 tables — via STDB integration |
+| Python backend tests | ✅ 1,735 tests (49 files) | All 25 route + spec modules covered |
 | TypeScript frontend tests | ✅ 94 tests (13 suites) | UI components + 5 page tests |
 | E2E tests | ✅ 33 tests (5 suites) | Playwright: Nav, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test, lint |
@@ -508,7 +508,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | **8: Feature Additions** | ~15 small features + ~9 larger features | **~15h** | 🟢 LOW |
 || **9: Infrastructure** | ✅ Reverse proxy + TLS + prod compose + env template done (~2h saved). Remaining: structured logging, Dockerfile healthcheck, CI/CD, dev tooling | **~2h** | 🟡 MEDIUM |
 | **Test coverage** | Negative tests, concurrent tests, Rust runtime tests, load tests | **~6h** | 🟡 MEDIUM |
-| **Overall remaining** | **~30 hours** | | |
+| **Overall remaining** | **~20 hours** | | |
 
 ---
 

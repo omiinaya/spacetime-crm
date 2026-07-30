@@ -1,18 +1,37 @@
+# Dependabot configuration for automatic dependency updates
 version: 2
 updates:
-  - package-ecosystem: "cargo"
-    directory: "/server/spacetimedb"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "npm"
-    directory: "/web"
-    schedule:
-      interval: "weekly"
+  # Python / Pip dependencies
   - package-ecosystem: "pip"
     directory: "/server"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+
+  # npm dependencies (frontend)
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "javascript"
+
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "ci"
