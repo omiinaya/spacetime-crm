@@ -169,6 +169,7 @@ async def import_products_csv(
             qoh = float(row.get("quantity_on_hand", 0) or 0)
             qc = float(row.get("quantity_committed", 0) or 0)
             min_stock = float(row.get("min_stock", 0) or 0)
+            reorder_quantity = float(row.get("reorder_quantity", 0) or 0)
             location = row.get("location", "").strip()
             active = (row.get("active", "true") or "true").strip().lower() in (
                 "true",
@@ -195,6 +196,7 @@ async def import_products_csv(
                         qoh,
                         qc,
                         min_stock,
+                        reorder_quantity,
                         location,
                         active,
                         created_at,
@@ -215,6 +217,7 @@ async def import_products_csv(
                         cost,
                         qoh,
                         min_stock,
+                        reorder_quantity,
                         location,
                     ],
                 )

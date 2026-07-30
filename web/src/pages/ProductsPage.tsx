@@ -35,6 +35,9 @@ const emptyForm: Partial<Product> = {
   price: 0,
   cost: 0,
   quantity_on_hand: 0,
+  min_stock: 0,
+  reorder_quantity: 0,
+  location: '',
 };
 
 const reasonColors: Record<string, string> = {
@@ -620,6 +623,12 @@ export default function ProductsPage() {
                     >
                       {selectedProduct.min_stock}
                     </span>
+                  </div>
+                )}
+                {selectedProduct.reorder_quantity > 0 && (
+                  <div className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                    <span>Reorder Qty:</span>
+                    <span className="font-medium">{selectedProduct.reorder_quantity}</span>
                   </div>
                 )}
                 <p className="text-sm">

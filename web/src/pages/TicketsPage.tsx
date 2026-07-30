@@ -31,7 +31,12 @@ import { usePagination } from '../lib/usePagination';
 import Pagination from '../components/Pagination';
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 const PAGE_SIZE = 25;
@@ -105,10 +110,10 @@ export default function TicketsPage() {
   const customers = data?.customers ?? [];
 
   const printTicket = (t: Ticket) => {
-    const win = window.open("", "_blank");
+    const win = window.open('', '_blank');
     if (!win) return;
     const cust = customers.find((c) => c.id === t.customer_id);
-    const custName = cust ? `${cust.first_name} ${cust.last_name}` : "N/A";
+    const custName = cust ? `${cust.first_name} ${cust.last_name}` : 'N/A';
     const created = new Date(t.created_at).toLocaleString();
     const updated = new Date(t.updated_at).toLocaleString();
     win.document.write(`
@@ -142,14 +147,14 @@ export default function TicketsPage() {
             <div class="field"><span class="label">Title:</span><span class="value">${escapeHtml(t.title)}</span></div>
             <div class="field"><span class="label">Status:</span><span class="value">${t.status}</span></div>
             <div class="field"><span class="label">Priority:</span><span class="value">${t.priority}</span></div>
-            <div class="field"><span class="label">Description:</span><span class="value">${escapeHtml(t.description || "None")}</span></div>
+            <div class="field"><span class="label">Description:</span><span class="value">${escapeHtml(t.description || 'None')}</span></div>
           </div>
           <div class="section">
             <h3>Device Info</h3>
-            <div class="field"><span class="label">Type:</span><span class="value">${escapeHtml(t.device_type || "N/A")}</span></div>
-            <div class="field"><span class="label">Model:</span><span class="value">${escapeHtml(t.device_model || "N/A")}</span></div>
-            <div class="field"><span class="label">Serial:</span><span class="value">${escapeHtml(t.device_serial || "N/A")}</span></div>
-            <div class="field"><span class="label">IMEI:</span><span class="value">${escapeHtml(t.device_imei || "N/A")}</span></div>
+            <div class="field"><span class="label">Type:</span><span class="value">${escapeHtml(t.device_type || 'N/A')}</span></div>
+            <div class="field"><span class="label">Model:</span><span class="value">${escapeHtml(t.device_model || 'N/A')}</span></div>
+            <div class="field"><span class="label">Serial:</span><span class="value">${escapeHtml(t.device_serial || 'N/A')}</span></div>
+            <div class="field"><span class="label">IMEI:</span><span class="value">${escapeHtml(t.device_imei || 'N/A')}</span></div>
           </div>
           <script>setTimeout(function(){ window.print(); }, 500);<\\/script>
         </body>
@@ -511,7 +516,12 @@ export default function TicketsPage() {
                 <CardTitle>
                   #{selectedTicket.ticket_number} — {selectedTicket.title}
                 </CardTitle>
-                <Button size="sm" variant="outline" onClick={() => printTicket(selectedTicket)} title="Print ticket summary">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => printTicket(selectedTicket)}
+                  title="Print ticket summary"
+                >
                   <Printer className="h-3.5 w-3.5" />
                 </Button>
               </CardHeader>

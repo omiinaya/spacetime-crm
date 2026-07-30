@@ -1,11 +1,11 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** | 2026-07-07 |
-| **Overall completeness:** | ~96% |
-| **Total endpoints:** | 99 API routes (25 route files) |
-| **Total STDB artifacts:** | 27 tables + 73 reducers |
+| **Last assessed:** | 2026-07-30 |
+| **Overall completeness:** | ~97% |
+| **Total endpoints:** | 101 API routes (26 route files) |
+| **Total STDB artifacts:** | 27 tables + 74 reducers |
 | **Total frontend pages:** | 22 admin + 3 auth + 5 portal = 30 pages |
-| **Total tests:** | 597 (503 backend + 94 frontend) |
+| **Total tests:** | 601 (507 backend + 94 frontend) |
 
 ---
 

@@ -14,6 +14,7 @@ interface ProductFormData {
   cost?: number;
   quantity_on_hand?: number;
   min_stock?: number;
+  reorder_quantity?: number;
   location?: string;
 }
 
@@ -104,6 +105,12 @@ export default function ProductForm({
           type="number"
           value={form.min_stock ?? 0}
           onChange={(e) => setForm({ ...form, min_stock: parseFloat(e.target.value) || 0 })}
+        />
+        <Input
+          placeholder="Reorder qty"
+          type="number"
+          value={form.reorder_quantity ?? 0}
+          onChange={(e) => setForm({ ...form, reorder_quantity: parseFloat(e.target.value) || 0 })}
         />
         <Input
           placeholder="Location"

@@ -186,6 +186,7 @@ class ProductCreate(BaseModel):
     cost: float = Field(default=0, ge=0)
     quantity_on_hand: float = Field(default=0, ge=0)
     min_stock: float = Field(default=0, ge=0)
+    reorder_quantity: float = Field(default=0, ge=0)
     location: str = Field(default="", max_length=255)
     active: bool = True
 

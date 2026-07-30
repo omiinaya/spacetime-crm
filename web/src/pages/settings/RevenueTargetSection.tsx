@@ -23,8 +23,7 @@ export default function RevenueTargetSection() {
   }, [data]);
 
   const mutation = useMutation({
-    mutationFn: () =>
-      api.settings.app.save({ revenue_target: parseFloat(target) || 0 }),
+    mutationFn: () => api.settings.app.save({ revenue_target: parseFloat(target) || 0 }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'app'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
@@ -55,10 +54,7 @@ export default function RevenueTargetSection() {
             onChange={(e) => setTarget(e.target.value)}
             placeholder="25000"
           />
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || isLoading}
-          >
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || isLoading}>
             <Save className="h-4 w-4 mr-1" />
             Save
           </Button>

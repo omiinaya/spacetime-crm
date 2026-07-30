@@ -22,6 +22,8 @@ pub struct Product {
     pub active: bool,
     pub created_at: u64,
     pub updated_at: u64,
+    #[default(0.0)]
+    pub reorder_quantity: f64,
 }
 
 #[spacetimedb::reducer]
@@ -37,6 +39,7 @@ pub fn create_product(
     cost: f64,
     quantity_on_hand: f64,
     min_stock: f64,
+    reorder_quantity: f64,
     location: String,
 ) {
     let id = super::make_id("prod", ctx);
@@ -55,6 +58,7 @@ pub fn create_product(
         quantity_committed: 0.0,
         quantity_available: quantity_on_hand,
         min_stock,
+        reorder_quantity,
         location,
         active: true,
         created_at: now,
@@ -92,6 +96,7 @@ pub fn update_product(
     price: f64,
     cost: f64,
     min_stock: f64,
+    reorder_quantity: f64,
     location: String,
 ) {
     if let Some(p) = ctx.db.products().id().find(&id) {
@@ -104,6 +109,7 @@ pub fn update_product(
             price,
             cost,
             min_stock,
+            reorder_quantity,
             location,
             updated_at: super::now_ms(ctx),
             ..p
@@ -126,6 +132,7 @@ pub fn import_product(
     quantity_on_hand: f64,
     quantity_committed: f64,
     min_stock: f64,
+    reorder_quantity: f64,
     location: String,
     active: bool,
     created_at: u64,
@@ -146,6 +153,7 @@ pub fn import_product(
         quantity_committed,
         quantity_available,
         min_stock,
+        reorder_quantity,
         location,
         active,
         created_at,

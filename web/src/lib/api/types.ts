@@ -164,6 +164,7 @@ export interface Product {
   quantity_committed: number;
   quantity_available: number;
   min_stock: number;
+  reorder_quantity: number;
   location: string;
   active: boolean;
   created_at: number;

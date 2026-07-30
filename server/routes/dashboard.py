@@ -114,6 +114,7 @@ async def dashboard_stats(
     )
     monthly_revenue = round(monthly_revenue, 2)
     from app_config import get_config as _app_get
+
     app_cfg = _app_get()
     revenue_target = app_cfg.get("revenue_target", 25000.0)
 

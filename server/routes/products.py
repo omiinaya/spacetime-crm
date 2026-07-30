@@ -84,6 +84,7 @@ async def create_product(
             body.cost,
             body.quantity_on_hand,
             body.min_stock,
+            body.reorder_quantity,
             body.location,
         ],
     )
@@ -130,6 +131,7 @@ async def update_product(
             body.price,
             body.cost,
             body.min_stock,
+            body.reorder_quantity,
             body.location,
         ],
     )
