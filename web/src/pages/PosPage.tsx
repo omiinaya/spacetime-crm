@@ -30,6 +30,8 @@ import {
   FileDown,
   Lock,
   Unlock,
+  Gift,
+  TicketCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth';
@@ -54,7 +56,6 @@ export default function PosPage() {
   const [customerName, setCustomerName] = useState('Walk-in');
   const [customerId, setCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
   const [amountTendered, setAmountTendered] = useState('');
   const [taxRate, setTaxRate] = useState('8.25');
   const [discount, setDiscount] = useState('0');
@@ -70,6 +71,16 @@ export default function PosPage() {
   const [locked, setLocked] = useState(false);
   const pinRef = useRef<HTMLInputElement>(null);
   const { user, token } = useAuth();
+
+  // ── Gift card state ──
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'gift_card'>('cash');
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null);
+  const [giftCardBalanceLoading, setGiftCardBalanceLoading] = useState(false);
+  const [showSellGiftCard, setShowSellGiftCard] = useState(false);
+  const [sellGiftCardAmount, setSellGiftCardAmount] = useState('');
+  const [sellGiftCardCustomer, setSellGiftCardCustomer] = useState('');
+  const [sellGiftCardLoading, setSellGiftCardLoading] = useState(false);
 
   // ── Check if user has a PIN set ──
   const [hasPin, setHasPin] = useState<boolean | null>(null);
@@ -159,6 +170,22 @@ export default function PosPage() {
       return;
     }
 
+    // Validate gift card payment
+    if (paymentMethod === 'gift_card') {
+      if (!giftCardCode.trim()) {
+        toast.error('Enter a gift card code');
+        return;
+      }
+      if (giftCardBalance === null) {
+        toast.error('Look up the gift card balance first');
+        return;
+      }
+      if (giftCardBalance < total) {
+        toast.error('Insufficient gift card balance');
+        return;
+      }
+    }
+
     // 1. Create the sale
     const createRes = await api.pos.create({
       customer_id: customerId,
@@ -193,6 +220,16 @@ export default function PosPage() {
       });
     }
 
+    // 3b. If paying with gift card, redeem it
+    if (paymentMethod === 'gift_card') {
+      try {
+        await api.giftCards.redeem({ code: giftCardCode.trim(), amount: total });
+      } catch {
+        toast.error('Gift card redemption failed — sale created but payment not collected');
+        // Continue so the receipt shows the sale, but note the payment issue
+      }
+    }
+
     // 4. Fetch completed receipt
     const detailRes = await api.pos.get(saleId);
     setLastReceipt({
@@ -210,6 +247,70 @@ export default function PosPage() {
     queryClient.invalidateQueries({ queryKey: ['pos-sales'] });
     toast.success(`Sale complete — Receipt #${detailRes.sale.receipt_number}`);
   }, [cart, customerName, paymentMethod, amountTendered, taxRate, discount, queryClient]);
+
+  // ── Gift card lookup ──
+  const handleGiftCardLookup = useCallback(async () => {
+    const code = giftCardCode.trim().toUpperCase();
+    if (!code) {
+      toast.error('Enter a gift card code');
+      return;
+    }
+    setGiftCardBalanceLoading(true);
+    setGiftCardBalance(null);
+    try {
+      const res = await api.giftCards.lookup(code);
+      if (!res.gift_card.active) {
+        toast.error('Gift card is no longer active');
+        return;
+      }
+      if (res.gift_card.remaining_balance <= 0) {
+        toast.error('Gift card has no remaining balance');
+        return;
+      }
+      setGiftCardBalance(res.gift_card.remaining_balance);
+      toast.success(`Balance: $${res.gift_card.remaining_balance.toFixed(2)}`);
+    } catch {
+      toast.error('Gift card not found');
+    } finally {
+      setGiftCardBalanceLoading(false);
+    }
+  }, [giftCardCode]);
+
+  // ── Sell gift card ──
+  const handleSellGiftCard = useCallback(async () => {
+    const amount = parseFloat(sellGiftCardAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Enter a valid amount');
+      return;
+    }
+    setSellGiftCardLoading(true);
+    try {
+      const res = await api.giftCards.create({
+        amount,
+        customer_name: sellGiftCardCustomer || 'Walk-in',
+      });
+      if (res.ok) {
+        toast.success(
+          `Gift card sold: ${res.gift_card.code} — $${amount.toFixed(2)}`,
+        );
+        setSellGiftCardAmount('');
+        setSellGiftCardCustomer('');
+        setShowSellGiftCard(false);
+      }
+    } catch {
+      toast.error('Failed to sell gift card');
+    } finally {
+      setSellGiftCardLoading(false);
+    }
+  }, [sellGiftCardAmount, sellGiftCardCustomer]);
+
+  // ── Reset gift card state on payment method change ──
+  useEffect(() => {
+    if (paymentMethod !== 'gift_card') {
+      setGiftCardCode('');
+      setGiftCardBalance(null);
+    }
+  }, [paymentMethod]);
 
   // ── Add to cart from search result ──
   const addToCart = useCallback(
@@ -673,6 +774,53 @@ export default function PosPage() {
               <CardTitle className="text-sm">Sale Details</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="flex gap-2 mb-3">
+                <Button
+                  size="sm"
+                  variant={showSellGiftCard ? 'default' : 'outline'}
+                  className="text-xs"
+                  onClick={() => setShowSellGiftCard(!showSellGiftCard)}
+                >
+                  <Gift className="w-3 h-3 mr-1" />
+                  {showSellGiftCard ? 'Cancel' : 'Sell Gift Card'}
+                </Button>
+              </div>
+
+              {showSellGiftCard && (
+                <div className="border rounded-lg p-3 mb-3 space-y-2 bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground">Sell a Gift Card</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Amount $"
+                      value={sellGiftCardAmount}
+                      onChange={(e) => setSellGiftCardAmount(e.target.value)}
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Customer name (optional)"
+                      value={sellGiftCardCustomer}
+                      onChange={(e) => setSellGiftCardCustomer(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSellGiftCard}
+                      disabled={sellGiftCardLoading || !sellGiftCardAmount || parseFloat(sellGiftCardAmount) <= 0}
+                    >
+                      {sellGiftCardLoading ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Gift className="w-3 h-3" />
+                      )}
+                      Issue
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="relative">
                   <label className="text-xs text-muted-foreground mb-1 block">Customer</label>
@@ -752,7 +900,53 @@ export default function PosPage() {
                     >
                       <CreditCard className="w-3 h-3 mr-1" /> Card
                     </Button>
+                    <Button
+                      size="sm"
+                      variant={paymentMethod === 'gift_card' ? 'default' : 'outline'}
+                      className="flex-1 text-xs"
+                      onClick={() => setPaymentMethod('gift_card')}
+                    >
+                      <Gift className="w-3 h-3 mr-1" /> Gift
+                    </Button>
                   </div>
+                  {paymentMethod === 'gift_card' && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex gap-1">
+                        <Input
+                          placeholder="Gift card code"
+                          value={giftCardCode}
+                          onChange={(e) => {
+                            setGiftCardCode(e.target.value.toUpperCase());
+                            setGiftCardBalance(null);
+                          }}
+                          className="flex-1 text-sm uppercase"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleGiftCardLookup}
+                          disabled={giftCardBalanceLoading || !giftCardCode.trim()}
+                        >
+                          {giftCardBalanceLoading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <TicketCheck className="w-3 h-3" />
+                          )}
+                          Check
+                        </Button>
+                      </div>
+                      {giftCardBalance !== null && (
+                        <p className="text-xs text-green-600 font-medium">
+                          Balance: ${giftCardBalance.toFixed(2)}
+                        </p>
+                      )}
+                      {giftCardBalance !== null && giftCardBalance < total && (
+                        <p className="text-xs text-red-500">
+                          Insufficient balance — need ${(total - giftCardBalance).toFixed(2)} more
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

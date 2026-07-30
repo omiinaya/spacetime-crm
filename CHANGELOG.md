@@ -17,6 +17,10 @@ All notable changes to SpacetimeCRM will be documented in this file.
 - **Dependabot Configuration**: `.github/dependabot.yml` for automated Python, npm, and GitHub Actions dependency updates.
 - **EditorConfig**: `.editorconfig` for cross-editor consistency.
 - **Node Version Pin**: `web/.nvmrc` pinning Node 22.
+- **Gift Card Management**: Full STDB table with 5 reducers, 6 API routes (create/lookup/list/redeem/void/by-code), TypeScript client, and admin page with filter/search/copy-code/void. Integrated into POS workflow with gift card sell and redeem.
+- **POS Gift Card Payment**: New "Gift Card" payment method option with real-time balance lookup. Gift card redeemed automatically on sale completion. Shows balance, insufficient-balance warning, and code entry field.
+- **POS Gift Card Sell**: "Sell Gift Card" toggle button in Sale Details panel — issue gift cards directly from the terminal with amount + optional customer name.
+- **Gift Cards Admin Page**: Dedicated page (`GiftCardsPage`) with create form, code lookup with full card info, filter tabs (All/Active/Voided), paginated card list with copy-to-clipboard and void actions. Accessible from sidebar navigation.
 
 ## [2.0.0] — 2026-07-30
 

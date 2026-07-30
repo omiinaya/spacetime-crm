@@ -28,6 +28,7 @@ import {
   ListChecks,
   Building2,
   Repeat,
+  Gift,
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { api, DashboardStats } from './lib/api';
@@ -66,6 +67,7 @@ const ChecklistTemplatesPage = lazy(() => import('./pages/ChecklistTemplatesPage
 const TenantsPage = lazy(() => import('./pages/TenantsPage'));
 const RecurringInvoicesPage = lazy(() => import('./pages/RecurringInvoicesPage'));
 const PaymentMethodsPage = lazy(() => import('./pages/PaymentMethodsPage'));
+const GiftCardsPage = lazy(() => import('./pages/GiftCardsPage'));
 const PosPage = lazy(() => import('./pages/PosPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const TechnicianSchedulePage = lazy(() => import('./pages/TechnicianSchedulePage'));
@@ -92,7 +94,8 @@ type PageId =
   | 'settings'
   | 'tenants'
   | 'recurring-invoices'
-  | 'payment-methods';
+  | 'payment-methods'
+  | 'gift-cards';
 
 type PortalPage = 'dashboard' | 'tickets' | 'invoices' | 'appointments';
 
@@ -112,6 +115,7 @@ const navItems: NavItem[] = [
   { id: 'recurring-invoices', label: 'Recurring', icon: Repeat },
   { id: 'payments', label: 'Payments', icon: CreditCard },
   { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard },
+  { id: 'gift-cards', label: 'Gift Cards', icon: Gift },
   { id: 'appointments', label: 'Appointments', icon: Calendar },
   { id: 'tech-schedule', label: 'Tech Schedule', icon: CalendarClock },
   { id: 'products', label: 'Products', icon: Package },
@@ -307,6 +311,8 @@ function AppShell() {
                 return <PaymentsPage />;
               case 'payment-methods':
                 return <PaymentMethodsPage />;
+              case 'gift-cards':
+                return <GiftCardsPage />;
               case 'pos':
                 return <PosPage />;
               case 'appointments':
