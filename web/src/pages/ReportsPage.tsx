@@ -332,7 +332,9 @@ export default function ReportsPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  label={(entry: any) => `${entry?.payload?.status || ''}: ${entry?.payload?.count || 0}`}
+                  label={(entry: any) =>
+                    `${entry?.payload?.status || ''}: ${entry?.payload?.count || 0}`
+                  }
                   labelLine={true}
                 >
                   {ticket_by_status.map((entry) => (
@@ -405,7 +407,9 @@ export default function ReportsPage() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={(entry: any) => `${entry?.payload?.item_type || ''}: $${Number(entry?.payload?.total || 0).toFixed(0)}`}
+                    label={(entry: any) =>
+                      `${entry?.payload?.item_type || ''}: $${Number(entry?.payload?.total || 0).toFixed(0)}`
+                    }
                     labelLine={true}
                   >
                     {invoice_item_type_breakdown.map((entry, idx) => (
@@ -425,7 +429,10 @@ export default function ReportsPage() {
                       border: '1px solid var(--color-border)',
                       borderRadius: '8px',
                     }}
-                    formatter={(value: any, name: any) => [`$${Number(value || 0).toFixed(2)}`, name]}
+                    formatter={(value: any, name: any) => [
+                      `$${Number(value || 0).toFixed(2)}`,
+                      name,
+                    ]}
                   />
                   <Legend />
                 </PieChart>

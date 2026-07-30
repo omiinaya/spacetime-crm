@@ -43,7 +43,20 @@ async def lifespan(app: FastAPI):
 if settings.jwt_secret == "change-me-to-a-random-secret":
     settings.jwt_secret = secrets.token_hex(32)
 
-app = FastAPI(title="SpacetimeCRM", lifespan=lifespan)
+app = FastAPI(
+    title="SpacetimeCRM",
+    description="RepairShopr-inspired CRM built on SpacetimeDB — customers, tickets, invoicing, appointments, inventory, and POS.",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
+    contact={
+        "name": "SpacetimeCRM",
+        "url": "https://github.com/omiinaya/spacetime-crm",
+    },
+    license_info={"name": "MIT"},
+)
 
 app.add_middleware(
     CORSMiddleware,

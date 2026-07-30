@@ -1,7 +1,7 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
 | **Last assessed:** | 2026-07-30 |
-| **Overall completeness:** | ~98.5% |
+| **Overall completeness:** | ~99% |
 | **Total endpoints:** | 102 API routes (26 route files) |
 | **Total STDB artifacts:** | 27 tables + 74 reducers |
 | **Total frontend pages:** | 23 admin + 3 auth + 5 portal = 31 pages |
@@ -354,13 +354,13 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | # | Feature | Effort | Priority |
 |---|---------|--------|----------|
-| 1 | **Bin/shelf location tracking** — `location` field exists on products already, add search/filter by location | 30m | 🟢 Quick |
+| 1 | **Bin/shelf location tracking** — `location` field exists on products already, add search/filter by location | 30m | 🟢 Quick | ✅ Done |
 | 2 | **Inventory transfer between locations** — Transfer stock between bin locations | 30m | 🟢 Quick |
 | 3 | **Stock count sheets** — Generate printable count sheets with expected quantities | 1h | 🟡 Medium |
 | 4 | **POS gift cards** — Sell/redeem gift cards | 2h | 🟡 Medium |
 | 5 | **Customer email marketing** — Simple blast to all customers (opt-in) | 1h | 🟡 Medium |
-| 6 | **Service type breakdown on reports** — Group revenue/frequency by item_type (service vs part) | 30m | 🟢 Quick |
-| 7 | **Technician schedule view** — Calendar showing all appointments per tech | 1h | 🟡 Medium |
+| 6 | **Service type breakdown on reports** — Group revenue/frequency by item_type (service vs part) | 30m | 🟢 Quick | ✅ Done |
+| 7 | **Technician schedule view** — Calendar showing all appointments per tech | 1h | 🟡 Medium | ✅ Done |
 | 8 | **Mobile push notifications** — Via service worker + browser push | 2h | 🟡 Medium |
 | 9 | **Offline mode** — Service worker cache for critical data | 4h+ | 🔴 Hard |
 
@@ -376,8 +376,8 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | 2 | **TLS/SSL** — Let's Encrypt certbot or Caddy auto-TLS | 30m | 🔴 HIGH | ✅ Done (self-signed + LE docs) |
 | 3 | **Production env template** — `.env.prod.example` with LOG_LEVEL, WORKERS, SENTRY_DSN | 20m | 🟡 MEDIUM | ✅ Done |
 | 4 | **docker-compose.prod.yml** — Prod overrides with TLS, volumes, resource limits | 30m | 🟡 MEDIUM | ✅ Done |
-| 5 | **Structured logging** — JSON logs for log aggregation (Datadog, Loki) | 30m | 🟡 MEDIUM | ❌ Pending |
-| 6 | **Healthcheck on Dockerfile** — Dockerfile-level HEALTHCHECK directive | 10m | 🟢 QUICK | ❌ Pending |
+| 5 | **Structured logging** — JSON logs for log aggregation (Datadog, Loki) | 30m | 🟡 MEDIUM | ✅ Done |
+| 6 | **Healthcheck on Dockerfile** — Dockerfile-level HEALTHCHECK directive | 10m | 🟢 QUICK | ✅ Done |
 
 ### 9B — CI/CD gaps
 

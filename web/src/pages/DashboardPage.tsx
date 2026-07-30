@@ -313,7 +313,9 @@ export default function DashboardPage({
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={(props: any) => `${props?.status || props?.payload?.status || ''}: ${props?.count || props?.payload?.count || 0}`}
+                    label={(props: any) =>
+                      `${props?.status || props?.payload?.status || ''}: ${props?.count || props?.payload?.count || 0}`
+                    }
                   >
                     {reports.ticket_by_status.map((_, i) => (
                       <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />

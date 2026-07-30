@@ -193,7 +193,11 @@ export default function InvoiceList({
             <option value="overdue">Overdue</option>
             <option value="cancelled">Cancelled</option>
           </Select>
-          <Button size="sm" onClick={() => bulkMutation.mutate(undefined as any)} disabled={bulkMutation.isPending}>
+          <Button
+            size="sm"
+            onClick={() => bulkMutation.mutate(undefined as any)}
+            disabled={bulkMutation.isPending}
+          >
             {bulkMutation.isPending ? (
               <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
             ) : null}

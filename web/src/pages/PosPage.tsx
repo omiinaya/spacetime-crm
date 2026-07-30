@@ -117,7 +117,8 @@ export default function PosPage() {
   // ── Product search ──
   const { data: searchResults } = useQuery({
     queryKey: ['pos-products', searchQuery],
-    queryFn: () => api.products.list(searchQuery, undefined, undefined, 0, 20).then((r) => r.products),
+    queryFn: () =>
+      api.products.list(searchQuery, undefined, undefined, 0, 20).then((r) => r.products),
     enabled: searchQuery.length >= 1,
   });
 

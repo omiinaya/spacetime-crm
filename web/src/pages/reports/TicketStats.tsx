@@ -59,7 +59,8 @@ export default function TicketStats({
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
-                label={(props: any) => `${props?.payload?.status || ''}: ${props?.payload?.count || 0}`
+                label={(props: any) =>
+                  `${props?.payload?.status || ''}: ${props?.payload?.count || 0}`
                 }
                 labelLine={true}
               >
