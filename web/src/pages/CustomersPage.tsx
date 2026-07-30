@@ -28,6 +28,8 @@ import {
   Receipt,
   ChevronDown,
   ChevronUp,
+  Copy,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -246,6 +248,21 @@ export default function CustomersPage() {
   const customers = data ?? [];
   const loading = isLoading;
 
+  // ── Duplicate detection ──
+  interface DuplicateGroup {
+    field: string;
+    value: string;
+    customers: Customer[];
+  }
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const { data: dupData } = useQuery({
+    queryKey: ["customer-duplicates"],
+    queryFn: () => api.customers.duplicates(),
+    enabled: !showForm, // Don't fetch while editing
+  });
+  const duplicateCount = dupData?.count ?? 0;
+  const duplicateGroups: DuplicateGroup[] = dupData?.duplicates ?? [];
+
   // Reset to page 1 when search changes
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -319,7 +336,19 @@ export default function CustomersPage() {
     <>
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Customers</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            Customers
+            {duplicateCount > 0 && (
+              <Badge
+                variant="outline"
+                className="cursor-pointer text-amber-400 border-amber-400/40 hover:bg-amber-500/10 text-xs gap-1"
+                onClick={() => setShowDuplicates(true)}
+              >
+                <Copy className="h-3 w-3" />
+                {duplicateCount} duplicate{duplicateCount !== 1 ? "s" : ""} found
+              </Badge>
+            )}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage your customer database
           </p>
@@ -599,6 +628,71 @@ export default function CustomersPage() {
                   Cancel
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Duplicate Detection Dialog */}
+      {showDuplicates && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setShowDuplicates(false)}
+        >
+          <Card
+            className="w-full max-w-lg max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Copy className="h-5 w-5 text-amber-400" />
+                Duplicate Customers ({duplicateCount})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Customers sharing the same email or phone number
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {duplicateGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No duplicates found
+                </p>
+              ) : (
+                duplicateGroups.map((group, gi) => (
+                  <div key={gi} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-medium">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        {group.field}
+                      </Badge>
+                      <span className="text-muted-foreground">{group.value}</span>
+                      <Badge className="ml-auto text-[10px]">
+                        {group.customers.length} customers
+                      </Badge>
+                    </div>
+                    {group.customers.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between text-xs py-1.5 px-2 rounded bg-muted/50"
+                      >
+                        <span>
+                          {c.first_name} {c.last_name}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {c.phone || c.mobile || c.email}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowDuplicates(false)}
+              >
+                Close
+              </Button>
             </CardContent>
           </Card>
         </div>

@@ -34,6 +34,7 @@ import {
   Mail,
   Edit3,
   Save,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,7 +52,7 @@ const statusColors: Record<
   cancelled: "outline",
 };
 
-export default function InvoicesPage() {
+export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: string) => void } = {}) {
   const pag = usePagination(PAGE_SIZE);
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -319,6 +320,17 @@ export default function InvoicesPage() {
   };
 
   const lineItems = lineItemsData ?? [];
+
+  const { data: paymentsData } = useQuery({
+    queryKey: ["invoice-payments", selectedInv?.id],
+    queryFn: async () => {
+      const res = await api.payments.list(selectedInv!.id);
+      return res.payments;
+    },
+    enabled: !!selectedInv,
+  });
+
+  const payments = paymentsData ?? [];
 
   const addLineItem = () => {
     if (!selectedInv) return;
@@ -897,6 +909,58 @@ export default function InvoicesPage() {
                           Cancel
                         </Button>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment History */}
+                <div className="border-t border-border pt-3 mt-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <History className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-medium">Payment History</p>
+                  </div>
+                  {payments.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No payments yet</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {payments.slice(0, 5).map((pmt) => (
+                        <div
+                          key={pmt.id}
+                          className="flex items-center justify-between text-sm p-2 rounded bg-muted/50"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <DollarSign className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="font-medium tabular-nums">
+                              {pmt.currency || "USD"} {pmt.amount.toFixed(2)}
+                            </span>
+                            <span className="text-muted-foreground capitalize text-xs">
+                              {pmt.method}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(pmt.created_at).toLocaleDateString()}
+                            </span>
+                            <Badge variant="success">Completed</Badge>
+                          </div>
+                        </div>
+                      ))}
+                      {payments.length > 5 && (
+                        <button
+                          onClick={() => onNavigate?.("payments")}
+                          className="text-xs text-center text-muted-foreground hover:text-foreground w-full underline underline-offset-2 transition-colors"
+                        >
+                          View all {payments.length} payments →
+                        </button>
+                      )}
+                      {payments.length <= 5 && payments.length > 0 && (
+                        <button
+                          onClick={() => onNavigate?.("payments")}
+                          className="text-xs text-center text-muted-foreground hover:text-foreground w-full underline underline-offset-2 transition-colors"
+                        >
+                          View all payments →
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

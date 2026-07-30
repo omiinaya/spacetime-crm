@@ -296,7 +296,7 @@ function AppShell() {
               case 'tickets':
                 return <TicketsPage />;
               case 'invoices':
-                return <InvoicesPage />;
+                return <InvoicesPage onNavigate={(page: string) => setPage(page as any)} />;
               case 'recurring-invoices':
                 return <RecurringInvoicesPage />;
               case 'payments':
