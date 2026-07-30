@@ -3,9 +3,7 @@
 import logging
 from typing import Any
 
-import stripe as stripe_lib
 from config import settings
-from stripe import StripeError
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +16,8 @@ def is_configured() -> bool:
 def init_stripe() -> None:
     """Initialize the Stripe client with the configured API key."""
     if settings.stripe_secret_key:
+        import stripe as stripe_lib  # noqa: F811
+
         stripe_lib.api_key = settings.stripe_secret_key
 
 
@@ -33,6 +33,9 @@ async def create_checkout_session(
 
     Returns dict with session_id and url, or None if Stripe isn't configured.
     """
+    import stripe as stripe_lib
+    from stripe import StripeError
+
     if not is_configured():
         logger.warning("Stripe not configured — skipping checkout session creation")
         return None
@@ -78,6 +81,9 @@ async def verify_webhook(payload: bytes, sig_header: str) -> dict[str, Any] | No
 
     Returns the event dict on success, or None if verification fails.
     """
+    import stripe as stripe_lib
+    from stripe import StripeError
+
     if not settings.stripe_webhook_secret:
         logger.warning("Stripe webhook secret not configured — skipping webhook verification")
         return None
@@ -102,6 +108,9 @@ async def create_setup_intent(customer_id: str) -> dict[str, Any] | None:
 
     Returns dict with client_secret, or None if Stripe isn't configured.
     """
+    import stripe as stripe_lib
+    from stripe import StripeError
+
     if not is_configured():
         logger.warning("Stripe not configured — skipping setup intent")
         return None
@@ -131,6 +140,9 @@ async def create_payment_intent(
 
     Returns dict with status + payment_intent_id, or None on failure.
     """
+    import stripe as stripe_lib
+    from stripe import StripeError
+
     if not is_configured():
         logger.warning("Stripe not configured — skipping payment intent")
         return None

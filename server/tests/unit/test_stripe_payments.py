@@ -7,9 +7,16 @@ All Stripe calls are mocked.
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# Mock the stripe module for environments where it's not installed
+_MOCK_STRIPE = MagicMock()
+_MOCK_STRIPE.StripeError = type("StripeError", (Exception,), {})
+sys.modules["stripe"] = _MOCK_STRIPE
+import stripe as stripe_lib  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -320,7 +327,7 @@ class TestCreateSetupIntent:
         mock_intent.client_secret = "seti_1_secret_abc"
         mock_intent.id = "seti_1"
 
-        with patch("stripe_payments.stripe_lib.SetupIntent.create", return_value=mock_intent):
+        with patch.object(stripe_lib.SetupIntent, "create", return_value=mock_intent):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_setup_intent
 
@@ -336,7 +343,7 @@ class TestCreateSetupIntent:
         mock_intent.id = "seti_2"
 
         mock_create = MagicMock(return_value=mock_intent)
-        with patch("stripe_payments.stripe_lib.SetupIntent.create", mock_create):
+        with patch.object(stripe_lib.SetupIntent, "create", mock_create):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_setup_intent
 
@@ -351,10 +358,7 @@ class TestCreateSetupIntent:
         """Should return None when StripeError occurs."""
         from stripe import StripeError
 
-        with patch(
-            "stripe_payments.stripe_lib.SetupIntent.create",
-            side_effect=StripeError("Setup failed"),
-        ):
+        with patch.object(stripe_lib.SetupIntent, "create", side_effect=StripeError("Setup failed")):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import create_setup_intent
 
@@ -389,7 +393,7 @@ class TestCreatePaymentIntent:
         mock_intent.id = "pi_abc123"
         mock_intent.status = "succeeded"
 
-        with patch("stripe_payments.stripe_lib.PaymentIntent.create", return_value=mock_intent):
+        with patch.object(stripe_lib.PaymentIntent, "create", return_value=mock_intent):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_payment_intent
 
@@ -415,7 +419,7 @@ class TestCreatePaymentIntent:
         mock_intent.status = "requires_confirmation"
 
         mock_create = MagicMock(return_value=mock_intent)
-        with patch("stripe_payments.stripe_lib.PaymentIntent.create", mock_create):
+        with patch.object(stripe_lib.PaymentIntent, "create", mock_create):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_payment_intent
 
@@ -442,10 +446,7 @@ class TestCreatePaymentIntent:
         """Should return empty dict when StripeError occurs."""
         from stripe import StripeError
 
-        with patch(
-            "stripe_payments.stripe_lib.PaymentIntent.create",
-            side_effect=StripeError("Card declined"),
-        ):
+        with patch.object(stripe_lib.PaymentIntent, "create", side_effect=StripeError("Card declined")):
             with patch("stripe_payments.logger") as mock_logger:
                 from stripe_payments import create_payment_intent
 

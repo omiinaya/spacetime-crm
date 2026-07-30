@@ -8,11 +8,17 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# Ensure the project root is on sys.path so that scripts/ is importable
+_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent.parent.parent)
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 # ── Helpers ──────────────────────────────────────────────────────
 
