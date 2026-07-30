@@ -91,9 +91,18 @@ export default function ProductsPage() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['products', { search, category: categoryFilter, location: locationFilter, offset: pag.offset }],
+    queryKey: [
+      'products',
+      { search, category: categoryFilter, location: locationFilter, offset: pag.offset },
+    ],
     queryFn: async () => {
-      const res = await api.products.list(search, categoryFilter, locationFilter, pag.offset, PAGE_SIZE);
+      const res = await api.products.list(
+        search,
+        categoryFilter,
+        locationFilter,
+        pag.offset,
+        PAGE_SIZE,
+      );
       return res;
     },
     select: (res) => {
@@ -365,6 +374,20 @@ export default function ProductsPage() {
             </option>
           ))}
         </select>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const params = new URLSearchParams();
+            if (categoryFilter) params.set('category', categoryFilter);
+            if (locationFilter) params.set('location', locationFilter);
+            window.open(`/api/products/count-sheet?${params.toString()}`, '_blank');
+          }}
+          title="Print stock count sheet"
+        >
+          <ClipboardList className="h-4 w-4 mr-1" />
+          Count Sheet
+        </Button>
         <div className="flex items-center gap-1 border rounded-md px-2 py-1 bg-muted/30 max-w-full sm:max-w-[200px] flex-1 sm:flex-none">
           <Scan className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <input

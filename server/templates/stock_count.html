@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stock Count Sheet — SpacetimeCRM</title>
+<style>
+  @page { margin: 0.5in; size: letter; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10pt; color: #1a1a1a; }
+  h1 { font-size: 18pt; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 9pt; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f3f4f6; text-align: left; padding: 8px 10px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; color: #555; border-bottom: 2px solid #d1d5db; }
+  td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 9pt; }
+  td.count-col { text-align: center; min-width: 60px; border-left: 2px solid #d1d5db; }
+  td.expected { text-align: right; }
+  td.qty-on-hand { text-align: right; }
+  .item-row:hover { background: #f9fafb; }
+  .section-title { font-size: 10pt; font-weight: bold; margin: 16px 0 8px 0; padding-bottom: 4px; border-bottom: 1px solid #d1d5db; }
+  .footer { margin-top: 30px; font-size: 8pt; color: #999; text-align: center; }
+  @media print {
+    .no-print { display: none; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <h1>Stock Count Sheet</h1>
+  <p class="subtitle">
+    Generated: {{ generated_at }}
+    {% if category %} &middot; Category: {{ category }}{% endif %}
+    {% if location %} &middot; Location: {{ location }}{% endif %}
+    &middot; {{ products|length }} item(s)
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30%">Product Name</th>
+        <th style="width:12%">SKU</th>
+        <th style="width:10%">Location</th>
+        <th style="width:10%" class="expected">Expected</th>
+        <th style="width:10%" class="qty-on-hand">On Hand</th>
+        <th style="width:10%" class="count-col">Counted</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr class="item-row">
+        <td>{{ p.name }}</td>
+        <td>{{ p.sku }}</td>
+        <td>{{ p.location or '—' }}</td>
+        <td class="expected">{{ "%.0f"|format(p.min_stock|float) if p.min_stock else '—' }}</td>
+        <td class="qty-on-hand">{{ "%.0f"|format(p.quantity_on_hand|float) }}</td>
+        <td class="count-col">&nbsp;</td>
+      </tr>
+      {% endfor %}
+      {% if not products %}
+      <tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">No products found matching the selected filters.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <div class="footer">SpacetimeCRM — Stock Count Sheet — Page 1</div>
+</body>
+</html>

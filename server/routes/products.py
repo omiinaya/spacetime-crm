@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from helpers import (
     _call,
     _log_audit,
@@ -296,3 +297,32 @@ async def list_locations(user: dict = Depends(require_role("admin", "tech"))):
     )
     locs = sorted({r.get("location", "") for r in rows if r.get("location")})
     return {"locations": locs}
+
+
+@router.get("/api/products/count-sheet")
+async def stock_count_sheet(
+    category: str = "",
+    location: str = "",
+    user: dict = Depends(require_role("admin", "tech")),
+):
+    """Generate an HTML stock count sheet for printing."""
+    from jinja2 import Environment, FileSystemLoader
+    from datetime import datetime, timezone
+
+    tid = user["tenant_id"]
+    rows, _ = await _paginated(tid, "products", offset=0, limit=5000, order_by="name")
+    products = rows
+    if category:
+        products = [p for p in products if p.get("category", "") == category]
+    if location:
+        products = [p for p in products if p.get("location", "") == location]
+
+    env = Environment(loader=FileSystemLoader("templates"))
+    template = env.get_template("stock_count.html")
+    html = template.render(
+        products=products,
+        category=category or None,
+        location=location or None,
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    )
+    return HTMLResponse(content=html, media_type="text/html")
