@@ -216,6 +216,7 @@ python3 scripts/restore.py backups/spacetime-crm-backup-<timestamp>.json.gz
 | **CSV Export** | `GET /api/export/{entity}` (customers, tickets, invoices, etc.) |
 | **CSV Import** | `POST /api/import/customers`, `POST /api/import/products` |
 | **Webhooks** | `GET/POST /api/webhook-subscriptions`, `PUT/DELETE /api/webhook-subscriptions/:id`, `POST /api/webhook-subscriptions/:id/test` |
+| **Push** | `POST /api/push/subscribe`, `/api/push/unsubscribe`, `/api/push/test` |
 
 ## SpacetimeDB Tables
 
@@ -235,3 +236,4 @@ python3 scripts/restore.py backups/spacetime-crm-backup-<timestamp>.json.gz
 - **audit_log** — immutable audit trail of all CRUD operations
 - **user** — staff accounts with roles
 - **user_settings** — per-user preferences
+- **push_subscription** — browser push notification subscriptions (VAPID)
