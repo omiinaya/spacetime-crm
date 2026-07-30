@@ -1,23 +1,14 @@
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
-import type { UseMutationResult } from "@tanstack/react-query";
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 interface InvoicePaymentFormProps {
   showPaymentForm: boolean;
   setShowPaymentForm: (v: boolean) => void;
   paymentForm: { amount: number; method: string; reference: string };
-  setPaymentForm: (f: {
-    amount: number;
-    method: string;
-    reference: string;
-  }) => void;
-  recordPaymentMutation: UseMutationResult<
-    { ok: boolean },
-    Error,
-    void,
-    unknown
-  >;
+  setPaymentForm: (f: { amount: number; method: string; reference: string }) => void;
+  recordPaymentMutation: UseMutationResult<{ ok: boolean }, Error, void, unknown>;
   selectedInvTotal: number;
 }
 
@@ -103,11 +94,7 @@ export default function InvoicePaymentForm({
           )}
           Pay
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setShowPaymentForm(false)}
-        >
+        <Button size="sm" variant="ghost" onClick={() => setShowPaymentForm(false)}>
           Cancel
         </Button>
       </div>

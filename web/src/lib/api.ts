@@ -5,14 +5,14 @@
 // The domain-split API modules live in ./api/ and are re-exported here.
 
 // Re-export all types from the types module
-export type * from "./api/types";
+export type * from './api/types';
 
 // Re-export helpers
-export { apiFetch, buildPaginationParams, getApiToken, API_BASE } from "./api/client";
+export { apiFetch, buildPaginationParams, getApiToken, API_BASE } from './api/client';
 
 // Re-export pagination types
-export type { PaginatedResponse, PaginationParams } from "./api-types";
+export type { PaginatedResponse, PaginationParams } from './api-types';
 
 // Re-export the api client object — import then export to avoid circular alias
-import { api as _api } from "./api/index";
+import { api as _api } from './api/index';
 export { _api as api };

@@ -1,23 +1,23 @@
-import { useState } from "react";
-import { useAuth } from "../lib/auth";
-import { ShieldAlert } from "lucide-react";
+import { useState } from 'react';
+import { useAuth } from '../lib/auth';
+import { ShieldAlert } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, complete2FA, pending2FA } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setBusy(true);
     try {
       await login(email, password);
     } catch (err: unknown) {
-      setError((err as Error).message || "Login failed");
+      setError((err as Error).message || 'Login failed');
     } finally {
       setBusy(false);
     }
@@ -25,12 +25,12 @@ export default function LoginPage() {
 
   const handle2FA = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setBusy(true);
     try {
       await complete2FA(code);
     } catch (err: unknown) {
-      setError((err as Error).message || "Verification failed");
+      setError((err as Error).message || 'Verification failed');
     } finally {
       setBusy(false);
     }
@@ -50,9 +50,7 @@ export default function LoginPage() {
               Enter the 6-digit code from your authenticator app
             </p>
             {pending2FA.user.email && (
-              <p className="text-xs text-muted-foreground mt-2">
-                {pending2FA.user.email}
-              </p>
+              <p className="text-xs text-muted-foreground mt-2">{pending2FA.user.email}</p>
             )}
           </div>
 
@@ -64,9 +62,7 @@ export default function LoginPage() {
                 pattern="[0-9]*"
                 maxLength={6}
                 value={code}
-                onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
                 required
                 autoFocus
@@ -85,14 +81,14 @@ export default function LoginPage() {
               disabled={busy || code.length !== 6}
               className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {busy ? "Verifying..." : "Verify Code"}
+              {busy ? 'Verifying...' : 'Verify Code'}
             </button>
 
             <button
               type="button"
               onClick={() => {
-                setCode("");
-                setError("");
+                setCode('');
+                setError('');
               }}
               className="w-full py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -125,9 +121,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-xl font-bold">SpacetimeCRM</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Sign in to your account
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -157,9 +151,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
-              {error}
-            </div>
+            <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</div>
           )}
 
           <button
@@ -167,7 +159,7 @@ export default function LoginPage() {
             disabled={busy}
             className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
-            {busy ? "Signing in..." : "Sign in"}
+            {busy ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 

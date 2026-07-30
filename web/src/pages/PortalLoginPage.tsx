@@ -1,28 +1,19 @@
-import { useState } from "react";
-import { usePortalAuth } from "../lib/portal-auth";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { usePortalAuth } from '../lib/portal-auth';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { toast } from 'sonner';
 
-export default function PortalLoginPage({
-  onSuccess,
-}: {
-  onSuccess: () => void;
-}) {
+export default function PortalLoginPage({ onSuccess }: { onSuccess: () => void }) {
   const { login } = usePortalAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      toast.error("Email and password required");
+      toast.error('Email and password required');
       return;
     }
     setLoading(true);
@@ -30,7 +21,7 @@ export default function PortalLoginPage({
       await login(email, password);
       onSuccess();
     } catch (e) {
-      toast.error("Invalid email or password");
+      toast.error('Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -54,17 +45,17 @@ export default function PortalLoginPage({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
           />
           <Input
             placeholder="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
           />
           <Button className="w-full" onClick={handleLogin} disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? 'Signing in...' : 'Sign In'}
           </Button>
         </CardContent>
       </Card>

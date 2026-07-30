@@ -1,13 +1,8 @@
-import { useRef } from "react";
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Scan, ScanLine } from "lucide-react";
+import { useRef } from 'react';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Scan, ScanLine } from 'lucide-react';
 
 interface ProductFormData {
   name?: string;
@@ -56,7 +51,7 @@ export default function ProductForm({
   return (
     <Card className="border-primary/30">
       <CardHeader>
-        <CardTitle>{editId ? "Edit Product" : "New Product"}</CardTitle>
+        <CardTitle>{editId ? 'Edit Product' : 'New Product'}</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
@@ -85,17 +80,13 @@ export default function ProductForm({
           placeholder="Price"
           type="number"
           value={form.price}
-          onChange={(e) =>
-            setForm({ ...form, price: parseFloat(e.target.value) || 0 })
-          }
+          onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
         />
         <Input
           placeholder="Cost"
           type="number"
           value={form.cost}
-          onChange={(e) =>
-            setForm({ ...form, cost: parseFloat(e.target.value) || 0 })
-          }
+          onChange={(e) => setForm({ ...form, cost: parseFloat(e.target.value) || 0 })}
         />
         <Input
           placeholder="Qty on hand"
@@ -112,13 +103,11 @@ export default function ProductForm({
           placeholder="Min stock"
           type="number"
           value={form.min_stock ?? 0}
-          onChange={(e) =>
-            setForm({ ...form, min_stock: parseFloat(e.target.value) || 0 })
-          }
+          onChange={(e) => setForm({ ...form, min_stock: parseFloat(e.target.value) || 0 })}
         />
         <Input
           placeholder="Location"
-          value={form.location ?? ""}
+          value={form.location ?? ''}
           onChange={(e) => setForm({ ...form, location: e.target.value })}
         />
         <div className="col-span-2 flex gap-2">
@@ -162,7 +151,7 @@ export default function ProductForm({
           </div>
         )}
         <div className="col-span-2 flex gap-2">
-          <Button onClick={handleSubmit}>{editId ? "Update" : "Create"}</Button>
+          <Button onClick={handleSubmit}>{editId ? 'Update' : 'Create'}</Button>
           <Button
             variant="outline"
             onClick={() => {

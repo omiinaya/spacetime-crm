@@ -1,25 +1,20 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../../lib/query-client";
-import { api } from "../../lib/api";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Badge } from "../../components/ui/badge";
-import { Percent, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../../lib/query-client';
+import { api } from '../../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
+import { Percent, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function TaxRateSettings() {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", rate: 0, is_default: false });
+  const [form, setForm] = useState({ name: '', rate: 0, is_default: false });
 
   const { data: taxRates = [] } = useQuery({
-    queryKey: ["tax-rates"],
+    queryKey: ['tax-rates'],
     queryFn: async () => {
       const res = await api.taxRates.list();
       return res.tax_rates ?? [];
@@ -30,13 +25,13 @@ export default function TaxRateSettings() {
     mutationFn: (data: { name: string; rate: number; is_default: boolean }) =>
       api.taxRates.create(data),
     onSuccess: () => {
-      toast.success("Tax rate created");
+      toast.success('Tax rate created');
       setShowForm(false);
-      setForm({ name: "", rate: 0, is_default: false });
-      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+      setForm({ name: '', rate: 0, is_default: false });
+      queryClient.invalidateQueries({ queryKey: ['tax-rates'] });
     },
     onError: () => {
-      toast.error("Failed to create tax rate");
+      toast.error('Failed to create tax rate');
     },
   });
 
@@ -49,22 +44,22 @@ export default function TaxRateSettings() {
       data: { name: string; rate: number; is_default: boolean };
     }) => api.taxRates.update(id, data),
     onSuccess: () => {
-      toast.success("Default updated");
-      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+      toast.success('Default updated');
+      queryClient.invalidateQueries({ queryKey: ['tax-rates'] });
     },
     onError: () => {
-      toast.error("Failed to update");
+      toast.error('Failed to update');
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.taxRates.delete(id),
     onSuccess: () => {
-      toast.success("Tax rate deleted");
-      queryClient.invalidateQueries({ queryKey: ["tax-rates"] });
+      toast.success('Tax rate deleted');
+      queryClient.invalidateQueries({ queryKey: ['tax-rates'] });
     },
     onError: () => {
-      toast.error("Failed to delete");
+      toast.error('Failed to delete');
     },
   });
 
@@ -93,18 +88,14 @@ export default function TaxRateSettings() {
               step="0.01"
               placeholder="Rate %"
               className="w-28"
-              value={form.rate || ""}
-              onChange={(e) =>
-                setForm({ ...form, rate: parseFloat(e.target.value) || 0 })
-              }
+              value={form.rate || ''}
+              onChange={(e) => setForm({ ...form, rate: parseFloat(e.target.value) || 0 })}
             />
             <label className="flex items-center gap-1.5 text-sm whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={form.is_default}
-                onChange={(e) =>
-                  setForm({ ...form, is_default: e.target.checked })
-                }
+                onChange={(e) => setForm({ ...form, is_default: e.target.checked })}
                 className="rounded border-border"
               />
               Default
@@ -112,26 +103,17 @@ export default function TaxRateSettings() {
             <Button size="sm" onClick={() => createMutation.mutate(form)}>
               Save
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowForm(false)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
           </div>
         )}
         {taxRates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No tax rates configured.
-          </p>
+          <p className="text-sm text-muted-foreground">No tax rates configured.</p>
         ) : (
           <div className="space-y-2">
             {taxRates.map((tr) => (
-              <div
-                key={tr.id}
-                className="flex items-center justify-between py-2"
-              >
+              <div key={tr.id} className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <Percent className="h-4 w-4 text-primary" />
@@ -163,7 +145,7 @@ export default function TaxRateSettings() {
                       })
                     }
                   >
-                    {tr.is_default ? "Unset Default" : "Set Default"}
+                    {tr.is_default ? 'Unset Default' : 'Set Default'}
                   </Button>
                   <Button
                     size="sm"
@@ -179,8 +161,8 @@ export default function TaxRateSettings() {
         )}
         <div className="border-t pt-3 mt-3">
           <p className="text-xs text-muted-foreground">
-            Tax rates are applied to invoices and estimates. The default rate is
-            pre-selected when creating new invoices.
+            Tax rates are applied to invoices and estimates. The default rate is pre-selected when
+            creating new invoices.
           </p>
         </div>
       </CardContent>

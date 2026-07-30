@@ -1,35 +1,33 @@
-import { apiFetch, buildPaginationParams } from "./client";
-import type { Customer, CustomerGeoLocation } from "./types";
+import { apiFetch, buildPaginationParams } from './client';
+import type { Customer, CustomerGeoLocation } from './types';
 
 export const customers = {
   list: (search?: string, offset?: number, limit?: number) => {
     const p = new URLSearchParams();
-    if (search) p.set("search", search);
-    if (offset !== undefined) p.set("offset", String(offset));
-    if (limit !== undefined) p.set("limit", String(limit));
+    if (search) p.set('search', search);
+    if (offset !== undefined) p.set('offset', String(offset));
+    if (limit !== undefined) p.set('limit', String(limit));
     const qs = p.toString();
     return apiFetch<{
       customers: Customer[];
       total: number;
       offset: number;
       limit: number;
-    }>(`/customers${qs ? `?${qs}` : ""}`);
+    }>(`/customers${qs ? `?${qs}` : ''}`);
   },
   create: (data: Partial<Customer>) =>
-    apiFetch<{ ok: boolean }>("/customers", {
-      method: "POST",
+    apiFetch<{ ok: boolean }>('/customers', {
+      method: 'POST',
       body: JSON.stringify(data),
     }),
   update: (id: string, data: Partial<Customer>) =>
     apiFetch<{ ok: boolean }>(`/customers/${id}`, {
-      method: "PUT",
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
-  delete: (id: string) =>
-    apiFetch<{ ok: boolean }>(`/customers/${id}`, { method: "DELETE" }),
+  delete: (id: string) => apiFetch<{ ok: boolean }>(`/customers/${id}`, { method: 'DELETE' }),
   geolocations: {
-    list: () =>
-      apiFetch<{ locations: CustomerGeoLocation[] }>("/customers/geolocations"),
+    list: () => apiFetch<{ locations: CustomerGeoLocation[] }>('/customers/geolocations'),
     geocode: (customerId: string) =>
       apiFetch<{
         ok: boolean;
@@ -37,20 +35,20 @@ export const customers = {
         longitude?: number;
         display_name?: string;
         error?: string;
-      }>(`/customers/${customerId}/geocode`, { method: "POST" }),
+      }>(`/customers/${customerId}/geocode`, { method: 'POST' }),
     geocodeAll: () =>
-      apiFetch<{ geocoded: number; results: any[] }>("/customers/geocode-all", {
-        method: "POST",
+      apiFetch<{ geocoded: number; results: any[] }>('/customers/geocode-all', {
+        method: 'POST',
       }),
   },
   setPortalPassword: (id: string, password: string) =>
     apiFetch<{ ok: boolean }>(`/customers/${id}/portal-password`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ password }),
     }),
   duplicates: () =>
     apiFetch<{
       duplicates: { field: string; value: string; customers: Customer[] }[];
       count: number;
-    }>("/customers/duplicates"),
+    }>('/customers/duplicates'),
 };

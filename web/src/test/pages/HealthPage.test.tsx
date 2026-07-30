@@ -7,10 +7,10 @@
  *   2. GET /api/health/ready → { status }
  * Each test must push() responses in this order.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import HealthPage from "@/pages/HealthPage";
-import { mockFetch, flushMicrotasks } from "../lib/mock-fetch";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import HealthPage from '@/pages/HealthPage';
+import { mockFetch, flushMicrotasks } from '../lib/mock-fetch';
 
 const mock = mockFetch();
 
@@ -26,37 +26,37 @@ afterEach(() => {
 // ── Loading state ──
 
 it("shows 'Checking…' placeholders while data loads", () => {
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "ok" });
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'ok' });
   render(<HealthPage />);
 
   // Three "Checking..." texts, one per card (server, STDB, module)
-  const checking = screen.getAllByText("Checking...");
+  const checking = screen.getAllByText('Checking...');
   expect(checking.length).toBeGreaterThanOrEqual(3);
 });
 
 // ── Data rendering ──
 
-it("renders health data when API responds", async () => {
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "ok" });
+it('renders health data when API responds', async () => {
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'ok' });
   render(<HealthPage />);
 
   // Wait for the first card badge to appear (multiple "ok" badges exist)
   await waitFor(
     () => {
-      expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
+      expect(screen.getAllByText('ok').length).toBeGreaterThan(0);
     },
     { timeout: 3000 },
   );
 
   // Both health endpoints were called
   const calls = mock.calls();
-  expect(calls.some((c) => c.url.includes("/api/health"))).toBe(true);
-  expect(calls.some((c) => c.url.includes("/api/health/ready"))).toBe(true);
+  expect(calls.some((c) => c.url.includes('/api/health'))).toBe(true);
+  expect(calls.some((c) => c.url.includes('/api/health/ready'))).toBe(true);
 });
 
-it("shows error card when API fails", async () => {
+it('shows error card when API fails', async () => {
   mock.pushFail(500);
   mock.pushFail(500);
   render(<HealthPage />);
@@ -70,12 +70,12 @@ it("shows error card when API fails", async () => {
   );
 });
 
-it("shows unknown status when fields are missing", async () => {
+it('shows unknown status when fields are missing', async () => {
   mock.push({}); // empty health response
-  mock.push({ status: "ok" });
+  mock.push({ status: 'ok' });
   render(<HealthPage />);
 
-  const unknowns = await waitFor(() => screen.findAllByText("unknown"), {
+  const unknowns = await waitFor(() => screen.findAllByText('unknown'), {
     timeout: 3000,
   });
   expect(unknowns.length).toBeGreaterThanOrEqual(1);
@@ -83,9 +83,9 @@ it("shows unknown status when fields are missing", async () => {
 
 // ── Ready probe ──
 
-it("renders readiness probe when ready data arrives", async () => {
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "ok" });
+it('renders readiness probe when ready data arrives', async () => {
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'ok' });
   render(<HealthPage />);
 
   await waitFor(
@@ -96,9 +96,9 @@ it("renders readiness probe when ready data arrives", async () => {
   );
 });
 
-it("shows degraded message when readiness fails", async () => {
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "unavailable" });
+it('shows degraded message when readiness fails', async () => {
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'unavailable' });
   render(<HealthPage />);
 
   await waitFor(
@@ -111,23 +111,23 @@ it("shows degraded message when readiness fails", async () => {
 
 // ── Refresh button ──
 
-it("re-fetches when Refresh button is clicked", async () => {
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "ok" });
+it('re-fetches when Refresh button is clicked', async () => {
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'ok' });
   render(<HealthPage />);
 
   await waitFor(
     () => {
-      expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
+      expect(screen.getAllByText('ok').length).toBeGreaterThan(0);
     },
     { timeout: 3000 },
   );
   const initialCount = mock.calls().length;
 
   // Refresh again – push two more responses
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "ok" });
-  const btn = screen.getByRole("button", { name: /refresh/i });
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'ok' });
+  const btn = screen.getByRole('button', { name: /refresh/i });
   btn.click();
 
   await flushMicrotasks();
@@ -136,11 +136,11 @@ it("re-fetches when Refresh button is clicked", async () => {
 
 // ── Auto-refresh interval ──
 
-it("auto-refreshes every 30 seconds", async () => {
+it('auto-refreshes every 30 seconds', async () => {
   vi.useFakeTimers();
 
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "ok" });
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'ok' });
   render(<HealthPage />);
 
   // Wait for initial mount state updates
@@ -149,8 +149,8 @@ it("auto-refreshes every 30 seconds", async () => {
   expect(afterMount).toBe(2);
 
   // Advance 30 seconds – should trigger another fetch (needs 2 more in queue)
-  mock.push({ server: "ok", stdb: "ok", module: "ok" });
-  mock.push({ status: "ok" });
+  mock.push({ server: 'ok', stdb: 'ok', module: 'ok' });
+  mock.push({ status: 'ok' });
   await vi.advanceTimersByTimeAsync(30000);
 
   expect(mock.calls().length).toBeGreaterThan(afterMount);

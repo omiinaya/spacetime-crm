@@ -1,55 +1,48 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../lib/query-client";
-import { api, Estimate, Customer, EstimateLineItem } from "../lib/api";
-import { usePagination } from "../lib/usePagination";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Select } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
-import Pagination from "../components/Pagination";
-import { FileCheck, Plus, Trash2, FileText } from "lucide-react";
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../lib/query-client';
+import { api, Estimate, Customer, EstimateLineItem } from '../lib/api';
+import { usePagination } from '../lib/usePagination';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
+import Pagination from '../components/Pagination';
+import { FileCheck, Plus, Trash2, FileText } from 'lucide-react';
 
 const PAGE_SIZE = 25;
-import { toast } from "sonner";
+import { toast } from 'sonner';
 
-const statusColors: Record<
-  string,
-  "default" | "warning" | "success" | "destructive" | "outline"
-> = {
-  draft: "outline",
-  sent: "default",
-  approved: "success",
-  declined: "destructive",
-};
+const statusColors: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'outline'> =
+  {
+    draft: 'outline',
+    sent: 'default',
+    approved: 'success',
+    declined: 'destructive',
+  };
 
 export default function EstimatesPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
-    customer_id: "",
-    ticket_id: "",
-    notes: "",
-    expires_at: "",
-    currency: "USD",
+    customer_id: '',
+    ticket_id: '',
+    notes: '',
+    expires_at: '',
+    currency: 'USD',
   });
   const [selectedEst, setSelectedEst] = useState<Estimate | null>(null);
   const [newItem, setNewItem] = useState({
-    description: "",
+    description: '',
     quantity: 1,
     unit_price: 0,
-    item_type: "service",
+    item_type: 'service',
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["estimates", { filter, offset: pag.offset }],
+    queryKey: ['estimates', { filter, offset: pag.offset }],
     queryFn: async () => {
       const [eRes, cRes] = await Promise.all([
         api.estimates.list(filter, pag.offset, PAGE_SIZE),
@@ -71,7 +64,7 @@ export default function EstimatesPage() {
   const customers = data?.customers ?? [];
 
   const { data: lineItemsData } = useQuery({
-    queryKey: ["estimate-line-items", selectedEst?.id],
+    queryKey: ['estimate-line-items', selectedEst?.id],
     queryFn: async () => {
       if (!selectedEst) return [];
       const res = await api.estimates.lineItems.list(selectedEst.id);
@@ -92,36 +85,36 @@ export default function EstimatesPage() {
         currency: form.currency,
       }),
     onSuccess: () => {
-      toast.success("Estimate created");
+      toast.success('Estimate created');
       setShowForm(false);
       setForm({
-        customer_id: "",
-        ticket_id: "",
-        notes: "",
-        expires_at: "",
-        currency: "USD",
+        customer_id: '',
+        ticket_id: '',
+        notes: '',
+        expires_at: '',
+        currency: 'USD',
       });
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ['estimates'] });
     },
-    onError: () => toast.error("Failed to create estimate"),
+    onError: () => toast.error('Failed to create estimate'),
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       api.estimates.updateStatus(id, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ['estimates'] });
     },
   });
 
   const convertMutation = useMutation({
     mutationFn: (id: string) => api.estimates.convert(id),
     onSuccess: () => {
-      toast.success("Converted to invoice!");
+      toast.success('Converted to invoice!');
       setSelectedEst(null);
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ['estimates'] });
     },
-    onError: () => toast.error("Failed to convert"),
+    onError: () => toast.error('Failed to convert'),
   });
 
   const lineItemMutation = useMutation({
@@ -133,26 +126,26 @@ export default function EstimatesPage() {
     }) => api.estimates.lineItems.create(selectedEst!.id, item),
     onSuccess: () => {
       setNewItem({
-        description: "",
+        description: '',
         quantity: 1,
         unit_price: 0,
-        item_type: "service",
+        item_type: 'service',
       });
       queryClient.invalidateQueries({
-        queryKey: ["estimate-line-items", selectedEst?.id],
+        queryKey: ['estimate-line-items', selectedEst?.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ['estimates'] });
     },
-    onError: () => toast.error("Failed to add item"),
+    onError: () => toast.error('Failed to add item'),
   });
 
   const selectEst = (est: Estimate) => {
     setSelectedEst(est);
     setNewItem({
-      description: "",
+      description: '',
       quantity: 1,
       unit_price: 0,
-      item_type: "service",
+      item_type: 'service',
     });
   };
 
@@ -170,9 +163,7 @@ export default function EstimatesPage() {
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Estimates</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Create and manage estimates
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Create and manage estimates</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-1.5" />
@@ -181,17 +172,17 @@ export default function EstimatesPage() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {["", "draft", "sent", "approved", "declined"].map((s) => (
+        {['', 'draft', 'sent', 'approved', 'declined'].map((s) => (
           <Button
             key={s}
             size="sm"
-            variant={filter === s ? "default" : "outline"}
+            variant={filter === s ? 'default' : 'outline'}
             onClick={() => {
               setFilter(s);
               pag.reset();
             }}
           >
-            {s || "All"}
+            {s || 'All'}
           </Button>
         ))}
       </div>
@@ -204,9 +195,7 @@ export default function EstimatesPage() {
           <CardContent className="space-y-3">
             <Select
               value={form.customer_id}
-              onChange={(e) =>
-                setForm({ ...form, customer_id: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
             >
               <option value="">Select customer...</option>
               {customers.map((c) => (
@@ -263,11 +252,7 @@ export default function EstimatesPage() {
               <p className="text-sm text-muted-foreground max-w-sm">
                 Create your first estimate to start quoting customers.
               </p>
-              <Button
-                onClick={() => setShowForm(true)}
-                className="mt-4"
-                variant="outline"
-              >
+              <Button onClick={() => setShowForm(true)} className="mt-4" variant="outline">
                 <Plus className="h-4 w-4 mr-1.5" />
                 New Estimate
               </Button>
@@ -278,20 +263,16 @@ export default function EstimatesPage() {
               return (
                 <Card
                   key={est.id}
-                  className={`cursor-pointer ${selectedEst?.id === est.id ? "border-primary" : "hover:border-primary/30"}`}
+                  className={`cursor-pointer ${selectedEst?.id === est.id ? 'border-primary' : 'hover:border-primary/30'}`}
                   onClick={() => selectEst(est)}
                 >
                   <CardContent className="pt-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        #{est.estimate_number}
-                      </span>
-                      <Badge variant={statusColors[est.status] || "outline"}>
-                        {est.status}
-                      </Badge>
+                      <span className="text-xs text-muted-foreground">#{est.estimate_number}</span>
+                      <Badge variant={statusColors[est.status] || 'outline'}>{est.status}</Badge>
                     </div>
                     <p className="font-medium mt-1">
-                      {est.currency || "USD"} {est.total.toFixed(2)}
+                      {est.currency || 'USD'} {est.total.toFixed(2)}
                     </p>
                     {cust && (
                       <p className="text-xs text-muted-foreground">
@@ -310,10 +291,9 @@ export default function EstimatesPage() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  #{selectedEst.estimate_number} — $
-                  {selectedEst.total.toFixed(2)}
+                  #{selectedEst.estimate_number} — ${selectedEst.total.toFixed(2)}
                 </CardTitle>
-                {selectedEst.status === "approved" && (
+                {selectedEst.status === 'approved' && (
                   <Button
                     size="sm"
                     variant="default"
@@ -350,18 +330,14 @@ export default function EstimatesPage() {
                           {li.quantity} x ${li.unit_price.toFixed(2)}
                         </p>
                       </div>
-                      <span className="font-medium shrink-0">
-                        ${li.total.toFixed(2)}
-                      </span>
+                      <span className="font-medium shrink-0">${li.total.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="flex gap-2">
                   <Select
                     value={newItem.item_type}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, item_type: e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })}
                     className="w-24"
                   >
                     <option value="service">Service</option>
@@ -370,26 +346,20 @@ export default function EstimatesPage() {
                   <Input
                     placeholder="Description"
                     value={newItem.description}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, description: e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                   />
                   <Input
                     type="number"
                     placeholder="Qty"
                     value={newItem.quantity}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, quantity: +e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })}
                     className="w-20"
                   />
                   <Input
                     type="number"
                     placeholder="Price"
                     value={newItem.unit_price}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, unit_price: +e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, unit_price: +e.target.value })}
                     className="w-24"
                   />
                   <Button size="sm" onClick={addLineItem}>

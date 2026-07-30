@@ -1,27 +1,27 @@
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setSuccess(false);
 
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setError("Please enter a valid email address.");
+      setError('Please enter a valid email address.');
       return;
     }
 
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
 
@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
 
       setSuccess(true);
     } catch (err: unknown) {
-      toast.error((err as Error).message || "Something went wrong. Please try again.");
+      toast.error((err as Error).message || 'Something went wrong. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -69,10 +69,7 @@ export default function ForgotPasswordPage() {
             <div className="text-sm text-green-400 bg-green-500/10 rounded-lg px-4 py-3">
               If that email exists, a reset link has been sent.
             </div>
-            <a
-              href="/"
-              className="inline-block text-sm text-primary hover:underline"
-            >
+            <a href="/" className="inline-block text-sm text-primary hover:underline">
               Back to Login
             </a>
           </div>
@@ -91,9 +88,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             {error && (
-              <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
-                {error}
-              </div>
+              <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</div>
             )}
 
             <button
@@ -101,7 +96,7 @@ export default function ForgotPasswordPage() {
               disabled={busy}
               className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {busy ? "Sending..." : "Send Reset Link"}
+              {busy ? 'Sending...' : 'Send Reset Link'}
             </button>
 
             <div className="text-center">

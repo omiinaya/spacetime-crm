@@ -2,17 +2,17 @@
  * Tests for ResetPasswordPage – token extraction, form validation,
  * password match, API submit, redirect on success.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 
 const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
   mockToastError: vi.fn(),
   mockToastSuccess: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     error: (...args: any[]) => mockToastError(...args),
     success: (...args: any[]) => mockToastSuccess(...args),
@@ -32,10 +32,10 @@ afterEach(() => {
 
 // ── No-token state ──
 
-it("shows invalid link state when no token in URL", () => {
+it('shows invalid link state when no token in URL', () => {
   // Ensure no token param
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get() {
@@ -49,22 +49,20 @@ it("shows invalid link state when no token in URL", () => {
 
   render(<ResetPasswordPage />);
 
-  expect(screen.getByText("Invalid Reset Link")).toBeInTheDocument();
-  expect(
-    screen.getByText(/This password reset link is invalid/),
-  ).toBeInTheDocument();
-  expect(screen.getByText("Request a new reset link")).toBeInTheDocument();
+  expect(screen.getByText('Invalid Reset Link')).toBeInTheDocument();
+  expect(screen.getByText(/This password reset link is invalid/)).toBeInTheDocument();
+  expect(screen.getByText('Request a new reset link')).toBeInTheDocument();
 });
 
 // ── Form rendering ──
 
-it("renders the reset password form when token is present", async () => {
+it('renders the reset password form when token is present', async () => {
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get(key: string) {
-        return key === "token" ? "abc123" : null;
+        return key === 'token' ? 'abc123' : null;
       }
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
@@ -76,26 +74,22 @@ it("renders the reset password form when token is present", async () => {
 
   // Wait for the useEffect that reads the token ("Reset Password" appears in h1 + button)
   await waitFor(() => {
-    expect(screen.getAllByText("Reset Password").length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Reset Password').length).toBeGreaterThan(0);
   });
-  expect(screen.getByPlaceholderText("Enter new password")).toBeInTheDocument();
-  expect(
-    screen.getByPlaceholderText("Confirm new password"),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole("button", { name: /reset password/i }),
-  ).toBeInTheDocument();
+  expect(screen.getByPlaceholderText('Enter new password')).toBeInTheDocument();
+  expect(screen.getByPlaceholderText('Confirm new password')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /reset password/i })).toBeInTheDocument();
 });
 
 // ── Client-side validation ──
 
 it("shows error when passwords don't match", async () => {
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get(key: string) {
-        return key === "token" ? "abc123" : null;
+        return key === 'token' ? 'abc123' : null;
       }
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
@@ -106,27 +100,21 @@ it("shows error when passwords don't match", async () => {
   const user = userEvent.setup();
   render(<ResetPasswordPage />);
 
-  await waitFor(() => screen.getByPlaceholderText("Enter new password"));
-  await user.type(
-    screen.getByPlaceholderText("Enter new password"),
-    "password123",
-  );
-  await user.type(
-    screen.getByPlaceholderText("Confirm new password"),
-    "different",
-  );
-  await user.click(screen.getByRole("button", { name: /reset password/i }));
+  await waitFor(() => screen.getByPlaceholderText('Enter new password'));
+  await user.type(screen.getByPlaceholderText('Enter new password'), 'password123');
+  await user.type(screen.getByPlaceholderText('Confirm new password'), 'different');
+  await user.click(screen.getByRole('button', { name: /reset password/i }));
 
-  expect(mockToastError).toHaveBeenCalledWith("Passwords do not match");
+  expect(mockToastError).toHaveBeenCalledWith('Passwords do not match');
 });
 
-it("shows error when password is too short", async () => {
+it('shows error when password is too short', async () => {
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get(key: string) {
-        return key === "token" ? "abc123" : null;
+        return key === 'token' ? 'abc123' : null;
       }
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
@@ -137,25 +125,23 @@ it("shows error when password is too short", async () => {
   const user = userEvent.setup();
   render(<ResetPasswordPage />);
 
-  await waitFor(() => screen.getByPlaceholderText("Enter new password"));
-  await user.type(screen.getByPlaceholderText("Enter new password"), "12");
-  await user.type(screen.getByPlaceholderText("Confirm new password"), "12");
-  await user.click(screen.getByRole("button", { name: /reset password/i }));
+  await waitFor(() => screen.getByPlaceholderText('Enter new password'));
+  await user.type(screen.getByPlaceholderText('Enter new password'), '12');
+  await user.type(screen.getByPlaceholderText('Confirm new password'), '12');
+  await user.click(screen.getByRole('button', { name: /reset password/i }));
 
-  expect(mockToastError).toHaveBeenCalledWith(
-    "Password must be at least 6 characters",
-  );
+  expect(mockToastError).toHaveBeenCalledWith('Password must be at least 6 characters');
 });
 
 // ── API call ──
 
-it("submits password and token to the API", async () => {
+it('submits password and token to the API', async () => {
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get(key: string) {
-        return key === "token" ? "abc123" : null;
+        return key === 'token' ? 'abc123' : null;
       }
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
@@ -163,46 +149,40 @@ it("submits password and token to the API", async () => {
     } as any,
   );
 
-  const fetchSpy = vi.spyOn(window, "fetch").mockResolvedValueOnce(
-    new Response("{}", {
+  const fetchSpy = vi.spyOn(window, 'fetch').mockResolvedValueOnce(
+    new Response('{}', {
       status: 200,
-      headers: { "content-type": "application/json" },
+      headers: { 'content-type': 'application/json' },
     }),
   );
 
   const user = userEvent.setup();
   render(<ResetPasswordPage />);
 
-  await waitFor(() => screen.getByPlaceholderText("Enter new password"));
-  await user.type(
-    screen.getByPlaceholderText("Enter new password"),
-    "newpass123",
-  );
-  await user.type(
-    screen.getByPlaceholderText("Confirm new password"),
-    "newpass123",
-  );
-  await user.click(screen.getByRole("button", { name: /reset password/i }));
+  await waitFor(() => screen.getByPlaceholderText('Enter new password'));
+  await user.type(screen.getByPlaceholderText('Enter new password'), 'newpass123');
+  await user.type(screen.getByPlaceholderText('Confirm new password'), 'newpass123');
+  await user.click(screen.getByRole('button', { name: /reset password/i }));
 
   await waitFor(() => {
     expect(fetchSpy).toHaveBeenCalledWith(
-      "/api/auth/reset-password",
+      '/api/auth/reset-password',
       expect.objectContaining({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: "abc123", password: "newpass123" }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: 'abc123', password: 'newpass123' }),
       }),
     );
   });
 });
 
-it("shows success toast after successful reset", async () => {
+it('shows success toast after successful reset', async () => {
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get(key: string) {
-        return key === "token" ? "abc123" : null;
+        return key === 'token' ? 'abc123' : null;
       }
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
@@ -210,41 +190,35 @@ it("shows success toast after successful reset", async () => {
     } as any,
   );
 
-  vi.spyOn(window, "fetch").mockResolvedValueOnce(
-    new Response("{}", {
+  vi.spyOn(window, 'fetch').mockResolvedValueOnce(
+    new Response('{}', {
       status: 200,
-      headers: { "content-type": "application/json" },
+      headers: { 'content-type': 'application/json' },
     }),
   );
 
   const user = userEvent.setup();
   render(<ResetPasswordPage />);
 
-  await waitFor(() => screen.getByPlaceholderText("Enter new password"));
-  await user.type(
-    screen.getByPlaceholderText("Enter new password"),
-    "newpass123",
-  );
-  await user.type(
-    screen.getByPlaceholderText("Confirm new password"),
-    "newpass123",
-  );
-  await user.click(screen.getByRole("button", { name: /reset password/i }));
+  await waitFor(() => screen.getByPlaceholderText('Enter new password'));
+  await user.type(screen.getByPlaceholderText('Enter new password'), 'newpass123');
+  await user.type(screen.getByPlaceholderText('Confirm new password'), 'newpass123');
+  await user.click(screen.getByRole('button', { name: /reset password/i }));
 
   await waitFor(() => {
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      expect.stringContaining("Password reset successfully"),
+      expect.stringContaining('Password reset successfully'),
     );
   });
 });
 
-it("shows toast.error when API returns an error", async () => {
+it('shows toast.error when API returns an error', async () => {
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get(key: string) {
-        return key === "token" ? "abc123" : null;
+        return key === 'token' ? 'abc123' : null;
       }
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
@@ -252,39 +226,33 @@ it("shows toast.error when API returns an error", async () => {
     } as any,
   );
 
-  vi.spyOn(window, "fetch").mockResolvedValueOnce(
-    new Response(JSON.stringify({ message: "Token expired" }), {
+  vi.spyOn(window, 'fetch').mockResolvedValueOnce(
+    new Response(JSON.stringify({ message: 'Token expired' }), {
       status: 400,
-      headers: { "content-type": "application/json" },
+      headers: { 'content-type': 'application/json' },
     }),
   );
 
   const user = userEvent.setup();
   render(<ResetPasswordPage />);
 
-  await waitFor(() => screen.getByPlaceholderText("Enter new password"));
-  await user.type(
-    screen.getByPlaceholderText("Enter new password"),
-    "newpass123",
-  );
-  await user.type(
-    screen.getByPlaceholderText("Confirm new password"),
-    "newpass123",
-  );
-  await user.click(screen.getByRole("button", { name: /reset password/i }));
+  await waitFor(() => screen.getByPlaceholderText('Enter new password'));
+  await user.type(screen.getByPlaceholderText('Enter new password'), 'newpass123');
+  await user.type(screen.getByPlaceholderText('Confirm new password'), 'newpass123');
+  await user.click(screen.getByRole('button', { name: /reset password/i }));
 
   await waitFor(() => {
-    expect(mockToastError).toHaveBeenCalledWith("Token expired");
+    expect(mockToastError).toHaveBeenCalledWith('Token expired');
   });
 });
 
 it("shows 'Resetting…' while request is in flight", async () => {
   vi.stubGlobal(
-    "URLSearchParams",
+    'URLSearchParams',
     class {
       constructor() {}
       get(key: string) {
-        return key === "token" ? "abc123" : null;
+        return key === 'token' ? 'abc123' : null;
       }
       [Symbol.iterator]() {
         return [][Symbol.iterator]();
@@ -292,21 +260,15 @@ it("shows 'Resetting…' while request is in flight", async () => {
     } as any,
   );
 
-  vi.spyOn(window, "fetch").mockReturnValueOnce(new Promise(() => {}));
+  vi.spyOn(window, 'fetch').mockReturnValueOnce(new Promise(() => {}));
 
   const user = userEvent.setup();
   render(<ResetPasswordPage />);
 
-  await waitFor(() => screen.getByPlaceholderText("Enter new password"));
-  await user.type(
-    screen.getByPlaceholderText("Enter new password"),
-    "newpass123",
-  );
-  await user.type(
-    screen.getByPlaceholderText("Confirm new password"),
-    "newpass123",
-  );
-  await user.click(screen.getByRole("button", { name: /reset password/i }));
+  await waitFor(() => screen.getByPlaceholderText('Enter new password'));
+  await user.type(screen.getByPlaceholderText('Enter new password'), 'newpass123');
+  await user.type(screen.getByPlaceholderText('Confirm new password'), 'newpass123');
+  await user.click(screen.getByRole('button', { name: /reset password/i }));
 
-  expect(screen.getByRole("button", { name: /resetting/i })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /resetting/i })).toBeDisabled();
 });

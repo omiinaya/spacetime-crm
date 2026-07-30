@@ -1,13 +1,8 @@
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
-import type { UseMutationResult } from "@tanstack/react-query";
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 interface InvoiceFormCustomer {
   id: string;
@@ -94,10 +89,7 @@ export default function InvoiceForm({
           <option value="JPY">JPY (¥)</option>
         </Select>
         <div className="flex gap-2">
-          <Button
-            onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending}
-          >
+          <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
             Create
           </Button>
           <Button

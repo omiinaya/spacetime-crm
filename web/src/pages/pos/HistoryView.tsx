@@ -1,12 +1,12 @@
-import { Receipt, ShoppingCart, Lock, Loader2 } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { Card, CardContent } from "../../components/ui/card";
+import { Receipt, ShoppingCart, Lock, Loader2 } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Card, CardContent } from '../../components/ui/card';
 
 interface HistoryViewProps {
   salesHistory: any[] | undefined;
   loadingHistory: boolean;
-  setMode: (mode: "sale" | "history" | "receipt") => void;
+  setMode: (mode: 'sale' | 'history' | 'receipt') => void;
   onViewReceipt: (saleId: string) => void;
   setLocked: (locked: boolean) => void;
 }
@@ -24,15 +24,10 @@ export default function HistoryView({
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Receipt className="w-5 h-5" /> Sale History
         </h2>
-        <Button variant="outline" size="sm" onClick={() => setMode("sale")}>
+        <Button variant="outline" size="sm" onClick={() => setMode('sale')}>
           <ShoppingCart className="w-4 h-4 mr-1" /> New Sale
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setLocked(true)}
-          title="Lock POS terminal"
-        >
+        <Button variant="ghost" size="sm" onClick={() => setLocked(true)} title="Lock POS terminal">
           <Lock className="w-4 h-4" />
         </Button>
       </div>
@@ -53,33 +48,26 @@ export default function HistoryView({
                 <div>
                   <p className="font-medium flex items-center gap-2">
                     Receipt #{sale.receipt_number}
-                    {sale.status === "refunded" && (
+                    {sale.status === 'refunded' && (
                       <Badge variant="destructive" className="text-xs">
                         Refunded
                       </Badge>
                     )}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {sale.customer_name} &middot;{" "}
-                    {new Date(sale.created_at).toLocaleDateString()}
+                    {sale.customer_name} &middot; {new Date(sale.created_at).toLocaleDateString()}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {sale.items_count} item(s)
-                  </p>
+                  <p className="text-xs text-muted-foreground">{sale.items_count} item(s)</p>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold">${sale.total.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {sale.payment_method}
-                  </p>
+                  <p className="text-xs text-muted-foreground capitalize">{sale.payment_method}</p>
                 </div>
               </CardContent>
             </Card>
           ))}
           {(!salesHistory || salesHistory.length === 0) && (
-            <p className="text-center text-muted-foreground py-10">
-              No sales yet
-            </p>
+            <p className="text-center text-muted-foreground py-10">No sales yet</p>
           )}
         </div>
       )}

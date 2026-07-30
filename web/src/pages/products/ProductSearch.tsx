@@ -1,6 +1,6 @@
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Search, Scan, AlertTriangle } from "lucide-react";
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Search, Scan, AlertTriangle } from 'lucide-react';
 
 interface ProductSearchProps {
   search: string;
@@ -70,7 +70,7 @@ export default function ProductSearch({
             <AlertTriangle className="h-5 w-5 text-amber-400" />
             <p className="text-sm text-amber-300">
               <span className="font-semibold">{lowStockCount}</span> product
-              {lowStockCount !== 1 ? "s" : ""} below minimum stock
+              {lowStockCount !== 1 ? 's' : ''} below minimum stock
             </p>
           </div>
           <div className="flex gap-2">
@@ -79,9 +79,7 @@ export default function ProductSearch({
               size="sm"
               className="border-amber-500/40 text-amber-300 hover:bg-amber-500/20"
               onClick={() =>
-                document
-                  .getElementById("low-stock-list")
-                  ?.scrollIntoView({ behavior: "smooth" })
+                document.getElementById('low-stock-list')?.scrollIntoView({ behavior: 'smooth' })
               }
             >
               View
@@ -93,7 +91,7 @@ export default function ProductSearch({
               onClick={() => notifyLowStockMutation.mutate()}
               disabled={notifyLowStockMutation.isPending}
             >
-              {notifyLowStockMutation.isPending ? "Sending..." : "Notify Admin"}
+              {notifyLowStockMutation.isPending ? 'Sending...' : 'Notify Admin'}
             </Button>
           </div>
         </div>

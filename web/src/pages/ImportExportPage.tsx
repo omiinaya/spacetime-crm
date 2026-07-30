@@ -1,34 +1,25 @@
-import { useState, useRef } from "react";
-import { api } from "../lib/api";
-import {
-  Download,
-  Upload,
-  FileUp,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
-import { Card } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import { useState, useRef } from 'react';
+import { api } from '../lib/api';
+import { Download, Upload, FileUp, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 const ENTITIES = [
-  { id: "customers", label: "Customers" },
-  { id: "tickets", label: "Tickets" },
-  { id: "invoices", label: "Invoices" },
-  { id: "payments", label: "Payments" },
-  { id: "appointments", label: "Appointments" },
-  { id: "products", label: "Products" },
-  { id: "estimates", label: "Estimates" },
-  { id: "purchase_orders", label: "Purchase Orders" },
-  { id: "tax_rates", label: "Tax Rates" },
-  { id: "users", label: "Users" },
+  { id: 'customers', label: 'Customers' },
+  { id: 'tickets', label: 'Tickets' },
+  { id: 'invoices', label: 'Invoices' },
+  { id: 'payments', label: 'Payments' },
+  { id: 'appointments', label: 'Appointments' },
+  { id: 'products', label: 'Products' },
+  { id: 'estimates', label: 'Estimates' },
+  { id: 'purchase_orders', label: 'Purchase Orders' },
+  { id: 'tax_rates', label: 'Tax Rates' },
+  { id: 'users', label: 'Users' },
 ];
 
 export default function ImportExportPage() {
-  const [exportEntity, setExportEntity] = useState("customers");
-  const [importType, setImportType] = useState<"customers" | "products">(
-    "customers",
-  );
+  const [exportEntity, setExportEntity] = useState('customers');
+  const [importType, setImportType] = useState<'customers' | 'products'>('customers');
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{
@@ -46,12 +37,12 @@ export default function ImportExportPage() {
     setImporting(true);
     setResult(null);
     try {
-      const res = await (importType === "customers"
+      const res = await (importType === 'customers'
         ? api.import.customers(file)
         : api.import.products(file));
       setResult(res);
     } catch (e: unknown) {
-      setResult({ imported: 0, errors: [(e as Error).message || "Import failed"] });
+      setResult({ imported: 0, errors: [(e as Error).message || 'Import failed'] });
     } finally {
       setImporting(false);
     }
@@ -102,15 +93,15 @@ export default function ImportExportPage() {
           Import Data
         </h2>
         <p className="text-sm text-slate-400 mb-4">
-          Upload a CSV file to bulk-import customers or products. The first row
-          must contain column headers.
+          Upload a CSV file to bulk-import customers or products. The first row must contain column
+          headers.
         </p>
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3 flex-wrap">
             <select
               value={importType}
               onChange={(e) => {
-                setImportType(e.target.value as "customers" | "products");
+                setImportType(e.target.value as 'customers' | 'products');
                 setResult(null);
               }}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
@@ -132,7 +123,7 @@ export default function ImportExportPage() {
               className="flex items-center gap-2"
             >
               <FileUp className="w-4 h-4" />
-              {file ? file.name : "Choose CSV File"}
+              {file ? file.name : 'Choose CSV File'}
             </Button>
 
             <Button
@@ -145,14 +136,14 @@ export default function ImportExportPage() {
               ) : (
                 <Upload className="w-4 h-4" />
               )}
-              {importing ? "Importing..." : "Import"}
+              {importing ? 'Importing...' : 'Import'}
             </Button>
           </div>
 
           {/* ── Import Result ── */}
           {result && (
             <div
-              className={`mt-3 p-3 rounded border ${result.errors.length > 0 ? "border-amber-700 bg-amber-900/20" : "border-green-700 bg-green-900/20"}`}
+              className={`mt-3 p-3 rounded border ${result.errors.length > 0 ? 'border-amber-700 bg-amber-900/20' : 'border-green-700 bg-green-900/20'}`}
             >
               <div className="flex items-center gap-2 mb-1">
                 {result.errors.length > 0 ? (
@@ -162,7 +153,7 @@ export default function ImportExportPage() {
                 )}
                 <span className="font-medium">
                   Imported {result.imported} record
-                  {result.imported !== 1 ? "s" : ""}
+                  {result.imported !== 1 ? 's' : ''}
                 </span>
               </div>
               {result.errors.length > 0 && (
@@ -184,30 +175,30 @@ export default function ImportExportPage() {
             </summary>
             <div className="mt-2 text-xs text-slate-400 space-y-2">
               <div>
-                <strong className="text-slate-300">Customers:</strong>{" "}
-                <code className="text-blue-300">first_name</code>,{" "}
-                <code className="text-blue-300">last_name</code> (required).
-                Optional: <code className="text-slate-400">email</code>,{" "}
-                <code className="text-slate-400">phone</code>,{" "}
-                <code className="text-slate-400">mobile</code>,{" "}
-                <code className="text-slate-400">company</code>,{" "}
-                <code className="text-slate-400">address_line1</code>,{" "}
-                <code className="text-slate-400">city</code>,{" "}
-                <code className="text-slate-400">state</code>,{" "}
-                <code className="text-slate-400">zip</code>,{" "}
-                <code className="text-slate-400">notes</code>,{" "}
+                <strong className="text-slate-300">Customers:</strong>{' '}
+                <code className="text-blue-300">first_name</code>,{' '}
+                <code className="text-blue-300">last_name</code> (required). Optional:{' '}
+                <code className="text-slate-400">email</code>,{' '}
+                <code className="text-slate-400">phone</code>,{' '}
+                <code className="text-slate-400">mobile</code>,{' '}
+                <code className="text-slate-400">company</code>,{' '}
+                <code className="text-slate-400">address_line1</code>,{' '}
+                <code className="text-slate-400">city</code>,{' '}
+                <code className="text-slate-400">state</code>,{' '}
+                <code className="text-slate-400">zip</code>,{' '}
+                <code className="text-slate-400">notes</code>,{' '}
                 <code className="text-slate-400">tags</code>.
               </div>
               <div>
-                <strong className="text-slate-300">Products:</strong>{" "}
-                <code className="text-blue-300">name</code> (required).
-                Optional: <code className="text-slate-400">sku</code>,{" "}
-                <code className="text-slate-400">price</code>,{" "}
-                <code className="text-slate-400">cost</code>,{" "}
-                <code className="text-slate-400">quantity_on_hand</code>,{" "}
-                <code className="text-slate-400">description</code>,{" "}
-                <code className="text-slate-400">category</code>,{" "}
-                <code className="text-slate-400">min_stock</code>,{" "}
+                <strong className="text-slate-300">Products:</strong>{' '}
+                <code className="text-blue-300">name</code> (required). Optional:{' '}
+                <code className="text-slate-400">sku</code>,{' '}
+                <code className="text-slate-400">price</code>,{' '}
+                <code className="text-slate-400">cost</code>,{' '}
+                <code className="text-slate-400">quantity_on_hand</code>,{' '}
+                <code className="text-slate-400">description</code>,{' '}
+                <code className="text-slate-400">category</code>,{' '}
+                <code className="text-slate-400">min_stock</code>,{' '}
                 <code className="text-slate-400">location</code>.
               </div>
             </div>

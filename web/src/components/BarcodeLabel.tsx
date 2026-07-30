@@ -2,13 +2,8 @@
  * Print a barcode label for a product.
  * Opens a new window with the barcode SVG and triggers the print dialog.
  */
-export function printBarcodeLabel(
-  barcode: string,
-  name: string,
-  price: number,
-  sku: string,
-) {
-  const printWindow = window.open("", "_blank");
+export function printBarcodeLabel(barcode: string, name: string, price: number, sku: string) {
+  const printWindow = window.open('', '_blank');
   if (!printWindow) return;
 
   const label = `
@@ -61,13 +56,13 @@ export function printBarcodeLabel(
 
 function escapeHtml(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function escapeJs(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "\\&quot;");
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\&quot;');
 }

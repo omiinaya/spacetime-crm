@@ -460,19 +460,19 @@ export interface POSAddItemPayload {
 }
 
 export const WEBHOOK_EVENTS = [
-  "customer.created",
-  "customer.updated",
-  "customer.deleted",
-  "ticket.created",
-  "ticket.updated",
-  "ticket.status_changed",
-  "invoice.created",
-  "invoice.status_changed",
-  "invoice.paid",
-  "payment.created",
-  "estimate.created",
-  "estimate.approved",
-  "appointment.created",
+  'customer.created',
+  'customer.updated',
+  'customer.deleted',
+  'ticket.created',
+  'ticket.updated',
+  'ticket.status_changed',
+  'invoice.created',
+  'invoice.status_changed',
+  'invoice.paid',
+  'payment.created',
+  'estimate.created',
+  'estimate.approved',
+  'appointment.created',
 ] as const;
 
 export interface Tenant {

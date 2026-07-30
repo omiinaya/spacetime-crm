@@ -9,16 +9,15 @@ import {
   WebhookSettings,
   PinSection,
   TwoFactorSection,
-} from "./settings";
+  RevenueTargetSection,
+} from './settings';
 
 export default function SettingsPage() {
   return (
     <>
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage users and configuration
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Manage users and configuration</p>
       </div>
       <UserSettings />
       <UserPreferencesSection />
@@ -29,6 +28,7 @@ export default function SettingsPage() {
       <BusinessHoursSection />
       <TaxRateSettings />
       <SlaConfigSection />
+      <RevenueTargetSection />
       <WebhookSettings />
     </>
   );

@@ -1,12 +1,7 @@
-import { ShoppingCart, Minus, Plus, X, Check, Loader2 } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
+import { ShoppingCart, Minus, Plus, X, Check, Loader2 } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
 
 interface CartItem {
   product_id: string;
@@ -71,12 +66,8 @@ export default function CartPanel({
                   className="flex items-center justify-between border rounded-lg p-2"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {item.product_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      ${item.unit_price.toFixed(2)}
-                    </p>
+                    <p className="text-sm font-medium truncate">{item.product_name}</p>
+                    <p className="text-xs text-muted-foreground">${item.unit_price.toFixed(2)}</p>
                   </div>
                   <div className="flex items-center gap-1 ml-2">
                     <Button
@@ -87,9 +78,7 @@ export default function CartPanel({
                     >
                       <Minus className="w-3 h-3" />
                     </Button>
-                    <span className="w-6 text-center text-sm font-medium">
-                      {item.quantity}
-                    </span>
+                    <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -151,9 +140,7 @@ export default function CartPanel({
             {tendered > 0 && (
               <div className="flex justify-between text-sm">
                 <span>Change:</span>
-                <span
-                  className={`font-bold ${changeDue > 0 ? "text-green-600" : ""}`}
-                >
+                <span className={`font-bold ${changeDue > 0 ? 'text-green-600' : ''}`}>
                   ${changeDue.toFixed(2)}
                 </span>
               </div>
@@ -164,11 +151,7 @@ export default function CartPanel({
           <Button
             className="w-full mt-4"
             size="lg"
-            disabled={
-              cart.length === 0 ||
-              createMutation.isPending ||
-              addItemMutation.isPending
-            }
+            disabled={cart.length === 0 || createMutation.isPending || addItemMutation.isPending}
             onClick={handleSaleComplete}
           >
             {createMutation.isPending || addItemMutation.isPending ? (

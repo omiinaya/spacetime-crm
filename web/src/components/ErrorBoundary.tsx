@@ -1,5 +1,5 @@
-import { Component, type ReactNode } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { Component, type ReactNode } from 'react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -28,7 +28,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     this.props.onError?.(error, errorInfo);
-    console.error("[ErrorBoundary]", error.message, errorInfo.componentStack);
+    console.error('[ErrorBoundary]', error.message, errorInfo.componentStack);
   }
 
   handleRetry = () => {
@@ -48,15 +48,15 @@ class ErrorBoundary extends Component<Props, State> {
           </div>
           <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
           <p className="text-sm text-muted-foreground max-w-md mb-6">
-            This page encountered an unexpected error. Try refreshing, or
-            navigate away and come back.
+            This page encountered an unexpected error. Try refreshing, or navigate away and come
+            back.
           </p>
           <details className="text-xs text-muted-foreground mb-6 max-w-md text-left">
             <summary className="cursor-pointer hover:text-foreground transition-colors">
               Error details
             </summary>
             <pre className="mt-2 p-3 rounded bg-muted overflow-auto text-[11px] leading-relaxed max-h-32">
-              {this.state.error?.message ?? "Unknown error"}
+              {this.state.error?.message ?? 'Unknown error'}
             </pre>
           </details>
           <button

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
 interface PaginationState {
   offset: number;
@@ -29,8 +29,7 @@ export function usePagination(initialLimit: number = 25): UsePaginationReturn {
   });
 
   const page = state.limit > 0 ? Math.floor(state.offset / state.limit) + 1 : 1;
-  const totalPages =
-    state.limit > 0 ? Math.max(1, Math.ceil(state.total / state.limit)) : 1;
+  const totalPages = state.limit > 0 ? Math.max(1, Math.ceil(state.total / state.limit)) : 1;
   const hasNext = state.offset + state.limit < state.total;
   const hasPrev = state.offset > 0;
 

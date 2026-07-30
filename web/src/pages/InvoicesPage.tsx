@@ -1,27 +1,15 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../lib/query-client";
-import {
-  api,
-  Invoice,
-  Customer,
-  TaxRate,
-  Payment,
-  InvoiceSummary,
-} from "../lib/api";
-import { usePagination } from "../lib/usePagination";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Select } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
-import Pagination from "../components/Pagination";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../lib/query-client';
+import { api, Invoice, Customer, TaxRate, Payment, InvoiceSummary } from '../lib/api';
+import { usePagination } from '../lib/usePagination';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { Select } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
+import Pagination from '../components/Pagination';
 import {
   FileText,
   Plus,
@@ -35,60 +23,58 @@ import {
   Edit3,
   Save,
   History,
-} from "lucide-react";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 const PAGE_SIZE = 25;
 
-const statusColors: Record<
-  string,
-  "default" | "warning" | "success" | "destructive" | "outline"
-> = {
-  draft: "outline",
-  sent: "default",
-  paid: "success",
-  partial: "warning",
-  overdue: "destructive",
-  cancelled: "outline",
-};
+const statusColors: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'outline'> =
+  {
+    draft: 'outline',
+    sent: 'default',
+    paid: 'success',
+    partial: 'warning',
+    overdue: 'destructive',
+    cancelled: 'outline',
+  };
 
 export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: string) => void } = {}) {
   const pag = usePagination(PAGE_SIZE);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const DRAFT_KEY = "spacetime-crm-invoice-draft";
+  const DRAFT_KEY = 'spacetime-crm-invoice-draft';
   const [form, setForm] = useState(() => {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
     return {
-      customer_id: "",
-      ticket_id: "",
-      notes: "",
-      terms: "",
-      due_date: "",
-      currency: "USD",
+      customer_id: '',
+      ticket_id: '',
+      notes: '',
+      terms: '',
+      due_date: '',
+      currency: 'USD',
     };
   });
   const [selectedInv, setSelectedInv] = useState<Invoice | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     amount: 0,
-    method: "cash",
-    reference: "",
+    method: 'cash',
+    reference: '',
   });
   const [newItem, setNewItem] = useState({
-    description: "",
+    description: '',
     quantity: 1,
     unit_price: 0,
-    item_type: "service",
+    item_type: 'service',
   });
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkStatus, setBulkStatus] = useState("sent");
+  const [bulkStatus, setBulkStatus] = useState('sent');
   const [showBulkEdit, setShowBulkEdit] = useState(false);
-  const [bulkEditForm, setBulkEditForm] = useState({ terms: "", notes: "" });
+  const [bulkEditForm, setBulkEditForm] = useState({ terms: '', notes: '' });
 
   // Auto-save invoice draft to localStorage
   useEffect(() => {
@@ -98,31 +84,28 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
   }, [form, showForm, DRAFT_KEY]);
 
   const { data: summary } = useQuery({
-    queryKey: ["invoice-summary"],
+    queryKey: ['invoice-summary'],
     queryFn: () => api.invoices.summary(),
   });
 
   const sendReminderMutation = useMutation({
     mutationFn: () => api.invoices.sendOverdueReminders(),
     onSuccess: (data) => {
-      toast.success(
-        `Sent ${data.email} email(s) and ${data.sms} SMS reminder(s)`,
-      );
-      queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
+      toast.success(`Sent ${data.email} email(s) and ${data.sms} SMS reminder(s)`);
+      queryClient.invalidateQueries({ queryKey: ['invoice-summary'] });
     },
-    onError: () => toast.error("Failed to send reminders"),
+    onError: () => toast.error('Failed to send reminders'),
   });
 
   const bulkMutation = useMutation({
-    mutationFn: () =>
-      api.invoices.bulkStatusUpdate(Array.from(selectedIds), bulkStatus),
+    mutationFn: () => api.invoices.bulkStatusUpdate(Array.from(selectedIds), bulkStatus),
     onSuccess: (data) => {
       toast.success(`Updated ${data.updated} invoice(s) to ${bulkStatus}`);
       setSelectedIds(new Set());
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-summary"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-summary'] });
     },
-    onError: () => toast.error("Bulk update failed"),
+    onError: () => toast.error('Bulk update failed'),
   });
 
   const batchEmailMutation = useMutation({
@@ -133,32 +116,29 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
       );
       if (data.failed > 0) {
         data.details
-          .filter((d) => d.status === "error")
+          .filter((d) => d.status === 'error')
           .slice(0, 3)
-          .forEach((d) =>
-            toast.error(`Failed: ${d.id.slice(0, 12)} — ${d.error}`),
-          );
+          .forEach((d) => toast.error(`Failed: ${d.id.slice(0, 12)} — ${d.error}`));
       }
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Batch email failed"),
+    onError: () => toast.error('Batch email failed'),
   });
 
   const bulkEditMutation = useMutation({
-    mutationFn: () =>
-      api.invoices.bulkEdit(Array.from(selectedIds), bulkEditForm),
+    mutationFn: () => api.invoices.bulkEdit(Array.from(selectedIds), bulkEditForm),
     onSuccess: (data) => {
       toast.success(`Updated terms/notes on ${data.updated} invoice(s)`);
       setSelectedIds(new Set());
       setShowBulkEdit(false);
-      setBulkEditForm({ terms: "", notes: "" });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setBulkEditForm({ terms: '', notes: '' });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Bulk edit failed"),
+    onError: () => toast.error('Bulk edit failed'),
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["invoices", { filter, offset: pag.offset }],
+    queryKey: ['invoices', { filter, offset: pag.offset }],
     queryFn: async () => {
       const [iRes, cRes, tRes] = await Promise.all([
         api.invoices.list(filter, undefined, pag.offset, PAGE_SIZE),
@@ -193,28 +173,28 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
         currency: form.currency,
       }),
     onSuccess: () => {
-      toast.success("Invoice created");
+      toast.success('Invoice created');
       setShowForm(false);
       setForm({
-        customer_id: "",
-        ticket_id: "",
-        notes: "",
-        terms: "",
-        due_date: "",
-        currency: "USD",
+        customer_id: '',
+        ticket_id: '',
+        notes: '',
+        terms: '',
+        due_date: '',
+        currency: 'USD',
       });
       localStorage.removeItem(DRAFT_KEY);
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Failed to create invoice"),
+    onError: () => toast.error('Failed to create invoice'),
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       api.invoices.updateStatus(id, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-line-items"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-line-items'] });
     },
   });
 
@@ -222,8 +202,8 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
     mutationFn: ({ id, rate }: { id: string; rate: number }) =>
       api.taxRates.setInvoiceTaxRate(id, rate),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoice-line-items"] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-line-items'] });
     },
   });
 
@@ -236,32 +216,31 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
     }) => api.invoices.lineItems.create(selectedInv!.id, item),
     onSuccess: () => {
       setNewItem({
-        description: "",
+        description: '',
         quantity: 1,
         unit_price: 0,
-        item_type: "service",
+        item_type: 'service',
       });
       queryClient.invalidateQueries({
-        queryKey: ["invoice-line-items", selectedInv?.id],
+        queryKey: ['invoice-line-items', selectedInv?.id],
       });
     },
-    onError: () => toast.error("Failed to add item"),
+    onError: () => toast.error('Failed to add item'),
   });
 
   const removeLineItemMutation = useMutation({
-    mutationFn: (itemId: string) =>
-      api.invoices.lineItems.delete(selectedInv!.id, itemId),
+    mutationFn: (itemId: string) => api.invoices.lineItems.delete(selectedInv!.id, itemId),
     onSuccess: (_, itemId) => {
       queryClient.invalidateQueries({
-        queryKey: ["invoice-line-items", selectedInv?.id],
+        queryKey: ['invoice-line-items', selectedInv?.id],
       });
     },
-    onError: () => toast.error("Failed to remove item"),
+    onError: () => toast.error('Failed to remove item'),
   });
 
   const recordPaymentMutation = useMutation({
     mutationFn: () => {
-      if (!selectedInv) throw new Error("No invoice selected");
+      if (!selectedInv) throw new Error('No invoice selected');
       const cust = customers.find((c) => c.id === selectedInv.customer_id);
       return api.payments.record({
         invoice_id: selectedInv.id,
@@ -269,17 +248,17 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
         amount: paymentForm.amount || selectedInv.total,
         method: paymentForm.method,
         reference: paymentForm.reference,
-        notes: "",
-        currency: selectedInv.currency || "USD",
+        notes: '',
+        currency: selectedInv.currency || 'USD',
       });
     },
     onSuccess: () => {
-      toast.success("Payment recorded");
+      toast.success('Payment recorded');
       setShowPaymentForm(false);
-      setPaymentForm({ amount: 0, method: "cash", reference: "" });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setPaymentForm({ amount: 0, method: 'cash', reference: '' });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: () => toast.error("Failed to record payment"),
+    onError: () => toast.error('Failed to record payment'),
   });
 
   const sendEmailMutation = useMutation({
@@ -287,7 +266,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
     onSuccess: (data) => {
       toast.success(`Invoice #${data.invoice_number} sent to ${data.sent_to}`);
     },
-    onError: () => toast.error("Failed to send email"),
+    onError: () => toast.error('Failed to send email'),
   });
 
   const handleSendEmail = () => {
@@ -296,7 +275,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
   };
 
   const { data: lineItemsData } = useQuery({
-    queryKey: ["invoice-line-items", selectedInv?.id],
+    queryKey: ['invoice-line-items', selectedInv?.id],
     queryFn: async () => {
       const res = await api.invoices.lineItems.list(selectedInv!.id);
       return res.line_items;
@@ -312,17 +291,17 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
   const selectInvoice = async (inv: Invoice) => {
     setSelectedInv(inv);
     setNewItem({
-      description: "",
+      description: '',
       quantity: 1,
       unit_price: 0,
-      item_type: "service",
+      item_type: 'service',
     });
   };
 
   const lineItems = lineItemsData ?? [];
 
   const { data: paymentsData } = useQuery({
-    queryKey: ["invoice-payments", selectedInv?.id],
+    queryKey: ['invoice-payments', selectedInv?.id],
     queryFn: async () => {
       const res = await api.payments.list(selectedInv!.id);
       return res.payments;
@@ -364,9 +343,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Invoices</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Billing and invoicing
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Billing and invoicing</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-1.5" />
@@ -394,14 +371,14 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {["", "draft", "sent", "paid", "overdue", "cancelled"].map((s) => (
+        {['', 'draft', 'sent', 'paid', 'overdue', 'cancelled'].map((s) => (
           <Button
             key={s}
             size="sm"
-            variant={filter === s ? "default" : "outline"}
+            variant={filter === s ? 'default' : 'outline'}
             onClick={() => handleFilter(s)}
           >
-            {s || "All"}
+            {s || 'All'}
           </Button>
         ))}
       </div>
@@ -435,16 +412,14 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                 {sendReminderMutation.isPending ? (
                   <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
                 ) : (
-                  "Remind"
+                  'Remind'
                 )}
               </Button>
             )}
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Revenue</p>
-            <p className="text-lg font-bold text-green-400">
-              ${summary.total_revenue.toFixed(2)}
-            </p>
+            <p className="text-lg font-bold text-green-400">${summary.total_revenue.toFixed(2)}</p>
           </div>
         </div>
       )}
@@ -452,9 +427,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
-          <span className="text-sm font-medium">
-            {selectedIds.size} selected
-          </span>
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
           <div className="flex-1" />
           <Select
             value={bulkStatus}
@@ -467,11 +440,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
             <option value="overdue">Overdue</option>
             <option value="cancelled">Cancelled</option>
           </Select>
-          <Button
-            size="sm"
-            onClick={() => bulkMutation.mutate()}
-            disabled={bulkMutation.isPending}
-          >
+          <Button size="sm" onClick={() => bulkMutation.mutate()} disabled={bulkMutation.isPending}>
             {bulkMutation.isPending ? (
               <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
             ) : null}
@@ -494,18 +463,14 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
             size="sm"
             variant="outline"
             onClick={() => {
-              setBulkEditForm({ terms: "", notes: "" });
+              setBulkEditForm({ terms: '', notes: '' });
               setShowBulkEdit(true);
             }}
           >
             <Edit3 className="h-3.5 w-3.5 mr-1" />
             Edit
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setSelectedIds(new Set())}
-          >
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Clear
           </Button>
         </div>
@@ -519,9 +484,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
           <CardContent className="space-y-3">
             <Select
               value={form.customer_id}
-              onChange={(e) =>
-                setForm({ ...form, customer_id: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
             >
               <option value="">Select customer...</option>
               {customers.map((c) => (
@@ -562,10 +525,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
               <option value="JPY">JPY (¥)</option>
             </Select>
             <div className="flex gap-2">
-              <Button
-                onClick={() => createMutation.mutate()}
-                disabled={createMutation.isPending}
-              >
+              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
                 Create
               </Button>
               <Button
@@ -583,7 +543,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={`space-y-3 ${selectedInv ? "hidden lg:block" : ""}`}>
+        <div className={`space-y-3 ${selectedInv ? 'hidden lg:block' : ''}`}>
           {/* Select all header */}
           {invoices.length > 0 && (
             <div className="flex items-center gap-2 px-1 pb-1 text-xs text-muted-foreground">
@@ -596,14 +556,10 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                 ) : (
                   <Square className="h-3.5 w-3.5" />
                 )}
-                {selectedIds.size === invoices.length
-                  ? "Deselect all"
-                  : "Select all"}
+                {selectedIds.size === invoices.length ? 'Deselect all' : 'Select all'}
               </button>
               {selectedIds.size > 0 && (
-                <span className="text-primary font-medium">
-                  {selectedIds.size} selected
-                </span>
+                <span className="text-primary font-medium">{selectedIds.size} selected</span>
               )}
             </div>
           )}
@@ -625,7 +581,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                   )}
                 </button>
                 <Card
-                  className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? "border-primary" : "hover:border-primary/30"} ${inv.status === "overdue" ? "border-l-red-500 border-l-2" : ""}`}
+                  className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? 'border-primary' : 'hover:border-primary/30'} ${inv.status === 'overdue' ? 'border-l-red-500 border-l-2' : ''}`}
                   onClick={() => selectInvoice(inv)}
                 >
                   <CardContent className="pt-4">
@@ -635,14 +591,12 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                           <span className="text-xs text-muted-foreground">
                             #{inv.invoice_number}
                           </span>
-                          <Badge
-                            variant={statusColors[inv.status] || "outline"}
-                          >
+                          <Badge variant={statusColors[inv.status] || 'outline'}>
                             {inv.status}
                           </Badge>
                         </div>
                         <p className="font-medium mt-1">
-                          {inv.currency || "USD"} {inv.total.toFixed(2)}
+                          {inv.currency || 'USD'} {inv.total.toFixed(2)}
                         </p>
                         {cust && (
                           <p className="text-xs text-muted-foreground">
@@ -667,18 +621,11 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
             >
               ← Back to list
             </button>
-            <Card
-              className={
-                selectedInv.status === "overdue"
-                  ? "border-l-red-500 border-l-2"
-                  : ""
-              }
-            >
+            <Card className={selectedInv.status === 'overdue' ? 'border-l-red-500 border-l-2' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>
-                    #{selectedInv.invoice_number} —{" "}
-                    {selectedInv.currency || "USD"}{" "}
+                    #{selectedInv.invoice_number} — {selectedInv.currency || 'USD'}{' '}
                     {selectedInv.total.toFixed(2)}
                   </CardTitle>
                   <div className="flex gap-1">
@@ -698,12 +645,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() =>
-                        window.open(
-                          `/api/invoices/${selectedInv.id}/pdf`,
-                          "_blank",
-                        )
-                      }
+                      onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, '_blank')}
                     >
                       <FileDown className="h-3.5 w-3.5 mr-1" /> PDF
                     </Button>
@@ -750,11 +692,8 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                     ))}
                   </Select>
                   <span className="text-sm font-medium tabular-nums">
-                    {selectedInv.currency || "USD"}{" "}
-                    {(
-                      (selectedInv.subtotal * (selectedInv.tax_rate || 0)) /
-                      100
-                    ).toFixed(2)}
+                    {selectedInv.currency || 'USD'}{' '}
+                    {((selectedInv.subtotal * (selectedInv.tax_rate || 0)) / 100).toFixed(2)}
                   </span>
                 </div>
 
@@ -768,19 +707,14 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{li.description}</p>
                         <p className="text-xs text-muted-foreground">
-                          {li.quantity} x {selectedInv.currency || "USD"}{" "}
-                          {li.unit_price.toFixed(2)}
+                          {li.quantity} x {selectedInv.currency || 'USD'} {li.unit_price.toFixed(2)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-medium">
-                          {selectedInv.currency || "USD"} {li.total.toFixed(2)}
+                          {selectedInv.currency || 'USD'} {li.total.toFixed(2)}
                         </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => removeLineItem(li.id)}
-                        >
+                        <Button size="icon" variant="ghost" onClick={() => removeLineItem(li.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -791,9 +725,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                 <div className="flex gap-2">
                   <Select
                     value={newItem.item_type}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, item_type: e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })}
                     className="w-28"
                   >
                     <option value="service">Service</option>
@@ -802,26 +734,20 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                   <Input
                     placeholder="Description"
                     value={newItem.description}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, description: e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                   />
                   <Input
                     type="number"
                     placeholder="Qty"
                     value={newItem.quantity}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, quantity: +e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })}
                     className="w-20"
                   />
                   <Input
                     type="number"
                     placeholder="Price"
                     value={newItem.unit_price}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, unit_price: +e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, unit_price: +e.target.value })}
                     className="w-24"
                   />
                   <Button size="sm" onClick={addLineItem}>
@@ -901,11 +827,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                           )}
                           Pay
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setShowPaymentForm(false)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => setShowPaymentForm(false)}>
                           Cancel
                         </Button>
                       </div>
@@ -931,7 +853,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                           <div className="flex items-center gap-2 min-w-0">
                             <DollarSign className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             <span className="font-medium tabular-nums">
-                              {pmt.currency || "USD"} {pmt.amount.toFixed(2)}
+                              {pmt.currency || 'USD'} {pmt.amount.toFixed(2)}
                             </span>
                             <span className="text-muted-foreground capitalize text-xs">
                               {pmt.method}
@@ -947,7 +869,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                       ))}
                       {payments.length > 5 && (
                         <button
-                          onClick={() => onNavigate?.("payments")}
+                          onClick={() => onNavigate?.('payments')}
                           className="text-xs text-center text-muted-foreground hover:text-foreground w-full underline underline-offset-2 transition-colors"
                         >
                           View all {payments.length} payments →
@@ -955,7 +877,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                       )}
                       {payments.length <= 5 && payments.length > 0 && (
                         <button
-                          onClick={() => onNavigate?.("payments")}
+                          onClick={() => onNavigate?.('payments')}
                           className="text-xs text-center text-muted-foreground hover:text-foreground w-full underline underline-offset-2 transition-colors"
                         >
                           View all payments →
@@ -977,7 +899,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
             <CardHeader>
               <CardTitle>
                 Edit {selectedIds.size} Invoice
-                {selectedIds.size !== 1 ? "s" : ""}
+                {selectedIds.size !== 1 ? 's' : ''}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -988,9 +910,7 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                 <Textarea
                   placeholder="Payment terms..."
                   value={bulkEditForm.terms}
-                  onChange={(e) =>
-                    setBulkEditForm({ ...bulkEditForm, terms: e.target.value })
-                  }
+                  onChange={(e) => setBulkEditForm({ ...bulkEditForm, terms: e.target.value })}
                 />
               </div>
               <div>
@@ -1000,30 +920,24 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
                 <Textarea
                   placeholder="Invoice notes..."
                   value={bulkEditForm.notes}
-                  onChange={(e) =>
-                    setBulkEditForm({ ...bulkEditForm, notes: e.target.value })
-                  }
+                  onChange={(e) => setBulkEditForm({ ...bulkEditForm, notes: e.target.value })}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowBulkEdit(false)}
-                >
+                <Button variant="outline" onClick={() => setShowBulkEdit(false)}>
                   Cancel
                 </Button>
                 <Button
                   onClick={() => bulkEditMutation.mutate()}
                   disabled={
-                    bulkEditMutation.isPending ||
-                    (!bulkEditForm.terms && !bulkEditForm.notes)
+                    bulkEditMutation.isPending || (!bulkEditForm.terms && !bulkEditForm.notes)
                   }
                 >
                   {bulkEditMutation.isPending ? (
                     <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
                   ) : null}
                   Apply to {selectedIds.size} invoice
-                  {selectedIds.size !== 1 ? "s" : ""}
+                  {selectedIds.size !== 1 ? 's' : ''}
                 </Button>
               </div>
             </CardContent>

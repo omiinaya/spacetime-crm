@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import {
   BarChart,
   Bar,
@@ -18,20 +13,19 @@ import {
   Legend,
   LineChart,
   Line,
-} from "recharts";
-import { Ticket, Users, Award, Calendar } from "lucide-react";
+} from 'recharts';
+import { Ticket, Users, Award, Calendar } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
-  open: "#f59e0b",
-  "in progress": "#3b82f6",
-  resolved: "#22c55e",
-  closed: "#6b7280",
-  waiting: "#8b5cf6",
-  on_hold: "#ef4444",
+  open: '#f59e0b',
+  'in progress': '#3b82f6',
+  resolved: '#22c55e',
+  closed: '#6b7280',
+  waiting: '#8b5cf6',
+  on_hold: '#ef4444',
 };
 
-const getStatusColor = (status: string) =>
-  STATUS_COLORS[status.toLowerCase()] || "#6b7280";
+const getStatusColor = (status: string) => STATUS_COLORS[status.toLowerCase()] || '#6b7280';
 
 interface TicketStatsProps {
   ticket_by_status: { status: string; count: number }[];
@@ -65,16 +59,11 @@ export default function TicketStats({
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
-                label={({ payload }: any) =>
-                  `${payload?.status || ""}: ${payload?.count || 0}`
-                }
+                label={({ payload }: any) => `${payload?.status || ''}: ${payload?.count || 0}`}
                 labelLine={true}
               >
                 {ticket_by_status.map((entry) => (
-                  <Cell
-                    key={entry.status}
-                    fill={getStatusColor(entry.status)}
-                  />
+                  <Cell key={entry.status} fill={getStatusColor(entry.status)} />
                 ))}
               </Pie>
               <Tooltip />
@@ -88,31 +77,24 @@ export default function TicketStats({
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-400" /> Appointments by
-            Month
+            <Calendar className="h-4 w-4 text-purple-400" /> Appointments by Month
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={appointments_by_month}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--color-border)"
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
               <XAxis
                 dataKey="month"
                 tick={{ fontSize: 11 }}
                 stroke="var(--color-muted-foreground)"
               />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                stroke="var(--color-muted-foreground)"
-              />
+              <YAxis tick={{ fontSize: 11 }} stroke="var(--color-muted-foreground)" />
               <Tooltip
                 contentStyle={{
-                  background: "var(--color-card)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "8px",
+                  background: 'var(--color-card)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
                 }}
               />
               <Line
@@ -120,7 +102,7 @@ export default function TicketStats({
                 dataKey="appointments"
                 stroke="#8b5cf6"
                 strokeWidth={2}
-                dot={{ fill: "#8b5cf6", r: 4 }}
+                dot={{ fill: '#8b5cf6', r: 4 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -131,25 +113,16 @@ export default function TicketStats({
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <Users className="h-4 w-4 text-blue-400" /> Tech Productivity —
-            Tickets Closed
+            <Users className="h-4 w-4 text-blue-400" /> Tech Productivity — Tickets Closed
           </CardTitle>
         </CardHeader>
         <CardContent>
           {tech_closed.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              No closed tickets yet
-            </p>
+            <p className="text-sm text-muted-foreground py-8 text-center">No closed tickets yet</p>
           ) : (
-            <ResponsiveContainer
-              width="100%"
-              height={Math.max(200, tech_closed.length * 50)}
-            >
+            <ResponsiveContainer width="100%" height={Math.max(200, tech_closed.length * 50)}>
               <BarChart data={tech_closed} layout="vertical">
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--color-border)"
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis
                   type="number"
                   tick={{ fontSize: 11 }}
@@ -164,9 +137,9 @@ export default function TicketStats({
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "var(--color-card)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "8px",
+                    background: 'var(--color-card)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
                   }}
                 />
                 <Bar
@@ -185,15 +158,12 @@ export default function TicketStats({
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <Award className="h-4 w-4 text-amber-400" /> Top Customers by
-            Revenue
+            <Award className="h-4 w-4 text-amber-400" /> Top Customers by Revenue
           </CardTitle>
         </CardHeader>
         <CardContent>
           {top_customers.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              No paid invoices yet
-            </p>
+            <p className="text-sm text-muted-foreground py-8 text-center">No paid invoices yet</p>
           ) : (
             <div className="divide-y divide-border">
               {top_customers.map((c, i) => (

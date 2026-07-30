@@ -1,49 +1,49 @@
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState<string | null>(null);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setToken(params.get("token"));
+    setToken(params.get('token'));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error('Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
     setBusy(true);
     try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error((err as Error)?.message || "Failed to reset password");
+        throw new Error((err as Error)?.message || 'Failed to reset password');
       }
 
-      toast.success("Password reset successfully. Redirecting to login...");
+      toast.success('Password reset successfully. Redirecting to login...');
       setTimeout(() => {
-        window.location.href = "/";
+        window.location.href = '/';
       }, 2000);
     } catch (err: unknown) {
-      toast.error((err as Error).message || "Something went wrong");
+      toast.error((err as Error).message || 'Something went wrong');
     } finally {
       setBusy(false);
     }
@@ -107,16 +107,12 @@ export default function ResetPasswordPage() {
             </svg>
           </div>
           <h1 className="text-xl font-bold">Reset Password</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Enter your new password
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Enter your new password</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">
-              New Password
-            </label>
+            <label className="text-sm font-medium mb-1 block">New Password</label>
             <input
               type="password"
               value={password}
@@ -129,9 +125,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">
-              Confirm Password
-            </label>
+            <label className="text-sm font-medium mb-1 block">Confirm Password</label>
             <input
               type="password"
               value={confirmPassword}
@@ -148,12 +142,12 @@ export default function ResetPasswordPage() {
             disabled={busy}
             className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
-            {busy ? "Resetting..." : "Reset Password"}
+            {busy ? 'Resetting...' : 'Reset Password'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Remember your password?{" "}
+          Remember your password?{' '}
           <a href="/" className="text-primary hover:underline">
             Sign in
           </a>

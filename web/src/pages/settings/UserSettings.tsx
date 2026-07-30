@@ -1,26 +1,21 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../../lib/query-client";
-import { api } from "../../lib/api";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
-import { Badge } from "../../components/ui/badge";
-import { Plus, User as UserIcon } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../../lib/query-client';
+import { api } from '../../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Badge } from '../../components/ui/badge';
+import { Plus, User as UserIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function UserSettings() {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", role: "staff" });
+  const [form, setForm] = useState({ name: '', email: '', role: 'staff' });
 
   const { data: users = [] } = useQuery({
-    queryKey: ["users"],
+    queryKey: ['users'],
     queryFn: async () => {
       const res = await api.users.list();
       return res.users ?? [];
@@ -28,16 +23,15 @@ export default function UserSettings() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; email: string; role: string }) =>
-      api.users.create(data),
+    mutationFn: (data: { name: string; email: string; role: string }) => api.users.create(data),
     onSuccess: () => {
-      toast.success("User created");
+      toast.success('User created');
       setShowForm(false);
-      setForm({ name: "", email: "", role: "staff" });
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setForm({ name: '', email: '', role: 'staff' });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: () => {
-      toast.error("Failed to create user");
+      toast.error('Failed to create user');
     },
   });
 
@@ -75,11 +69,7 @@ export default function UserSettings() {
             <Button size="sm" onClick={() => createMutation.mutate(form)}>
               Save
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowForm(false)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
           </div>
@@ -96,9 +86,7 @@ export default function UserSettings() {
                   <p className="text-xs text-muted-foreground">{u.email}</p>
                 </div>
               </div>
-              <Badge variant={u.active ? "success" : "secondary"}>
-                {u.role}
-              </Badge>
+              <Badge variant={u.active ? 'success' : 'secondary'}>{u.role}</Badge>
             </div>
           ))}
         </div>

@@ -113,7 +113,9 @@ async def dashboard_stats(
         if month_start_ms <= p.get("created_at", 0) < now_ms_month
     )
     monthly_revenue = round(monthly_revenue, 2)
-    revenue_target = 25000.0  # default monthly target
+    from app_config import get_config as _app_get
+    app_cfg = _app_get()
+    revenue_target = app_cfg.get("revenue_target", 25000.0)
 
     # Average resolution time
     resolution_times = []

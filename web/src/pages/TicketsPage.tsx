@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../lib/query-client";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../lib/query-client';
 import {
   api,
   Ticket,
@@ -8,17 +8,12 @@ import {
   TicketTimer,
   ChecklistTemplate,
   TicketChecklistItem,
-} from "../lib/api";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Select } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
+} from '../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Select } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
 import {
   Ticket as TicketIcon,
   Plus,
@@ -28,70 +23,67 @@ import {
   Play,
   ListChecks,
   AlertTriangle,
-} from "lucide-react";
-import { toast } from "sonner";
-import { useAuth } from "../lib/auth";
-import { usePagination } from "../lib/usePagination";
-import Pagination from "../components/Pagination";
+  Printer,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '../lib/auth';
+import { usePagination } from '../lib/usePagination';
+import Pagination from '../components/Pagination';
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
 
 const PAGE_SIZE = 25;
 
-const statusColors: Record<
-  string,
-  "default" | "secondary" | "warning" | "success" | "outline"
-> = {
-  new: "default",
-  assigned: "secondary",
-  in_progress: "warning",
-  waiting_on_customer: "outline",
-  resolved: "success",
-  closed: "secondary",
+const statusColors: Record<string, 'default' | 'secondary' | 'warning' | 'success' | 'outline'> = {
+  new: 'default',
+  assigned: 'secondary',
+  in_progress: 'warning',
+  waiting_on_customer: 'outline',
+  resolved: 'success',
+  closed: 'secondary',
 };
 
 const priorityColors: Record<string, string> = {
-  low: "text-blue-400",
-  medium: "text-yellow-400",
-  high: "text-orange-400",
-  urgent: "text-red-400",
+  low: 'text-blue-400',
+  medium: 'text-yellow-400',
+  high: 'text-orange-400',
+  urgent: 'text-red-400',
 };
 
 const slaUrgency = (createdAt: number): { color: string; label: string } => {
   const hours = (Date.now() - createdAt) / 3600000;
-  if (hours < 4)
-    return { color: "bg-green-500", label: `${Math.round(hours)}h` };
-  if (hours < 24)
-    return { color: "bg-amber-500", label: `${Math.round(hours)}h` };
-  if (hours < 72)
-    return { color: "bg-red-500", label: `${Math.floor(hours / 24)}d` };
-  return { color: "bg-red-700", label: `${Math.floor(hours / 24)}d` };
+  if (hours < 4) return { color: 'bg-green-500', label: `${Math.round(hours)}h` };
+  if (hours < 24) return { color: 'bg-amber-500', label: `${Math.round(hours)}h` };
+  if (hours < 72) return { color: 'bg-red-500', label: `${Math.floor(hours / 24)}d` };
+  return { color: 'bg-red-700', label: `${Math.floor(hours / 24)}d` };
 };
 
 export default function TicketsPage() {
   const pag = usePagination(PAGE_SIZE);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
-    customer_id: "",
-    title: "",
-    description: "",
-    device_type: "",
-    device_model: "",
-    device_serial: "",
-    priority: "medium",
+    customer_id: '',
+    title: '',
+    description: '',
+    device_type: '',
+    device_model: '',
+    device_serial: '',
+    priority: 'medium',
   });
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [newNote, setNewNote] = useState("");
+  const [newNote, setNewNote] = useState('');
   const [timers, setTimers] = useState<TicketTimer[]>([]);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [checklist, setChecklist] = useState<TicketChecklistItem[]>([]);
-  const [checklistTemplates, setChecklistTemplates] = useState<
-    ChecklistTemplate[]
-  >([]);
+  const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const { user } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["tickets", { filter, offset: pag.offset }],
+    queryKey: ['tickets', { filter, offset: pag.offset }],
     queryFn: async () => {
       const [tRes, cRes] = await Promise.all([
         api.tickets.list(filter, undefined, pag.offset, PAGE_SIZE),
@@ -112,9 +104,63 @@ export default function TicketsPage() {
   const tickets = data?.tickets ?? [];
   const customers = data?.customers ?? [];
 
+  const printTicket = (t: Ticket) => {
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const cust = customers.find((c) => c.id === t.customer_id);
+    const custName = cust ? `${cust.first_name} ${cust.last_name}` : "N/A";
+    const created = new Date(t.created_at).toLocaleString();
+    const updated = new Date(t.updated_at).toLocaleString();
+    win.document.write(`
+      <html>
+        <head>
+          <title>Ticket #${t.ticket_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
+            .header { border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .meta { color: #555; font-size: 13px; margin-top: 4px; }
+            .section { margin-bottom: 16px; }
+            .section h3 { font-size: 14px; color: #333; margin-bottom: 4px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+            .field { display: flex; padding: 3px 0; font-size: 13px; }
+            .field .label { width: 120px; font-weight: 600; color: #555; }
+            .field .value { flex: 1; }
+            @media print { @page { margin: 0.5in; } body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Repair Ticket #${t.ticket_number}</h1>
+            <div class="meta">Created: ${created} | Updated: ${updated}</div>
+          </div>
+          <div class="section">
+            <h3>Customer</h3>
+            <div class="field"><span class="label">Name:</span><span class="value">${custName}</span></div>
+          </div>
+          <div class="section">
+            <h3>Ticket Details</h3>
+            <div class="field"><span class="label">Title:</span><span class="value">${escapeHtml(t.title)}</span></div>
+            <div class="field"><span class="label">Status:</span><span class="value">${t.status}</span></div>
+            <div class="field"><span class="label">Priority:</span><span class="value">${t.priority}</span></div>
+            <div class="field"><span class="label">Description:</span><span class="value">${escapeHtml(t.description || "None")}</span></div>
+          </div>
+          <div class="section">
+            <h3>Device Info</h3>
+            <div class="field"><span class="label">Type:</span><span class="value">${escapeHtml(t.device_type || "N/A")}</span></div>
+            <div class="field"><span class="label">Model:</span><span class="value">${escapeHtml(t.device_model || "N/A")}</span></div>
+            <div class="field"><span class="label">Serial:</span><span class="value">${escapeHtml(t.device_serial || "N/A")}</span></div>
+            <div class="field"><span class="label">IMEI:</span><span class="value">${escapeHtml(t.device_imei || "N/A")}</span></div>
+          </div>
+          <script>setTimeout(function(){ window.print(); }, 500);<\\/script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
   // SLA breaches — auto-refresh
   const { data: breachData } = useQuery({
-    queryKey: ["tickets", "sla-breaches"],
+    queryKey: ['tickets', 'sla-breaches'],
     queryFn: () => api.tickets.sla.breaches(),
     refetchInterval: 60_000,
   });
@@ -123,7 +169,7 @@ export default function TicketsPage() {
 
   // Notes query — only active when a ticket is selected
   const { data: notesData } = useQuery({
-    queryKey: ["ticket-notes", selectedTicket?.id],
+    queryKey: ['ticket-notes', selectedTicket?.id],
     queryFn: async () => {
       const res = await api.tickets.notes.list(selectedTicket!.id);
       return res.notes;
@@ -144,14 +190,13 @@ export default function TicketsPage() {
       const running = res.timers.find((t) => t.running);
       if (running) {
         setTimerSeconds(
-          running.total_seconds +
-            Math.floor((Date.now() - running.start_time) / 1000),
+          running.total_seconds + Math.floor((Date.now() - running.start_time) / 1000),
         );
       } else {
         setTimerSeconds(0);
       }
     } catch {
-      toast.error("Failed to load timers");
+      toast.error('Failed to load timers');
       setTimers([]);
     }
   };
@@ -170,9 +215,9 @@ export default function TicketsPage() {
     try {
       await api.tickets.timers.start(selectedTicket.id, user.id);
       await loadTimers(selectedTicket.id);
-      toast.success("Timer started");
+      toast.success('Timer started');
     } catch {
-      toast.error("Failed to start timer");
+      toast.error('Failed to start timer');
     }
   };
 
@@ -182,9 +227,9 @@ export default function TicketsPage() {
     try {
       await api.tickets.timers.stop(running.id);
       await loadTimers(selectedTicket!.id);
-      toast.success("Timer stopped");
+      toast.success('Timer stopped');
     } catch {
-      toast.error("Failed to stop timer");
+      toast.error('Failed to stop timer');
     }
   };
 
@@ -192,7 +237,7 @@ export default function TicketsPage() {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const totalTrackedTime = () => {
@@ -205,31 +250,31 @@ export default function TicketsPage() {
   const createMutation = useMutation({
     mutationFn: () => api.tickets.create(form),
     onSuccess: () => {
-      toast.success("Ticket created");
+      toast.success('Ticket created');
       setShowForm(false);
       setForm({
-        customer_id: "",
-        title: "",
-        description: "",
-        device_type: "",
-        device_model: "",
-        device_serial: "",
-        priority: "medium",
+        customer_id: '',
+        title: '',
+        description: '',
+        device_type: '',
+        device_model: '',
+        device_serial: '',
+        priority: 'medium',
       });
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
     },
-    onError: () => toast.error("Failed to create ticket"),
+    onError: () => toast.error('Failed to create ticket'),
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       api.tickets.updateStatus(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
   });
 
   const viewTicket = async (t: Ticket) => {
     setSelectedTicket(t);
-    setNewNote("");
+    setNewNote('');
     loadTimers(t.id);
     loadChecklist(t.id);
     loadTemplates();
@@ -240,7 +285,7 @@ export default function TicketsPage() {
       const res = await api.checklist.ticket.list(ticketId);
       setChecklist(res.items);
     } catch {
-      toast.error("Failed to load checklist");
+      toast.error('Failed to load checklist');
       setChecklist([]);
     }
   };
@@ -250,7 +295,7 @@ export default function TicketsPage() {
       const res = await api.checklist.templates.list();
       setChecklistTemplates(res.templates);
     } catch {
-      toast.error("Failed to load templates");
+      toast.error('Failed to load templates');
       setChecklistTemplates([]);
     }
   };
@@ -259,25 +304,21 @@ export default function TicketsPage() {
     if (!selectedTicket) return;
     try {
       await api.checklist.ticket.apply(selectedTicket.id, templateId);
-      toast.success("Checklist applied");
+      toast.success('Checklist applied');
       setShowApplyTemplate(false);
       loadChecklist(selectedTicket.id);
     } catch {
-      toast.error("Failed to apply checklist");
+      toast.error('Failed to apply checklist');
     }
   };
 
   const handleToggleChecklist = async (item: TicketChecklistItem) => {
     if (!selectedTicket) return;
     try {
-      await api.checklist.ticket.toggle(
-        selectedTicket.id,
-        item.id,
-        !item.completed,
-      );
+      await api.checklist.ticket.toggle(selectedTicket.id, item.id, !item.completed);
       loadChecklist(selectedTicket.id);
     } catch {
-      toast.error("Failed to update checklist item");
+      toast.error('Failed to update checklist item');
     }
   };
 
@@ -285,31 +326,25 @@ export default function TicketsPage() {
     if (!selectedTicket) return;
     try {
       await api.checklist.ticket.clear(selectedTicket.id);
-      toast.success("Checklist cleared");
+      toast.success('Checklist cleared');
       setChecklist([]);
     } catch {
-      toast.error("Failed to clear checklist");
+      toast.error('Failed to clear checklist');
     }
   };
 
   const noteMutation = useMutation({
-    mutationFn: ({
-      ticketId,
-      content,
-    }: {
-      ticketId: string;
-      content: string;
-    }) =>
+    mutationFn: ({ ticketId, content }: { ticketId: string; content: string }) =>
       api.tickets.notes.create(ticketId, {
-        author: "User",
+        author: 'User',
         content,
         internal: false,
       }),
     onSuccess: (_, { ticketId }) => {
-      setNewNote("");
-      queryClient.invalidateQueries({ queryKey: ["ticket-notes", ticketId] });
+      setNewNote('');
+      queryClient.invalidateQueries({ queryKey: ['ticket-notes', ticketId] });
     },
-    onError: () => toast.error("Failed to add note"),
+    onError: () => toast.error('Failed to add note'),
   });
 
   const addNote = () => {
@@ -325,7 +360,7 @@ export default function TicketsPage() {
           {breachCount > 0 && (
             <Badge variant="destructive" className="text-xs animate-pulse">
               <AlertTriangle className="h-3 w-3 mr-1" />
-              {breachCount} SLA breach{breachCount !== 1 ? "es" : ""}
+              {breachCount} SLA breach{breachCount !== 1 ? 'es' : ''}
             </Badge>
           )}
         </div>
@@ -333,29 +368,21 @@ export default function TicketsPage() {
           <Plus className="h-4 w-4 mr-1.5" /> New Ticket
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground -mt-2">
-        Manage repair tickets
-      </p>
+      <p className="text-sm text-muted-foreground -mt-2">Manage repair tickets</p>
 
       <div className="flex gap-2 flex-wrap">
-        {[
-          "",
-          "new",
-          "assigned",
-          "in_progress",
-          "waiting_on_customer",
-          "resolved",
-          "closed",
-        ].map((s) => (
-          <Button
-            key={s}
-            size="sm"
-            variant={filter === s ? "default" : "outline"}
-            onClick={() => handleFilter(s)}
-          >
-            {s || "All"}
-          </Button>
-        ))}
+        {['', 'new', 'assigned', 'in_progress', 'waiting_on_customer', 'resolved', 'closed'].map(
+          (s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant={filter === s ? 'default' : 'outline'}
+              onClick={() => handleFilter(s)}
+            >
+              {s || 'All'}
+            </Button>
+          ),
+        )}
       </div>
 
       {showForm && (
@@ -366,9 +393,7 @@ export default function TicketsPage() {
           <CardContent className="space-y-3">
             <Select
               value={form.customer_id}
-              onChange={(e) =>
-                setForm({ ...form, customer_id: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
             >
               <option value="">Select customer...</option>
               {customers.map((c) => (
@@ -385,31 +410,23 @@ export default function TicketsPage() {
             <Input
               placeholder="Description"
               value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
             <div className="grid grid-cols-3 gap-2">
               <Input
                 placeholder="Device type"
                 value={form.device_type}
-                onChange={(e) =>
-                  setForm({ ...form, device_type: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, device_type: e.target.value })}
               />
               <Input
                 placeholder="Device model"
                 value={form.device_model}
-                onChange={(e) =>
-                  setForm({ ...form, device_model: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, device_model: e.target.value })}
               />
               <Input
                 placeholder="Serial"
                 value={form.device_serial}
-                onChange={(e) =>
-                  setForm({ ...form, device_serial: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, device_serial: e.target.value })}
               />
             </div>
             <Select
@@ -422,10 +439,7 @@ export default function TicketsPage() {
               <option value="urgent">Urgent</option>
             </Select>
             <div className="flex gap-2">
-              <Button
-                onClick={() => createMutation.mutate()}
-                disabled={createMutation.isPending}
-              >
+              <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
                 Create
               </Button>
               <Button variant="outline" onClick={() => setShowForm(false)}>
@@ -438,28 +452,22 @@ export default function TicketsPage() {
 
       {/* Ticket list & detail */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={`space-y-3 ${selectedTicket ? "hidden lg:block" : ""}`}>
+        <div className={`space-y-3 ${selectedTicket ? 'hidden lg:block' : ''}`}>
           {tickets.map((t) => {
             const cust = customers.find((c) => c.id === t.customer_id);
             return (
               <Card
                 key={t.id}
-                className={`cursor-pointer transition-colors ${selectedTicket?.id === t.id ? "border-primary" : "hover:border-primary/30"} ${breachedIds.has(t.id) ? "border-l-red-500 border-l-4" : ""}`}
+                className={`cursor-pointer transition-colors ${selectedTicket?.id === t.id ? 'border-primary' : 'hover:border-primary/30'} ${breachedIds.has(t.id) ? 'border-l-red-500 border-l-4' : ''}`}
                 onClick={() => viewTicket(t)}
               >
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          #{t.ticket_number}
-                        </span>
-                        <Badge variant={statusColors[t.status] || "secondary"}>
-                          {t.status}
-                        </Badge>
-                        <span
-                          className={`text-xs ${priorityColors[t.priority] || ""}`}
-                        >
+                        <span className="text-xs text-muted-foreground">#{t.ticket_number}</span>
+                        <Badge variant={statusColors[t.status] || 'secondary'}>{t.status}</Badge>
+                        <span className={`text-xs ${priorityColors[t.priority] || ''}`}>
                           {t.priority}
                         </span>
                         <span
@@ -499,19 +507,21 @@ export default function TicketsPage() {
               ← Back to list
             </button>
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>
                   #{selectedTicket.ticket_number} — {selectedTicket.title}
                 </CardTitle>
+                <Button size="sm" variant="outline" onClick={() => printTicket(selectedTicket)} title="Print ticket summary">
+                  <Printer className="h-3.5 w-3.5" />
+                </Button>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  {selectedTicket.description || "No description"}
+                  {selectedTicket.description || 'No description'}
                 </p>
                 {selectedTicket.device_type && (
                   <p className="text-xs text-muted-foreground">
-                    Device: {selectedTicket.device_type}{" "}
-                    {selectedTicket.device_model} (
+                    Device: {selectedTicket.device_type} {selectedTicket.device_model} (
                     {selectedTicket.device_serial})
                   </p>
                 )}
@@ -527,9 +537,7 @@ export default function TicketsPage() {
                   <option value="new">New</option>
                   <option value="assigned">Assigned</option>
                   <option value="in_progress">In Progress</option>
-                  <option value="waiting_on_customer">
-                    Waiting on Customer
-                  </option>
+                  <option value="waiting_on_customer">Waiting on Customer</option>
                   <option value="resolved">Resolved</option>
                   <option value="closed">Closed</option>
                 </Select>
@@ -550,25 +558,15 @@ export default function TicketsPage() {
                     <span className="text-2xl font-mono font-bold">
                       {fmtTime(totalTrackedTime())}
                     </span>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Total time logged
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Total time logged</p>
                   </div>
                   <div className="flex gap-2">
                     {timers.some((t) => t.running) ? (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={handleStopTimer}
-                      >
+                      <Button size="sm" variant="destructive" onClick={handleStopTimer}>
                         <StopCircle className="h-4 w-4 mr-1" /> Stop
                       </Button>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={handleStartTimer}
-                      >
+                      <Button size="sm" variant="default" onClick={handleStartTimer}>
                         <Play className="h-4 w-4 mr-1" /> Start Timer
                       </Button>
                     )}
@@ -588,9 +586,7 @@ export default function TicketsPage() {
                             {new Date(tmr.start_time).toLocaleString()}
                           </span>
                           <span className="font-mono">
-                            {tmr.running
-                              ? fmtTime(timerSeconds)
-                              : fmtTime(tmr.total_seconds)}
+                            {tmr.running ? fmtTime(timerSeconds) : fmtTime(tmr.total_seconds)}
                           </span>
                         </div>
                       ))}
@@ -664,15 +660,13 @@ export default function TicketsPage() {
                     {checklist.map((item) => (
                       <div
                         key={item.id}
-                        className={`flex items-center gap-3 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors hover:bg-muted/50 ${item.completed ? "text-muted-foreground line-through" : ""}`}
+                        className={`flex items-center gap-3 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors hover:bg-muted/50 ${item.completed ? 'text-muted-foreground line-through' : ''}`}
                         onClick={() => handleToggleChecklist(item)}
                       >
                         <div
-                          className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${item.completed ? "bg-primary border-primary" : "border-muted-foreground/40"}`}
+                          className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${item.completed ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}
                         >
-                          {item.completed && (
-                            <div className="w-2 h-2 rounded-sm bg-white" />
-                          )}
+                          {item.completed && <div className="w-2 h-2 rounded-sm bg-white" />}
                         </div>
                         <span className="flex-1">{item.label}</span>
                         {item.template_name && (
@@ -685,8 +679,7 @@ export default function TicketsPage() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  {checklist.filter((i) => i.completed).length}/
-                  {checklist.length} completed
+                  {checklist.filter((i) => i.completed).length}/{checklist.length} completed
                 </p>
               </CardContent>
             </Card>
@@ -715,7 +708,7 @@ export default function TicketsPage() {
                     placeholder="Add note..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addNote()}
+                    onKeyDown={(e) => e.key === 'Enter' && addNote()}
                   />
                   <Button size="sm" onClick={addNote}>
                     Send

@@ -1,11 +1,11 @@
-import { apiFetch, buildPaginationParams } from "./client";
-import type { CustomFieldDefinition, CustomFieldValue } from "./types";
+import { apiFetch, buildPaginationParams } from './client';
+import type { CustomFieldDefinition, CustomFieldValue } from './types';
 
 export const customFields = {
   definitions: {
     list: (entityType?: string) =>
       apiFetch<{ definitions: CustomFieldDefinition[] }>(
-        `/custom-field-definitions${entityType ? `?entity_type=${entityType}` : ""}`,
+        `/custom-field-definitions${entityType ? `?entity_type=${entityType}` : ''}`,
       ),
     create: (data: {
       entity_type: string;
@@ -16,8 +16,8 @@ export const customFields = {
       required?: boolean;
       active?: boolean;
     }) =>
-      apiFetch<{ ok: boolean; id: string }>("/custom-field-definitions", {
-        method: "POST",
+      apiFetch<{ ok: boolean; id: string }>('/custom-field-definitions', {
+        method: 'POST',
         body: JSON.stringify(data),
       }),
     update: (
@@ -32,26 +32,21 @@ export const customFields = {
       },
     ) =>
       apiFetch<{ ok: boolean }>(`/custom-field-definitions/${id}`, {
-        method: "PUT",
+        method: 'PUT',
         body: JSON.stringify(data),
       }),
     delete: (id: string) =>
       apiFetch<{ ok: boolean }>(`/custom-field-definitions/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       }),
   },
   values: {
     get: (entityId: string) =>
-      apiFetch<{ values: CustomFieldValue[] }>(
-        `/custom-field-values/${entityId}`,
-      ),
+      apiFetch<{ values: CustomFieldValue[] }>(`/custom-field-values/${entityId}`),
     set: (entityId: string, values: Record<string, string>) =>
-      apiFetch<{ ok: boolean; count: number }>(
-        `/custom-field-values/${entityId}`,
-        {
-          method: "PUT",
-          body: JSON.stringify({ values }),
-        },
-      ),
+      apiFetch<{ ok: boolean; count: number }>(`/custom-field-values/${entityId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ values }),
+      }),
   },
 };

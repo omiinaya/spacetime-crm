@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
   Building2,
   Plus,
@@ -11,17 +11,12 @@ import {
   RefreshCw,
   Shield,
   User,
-} from "lucide-react";
-import { api } from "../lib/api";
-import { useAuth, hasRole } from "../lib/auth";
-import { Button } from "../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
+} from 'lucide-react';
+import { api } from '../lib/api';
+import { useAuth, hasRole } from '../lib/auth';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 
 interface Tenant {
   id: string;
@@ -53,16 +48,16 @@ export default function TenantsPage() {
   const [migrating, setMigrating] = useState(false);
 
   // Create form
-  const [newName, setNewName] = useState("");
-  const [newSlug, setNewSlug] = useState("");
+  const [newName, setNewName] = useState('');
+  const [newSlug, setNewSlug] = useState('');
 
   // Edit form
-  const [editName, setEditName] = useState("");
-  const [editSlug, setEditSlug] = useState("");
+  const [editName, setEditName] = useState('');
+  const [editSlug, setEditSlug] = useState('');
 
   // Member form
-  const [memberUsername, setMemberUsername] = useState("");
-  const [memberRole, setMemberRole] = useState("user");
+  const [memberUsername, setMemberUsername] = useState('');
+  const [memberRole, setMemberRole] = useState('user');
 
   const load = async () => {
     try {
@@ -100,10 +95,10 @@ export default function TenantsPage() {
         name: newName.trim(),
         slug: newSlug.trim() || undefined,
       });
-      toast.success("Tenant created");
+      toast.success('Tenant created');
       setShowCreate(false);
-      setNewName("");
-      setNewSlug("");
+      setNewName('');
+      setNewSlug('');
       await load();
     } catch (e: unknown) {
       toast.error((e as Error).message);
@@ -117,7 +112,7 @@ export default function TenantsPage() {
         name: editName.trim(),
         slug: editSlug.trim() || undefined,
       });
-      toast.success("Tenant updated");
+      toast.success('Tenant updated');
       setEditTenant(null);
       await load();
       if (selected?.id === editTenant.id) {
@@ -133,10 +128,10 @@ export default function TenantsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this tenant and all its data?")) return;
+    if (!confirm('Delete this tenant and all its data?')) return;
     try {
       await api.tenants.delete(id);
-      toast.success("Tenant deleted");
+      toast.success('Tenant deleted');
       if (selected?.id === id) {
         setSelected(null);
         setMembers([]);
@@ -154,10 +149,10 @@ export default function TenantsPage() {
         username: memberUsername.trim(),
         role: memberRole,
       });
-      toast.success("Member added");
+      toast.success('Member added');
       setShowAddMember(false);
-      setMemberUsername("");
-      setMemberRole("user");
+      setMemberUsername('');
+      setMemberRole('user');
       await loadMembers(selected.id);
     } catch (e: unknown) {
       toast.error((e as Error).message);
@@ -168,7 +163,7 @@ export default function TenantsPage() {
     if (!selected) return;
     try {
       await api.tenants.removeMember(selected.id, memberId);
-      toast.success("Member removed");
+      toast.success('Member removed');
       await loadMembers(selected.id);
     } catch (e: unknown) {
       toast.error((e as Error).message);
@@ -178,7 +173,7 @@ export default function TenantsPage() {
   const handleMigrate = async () => {
     setMigrating(true);
     try {
-      const result = await api.tenants.migrate({ name: "Default" });
+      const result = await api.tenants.migrate({ name: 'Default' });
       toast.success(`Migrated: ${result.users_migrated} users assigned`);
       await load();
       await refreshTenant();
@@ -189,7 +184,7 @@ export default function TenantsPage() {
     }
   };
 
-  const isAdmin = hasRole(user, "admin");
+  const isAdmin = hasRole(user, 'admin');
 
   if (loading) {
     return (
@@ -204,20 +199,12 @@ export default function TenantsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Tenants</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage organizations and team access
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Manage organizations and team access</p>
         </div>
         <div className="flex gap-2">
           {tenants.length === 0 && isAdmin && (
-            <Button
-              variant="outline"
-              onClick={handleMigrate}
-              disabled={migrating}
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${migrating ? "animate-spin" : ""}`}
-              />
+            <Button variant="outline" onClick={handleMigrate} disabled={migrating}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${migrating ? 'animate-spin' : ''}`} />
               Migrate from Single-Tenant
             </Button>
           )}
@@ -252,9 +239,7 @@ export default function TenantsPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">
-                Slug (URL-friendly)
-              </label>
+              <label className="text-xs text-muted-foreground">Slug (URL-friendly)</label>
               <input
                 className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm"
                 value={newSlug}
@@ -286,8 +271,8 @@ export default function TenantsPage() {
                 key={t.id}
                 className={`flex items-center justify-between p-3 rounded-md border cursor-pointer transition-colors ${
                   selected?.id === t.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-muted"
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:bg-muted'
                 }`}
                 onClick={() => selectTenant(t)}
               >
@@ -337,11 +322,7 @@ export default function TenantsPage() {
             <CardTitle className="flex items-center justify-between">
               <span>Members</span>
               {selected && isAdmin && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddMember(true)}
-                >
+                <Button size="sm" variant="outline" onClick={() => setShowAddMember(true)}>
                   <UserPlus className="h-3.5 w-3.5 mr-1" />
                   Add
                 </Button>
@@ -361,9 +342,7 @@ export default function TenantsPage() {
                   <span className="text-sm font-medium">{selected.name}</span>
                 </div>
                 {members.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No members yet
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No members yet</p>
                 )}
                 {members.map((m) => (
                   <div
@@ -374,7 +353,7 @@ export default function TenantsPage() {
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{m.username}</span>
                       <Badge
-                        variant={m.role === "admin" ? "default" : "secondary"}
+                        variant={m.role === 'admin' ? 'default' : 'secondary'}
                         className="text-[10px] px-1.5 py-0"
                       >
                         {m.role}
@@ -422,19 +401,11 @@ export default function TenantsPage() {
                   <option value="admin">Admin</option>
                 </select>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleAddMember}
-                    disabled={!memberUsername.trim()}
-                  >
+                  <Button size="sm" onClick={handleAddMember} disabled={!memberUsername.trim()}>
                     <UserPlus className="h-3.5 w-3.5 mr-1" />
                     Add
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowAddMember(false)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setShowAddMember(false)}>
                     Cancel
                   </Button>
                 </div>

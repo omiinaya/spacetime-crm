@@ -1,13 +1,8 @@
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
-import { ClipboardList, ArrowRightLeft } from "lucide-react";
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { ClipboardList, ArrowRightLeft } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -48,12 +43,12 @@ interface TransferForm {
 }
 
 const reasonColors: Record<string, string> = {
-  received: "text-green-400",
-  sold: "text-red-400",
-  damaged: "text-orange-400",
-  returned: "text-blue-400",
-  counted: "text-purple-400",
-  transferred: "text-cyan-400",
+  received: 'text-green-400',
+  sold: 'text-red-400',
+  damaged: 'text-orange-400',
+  returned: 'text-blue-400',
+  counted: 'text-purple-400',
+  transferred: 'text-cyan-400',
 };
 
 interface ProductAdjustmentProps {
@@ -70,12 +65,7 @@ interface ProductAdjustmentProps {
   adjustments: Adjustment[];
   fmtDate: (ts: number) => string;
   setSelectedProduct: any;
-  printBarcodeLabel: (
-    barcode: string,
-    name: string,
-    price: number,
-    sku: string,
-  ) => void;
+  printBarcodeLabel: (barcode: string, name: string, price: number, sku: string) => void;
 }
 
 export default function ProductAdjustment({
@@ -114,20 +104,16 @@ export default function ProductAdjustment({
         <CardContent className="space-y-3">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold">
-                {selectedProduct.quantity_on_hand}
-              </p>
+              <p className="text-2xl font-bold">{selectedProduct.quantity_on_hand}</p>
               <p className="text-xs text-muted-foreground">On Hand</p>
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {selectedProduct.quantity_committed}
-              </p>
+              <p className="text-2xl font-bold">{selectedProduct.quantity_committed}</p>
               <p className="text-xs text-muted-foreground">Committed</p>
             </div>
             <div>
               <p
-                className={`text-2xl font-bold ${(selectedProduct.quantity_available ?? 0) <= 0 ? "text-destructive" : ""}`}
+                className={`text-2xl font-bold ${(selectedProduct.quantity_available ?? 0) <= 0 ? 'text-destructive' : ''}`}
               >
                 {selectedProduct.quantity_available}
               </p>
@@ -138,25 +124,19 @@ export default function ProductAdjustment({
             <div className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
               <span>Min Stock:</span>
               <span
-                className={`font-medium ${selectedProduct.quantity_on_hand <= selectedProduct.min_stock ? "text-destructive" : "text-green-400"}`}
+                className={`font-medium ${selectedProduct.quantity_on_hand <= selectedProduct.min_stock ? 'text-destructive' : 'text-green-400'}`}
               >
                 {selectedProduct.min_stock}
               </span>
             </div>
           )}
           <p className="text-sm">
-            Price:{" "}
-            <span className="font-medium">
-              ${selectedProduct.price.toFixed(2)}
-            </span>{" "}
-            &middot; Cost:{" "}
-            <span className="font-medium">
-              ${selectedProduct.cost.toFixed(2)}
-            </span>
+            Price: <span className="font-medium">${selectedProduct.price.toFixed(2)}</span> &middot;
+            Cost: <span className="font-medium">${selectedProduct.cost.toFixed(2)}</span>
           </p>
           {selectedProduct.barcode && (
             <p className="text-sm">
-              Barcode:{" "}
+              Barcode:{' '}
               <span className="font-mono text-xs text-muted-foreground">
                 {selectedProduct.barcode}
               </span>
@@ -169,7 +149,7 @@ export default function ProductAdjustment({
                     selectedProduct.barcode!,
                     selectedProduct.name,
                     selectedProduct.price,
-                    selectedProduct.sku || "",
+                    selectedProduct.sku || '',
                   )
                 }
                 title="Print barcode label"
@@ -179,9 +159,7 @@ export default function ProductAdjustment({
             </p>
           )}
           {selectedProduct.description && (
-            <p className="text-sm text-muted-foreground">
-              {selectedProduct.description}
-            </p>
+            <p className="text-sm text-muted-foreground">{selectedProduct.description}</p>
           )}
         </CardContent>
       </Card>
@@ -209,9 +187,7 @@ export default function ProductAdjustment({
             />
             <Select
               value={adjForm.reason}
-              onChange={(e) =>
-                setAdjForm({ ...adjForm, reason: e.target.value })
-              }
+              onChange={(e) => setAdjForm({ ...adjForm, reason: e.target.value })}
             >
               <option value="received">Received</option>
               <option value="sold">Sold</option>
@@ -224,9 +200,7 @@ export default function ProductAdjustment({
           <Input
             placeholder="Reference (e.g. PO-1234)"
             value={adjForm.reference_id}
-            onChange={(e) =>
-              setAdjForm({ ...adjForm, reference_id: e.target.value })
-            }
+            onChange={(e) => setAdjForm({ ...adjForm, reference_id: e.target.value })}
           />
           <Input
             placeholder="Notes"
@@ -247,8 +221,7 @@ export default function ProductAdjustment({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Move stock from <strong>{selectedProduct.name}</strong> to another
-            product
+            Move stock from <strong>{selectedProduct.name}</strong> to another product
           </p>
           <div>
             <Input
@@ -260,45 +233,35 @@ export default function ProductAdjustment({
               <div className="mt-1 max-h-32 overflow-y-auto border border-border rounded-md bg-card">
                 {(transferProducts?.products ?? [])
                   .filter((p: { id: string }) => p.id !== selectedProduct.id)
-                  .map(
-                    (p: {
-                      id: string;
-                      name: string;
-                      quantity_on_hand: number;
-                    }) => (
-                      <button
-                        key={p.id}
-                        className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors ${transferForm.destProductId === p.id ? "bg-primary/10 font-medium" : ""}`}
-                        onClick={() => {
-                          setTransferForm({
-                            ...transferForm,
-                            destProductId: p.id,
-                          });
-                          setTransferSearch(p.name);
-                        }}
-                      >
-                        {p.name}{" "}
-                        <span className="text-xs text-muted-foreground">
-                          ({p.quantity_on_hand} in stock)
-                        </span>
-                      </button>
-                    ),
-                  )}
+                  .map((p: { id: string; name: string; quantity_on_hand: number }) => (
+                    <button
+                      key={p.id}
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 transition-colors ${transferForm.destProductId === p.id ? 'bg-primary/10 font-medium' : ''}`}
+                      onClick={() => {
+                        setTransferForm({
+                          ...transferForm,
+                          destProductId: p.id,
+                        });
+                        setTransferSearch(p.name);
+                      }}
+                    >
+                      {p.name}{' '}
+                      <span className="text-xs text-muted-foreground">
+                        ({p.quantity_on_hand} in stock)
+                      </span>
+                    </button>
+                  ))}
                 {(transferProducts?.products ?? []).filter(
                   (p: { id: string }) => p.id !== selectedProduct.id,
                 ).length === 0 && (
-                  <p className="px-3 py-1.5 text-xs text-muted-foreground">
-                    No matching products
-                  </p>
+                  <p className="px-3 py-1.5 text-xs text-muted-foreground">No matching products</p>
                 )}
               </div>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
-                Quantity
-              </label>
+              <label className="text-xs text-muted-foreground block mb-1">Quantity</label>
               <Input
                 type="number"
                 min={1}
@@ -320,15 +283,13 @@ export default function ProductAdjustment({
           <Input
             placeholder="Transfer notes (optional)"
             value={transferForm.notes}
-            onChange={(e) =>
-              setTransferForm({ ...transferForm, notes: e.target.value })
-            }
+            onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
           />
           <Button
             onClick={() => transferMutation.mutate()}
             disabled={!transferForm.destProductId || transferMutation.isPending}
           >
-            {transferMutation.isPending ? "Transferring..." : "Transfer"}
+            {transferMutation.isPending ? 'Transferring...' : 'Transfer'}
           </Button>
         </CardContent>
       </Card>
@@ -341,9 +302,7 @@ export default function ProductAdjustment({
         <CardContent>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {adjustments.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No adjustments yet
-              </p>
+              <p className="text-sm text-muted-foreground">No adjustments yet</p>
             )}
             {adjustments
               .slice()
@@ -355,24 +314,18 @@ export default function ProductAdjustment({
                 >
                   <div className="min-w-0 flex-1">
                     <span
-                      className={`font-medium ${a.quantity_change > 0 ? "text-green-400" : "text-red-400"}`}
+                      className={`font-medium ${a.quantity_change > 0 ? 'text-green-400' : 'text-red-400'}`}
                     >
-                      {a.quantity_change > 0 ? "+" : ""}
+                      {a.quantity_change > 0 ? '+' : ''}
                       {a.quantity_change}
                     </span>
-                    <span
-                      className={`ml-2 text-xs ${reasonColors[a.reason] || ""}`}
-                    >
+                    <span className={`ml-2 text-xs ${reasonColors[a.reason] || ''}`}>
                       {a.reason}
                     </span>
                     {a.reference_id && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {a.reference_id}
-                      </span>
+                      <span className="ml-2 text-xs text-muted-foreground">{a.reference_id}</span>
                     )}
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {a.notes}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{a.notes}</p>
                   </div>
                   <span className="text-xs text-muted-foreground ml-2 shrink-0">
                     {fmtDate(a.created_at)}

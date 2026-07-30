@@ -1,4 +1,4 @@
-import { cn } from "../../lib/utils";
+import { cn } from '../../lib/utils';
 
 export function Label({
   children,
@@ -15,7 +15,7 @@ export function Label({
     <label
       htmlFor={htmlFor}
       className={cn(
-        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+        'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
         className,
       )}
       {...props}

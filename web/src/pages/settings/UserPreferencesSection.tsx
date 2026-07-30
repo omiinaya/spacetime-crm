@@ -1,31 +1,26 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "../../lib/query-client";
-import { api } from "../../lib/api";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Select } from "../../components/ui/select";
-import { Loader2, Sun, Moon, Palette } from "lucide-react";
-import { toast } from "sonner";
-import { useTheme } from "../../lib/theme";
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '../../lib/query-client';
+import { api } from '../../lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Select } from '../../components/ui/select';
+import { Loader2, Sun, Moon, Palette } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTheme } from '../../lib/theme';
 
-const TICKET_STATUSES = ["new", "open", "in_progress", "resolved", "closed"];
+const TICKET_STATUSES = ['new', 'open', 'in_progress', 'resolved', 'closed'];
 
 export default function UserPreferencesSection() {
   const { theme, toggleTheme } = useTheme();
   const [form, setForm] = useState({
-    theme: "dark",
-    default_ticket_status: "new",
+    theme: 'dark',
+    default_ticket_status: 'new',
   });
   const [dirty, setDirty] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["user-settings"],
+    queryKey: ['user-settings'],
     queryFn: async () => {
       const res = await api.userSettings.get();
       if (res.settings) {
@@ -42,16 +37,16 @@ export default function UserPreferencesSection() {
     mutationFn: (data: { theme: string; default_ticket_status: string }) =>
       api.userSettings.update(data),
     onSuccess: () => {
-      toast.success("Preferences saved");
+      toast.success('Preferences saved');
       setDirty(false);
-      queryClient.invalidateQueries({ queryKey: ["user-settings"] });
+      queryClient.invalidateQueries({ queryKey: ['user-settings'] });
     },
     onError: () => {
-      toast.error("Failed to save preferences");
+      toast.error('Failed to save preferences');
     },
   });
 
-  const handleThemeChange = (newTheme: "light" | "dark") => {
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setForm({ ...form, theme: newTheme });
     setDirty(true);
     // Sync the app theme hook immediately for instant feedback
@@ -79,11 +74,11 @@ export default function UserPreferencesSection() {
           <div className="flex gap-1 rounded-lg border border-border p-1">
             <button
               type="button"
-              onClick={() => handleThemeChange("light")}
+              onClick={() => handleThemeChange('light')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                form.theme === "light"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                form.theme === 'light'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Sun className="h-3.5 w-3.5" />
@@ -91,11 +86,11 @@ export default function UserPreferencesSection() {
             </button>
             <button
               type="button"
-              onClick={() => handleThemeChange("dark")}
+              onClick={() => handleThemeChange('dark')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                form.theme === "dark"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                form.theme === 'dark'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Moon className="h-3.5 w-3.5" />
@@ -117,7 +112,7 @@ export default function UserPreferencesSection() {
           >
             {TICKET_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                {s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
               </option>
             ))}
           </Select>
@@ -134,7 +129,7 @@ export default function UserPreferencesSection() {
                 Saving...
               </>
             ) : (
-              "Save Preferences"
+              'Save Preferences'
             )}
           </Button>
         </div>

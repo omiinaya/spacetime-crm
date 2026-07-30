@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from 'react';
 
-type Theme = "dark" | "light";
+type Theme = 'dark' | 'light';
 
-const STORAGE_KEY = "spacetime-crm-theme";
+const STORAGE_KEY = 'spacetime-crm-theme';
 
 function getStoredTheme(): Theme | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "dark" || stored === "light") return stored;
+    if (stored === 'dark' || stored === 'light') return stored;
   } catch {
     /* ignore */
   }
@@ -23,30 +23,30 @@ function storeTheme(theme: Theme) {
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>('dark');
 
   useEffect(() => {
     const stored = getStoredTheme();
-    const t = stored || "dark";
+    const t = stored || 'dark';
     setThemeState(t);
-    if (t === "light") {
-      document.documentElement.classList.add("light");
+    if (t === 'light') {
+      document.documentElement.classList.add('light');
     } else {
-      document.documentElement.classList.remove("light");
+      document.documentElement.classList.remove('light');
     }
   }, []);
 
   useEffect(() => {
-    if (theme === "light") {
-      document.documentElement.classList.add("light");
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
     } else {
-      document.documentElement.classList.remove("light");
+      document.documentElement.classList.remove('light');
     }
     storeTheme(theme);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
-    setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
+    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }, []);
 
   return { theme, toggleTheme };

@@ -12,6 +12,7 @@ from business_hours import (
     DEFAULT_HOURS,
     update_settings as _bh_update,
 )
+from app_config import get_config as _app_get, update_config as _app_update
 from mail import (
     get_settings as _mail_get,
     update_settings as _mail_update,
@@ -122,3 +123,27 @@ async def business_hours_save(
     data = body.model_dump()
     result = _bh_update(data)
     return {"ok": True, "hours": result}
+
+
+# ── App Config (revenue target, etc.) ─────────────────────────────
+
+
+@router.get("/api/settings/app")
+async def app_config_get(
+    user: dict = Depends(require_role("admin")),
+):
+    """Get app-level config (revenue target, etc.)."""
+    config = _app_get()
+    return {"config": config}
+
+
+@router.post("/api/settings/app")
+@limiter.limit("30/minute")
+async def app_config_save(
+    request: Request,
+    body: dict,
+    user: dict = Depends(require_role("admin")),
+):
+    """Save app-level config."""
+    result = _app_update(body)
+    return {"ok": True, "config": result}

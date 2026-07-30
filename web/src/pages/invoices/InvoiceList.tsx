@@ -1,35 +1,22 @@
-import { Button } from "../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
-import { Textarea } from "../../components/ui/textarea";
-import { Badge } from "../../components/ui/badge";
-import Pagination from "../../components/Pagination";
-import { Plus, Mail, Edit3, CheckSquare, Square } from "lucide-react";
-import type {
-  Invoice,
-  Customer,
-  TaxRate,
-  InvoiceLineItem,
-  InvoiceSummary,
-} from "../../lib/api";
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Textarea } from '../../components/ui/textarea';
+import { Badge } from '../../components/ui/badge';
+import Pagination from '../../components/Pagination';
+import { Plus, Mail, Edit3, CheckSquare, Square } from 'lucide-react';
+import type { Invoice, Customer, TaxRate, InvoiceLineItem, InvoiceSummary } from '../../lib/api';
 
-const statusColors: Record<
-  string,
-  "default" | "warning" | "success" | "destructive" | "outline"
-> = {
-  draft: "outline",
-  sent: "default",
-  paid: "success",
-  partial: "warning",
-  overdue: "destructive",
-  cancelled: "outline",
-};
+const statusColors: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'outline'> =
+  {
+    draft: 'outline',
+    sent: 'default',
+    paid: 'success',
+    partial: 'warning',
+    overdue: 'destructive',
+    cancelled: 'outline',
+  };
 
 interface InvoiceListProps {
   filter: string;
@@ -79,11 +66,7 @@ interface InvoiceListProps {
   showPaymentForm: boolean;
   setShowPaymentForm: (v: boolean) => void;
   paymentForm: { amount: number; method: string; reference: string };
-  setPaymentForm: (f: {
-    amount: number;
-    method: string;
-    reference: string;
-  }) => void;
+  setPaymentForm: (f: { amount: number; method: string; reference: string }) => void;
   recordPaymentMutation: any;
   selectedInvCurrency: string;
   selectedInvTotal: number;
@@ -140,14 +123,14 @@ export default function InvoiceList({
     <>
       {/* Filter buttons */}
       <div className="flex gap-2 flex-wrap">
-        {["", "draft", "sent", "paid", "overdue", "cancelled"].map((s) => (
+        {['', 'draft', 'sent', 'paid', 'overdue', 'cancelled'].map((s) => (
           <Button
             key={s}
             size="sm"
-            variant={filter === s ? "default" : "outline"}
+            variant={filter === s ? 'default' : 'outline'}
             onClick={() => setFilter(s)}
           >
-            {s || "All"}
+            {s || 'All'}
           </Button>
         ))}
       </div>
@@ -181,16 +164,14 @@ export default function InvoiceList({
                 {sendReminderMutation.isPending ? (
                   <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
                 ) : (
-                  "Remind"
+                  'Remind'
                 )}
               </Button>
             )}
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Revenue</p>
-            <p className="text-lg font-bold text-green-400">
-              ${summary.total_revenue.toFixed(2)}
-            </p>
+            <p className="text-lg font-bold text-green-400">${summary.total_revenue.toFixed(2)}</p>
           </div>
         </div>
       )}
@@ -198,9 +179,7 @@ export default function InvoiceList({
       {/* Bulk action bar */}
       {selectedIdsSize > 0 && (
         <div className="flex items-center gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
-          <span className="text-sm font-medium">
-            {selectedIdsSize} selected
-          </span>
+          <span className="text-sm font-medium">{selectedIdsSize} selected</span>
           <div className="flex-1" />
           <Select
             value={bulkStatus}
@@ -213,11 +192,7 @@ export default function InvoiceList({
             <option value="overdue">Overdue</option>
             <option value="cancelled">Cancelled</option>
           </Select>
-          <Button
-            size="sm"
-            onClick={() => bulkMutation.mutate()}
-            disabled={bulkMutation.isPending}
-          >
+          <Button size="sm" onClick={() => bulkMutation.mutate()} disabled={bulkMutation.isPending}>
             {bulkMutation.isPending ? (
               <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
             ) : null}
@@ -240,18 +215,14 @@ export default function InvoiceList({
             size="sm"
             variant="outline"
             onClick={() => {
-              setBulkEditForm({ terms: "", notes: "" });
+              setBulkEditForm({ terms: '', notes: '' });
               setShowBulkEdit(true);
             }}
           >
             <Edit3 className="h-3.5 w-3.5 mr-1" />
             Edit
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setSelectedIds(new Set())}
-          >
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Clear
           </Button>
         </div>
@@ -259,7 +230,7 @@ export default function InvoiceList({
 
       {/* Invoice list + detail */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className={`space-y-3 ${selectedInv ? "hidden lg:block" : ""}`}>
+        <div className={`space-y-3 ${selectedInv ? 'hidden lg:block' : ''}`}>
           {/* Select all header */}
           {invoices.length > 0 && (
             <div className="flex items-center gap-2 px-1 pb-1 text-xs text-muted-foreground">
@@ -272,14 +243,10 @@ export default function InvoiceList({
                 ) : (
                   <Square className="h-3.5 w-3.5" />
                 )}
-                {selectedIds.size === invoices.length
-                  ? "Deselect all"
-                  : "Select all"}
+                {selectedIds.size === invoices.length ? 'Deselect all' : 'Select all'}
               </button>
               {selectedIds.size > 0 && (
-                <span className="text-primary font-medium">
-                  {selectedIds.size} selected
-                </span>
+                <span className="text-primary font-medium">{selectedIds.size} selected</span>
               )}
             </div>
           )}
@@ -301,7 +268,7 @@ export default function InvoiceList({
                   )}
                 </button>
                 <Card
-                  className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? "border-primary" : "hover:border-primary/30"} ${inv.status === "overdue" ? "border-l-red-500 border-l-2" : ""}`}
+                  className={`flex-1 cursor-pointer transition-colors ${selectedInv?.id === inv.id ? 'border-primary' : 'hover:border-primary/30'} ${inv.status === 'overdue' ? 'border-l-red-500 border-l-2' : ''}`}
                   onClick={() => selectInvoice(inv)}
                 >
                   <CardContent className="pt-4">
@@ -311,14 +278,12 @@ export default function InvoiceList({
                           <span className="text-xs text-muted-foreground">
                             #{inv.invoice_number}
                           </span>
-                          <Badge
-                            variant={statusColors[inv.status] || "outline"}
-                          >
+                          <Badge variant={statusColors[inv.status] || 'outline'}>
                             {inv.status}
                           </Badge>
                         </div>
                         <p className="font-medium mt-1">
-                          {inv.currency || "USD"} {inv.total.toFixed(2)}
+                          {inv.currency || 'USD'} {inv.total.toFixed(2)}
                         </p>
                         {cust && (
                           <p className="text-xs text-muted-foreground">
@@ -343,17 +308,11 @@ export default function InvoiceList({
             >
               ← Back to list
             </button>
-            <Card
-              className={
-                selectedInv.status === "overdue"
-                  ? "border-l-red-500 border-l-2"
-                  : ""
-              }
-            >
+            <Card className={selectedInv.status === 'overdue' ? 'border-l-red-500 border-l-2' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>
-                    #{selectedInv.invoice_number} — {selectedInvCurrency}{" "}
+                    #{selectedInv.invoice_number} — {selectedInvCurrency}{' '}
                     {selectedInvTotal.toFixed(2)}
                   </CardTitle>
                   <div className="flex gap-1">
@@ -373,12 +332,7 @@ export default function InvoiceList({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() =>
-                        window.open(
-                          `/api/invoices/${selectedInv.id}/pdf`,
-                          "_blank",
-                        )
-                      }
+                      onClick={() => window.open(`/api/invoices/${selectedInv.id}/pdf`, '_blank')}
                     >
                       <span className="h-3.5 w-3.5 mr-1">📄</span> PDF
                     </Button>
@@ -425,11 +379,8 @@ export default function InvoiceList({
                     ))}
                   </Select>
                   <span className="text-sm font-medium tabular-nums">
-                    {selectedInvCurrency}{" "}
-                    {(
-                      (selectedInvSubtotal * (selectedInvTaxRate || 0)) /
-                      100
-                    ).toFixed(2)}
+                    {selectedInvCurrency}{' '}
+                    {((selectedInvSubtotal * (selectedInvTaxRate || 0)) / 100).toFixed(2)}
                   </span>
                 </div>
 
@@ -443,19 +394,14 @@ export default function InvoiceList({
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{li.description}</p>
                         <p className="text-xs text-muted-foreground">
-                          {li.quantity} x {selectedInvCurrency}{" "}
-                          {li.unit_price.toFixed(2)}
+                          {li.quantity} x {selectedInvCurrency} {li.unit_price.toFixed(2)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-medium">
                           {selectedInvCurrency} {li.total.toFixed(2)}
                         </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => removeLineItem(li.id)}
-                        >
+                        <Button size="icon" variant="ghost" onClick={() => removeLineItem(li.id)}>
                           <span className="h-3 w-3">🗑</span>
                         </Button>
                       </div>
@@ -466,9 +412,7 @@ export default function InvoiceList({
                 <div className="flex gap-2">
                   <select
                     value={newItem.item_type}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, item_type: e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })}
                     className="w-28 h-9 rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="service">Service</option>
@@ -477,26 +421,20 @@ export default function InvoiceList({
                   <Input
                     placeholder="Description"
                     value={newItem.description}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, description: e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                   />
                   <Input
                     type="number"
                     placeholder="Qty"
                     value={newItem.quantity}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, quantity: +e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, quantity: +e.target.value })}
                     className="w-20"
                   />
                   <Input
                     type="number"
                     placeholder="Price"
                     value={newItem.unit_price}
-                    onChange={(e) =>
-                      setNewItem({ ...newItem, unit_price: +e.target.value })
-                    }
+                    onChange={(e) => setNewItem({ ...newItem, unit_price: +e.target.value })}
                     className="w-24"
                   />
                   <Button size="sm" onClick={addLineItem}>
@@ -576,11 +514,7 @@ export default function InvoiceList({
                           )}
                           Pay
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setShowPaymentForm(false)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => setShowPaymentForm(false)}>
                           Cancel
                         </Button>
                       </div>
@@ -600,7 +534,7 @@ export default function InvoiceList({
             <CardHeader>
               <CardTitle>
                 Edit {selectedIds.size} Invoice
-                {selectedIds.size !== 1 ? "s" : ""}
+                {selectedIds.size !== 1 ? 's' : ''}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -611,9 +545,7 @@ export default function InvoiceList({
                 <Textarea
                   placeholder="Payment terms..."
                   value={bulkEditForm.terms}
-                  onChange={(e) =>
-                    setBulkEditForm({ ...bulkEditForm, terms: e.target.value })
-                  }
+                  onChange={(e) => setBulkEditForm({ ...bulkEditForm, terms: e.target.value })}
                 />
               </div>
               <div>
@@ -623,30 +555,24 @@ export default function InvoiceList({
                 <Textarea
                   placeholder="Invoice notes..."
                   value={bulkEditForm.notes}
-                  onChange={(e) =>
-                    setBulkEditForm({ ...bulkEditForm, notes: e.target.value })
-                  }
+                  onChange={(e) => setBulkEditForm({ ...bulkEditForm, notes: e.target.value })}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowBulkEdit(false)}
-                >
+                <Button variant="outline" onClick={() => setShowBulkEdit(false)}>
                   Cancel
                 </Button>
                 <Button
                   onClick={() => bulkEditMutation.mutate()}
                   disabled={
-                    bulkEditMutation.isPending ||
-                    (!bulkEditForm.terms && !bulkEditForm.notes)
+                    bulkEditMutation.isPending || (!bulkEditForm.terms && !bulkEditForm.notes)
                   }
                 >
                   {bulkEditMutation.isPending ? (
                     <span className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full mr-1" />
                   ) : null}
                   Apply to {selectedIds.size} invoice
-                  {selectedIds.size !== 1 ? "s" : ""}
+                  {selectedIds.size !== 1 ? 's' : ''}
                 </Button>
               </div>
             </CardContent>

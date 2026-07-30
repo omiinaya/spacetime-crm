@@ -1,22 +1,19 @@
-import { useState, useEffect } from "react";
-import { portalApi, PortalTicket } from "../lib/portal-auth";
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Input } from "../components/ui/input";
-import { toast } from "sonner";
-import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { portalApi, PortalTicket } from '../lib/portal-auth';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { toast } from 'sonner';
+import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 
-const statusColors: Record<
-  string,
-  "outline" | "default" | "success" | "destructive"
-> = {
-  new: "default",
-  in_progress: "default",
-  waiting_parts: "outline",
-  waiting_customer: "outline",
-  resolved: "success",
-  closed: "outline",
+const statusColors: Record<string, 'outline' | 'default' | 'success' | 'destructive'> = {
+  new: 'default',
+  in_progress: 'default',
+  waiting_parts: 'outline',
+  waiting_customer: 'outline',
+  resolved: 'success',
+  closed: 'outline',
 };
 
 export default function PortalTicketsPage() {
@@ -24,7 +21,7 @@ export default function PortalTicketsPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<PortalTicket | null>(null);
-  const [noteText, setNoteText] = useState("");
+  const [noteText, setNoteText] = useState('');
   const [sending, setSending] = useState(false);
 
   const load = async () => {
@@ -32,7 +29,7 @@ export default function PortalTicketsPage() {
       const res = await portalApi.tickets.list();
       setTickets(res.tickets);
     } catch {
-      toast.error("Failed to load tickets");
+      toast.error('Failed to load tickets');
     } finally {
       setLoading(false);
     }
@@ -53,7 +50,7 @@ export default function PortalTicketsPage() {
       const res = await portalApi.tickets.get(id);
       setDetail(res.ticket);
     } catch {
-      toast.error("Failed to load ticket");
+      toast.error('Failed to load ticket');
     }
   };
 
@@ -62,13 +59,13 @@ export default function PortalTicketsPage() {
     setSending(true);
     try {
       await portalApi.tickets.addNote(ticketId, noteText);
-      toast.success("Note added");
-      setNoteText("");
+      toast.success('Note added');
+      setNoteText('');
       // Reload detail
       const res = await portalApi.tickets.get(ticketId);
       setDetail(res.ticket);
     } catch {
-      toast.error("Failed to add note");
+      toast.error('Failed to add note');
     } finally {
       setSending(false);
     }
@@ -77,9 +74,7 @@ export default function PortalTicketsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold">My Tickets</h1>
-      <p className="text-sm text-muted-foreground mt-1">
-        Track your service requests and repairs
-      </p>
+      <p className="text-sm text-muted-foreground mt-1">Track your service requests and repairs</p>
 
       <div className="space-y-2 mt-4">
         {tickets.map((t) => (
@@ -91,11 +86,9 @@ export default function PortalTicketsPage() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      #{t.ticket_number}
-                    </span>
-                    <Badge variant={statusColors[t.status] || "outline"}>
-                      {t.status.replace(/_/g, " ")}
+                    <span className="text-xs text-muted-foreground">#{t.ticket_number}</span>
+                    <Badge variant={statusColors[t.status] || 'outline'}>
+                      {t.status.replace(/_/g, ' ')}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
                       {t.priority}
@@ -104,7 +97,7 @@ export default function PortalTicketsPage() {
                   <p className="font-medium mt-1">{t.title}</p>
                   <p className="text-sm text-muted-foreground">
                     {t.device_type} {t.device_model}
-                    {t.assigned_name ? ` — ${t.assigned_name}` : ""}
+                    {t.assigned_name ? ` — ${t.assigned_name}` : ''}
                   </p>
                 </div>
                 {expanded === t.id ? (
@@ -125,17 +118,10 @@ export default function PortalTicketsPage() {
                         <MessageSquare className="h-3.5 w-3.5" /> Updates
                       </p>
                       {detail.notes.map((n) => (
-                        <div
-                          key={n.id}
-                          className="bg-muted/50 rounded p-2 text-sm"
-                        >
+                        <div key={n.id} className="bg-muted/50 rounded p-2 text-sm">
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground">
-                              {n.author}
-                            </span>
-                            <span>
-                              {new Date(n.created_at).toLocaleDateString()}
-                            </span>
+                            <span className="font-medium text-foreground">{n.author}</span>
+                            <span>{new Date(n.created_at).toLocaleDateString()}</span>
                           </div>
                           <p className="mt-1">{n.content}</p>
                         </div>
@@ -164,9 +150,7 @@ export default function PortalTicketsPage() {
           </Card>
         ))}
         {!loading && tickets.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No tickets yet
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-8">No tickets yet</p>
         )}
       </div>
     </div>
