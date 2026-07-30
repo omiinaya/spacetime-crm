@@ -6,7 +6,6 @@ Tests Settings pydantic model with default values and env overrides.
 
 from __future__ import annotations
 
-
 from server.config import Settings
 
 

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-
 from helpers import (
-    _sql,
-    _paginated,
     _call,
     _log_audit,
+    _paginated,
+    _sql,
     require_role,
 )
 from models import UserCreate, UserSettingsUpdate

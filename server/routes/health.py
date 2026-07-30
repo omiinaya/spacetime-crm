@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+from client import get_http_client
+from config import settings
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-
-from config import settings
-from client import get_http_client
 from helpers import logger
 
 router = APIRouter()

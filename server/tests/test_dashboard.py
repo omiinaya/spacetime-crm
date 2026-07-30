@@ -1,6 +1,7 @@
 """Dashboard stats, reports, and audit log tests."""
 
 import httpx
+
 from .conftest import SERVER_URL, assert_ok
 
 

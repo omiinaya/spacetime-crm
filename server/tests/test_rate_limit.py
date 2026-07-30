@@ -24,4 +24,4 @@ if not _SERVER_OK:
     )
 
 # Import all unit test classes
-from server.test_rate_limit import *  # noqa: F401, F403, F4
+from server.test_rate_limit import *  # noqa: F403

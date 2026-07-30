@@ -7,16 +7,17 @@ Tests background task scheduling and periodic health checks.
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 from server.scheduler import (
-    _http,
     SCHEDULED_TASKS,
+    _http,
+    appointment_reminders,
+    log_cleanup,
+    low_stock_alerts,
     overdue_check,
     recurring_invoices,
-    appointment_reminders,
-    low_stock_alerts,
-    log_cleanup,
 )
 
 

@@ -53,6 +53,7 @@ export default function ProductsPage() {
   const pag = usePagination(PAGE_SIZE);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Product>>({ ...emptyForm });
@@ -80,10 +81,19 @@ export default function ProductsPage() {
     staleTime: 60000,
   });
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['products', { search, category: categoryFilter, offset: pag.offset }],
+  const { data: locations } = useQuery({
+    queryKey: ['product-locations'],
     queryFn: async () => {
-      const res = await api.products.list(search, categoryFilter, pag.offset, PAGE_SIZE);
+      const res = await api.products.locations();
+      return res.locations;
+    },
+    staleTime: 60000,
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['products', { search, category: categoryFilter, location: locationFilter, offset: pag.offset }],
+    queryFn: async () => {
+      const res = await api.products.list(search, categoryFilter, locationFilter, pag.offset, PAGE_SIZE);
       return res;
     },
     select: (res) => {
@@ -266,7 +276,7 @@ export default function ProductsPage() {
     });
     detector
       .detect(videoRef.current)
-      .then((barcodes: any[]) => {
+      .then((barcodes: { rawValue: string }[]) => {
         if (barcodes.length > 0) {
           const code = barcodes[0].rawValue;
           setForm({ ...form, barcode: code });
@@ -317,7 +327,7 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      {/* Search + category filter */}
+      {/* Search + category + location filters */}
       <div className="flex gap-2 items-center flex-wrap">
         <Input
           placeholder="Search products..."
@@ -337,6 +347,21 @@ export default function ProductsPage() {
           {categories?.map((c) => (
             <option key={c} value={c}>
               {c}
+            </option>
+          ))}
+        </select>
+        <select
+          value={locationFilter}
+          onChange={(e) => {
+            setLocationFilter(e.target.value);
+            pag.reset();
+          }}
+          className="h-9 rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">All locations</option>
+          {locations?.map((l) => (
+            <option key={l} value={l}>
+              {l}
             </option>
           ))}
         </select>

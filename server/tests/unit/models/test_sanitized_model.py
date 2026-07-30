@@ -65,7 +65,7 @@ class TestSanitizedModel:
 
     def test_nested_model_html_stripping(self) -> None:
         """Verify HTML stripping works on nested Pydantic models."""
-        from models import RecurringInvoiceRuleCreate, RecurringInvoiceLineItem
+        from models import RecurringInvoiceLineItem, RecurringInvoiceRuleCreate
 
         item = RecurringInvoiceLineItem(
             description="<script>alert(1)</script>Laptop repair",

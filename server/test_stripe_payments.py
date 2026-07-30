@@ -11,12 +11,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from server.stripe_payments import (
-    is_configured,
-    init_stripe,
     create_checkout_session,
-    verify_webhook,
-    create_setup_intent,
     create_payment_intent,
+    create_setup_intent,
+    init_stripe,
+    is_configured,
+    verify_webhook,
 )
 
 

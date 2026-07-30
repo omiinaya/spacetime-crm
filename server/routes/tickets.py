@@ -4,31 +4,34 @@ from __future__ import annotations
 
 import asyncio
 import json
-from fastapi import APIRouter, Depends, HTTPException
 
 from config import settings
+from fastapi import APIRouter, Depends, HTTPException
 from helpers import (
-    _sql,
-    _paginated,
     _call,
-    _sort,
-    _log_audit,
     _fire_webhook,
-    require_role,
+    _log_audit,
+    _paginated,
+    _sort,
+    _sql,
     logger,
+    require_role,
 )
+from mail import _customer_email as _mail_customer_email
+from mail import _notify_ticket_status_change
 from models import (
-    TicketCreate,
-    TicketStatusUpdate,
-    TicketAssign,
-    TicketNoteCreate,
-    TicketTimerStart,
     ChecklistApply,
     ChecklistToggle,
+    TicketAssign,
+    TicketCreate,
+    TicketNoteCreate,
+    TicketStatusUpdate,
+    TicketTimerStart,
 )
-from mail import _customer_email as _mail_customer_email, _notify_ticket_status_change
 from sms import (
     _customer_phone as _sms_customer_phone,
+)
+from sms import (
     _notify_ticket_status_change as _sms_ticket_status,
 )
 

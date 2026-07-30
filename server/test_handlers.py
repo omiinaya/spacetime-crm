@@ -22,8 +22,8 @@ class TestHandlers:
 
     def test_register_handlers_registers_four_handlers(self):
         """register_exception_handlers adds 4 exception handlers to the app."""
-        from fastapi.exceptions import RequestValidationError
         from fastapi import HTTPException
+        from fastapi.exceptions import RequestValidationError
 
         app = MagicMock(spec=FastAPI)
         registered = {}

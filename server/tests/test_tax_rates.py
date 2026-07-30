@@ -1,14 +1,15 @@
 """Tax rate CRUD tests."""
 
 import httpx
+
 from .conftest import (
     SERVER_URL,
-    assert_ok,
-    unique_suffix,
     _stdb_sql,
-    save_default_tax_rate,
-    restore_default_tax_rate,
     _track_entity,
+    assert_ok,
+    restore_default_tax_rate,
+    save_default_tax_rate,
+    unique_suffix,
 )
 
 

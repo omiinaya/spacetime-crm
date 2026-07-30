@@ -10,10 +10,11 @@ Validates the auto-generated OpenAPI schema and endpoint contracts:
 """
 
 import json
-import pytest
-import httpx
-from .conftest import SERVER_URL, assert_ok, assert_unauthorized
 
+import httpx
+import pytest
+
+from .conftest import SERVER_URL, assert_ok, assert_unauthorized
 
 # ── Helpers ──────────────────────────────────────────────────────
 

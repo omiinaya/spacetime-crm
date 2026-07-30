@@ -5,10 +5,11 @@ never affects the global admin. All test users are created within the
 isolated tenant scope and cleaned up at module end.
 """
 
-import pyotp
 import httpx
+import pyotp
 import pytest
-from .conftest import SERVER_URL, assert_ok, _track_entity
+
+from .conftest import SERVER_URL, _track_entity, assert_ok
 
 
 @pytest.fixture(scope="module")
@@ -48,6 +49,7 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
 
     # Set password for the test user
     import bcrypt
+
     from .conftest import STDB_CALL_URL
 
     hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()

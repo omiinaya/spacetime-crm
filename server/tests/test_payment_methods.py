@@ -2,12 +2,13 @@
 
 import httpx
 import pytest
+
 from .conftest import (
     SERVER_URL,
+    _track_entity,
     assert_ok,
     create_customer,
     unique_suffix,
-    _track_entity,
 )
 
 

@@ -7,8 +7,9 @@ The health endpoint test requires mocking the STDB HTTP client.
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
-from fastapi.testclient import TestClient
+
 import main
+from fastapi.testclient import TestClient
 
 
 class TestAppStructure:

@@ -94,7 +94,7 @@ class BaseSchedulerTest:
 
         return mock_client, mock_sleep
 
-    def _run_and_expect(  # noqa: PLR0913 (too many arguments is reasonable here)
+    def _run_and_expect(
         self,
         task_func,
         interval: int,
@@ -688,9 +688,9 @@ class TestScheduledTasksConfig:
 
     def test_each_task_is_callable(self) -> None:
         """Each task entry should be a (coroutine_function, interval) tuple."""
-        from scheduler import SCHEDULED_TASKS
-
         import asyncio as _asyncio
+
+        from scheduler import SCHEDULED_TASKS
 
         for name, (func, interval) in SCHEDULED_TASKS.items():
             assert _asyncio.iscoroutinefunction(func), (

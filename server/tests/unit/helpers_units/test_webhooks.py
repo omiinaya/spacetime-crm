@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-
 # ===================================================================
 # _get_webhook_subscriptions
 # ===================================================================

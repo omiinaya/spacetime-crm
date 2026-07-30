@@ -2,9 +2,10 @@ import { Receipt, ShoppingCart, Lock, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent } from '../../components/ui/card';
+import { POSCounterSale } from '../../lib/api';
 
 interface HistoryViewProps {
-  salesHistory: any[] | undefined;
+  salesHistory: POSCounterSale[] | undefined;
   loadingHistory: boolean;
   setMode: (mode: 'sale' | 'history' | 'receipt') => void;
   onViewReceipt: (saleId: string) => void;
@@ -38,7 +39,7 @@ export default function HistoryView({
         </div>
       ) : (
         <div className="grid gap-3">
-          {salesHistory?.map((sale: any) => (
+          {salesHistory?.map((sale: POSCounterSale) => (
             <Card
               key={sale.id}
               className="hover:bg-accent/50 cursor-pointer"

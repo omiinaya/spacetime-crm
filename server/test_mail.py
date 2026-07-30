@@ -9,23 +9,22 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-
 from server.mail import (
+    _customer_email,
     _load_settings,
+    _notify_appointment_created,
+    _notify_appointment_reminder,
+    _notify_estimate_approved,
+    _notify_invoice_created,
+    _notify_low_stock,
+    _notify_overdue_reminder,
+    _notify_payment_received,
+    _notify_ticket_status_change,
     _save_settings,
     get_settings,
-    update_settings,
     send_email,
     test_connection,
-    _customer_email,
-    _notify_ticket_status_change,
-    _notify_invoice_created,
-    _notify_appointment_created,
-    _notify_payment_received,
-    _notify_estimate_approved,
-    _notify_low_stock,
-    _notify_appointment_reminder,
-    _notify_overdue_reminder,
+    update_settings,
 )
 
 

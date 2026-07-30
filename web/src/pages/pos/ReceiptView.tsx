@@ -3,15 +3,17 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent } from '../../components/ui/card';
 import { toast } from 'sonner';
+import { POSCounterSale, POSCounterSaleLineItem } from '../../lib/api';
+import type { QueryClient } from '@tanstack/react-query';
 
 interface ReceiptViewProps {
-  lastReceipt: any;
+  lastReceipt: { sale: POSCounterSale; items: POSCounterSaleLineItem[] } | null;
   setMode: (mode: 'sale' | 'history' | 'receipt') => void;
-  setLastReceipt: (data: any) => void;
+  setLastReceipt: (data: { sale: POSCounterSale; items: POSCounterSaleLineItem[] } | null) => void;
   setLocked: (locked: boolean) => void;
   refunding: boolean;
   setRefunding: (val: boolean) => void;
-  queryClient: any;
+  queryClient: QueryClient;
 }
 
 export default function ReceiptView({
@@ -23,7 +25,7 @@ export default function ReceiptView({
   setRefunding,
   queryClient,
 }: ReceiptViewProps) {
-  const { sale, items } = lastReceipt;
+  const { sale, items } = lastReceipt!;
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
@@ -67,13 +69,6 @@ export default function ReceiptView({
                 const { api } = await import('../../lib/api');
                 await api.pos.refund(sale.id);
                 setLastReceipt({
-                  ...lastReceipt,
-                  sale: {
-                    ...sale,
-                    status: 'refunded',
-                    refunded_at: Date.now(),
-                  },
-                });
                 queryClient.invalidateQueries({ queryKey: ['pos-sales'] });
                 toast.success('Sale refunded');
               } catch (e) {
@@ -112,7 +107,7 @@ export default function ReceiptView({
               </tr>
             </thead>
             <tbody>
-              {items.map((item: any) => (
+              {items.map((item: POSCounterSaleLineItem) => (
                 <tr key={item.id} className="border-b border-dashed">
                   <td className="py-1">{item.product_name}</td>
                   <td className="py-1 text-right">{item.quantity}</td>

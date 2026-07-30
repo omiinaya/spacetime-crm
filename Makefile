@@ -52,8 +52,8 @@ test-web: ## Run frontend tests (vitest + playwright e2e)
 lint: lint-py lint-rs lint-web ## Run all linters
 
 lint-py: ## Lint Python code (ruff)
-	@if command -v ruff >/dev/null 2>&1; then \
-		ruff check server/ scripts/; \
+	@if python3 -m ruff --version >/dev/null 2>&1; then \
+		python3 -m ruff check server/ scripts/; \
 	else \
 		echo "⚠️  ruff not installed. Run: pip install ruff"; \
 	fi
@@ -69,8 +69,8 @@ lint-web: ## Lint TypeScript/React code
 fmt: fmt-py fmt-rs fmt-web ## Format all code
 
 fmt-py: ## Format Python code (ruff)
-	@if command -v ruff >/dev/null 2>&1; then \
-		ruff format server/ scripts/; \
+	@if python3 -m ruff --version >/dev/null 2>&1; then \
+		python3 -m ruff format server/ scripts/; \
 	else \
 		echo "⚠️  ruff not installed. Run: pip install ruff"; \
 	fi
@@ -88,8 +88,8 @@ fmt-web: ## Format frontend code (prettier or biome)
 	fi
 
 fix: ## Auto-fix lint issues (ruff + cargo fix)
-	@if command -v ruff >/dev/null 2>&1; then \
-		ruff check --fix server/ scripts/; \
+	@if python3 -m ruff --version >/dev/null 2>&1; then \
+		python3 -m ruff check --fix server/ scripts/; \
 	else \
 		echo "⚠️  ruff not installed. Run: pip install ruff"; \
 	fi
@@ -238,8 +238,8 @@ test-quick:  ## ~5s sanity check
 		echo "❌ node not found"; \
 	fi
 	@echo "--- Lint check (ruff only) ---"
-	@if command -v ruff >/dev/null 2>&1; then \
-		ruff check server/main.py --quiet 2>/dev/null && echo "  lint OK"; \
+	@if python3 -m ruff --version >/dev/null 2>&1; then \
+		python3 -m ruff check server/main.py --quiet 2>/dev/null && echo "  lint OK"; \
 	else \
 		echo "  ruff not installed"; \
 	fi

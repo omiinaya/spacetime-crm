@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ DAY_NAMES = [
 ]
 
 
-def _load_settings() -> Optional[dict]:
+def _load_settings() -> dict | None:
     if not SETTINGS_PATH.exists():
         return None
     try:
@@ -55,7 +54,7 @@ def _save_settings(settings: dict) -> None:
     SETTINGS_PATH.write_text(json.dumps(settings, indent=2))
 
 
-def get_settings() -> Optional[dict]:
+def get_settings() -> dict | None:
     """Get current business hours, or None if default."""
     return _load_settings()
 

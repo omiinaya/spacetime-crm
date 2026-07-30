@@ -5,6 +5,7 @@ Applied automatically via SanitizedModel base class.
 """
 
 import re
+
 from pydantic import BaseModel, model_validator
 
 

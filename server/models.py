@@ -218,7 +218,7 @@ class POLineItemCreate(BaseModel):
 
 class POReceiveItem(BaseModel):
     received_quantity: float = Field(..., ge=0)
-    items: list[dict] = []
+    items: list[dict] = Field(default_factory=list)
 
 
 class POApprovalAction(BaseModel):
@@ -352,7 +352,7 @@ class CustomFieldDefinitionCreate(BaseModel):
 
 
 class CustomFieldValuesUpdate(BaseModel):
-    values: dict[str, str | int | float | bool | list[str]] = {}
+    values: dict[str, str | int | float | bool | list[str]] = Field(default_factory=dict)
 
 
 # ─── Checklist ───────────────────────────────────────────────────
@@ -361,13 +361,13 @@ class CustomFieldValuesUpdate(BaseModel):
 class ChecklistTemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str = Field(default="", max_length=2000)
-    items: list[dict] = []
+    items: list[dict] = Field(default_factory=list)
 
 
 class ChecklistTemplateUpdate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str = Field(default="", max_length=2000)
-    items: list[dict] = []
+    items: list[dict] = Field(default_factory=list)
 
 
 class ChecklistApply(BaseModel):

@@ -1,6 +1,7 @@
 """Purchase order request models."""
 
 from pydantic import Field
+
 from .base import BaseModel
 
 
@@ -24,7 +25,7 @@ class POLineItemCreate(BaseModel):
 
 class POReceiveItem(BaseModel):
     received_quantity: float = Field(..., ge=0)
-    items: list[dict] = []
+    items: list[dict] = Field(default_factory=list)
 
 
 class POApprovalAction(BaseModel):

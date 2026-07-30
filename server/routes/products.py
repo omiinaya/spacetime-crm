@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-
 from helpers import (
-    _sql,
-    _paginated,
     _call,
-    _sort,
     _log_audit,
+    _paginated,
+    _sort,
+    _sql,
     require_role,
 )
+from mail import _notify_low_stock
 from models import (
+    InventoryAdjustmentCreate,
     ProductCreate,
     ProductQuantityUpdate,
-    InventoryAdjustmentCreate,
     StockTransferRequest,
 )
-from mail import _notify_low_stock
 
 router = APIRouter()
 
@@ -27,14 +26,16 @@ router = APIRouter()
 async def list_products(
     search: str = "",
     category: str = "",
+    location: str = "",
     offset: int = 0,
     limit: int = 50,
     user: dict = Depends(require_role("admin", "tech")),
 ):
-    """List products with pagination and optional search + category filter."""
+    """List products with pagination and optional search + category + location filter."""
     cat = category.strip()
+    loc = location.strip()
     q = search.lower().strip()
-    if q or cat:
+    if q or cat or loc:
         # When filtering, fetch up to 1000 rows, filter client-side, then paginate
         rows, _ = await _paginated(
             user["tenant_id"],
@@ -53,6 +54,8 @@ async def list_products(
             ]
         if cat:
             rows = [r for r in rows if r.get("category", "") == cat]
+        if loc:
+            rows = [r for r in rows if r.get("location", "") == loc]
         total = len(rows)
         rows = rows[offset : offset + limit]
     else:
@@ -291,3 +294,18 @@ async def list_categories(user: dict = Depends(require_role("admin", "tech"))):
     )
     cats = sorted({r.get("category", "") for r in rows if r.get("category")})
     return {"categories": cats}
+
+
+@router.get("/api/products/locations")
+async def list_locations(user: dict = Depends(require_role("admin", "tech"))):
+    """Get distinct product locations for the current tenant."""
+    rows, _ = await _paginated(
+        user["tenant_id"],
+        "products",
+        offset=0,
+        limit=1000,
+        order_by="name",
+        order_desc=False,
+    )
+    locs = sorted({r.get("location", "") for r in rows if r.get("location")})
+    return {"locations": locs}

@@ -1,12 +1,13 @@
 """Invoice CRUD, line items, tax, PDF, and status workflow integration tests."""
 
 import httpx
+
 from .conftest import (
     SERVER_URL,
+    _track_entity,
     assert_ok,
     create_customer,
     unique_suffix,
-    _track_entity,
 )
 
 

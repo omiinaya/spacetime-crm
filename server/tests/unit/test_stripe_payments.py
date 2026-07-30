@@ -57,8 +57,8 @@ class TestInitStripe:
 
     def test_sets_api_key_when_configured(self, _configured_settings) -> None:
         """Should set stripe_lib.api_key when secret key is present."""
-        import stripe_payments
         import stripe as stripe_lib
+        import stripe_payments
 
         with patch.object(stripe_lib, "api_key", ""):
             stripe_payments.init_stripe()
@@ -66,8 +66,8 @@ class TestInitStripe:
 
     def test_does_not_set_api_key_when_not_configured(self) -> None:
         """Should not set api_key when no secret key."""
-        import stripe_payments
         import stripe as stripe_lib
+        import stripe_payments
 
         original = stripe_lib.api_key
         stripe_payments.init_stripe()

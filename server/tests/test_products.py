@@ -1,12 +1,13 @@
 """Product CRUD, inventory adjustments, low stock alert integration tests."""
 
-import pytest
 import httpx
+import pytest
+
 from .conftest import (
     SERVER_URL,
+    _track_entity,
     assert_ok,
     unique_suffix,
-    _track_entity,
 )
 
 

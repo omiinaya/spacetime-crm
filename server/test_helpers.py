@@ -6,23 +6,23 @@ Tests STDB helpers, auth middleware, and shared utilities.
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import HTTPException
 
 from server.helpers import (
+    CUSTOMER_SENSITIVE_FIELDS,
+    STATUS_CSS,
+    STATUS_LABELS,
+    _call,
+    _log_audit,
+    _paginated,
     _safe_customer,
+    _safe_id,
+    _sort,
     _sql,
     _sql_t,
-    _call,
-    _sort,
-    _log_audit,
-    _safe_id,
-    _paginated,
-    STATUS_LABELS,
-    STATUS_CSS,
-    CUSTOMER_SENSITIVE_FIELDS,
     require_role,
 )
 

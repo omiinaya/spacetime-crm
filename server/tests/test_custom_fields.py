@@ -4,11 +4,12 @@ Uses unique_suffix for all identifiers to avoid parallel-session collisions.
 """
 
 import httpx
+
 from .conftest import (
     SERVER_URL,
+    _track_entity,
     assert_ok,
     unique_suffix,
-    _track_entity,
 )
 
 

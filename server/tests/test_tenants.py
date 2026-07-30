@@ -1,7 +1,9 @@
 """Tenant management integration tests."""
 
-import httpx
 import uuid
+
+import httpx
+
 from .conftest import (
     SERVER_URL,
     assert_ok,

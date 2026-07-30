@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import uuid
+
 import httpx
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")

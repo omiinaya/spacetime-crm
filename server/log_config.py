@@ -4,12 +4,11 @@ Provides a standardized JSON log format for production use.
 In dev mode, logs remain human-readable via the console handler.
 """
 
-import os
 import json
 import logging
+import os
 import sys
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info").upper()
 # Enable JSON logging for production (structured logs)
@@ -21,7 +20,7 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -36,7 +35,7 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log_entry, default=str)
 
 
-def configure_logging(logger_name: Optional[str] = None) -> logging.Logger:
+def configure_logging(logger_name: str | None = None) -> logging.Logger:
     """Configure structured logging for the app.
 
     In production (STRUCTURED_LOGGING=true), outputs JSON to stderr.

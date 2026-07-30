@@ -267,8 +267,7 @@ class TestConfigureLogging:
     def test_structured_mode_formatter(self) -> None:
         """In structured mode, handler should use JsonFormatter."""
         with patch("log_config.STRUCTURED", True):
-            from log_config import configure_logging
-            from log_config import JsonFormatter
+            from log_config import JsonFormatter, configure_logging
 
             logger = configure_logging("test_structured")
             handler = logger.handlers[0]
@@ -286,8 +285,7 @@ class TestConfigureLogging:
     def test_dev_mode_not_json_formatter(self) -> None:
         """In dev mode, formatter should NOT be JsonFormatter."""
         with patch("log_config.STRUCTURED", False):
-            from log_config import configure_logging
-            from log_config import JsonFormatter
+            from log_config import JsonFormatter, configure_logging
 
             logger = configure_logging("test_dev_not_json")
             handler = logger.handlers[0]

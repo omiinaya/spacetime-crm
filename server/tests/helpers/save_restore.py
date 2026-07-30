@@ -6,7 +6,6 @@ import httpx
 
 from tests.helpers.db import SERVER_URL
 
-
 # ── Settings save/restore helpers ─────────────────────────────────
 
 

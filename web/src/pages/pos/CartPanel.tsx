@@ -2,6 +2,7 @@ import { ShoppingCart, Minus, Plus, X, Check, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 interface CartItem {
   product_id: string;
@@ -24,8 +25,8 @@ interface CartPanelProps {
   tendered: number;
   changeDue: number;
   handleSaleComplete: () => Promise<void>;
-  createMutation: any;
-  addItemMutation: any;
+  createMutation: UseMutationResult;
+  addItemMutation: UseMutationResult;
 }
 
 export default function CartPanel({

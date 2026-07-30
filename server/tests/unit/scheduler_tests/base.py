@@ -46,7 +46,7 @@ class BaseSchedulerTest:
 
         return mock_client, mock_sleep
 
-    def _run_and_expect(  # noqa: PLR0913 (too many arguments is reasonable here)
+    def _run_and_expect(
         self,
         task_func,
         interval: int,

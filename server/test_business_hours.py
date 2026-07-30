@@ -11,8 +11,8 @@ import json
 from unittest.mock import patch
 
 from server.business_hours import (
-    DEFAULT_HOURS,
     DAY_NAMES,
+    DEFAULT_HOURS,
     _load_settings,
     _save_settings,
     get_settings,

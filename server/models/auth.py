@@ -1,6 +1,7 @@
 """Auth request models — login, password management, 2FA/TOTP, PIN."""
 
 from pydantic import Field
+
 from .base import BaseModel
 
 

@@ -1,6 +1,6 @@
 """Tests for server/tests/unit/scheduler_tests/base.py."""
 
-from tests.unit.scheduler_tests.base import *  # noqa: F401, F403
+from tests.unit.scheduler_tests.base import *  # noqa: F403
 
 
 class TestBase:

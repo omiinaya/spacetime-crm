@@ -339,6 +339,8 @@ export interface ReportsData {
   };
   tech_closed: { user_name: string; closed_count: number }[];
   top_customers: { customer_name: string; revenue: number }[];
+  invoice_item_type_breakdown: { item_type: string; count: number; total: number }[];
+  estimate_item_type_breakdown: { item_type: string; count: number; total: number }[];
 }
 
 export interface ScheduledReport {

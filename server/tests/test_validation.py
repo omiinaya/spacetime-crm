@@ -1,11 +1,12 @@
 """Error handling and input validation tests."""
 
-import pytest
 import httpx
+import pytest
+
 from .conftest import (
     SERVER_URL,
-    unique_suffix,
     _track_entity,
+    unique_suffix,
 )
 
 

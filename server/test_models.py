@@ -10,22 +10,22 @@ import pytest
 from pydantic import ValidationError
 
 from server.models import (
+    AppointmentCreate,
     CustomerCreate,
     CustomerUpdate,
-    TicketCreate,
+    CustomFieldDefinitionCreate,
     InvoiceCreate,
+    LoginRequest,
+    MailSettingsUpdate,
     PaymentCreate,
-    AppointmentCreate,
     ProductCreate,
     PurchaseOrderCreate,
-    LoginRequest,
     SetPasswordRequest,
+    SMSSettingsUpdate,
+    TaxRateCreate,
+    TicketCreate,
     UserCreate,
     UserUpdate,
-    TaxRateCreate,
-    MailSettingsUpdate,
-    SMSSettingsUpdate,
-    CustomFieldDefinitionCreate,
 )
 
 

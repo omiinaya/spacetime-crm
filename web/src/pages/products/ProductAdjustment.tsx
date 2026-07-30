@@ -2,6 +2,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
+import type { UseMutationResult } from '@tanstack/react-query';
 import { ClipboardList, ArrowRightLeft } from 'lucide-react';
 
 interface Product {
@@ -60,11 +61,11 @@ interface ProductAdjustmentProps {
   setTransferForm: (f: TransferForm) => void;
   transferSearch: string;
   setTransferSearch: (v: string) => void;
-  transferProducts: any;
-  transferMutation: any;
+  transferProducts: { products: { id: string; name: string; quantity_on_hand: number }[] } | undefined;
+  transferMutation: UseMutationResult;
   adjustments: Adjustment[];
   fmtDate: (ts: number) => string;
-  setSelectedProduct: any;
+  setSelectedProduct: (product: Product | null) => void;
   printBarcodeLabel: (barcode: string, name: string, price: number, sku: string) => void;
 }
 

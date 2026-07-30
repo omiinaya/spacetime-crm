@@ -10,7 +10,7 @@ import json
 import logging
 import sys
 
-from server.log_config import JsonFormatter, configure_logging, LOG_LEVEL
+from server.log_config import LOG_LEVEL, JsonFormatter, configure_logging
 
 
 class TestLogConfig:

@@ -22,7 +22,6 @@ from fastapi import HTTPException
 from fastapi.security import HTTPBearer
 from jinja2 import Environment
 
-
 # ===================================================================
 # Module-level constants
 # ===================================================================
@@ -45,7 +44,7 @@ class TestStatusLabels:
 
     def test_status_labels_keys_match_css_keys(self) -> None:
         """STATUS_LABELS and STATUS_CSS should have the same set of keys."""
-        from helpers import STATUS_LABELS, STATUS_CSS
+        from helpers import STATUS_CSS, STATUS_LABELS
 
         assert set(STATUS_LABELS.keys()) == set(STATUS_CSS.keys())
 
@@ -188,18 +187,18 @@ class TestModuleStructure:
     def test_module_has_all_expected_names(self) -> None:
         """All expected public and private names should be importable."""
         from helpers import (
+            _call,
+            _fire_webhook,
+            _get_webhook_subscriptions,
+            _log_audit,
+            _paginated,
+            _safe_customer,
+            _safe_id,
+            _sort,
             _sql,
             _sql_t,
-            _paginated,
-            _call,
-            _sort,
-            _log_audit,
-            _get_webhook_subscriptions,
-            _fire_webhook,
-            require_role,
-            _safe_id,
             get_current_user,
-            _safe_customer,
+            require_role,
         )
 
         # If we got here, all imports succeeded

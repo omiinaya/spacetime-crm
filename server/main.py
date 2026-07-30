@@ -7,14 +7,14 @@ import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+# Initialize structured logging (import triggers configure_logging)
+import log_config  # noqa: F401
 import uvicorn
+from config import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
-from config import settings
-
+from fastapi.staticfiles import StaticFiles
 
 # ── Background scheduler ───────────────────────────────────
 

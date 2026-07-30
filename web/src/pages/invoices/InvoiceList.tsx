@@ -6,6 +6,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
 import Pagination from '../../components/Pagination';
 import { Plus, Mail, Edit3, CheckSquare, Square } from 'lucide-react';
+import type { UseMutationResult } from '@tanstack/react-query';
 import type { Invoice, Customer, TaxRate, InvoiceLineItem, InvoiceSummary } from '../../lib/api';
 
 const statusColors: Record<string, 'default' | 'warning' | 'success' | 'destructive' | 'outline'> =
@@ -30,20 +31,20 @@ interface InvoiceListProps {
   toggleSelect: (id: string) => void;
   toggleSelectAll: () => void;
   setSelectedIds: (ids: Set<string>) => void;
-  sendReminderMutation: any;
+  sendReminderMutation: UseMutationResult;
   selectedIdsSize: number;
   showBulkEdit: boolean;
   setShowBulkEdit: (v: boolean) => void;
   bulkStatus: string;
   setBulkStatus: (v: string) => void;
-  bulkMutation: any;
-  batchEmailMutation: any;
-  bulkEditMutation: any;
+  bulkMutation: UseMutationResult;
+  batchEmailMutation: UseMutationResult;
+  bulkEditMutation: UseMutationResult;
   bulkEditForm: { terms: string; notes: string };
   setBulkEditForm: (f: { terms: string; notes: string }) => void;
-  pag: any;
-  statusMutation: any;
-  taxMutation: any;
+  pag: { offset: number; setOffset: (o: number) => void; total: number; setTotal: (t: number) => void; reset: () => void };
+  statusMutation: UseMutationResult;
+  taxMutation: UseMutationResult;
   taxRates: TaxRate[];
   lineItems: InvoiceLineItem[];
   newItem: {
@@ -62,12 +63,12 @@ interface InvoiceListProps {
   removeLineItem: (itemId: string) => void;
   setSelectedInv: (inv: Invoice | null) => void;
   handleSendEmail: () => void;
-  sendEmailMutation: any;
+  sendEmailMutation: UseMutationResult;
   showPaymentForm: boolean;
   setShowPaymentForm: (v: boolean) => void;
   paymentForm: { amount: number; method: string; reference: string };
   setPaymentForm: (f: { amount: number; method: string; reference: string }) => void;
-  recordPaymentMutation: any;
+  recordPaymentMutation: UseMutationResult;
   selectedInvCurrency: string;
   selectedInvTotal: number;
   selectedInvSubtotal: number;

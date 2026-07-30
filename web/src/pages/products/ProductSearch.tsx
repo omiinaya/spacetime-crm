@@ -12,7 +12,7 @@ interface ProductSearchProps {
   setBarcodeLookup: (val: string) => void;
   handleBarcodeLookup: (e: React.KeyboardEvent) => void;
   lowStockCount: number;
-  notifyLowStockMutation: any;
+  notifyLowStockMutation: { isPending: boolean; mutate: () => void };
 }
 
 export default function ProductSearch({

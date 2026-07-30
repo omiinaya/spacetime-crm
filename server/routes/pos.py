@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Response
 
+from fastapi import APIRouter, Depends, HTTPException, Response
 from helpers import (
-    _sql,
-    _paginated,
     _call,
     _log_audit,
-    require_role,
+    _paginated,
+    _sql,
     jinja_env,
+    require_role,
 )
-from models import POSCreate, POSAddItem
+from models import POSAddItem, POSCreate
 from pdf import html_to_pdf
 
 router = APIRouter()

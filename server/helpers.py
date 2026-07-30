@@ -6,18 +6,18 @@ Extracted from main.py to enable route splitting and reduce code duplication.
 from __future__ import annotations
 
 import logging
-from typing import Any
 from pathlib import Path
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
-from jinja2 import Environment, FileSystemLoader
+from typing import Any
 
+import jwt
 from client import get_http_client
 from config import settings
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jinja2 import Environment, FileSystemLoader
 from webhooks import fire_event as _fire_webhook_event
 
-logging.basicConfig(level=logging.INFO)
+# Root logging configured by log_config.py (imported from main.py)
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer(auto_error=False)
@@ -80,7 +80,7 @@ async def _sql(query: str) -> list[dict[str, Any]]:
                 if "some" in e.get("name", {})
             ]
             for row in rows:
-                result.append(dict(zip(cols, row)))
+                result.append(dict(zip(cols, row, strict=False)))
     return result
 
 
@@ -235,9 +235,9 @@ def require_role(*roles: str):
                 algorithms=[settings.jwt_algorithm],
             )
         except jwt.ExpiredSignatureError:
-            raise HTTPException(401, "Token expired")
+            raise HTTPException(401, "Token expired") from None
         except jwt.InvalidTokenError:
-            raise HTTPException(401, "Invalid token")
+            raise HTTPException(401, "Invalid token") from None
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(401, "Invalid token: no subject")
@@ -279,9 +279,9 @@ async def get_current_user(
             algorithms=[settings.jwt_algorithm],
         )
     except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Token expired")
+        raise HTTPException(401, "Token expired") from None
     except jwt.InvalidTokenError:
-        raise HTTPException(401, "Invalid token")
+        raise HTTPException(401, "Invalid token") from None
 
     user_id = payload.get("sub")
     if not user_id:

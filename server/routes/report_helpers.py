@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from helpers import _sql, _log_audit, logger
+from helpers import _log_audit, _sql, logger
 from mail import send_email
+
 from .report_schedules_helpers import _render_report_email
 
 
@@ -119,6 +120,7 @@ async def _build_report_data(
                                 "customer_name",
                             ],
                             r,
+                            strict=False,
                         )
                     )
                     for r in rows
@@ -143,6 +145,7 @@ async def _build_report_data(
                             "customer_name",
                         ],
                         r,
+                        strict=False,
                     )
                 )
             ).get("status", "")

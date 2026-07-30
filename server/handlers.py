@@ -10,11 +10,10 @@ import logging
 import traceback
 from typing import Any
 
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-
 
 logger = logging.getLogger(__name__)
 

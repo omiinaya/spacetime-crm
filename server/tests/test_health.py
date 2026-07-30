@@ -1,6 +1,7 @@
 """Health check endpoint tests."""
 
 import httpx
+
 from .conftest import SERVER_URL
 
 

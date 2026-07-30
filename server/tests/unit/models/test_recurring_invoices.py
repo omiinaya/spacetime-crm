@@ -91,7 +91,7 @@ class TestRecurringInvoiceRuleCreate:
             )
 
     def test_line_items_valid(self) -> None:
-        from models import RecurringInvoiceRuleCreate, RecurringInvoiceLineItem
+        from models import RecurringInvoiceLineItem, RecurringInvoiceRuleCreate
 
         items = [
             RecurringInvoiceLineItem(

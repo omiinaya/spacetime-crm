@@ -1,31 +1,33 @@
 """Customer portal routes + Stripe checkout session creation."""
 
 from datetime import datetime, timedelta
+
 import bcrypt
 import jwt
+from config import settings
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
-
-from config import settings
 from helpers import (
-    _sql,
     _call,
-    _sort,
     _safe_customer,
+    _sort,
+    _sql,
     security,
 )
-from rate_limit import limiter
 from models import (
+    PortalCheckoutSessionCreate,
     PortalLoginRequest,
     PortalNoteCreate,
     PortalPaymentCreate,
-    PortalSetPassword,
-    PortalCheckoutSessionCreate,
     PortalPayWithSavedCard,
+    PortalSetPassword,
 )
+from rate_limit import limiter
 from stripe_payments import (
     create_checkout_session,
     create_payment_intent,
+)
+from stripe_payments import (
     is_configured as stripe_configured,
 )
 
@@ -48,9 +50,9 @@ async def get_current_customer(
             algorithms=[settings.jwt_algorithm],
         )
     except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Token expired")
+        raise HTTPException(401, "Token expired") from None
     except jwt.InvalidTokenError:
-        raise HTTPException(401, "Invalid token")
+        raise HTTPException(401, "Invalid token") from None
 
     if payload.get("type") != "portal":
         raise HTTPException(401, "Not a customer token")

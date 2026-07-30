@@ -1,6 +1,7 @@
 """Custom field request models."""
 
 from pydantic import Field
+
 from .base import BaseModel
 
 
@@ -18,4 +19,4 @@ class CustomFieldDefinitionCreate(BaseModel):
 
 
 class CustomFieldValuesUpdate(BaseModel):
-    values: dict[str, str | int | float | bool | list[str]] = {}
+    values: dict[str, str | int | float | bool | list[str]] = Field(default_factory=dict)

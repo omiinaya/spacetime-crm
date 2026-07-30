@@ -2,10 +2,11 @@ import { apiFetch, buildPaginationParams } from './client';
 import type { Product, InventoryAdjustment } from './types';
 
 export const products = {
-  list: (search?: string, category?: string, offset?: number, limit?: number) => {
+  list: (search?: string, category?: string, location?: string, offset?: number, limit?: number) => {
     const p = new URLSearchParams();
     if (search) p.set('search', search);
     if (category) p.set('category', category);
+    if (location) p.set('location', location);
     if (offset !== undefined) p.set('offset', String(offset));
     if (limit !== undefined) p.set('limit', String(limit));
     const qs = p.toString();
@@ -17,6 +18,7 @@ export const products = {
     }>(`/products${qs ? `?${qs}` : ''}`);
   },
   categories: () => apiFetch<{ categories: string[] }>('/products/categories'),
+  locations: () => apiFetch<{ locations: string[] }>('/products/locations'),
   create: (data: Partial<Product>) =>
     apiFetch<{ ok: boolean }>('/products', {
       method: 'POST',

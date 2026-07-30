@@ -6,7 +6,6 @@ httpx.AsyncClient with connection pooling.
 
 from __future__ import annotations
 
-
 import httpx
 
 
@@ -14,11 +13,10 @@ class TestGetHttpClient:
     """Tests for the shared HTTP client singleton."""
 
     def test_returns_async_client(self) -> None:
-        from client import get_http_client
-        from client import _shared_client as original
-
         # Reset singleton for clean test
         import client as client_module
+        from client import _shared_client as original
+        from client import get_http_client
 
         client_module._shared_client = None
         try:
@@ -29,10 +27,9 @@ class TestGetHttpClient:
 
     def test_singleton_same_instance(self) -> None:
         """Calling get_http_client() twice returns the same instance."""
-        from client import get_http_client
-        from client import _shared_client as original
-
         import client as client_module
+        from client import _shared_client as original
+        from client import get_http_client
 
         client_module._shared_client = None
         try:
@@ -43,10 +40,9 @@ class TestGetHttpClient:
             client_module._shared_client = original
 
     def test_not_none(self) -> None:
-        from client import get_http_client
-        from client import _shared_client as original
-
         import client as client_module
+        from client import _shared_client as original
+        from client import get_http_client
 
         client_module._shared_client = None
         try:
@@ -57,10 +53,9 @@ class TestGetHttpClient:
 
     def test_has_expected_timeout(self) -> None:
         """Client should have a 30-second default timeout."""
-        from client import get_http_client
-        from client import _shared_client as original
-
         import client as client_module
+        from client import _shared_client as original
+        from client import get_http_client
 
         client_module._shared_client = None
         try:
@@ -74,10 +69,9 @@ class TestGetHttpClient:
 
     def test_has_connection_limits(self) -> None:
         """Client should have connection pooling limits configured."""
-        from client import get_http_client
-        from client import _shared_client as original
-
         import client as client_module
+        from client import _shared_client as original
+        from client import get_http_client
 
         client_module._shared_client = None
         try:

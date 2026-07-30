@@ -1,6 +1,7 @@
 """Recurring invoice request models."""
 
 from pydantic import Field
+
 from .base import BaseModel
 
 

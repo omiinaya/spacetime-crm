@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-
 from helpers import (
-    _sql,
-    _paginated,
     _call,
     _log_audit,
+    _paginated,
     _safe_id,
-    require_role,
+    _sql,
     logger,
+    require_role,
 )
 from models import (
     TenantCreate,
-    TenantUpdate,
     TenantMemberAdd,
     TenantMemberRoleUpdate,
     TenantMigrate,
+    TenantUpdate,
 )
 
 router = APIRouter()

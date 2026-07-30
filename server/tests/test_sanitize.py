@@ -1,7 +1,7 @@
 """Tests for input sanitization (XSS protection)."""
 
-from sanitize import strip_html, SanitizedModel, _SKIP_SANITIZE
 from pydantic import Field
+from sanitize import _SKIP_SANITIZE, SanitizedModel, strip_html
 
 
 class _TestModel(SanitizedModel):

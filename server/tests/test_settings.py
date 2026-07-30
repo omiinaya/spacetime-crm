@@ -1,15 +1,16 @@
 """Settings (mail/SMS) routes — get/save/test."""
 
 import httpx
+
 from .conftest import (
     SERVER_URL,
     assert_ok,
-    save_mail_settings,
     restore_mail_settings,
-    save_sms_settings,
     restore_sms_settings,
-    save_user_settings,
     restore_user_settings,
+    save_mail_settings,
+    save_sms_settings,
+    save_user_settings,
 )
 
 

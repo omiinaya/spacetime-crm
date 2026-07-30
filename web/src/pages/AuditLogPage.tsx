@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../lib/query-client';
-import { api } from '../lib/api';
+import { api, AuditLogEntry } from '../lib/api';
 import { History, Filter, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -132,7 +132,7 @@ export default function AuditLogPage() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e: any) => (
+                {entries.map((e: AuditLogEntry) => (
                   <tr key={e.id} className="border-b border-slate-800 hover:bg-slate-800/30">
                     <td className="px-4 py-3 text-slate-400 whitespace-nowrap font-mono text-xs">
                       {formatTime(e.created_at)}

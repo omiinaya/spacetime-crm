@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from fastapi import APIRouter, Depends
 
+from fastapi import APIRouter, Depends
 from helpers import (
-    _paginated,
     _call,
     _log_audit,
+    _paginated,
     require_role,
 )
 from models import ChecklistTemplateCreate, ChecklistTemplateUpdate

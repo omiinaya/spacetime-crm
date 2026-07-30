@@ -1,27 +1,39 @@
 """Settings routes — Mail + SMS."""
 
+from app_config import get_config as _app_get
+from app_config import update_config as _app_update
+from business_hours import (
+    DEFAULT_HOURS,
+)
+from business_hours import (
+    get_settings as _bh_get,
+)
+from business_hours import (
+    update_settings as _bh_update,
+)
 from fastapi import APIRouter, Depends, Request
-
 from helpers import (
     require_role,
 )
-from models import MailSettingsUpdate, SMSSettingsUpdate, BusinessHoursUpdate
-from rate_limit import limiter
-from business_hours import (
-    get_settings as _bh_get,
-    DEFAULT_HOURS,
-    update_settings as _bh_update,
-)
-from app_config import get_config as _app_get, update_config as _app_update
 from mail import (
     get_settings as _mail_get,
-    update_settings as _mail_update,
+)
+from mail import (
     test_connection as _mail_test,
 )
+from mail import (
+    update_settings as _mail_update,
+)
+from models import BusinessHoursUpdate, MailSettingsUpdate, SMSSettingsUpdate
+from rate_limit import limiter
 from sms import (
     get_settings as _sms_get,
-    update_settings as _sms_update,
+)
+from sms import (
     test_connection as _sms_test,
+)
+from sms import (
+    update_settings as _sms_update,
 )
 
 router = APIRouter()

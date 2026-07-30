@@ -3,22 +3,22 @@
 from __future__ import annotations
 
 import asyncio
-import bcrypt
-from fastapi import APIRouter, Depends, HTTPException
 
+import bcrypt
+from client import get_http_client
+from fastapi import APIRouter, Depends, HTTPException
 from helpers import (
     CUSTOMER_SENSITIVE_FIELDS,
+    _call,
+    _fire_webhook,
+    _log_audit,
+    _paginated,
+    _safe_customer,
     _sql,
     _sql_t,
-    _paginated,
-    _call,
-    _log_audit,
-    _fire_webhook,
-    _safe_customer,
-    require_role,
     logger,
+    require_role,
 )
-from client import get_http_client
 from models import CustomerCreate, CustomerUpdate, SetPasswordRequest
 
 router = APIRouter()

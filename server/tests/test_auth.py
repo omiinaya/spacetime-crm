@@ -7,8 +7,10 @@ the bootstrap admin user exists and can log in.
 
 import base64
 import json
+
 import httpx
-from .conftest import SERVER_URL, ADMIN_EMAIL, ADMIN_PW, assert_ok, assert_unauthorized
+
+from .conftest import ADMIN_EMAIL, ADMIN_PW, SERVER_URL, assert_ok, assert_unauthorized
 
 
 class TestAuth:

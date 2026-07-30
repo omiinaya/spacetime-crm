@@ -285,7 +285,7 @@ export default function DashboardPage({
                       border: '1px solid var(--color-border)',
                       borderRadius: '8px',
                     }}
-                    formatter={(v: any) => [`$${Number(v).toFixed(2)}`, 'Revenue']}
+                    formatter={(v: number) => [`$${Number(v).toFixed(2)}`, 'Revenue']}
                   />
                   <Bar dataKey="revenue" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -313,7 +313,7 @@ export default function DashboardPage({
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={(entry: any) => `${entry.status}: ${entry.count}`}
+                    label={(entry: { status: string; count: number }) => `${entry.status}: ${entry.count}`}
                   >
                     {reports.ticket_by_status.map((_, i) => (
                       <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />

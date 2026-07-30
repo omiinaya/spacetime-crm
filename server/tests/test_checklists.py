@@ -1,12 +1,13 @@
 """Checklist template CRUD tests."""
 
 import httpx
+
 from .conftest import (
     SERVER_URL,
-    assert_ok,
-    unique_suffix,
     _stdb_sql,
     _track_entity,
+    assert_ok,
+    unique_suffix,
 )
 
 

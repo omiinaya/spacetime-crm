@@ -8,7 +8,6 @@ import jwt
 import pytest
 from fastapi import HTTPException
 
-
 # ===================================================================
 # require_role  — FastAPI auth dependency factory
 # ===================================================================

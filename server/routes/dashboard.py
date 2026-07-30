@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends
 
+from fastapi import APIRouter, Depends
 from helpers import (
+    _paginated,
     _sql,
     _sql_t,
-    _paginated,
     require_role,
 )
 
@@ -324,6 +324,28 @@ async def get_reports(
         )
         customers_by_month.append({"month": month_label, "new_customers": month_count})
 
+    # Service vs Parts breakdown from invoice + estimate line items
+    inv_line_items = await _sql_t(
+        "SELECT * FROM invoice_line_items", user["tenant_id"]
+    )
+    est_line_items = await _sql_t(
+        "SELECT * FROM estimate_line_items", user["tenant_id"]
+    )
+    inv_type_breakdown: dict[str, dict[str, float]] = {}
+    for li in inv_line_items:
+        t = li.get("item_type", "other")
+        if t not in inv_type_breakdown:
+            inv_type_breakdown[t] = {"count": 0, "total": 0.0}
+        inv_type_breakdown[t]["count"] += 1
+        inv_type_breakdown[t]["total"] += float(li.get("total", 0))
+    est_type_breakdown: dict[str, dict[str, float]] = {}
+    for li in est_line_items:
+        t = li.get("item_type", "other")
+        if t not in est_type_breakdown:
+            est_type_breakdown[t] = {"count": 0, "total": 0.0}
+        est_type_breakdown[t]["count"] += 1
+        est_type_breakdown[t]["total"] += float(li.get("total", 0))
+
     return {
         "revenue_by_month": revenue_by_month,
         "ticket_by_status": ticket_by_status,
@@ -345,6 +367,14 @@ async def get_reports(
         "tech_closed": tech_closed,
         "top_customers": top_customers,
         "customers_by_month": customers_by_month,
+        "invoice_item_type_breakdown": [
+            {"item_type": t, "count": v["count"], "total": round(v["total"], 2)}
+            for t, v in sorted(inv_type_breakdown.items())
+        ],
+        "estimate_item_type_breakdown": [
+            {"item_type": t, "count": v["count"], "total": round(v["total"], 2)}
+            for t, v in sorted(est_type_breakdown.items())
+        ],
     }
 
 

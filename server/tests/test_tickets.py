@@ -6,16 +6,17 @@ run in parallel or in any order.
 """
 
 import httpx
+
 from .conftest import (
     SERVER_URL,
-    assert_ok,
-    create_customer,
-    unique_suffix,
     _stdb_sql,
     _track_entity,
-    save_sla_targets,
-    restore_sla_targets,
+    assert_ok,
+    create_customer,
     reset_sla_targets,
+    restore_sla_targets,
+    save_sla_targets,
+    unique_suffix,
 )
 
 
@@ -59,7 +60,7 @@ def _create_ticket(
 
     # Look up ticket by unique device_serial via STDB SQL
     result = _stdb_sql(f"SELECT * FROM ticket WHERE device_serial = '{device_serial}'")
-    assert len(result) == 1, f"Expected 1 table result"
+    assert len(result) == 1, "Expected 1 table result"
     table = result[0]
     assert table.get("rows") and len(table["rows"]) == 1, (
         f"Expected 1 ticket with serial {device_serial}, got {len(table.get('rows', []))}"

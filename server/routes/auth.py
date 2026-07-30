@@ -1,32 +1,31 @@
 """Auth routes — login, me, set-password, refresh-tenant, 2FA/TOTP."""
 
 from datetime import datetime, timedelta
+
 import bcrypt
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request
-
+import pyotp
 from config import settings
+from fastapi import APIRouter, Depends, HTTPException, Request
 from helpers import (
-    _sql,
     _call,
+    _sql,
     get_current_user,
     logger,
 )
+from mail import send_email as _send_email
 from models import (
-    LoginRequest,
-    SetPasswordRequest,
-    ForgotPasswordRequest,
-    ResetPasswordRequest,
-    Setup2FARequest,
     CompleteLoginRequest,
     Disable2FARequest,
-    SetPinRequest,
+    ForgotPasswordRequest,
+    LoginRequest,
     PosLoginRequest,
+    ResetPasswordRequest,
+    SetPasswordRequest,
+    SetPinRequest,
+    Setup2FARequest,
 )
 from rate_limit import limiter
-
-import pyotp
-from mail import send_email as _send_email
 
 router = APIRouter()
 
@@ -80,9 +79,9 @@ def _decode_temp_token(token: str) -> dict:
             raise HTTPException(400, "Invalid token purpose")
         return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Temporary token expired. Please log in again.")
+        raise HTTPException(401, "Temporary token expired. Please log in again.") from None
     except jwt.InvalidTokenError:
-        raise HTTPException(400, "Invalid temporary token.")
+        raise HTTPException(400, "Invalid temporary token.") from None
 
 
 @router.post("/api/auth/login")
@@ -341,7 +340,7 @@ async def set_pin(body: SetPinRequest, user: dict = Depends(get_current_user)):
         await _call("set_user_pin", [user["id"], ""])
         return {"ok": True, "message": "POS PIN removed"}
     if not pin.isdigit() or len(pin) < 4 or len(pin) > 10:
-        raise HTTPException(400, "PIN must be 4–10 digits or empty to remove")
+        raise HTTPException(400, "PIN must be 4-10 digits or empty to remove")
     hashed = bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
     await _call("set_user_pin", [user["id"], hashed])
     return {"ok": True}
@@ -355,7 +354,7 @@ async def pos_login(request: Request, body: PosLoginRequest):
     pin = body.pin
 
     if not pin.isdigit() or len(pin) < 4 or len(pin) > 10:
-        raise HTTPException(400, "PIN must be 4–10 digits")
+        raise HTTPException(400, "PIN must be 4-10 digits")
 
     rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
     if not rows:
@@ -476,9 +475,9 @@ async def reset_password(request: Request, body: ResetPasswordRequest):
             algorithms=[settings.jwt_algorithm],
         )
     except jwt.ExpiredSignatureError:
-        raise HTTPException(400, "Reset token has expired. Please request a new one.")
+        raise HTTPException(400, "Reset token has expired. Please request a new one.") from None
     except jwt.InvalidTokenError:
-        raise HTTPException(400, "Invalid reset token.")
+        raise HTTPException(400, "Invalid reset token.") from None
 
     if payload.get("type") != "password_reset":
         raise HTTPException(400, "Invalid reset token.")

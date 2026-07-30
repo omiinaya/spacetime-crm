@@ -9,7 +9,6 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from client import get_http_client
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 SETTINGS_PATH = Path(__file__).resolve().parent / "sms_settings.json"
 
 
-def _load_settings() -> Optional[dict]:
+def _load_settings() -> dict | None:
     if not SETTINGS_PATH.exists():
         return None
     try:
@@ -34,7 +33,7 @@ def _save_settings(settings: dict) -> None:
     logger.info("SMS settings saved to %s", SETTINGS_PATH)
 
 
-def get_settings() -> Optional[dict]:
+def get_settings() -> dict | None:
     settings = _load_settings()
     if not settings:
         return None
@@ -57,7 +56,7 @@ def update_settings(data: dict) -> dict:
             "from_number": data.get("from_number", current.get("from_number", "")),
         }
     )
-    if "auth_token" in data and data["auth_token"]:
+    if data.get("auth_token"):
         current["auth_token"] = data["auth_token"]
     _save_settings(current)
     return get_settings()
@@ -74,7 +73,7 @@ def is_configured() -> bool:
     )
 
 
-def _customer_phone(customer: Optional[dict]) -> Optional[str]:
+def _customer_phone(customer: dict | None) -> str | None:
     """Get customer's preferred notification phone number."""
     if not customer:
         return None

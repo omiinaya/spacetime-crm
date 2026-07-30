@@ -1,6 +1,7 @@
 """Webhook subscription and mail/SMS settings request models."""
 
 from pydantic import Field
+
 from .base import BaseModel
 
 

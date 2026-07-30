@@ -21,7 +21,6 @@ from routes.report_helpers import (
 )
 from routes.report_schedules_helpers import _calc_next_run, _render_report_email
 
-
 # ===================================================================
 # _calc_next_run
 # ===================================================================

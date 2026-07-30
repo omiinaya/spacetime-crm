@@ -62,8 +62,7 @@ class TestLoadSettings:
 
     def test_load_missing_file_returns_none(self) -> None:
         """When SETTINGS_PATH does not exist on disk, _load_settings returns None."""
-        from business_hours import _load_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _load_settings
 
         # Remove the temp file so the path truly doesn't exist
         SETTINGS_PATH.unlink()
@@ -72,8 +71,7 @@ class TestLoadSettings:
         assert result is None
 
     def test_load_valid_json(self) -> None:
-        from business_hours import _load_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _load_settings
 
         data = {"monday": {"enabled": True, "open": "08:00", "close": "17:00"}}
         SETTINGS_PATH.write_text(json.dumps(data))
@@ -81,8 +79,7 @@ class TestLoadSettings:
         assert result == data
 
     def test_load_returns_parsed_dict(self) -> None:
-        from business_hours import _load_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _load_settings
 
         data = {"monday": {"enabled": True, "open": "09:00", "close": "18:00"}}
         SETTINGS_PATH.write_text(json.dumps(data))
@@ -90,8 +87,7 @@ class TestLoadSettings:
         assert isinstance(result, dict)
 
     def test_load_parse_error_returns_none(self) -> None:
-        from business_hours import _load_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _load_settings
 
         SETTINGS_PATH.write_text("invalid json content")
         with patch("business_hours.logger"):
@@ -99,8 +95,7 @@ class TestLoadSettings:
             assert result is None
 
     def test_load_empty_file_returns_none(self) -> None:
-        from business_hours import _load_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _load_settings
 
         SETTINGS_PATH.write_text("")
         with patch("business_hours.logger"):
@@ -112,8 +107,7 @@ class TestSaveSettings:
     """_save_settings() — writing to the JSON file."""
 
     def test_save_writes_json(self) -> None:
-        from business_hours import _save_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _save_settings
 
         data = {"monday": {"enabled": True, "open": "08:00", "close": "17:00"}}
         _save_settings(data)
@@ -122,8 +116,7 @@ class TestSaveSettings:
         assert loaded["monday"] == {"enabled": True, "open": "08:00", "close": "17:00"}
 
     def test_save_round_trip(self) -> None:
-        from business_hours import _load_settings
-        from business_hours import _save_settings
+        from business_hours import _load_settings, _save_settings
 
         data = {"friday": {"enabled": True, "open": "10:00", "close": "19:00"}}
         _save_settings(data)
@@ -133,8 +126,7 @@ class TestSaveSettings:
 
     def test_save_fills_missing_days(self) -> None:
         """_save_settings should fill missing days with defaults."""
-        from business_hours import _save_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _save_settings
 
         _save_settings({"monday": {"enabled": True, "open": "08:00", "close": "17:00"}})
         loaded = json.loads(SETTINGS_PATH.read_text())
@@ -148,8 +140,7 @@ class TestSaveSettings:
 
     def test_save_indents_json(self) -> None:
         """Saved JSON should be indented for readability."""
-        from business_hours import _save_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _save_settings
 
         _save_settings({"monday": {"enabled": True, "open": "09:00", "close": "18:00"}})
         content = SETTINGS_PATH.read_text()
@@ -159,8 +150,7 @@ class TestSaveSettings:
 
     def test_save_replaces_existing_content(self) -> None:
         """Saving should overwrite existing file content."""
-        from business_hours import _save_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, _save_settings
 
         _save_settings({"first": {"enabled": True, "open": "09:00", "close": "17:00"}})
         _save_settings(
@@ -180,8 +170,7 @@ class TestGetSettings:
         assert result is None
 
     def test_get_settings_returns_saved(self) -> None:
-        from business_hours import get_settings
-        from business_hours import SETTINGS_PATH
+        from business_hours import SETTINGS_PATH, get_settings
 
         data = {"tuesday": {"enabled": True, "open": "07:00", "close": "15:00"}}
         SETTINGS_PATH.write_text(json.dumps(data))
@@ -248,8 +237,7 @@ class TestUpdateSettings:
         assert result["monday"]["close"] == "18:00"
 
     def test_update_settings_persists_to_file(self) -> None:
-        from business_hours import update_settings
-        from business_hours import _load_settings
+        from business_hours import _load_settings, update_settings
 
         update_settings(
             {"wednesday": {"enabled": True, "open": "08:00", "close": "16:00"}}

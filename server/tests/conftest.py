@@ -13,9 +13,10 @@ HTTP endpoint calls).
 
 import os
 import uuid
-import pytest
-import httpx
+
 import bcrypt
+import httpx
+import pytest
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")

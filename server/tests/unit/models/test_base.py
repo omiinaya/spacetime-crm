@@ -97,11 +97,11 @@ class TestBaseModel:
         assert m.name == "Plain text name"
 
     def test_strips_html_from_optional_field(self) -> None:
+
         from models.base import BaseModel
-        from typing import Optional
 
         class _Model(BaseModel):
-            title: Optional[str] = None
+            title: str | None = None
 
         m = _Model(title="<script>x</script>Report")
         assert m.title is not None

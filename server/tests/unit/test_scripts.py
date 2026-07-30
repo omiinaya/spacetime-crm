@@ -14,7 +14,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ── Helpers ──────────────────────────────────────────────────────
 
 
@@ -193,6 +192,7 @@ class TestBootstrapConfig:
             "sys.modules", {"httpx": MagicMock(Client=lambda *a, **kw: mock_client)}
         ):
             import importlib
+
             from scripts import bootstrap
 
             importlib.reload(bootstrap)
@@ -434,7 +434,7 @@ class TestRestoreConstants:
 
         assert restore.STDB_HOST == "localhost"
         assert restore.STDB_PORT == 3001
-        assert restore.STDB_SERVER == f"http://{restore.STDB_HOST}:{restore.STDB_PORT}"
+        assert f"http://{restore.STDB_HOST}:{restore.STDB_PORT}" == restore.STDB_SERVER
 
 
 # ===================================================================
@@ -536,7 +536,7 @@ class TestSeedDemoData:
         with patch.dict("sys.modules", {"httpx": mock_httpx}):
             mod = _import_seed_demo()
             max_idx = len(mod.customers) - 1
-            for ci, ti, items in mod.inv_items_data:
+            for ci, _ti, _items in mod.inv_items_data:
                 assert 0 <= ci <= max_idx, (
                     f"References customer index {ci} but only {max_idx + 1} customers exist"
                 )
@@ -608,7 +608,7 @@ class TestStartTestBackend:
 
         # Combine all patches into one
         combined = stack[0] if stack else _patch("os.path")  # no-op
-        for p in stack[1:]:
+        for _p in stack[1:]:
             combined = combined.__enter__.__class__  # can't easily nest
             # Actually, use ExitStack
             pass

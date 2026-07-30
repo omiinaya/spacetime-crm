@@ -1,0 +1,53 @@
+# Ruff configuration for SpacetimeCRM
+# See https://docs.astral.sh/ruff/settings/
+
+# Target Python version
+target-version = "py312"
+
+# Enable ruff format as well
+line-length = 100
+
+[lint]
+# Default ruleset, plus a few extras
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "LOG", # flake8-logging
+    "RUF", # Ruff-specific
+]
+
+# Rules we explicitly allow
+ignore = [
+    "E501",    # line too long (handled by formatter)
+    "N818",    # exception names can end in Error
+    "SIM117",  # multiple with statements can be combined
+    "SIM108",  # use ternary operator
+    "LOG001",  # not all log messages need f-strings
+    "RUF006",  # asyncio.ensure_future return value — fire-and-forget is intentional
+    "SIM105",  # contextlib.suppress — try/except/pass is more readable here
+    "SIM102",  # single if instead of nested if — readability preference
+    "RUF015",  # prefer next() over single element slice — not always clearer
+    "B011",    # assert False — used intentionally in tests
+    "B017",    # assert blind exception — test assertion is fine
+    "B008",    # Depends() in function defaults is standard FastAPI pattern
+]
+
+# Per-file ignores
+[lint.per-file-ignores]
+"tests/**" = ["B018", "S101", "PLR2004", "N802", "N803", "N806", "RUF012"]
+"server/tests/**" = ["B018", "S101", "PLR2004", "N802", "N803", "N806", "RUF012", "B023", "RUF059"]
+"server/models/__init__.py" = ["RUF022"]
+"server/tests/unit/**" = ["B023", "RUF059"]
+
+[lint.pydocstyle]
+convention = "google"
+
+[format]
+# Format code blocks in docstrings
+docstring-code-format = true

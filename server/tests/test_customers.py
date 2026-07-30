@@ -1,11 +1,12 @@
 """Customer CRUD and tenant isolation integration tests."""
 
 import httpx
+
 from .conftest import (
     SERVER_URL,
+    _track_entity,
     assert_ok,
     create_customer,
-    _track_entity,
 )
 
 
