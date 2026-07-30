@@ -57,9 +57,7 @@ def update_settings(data: dict) -> dict:
             "port": data.get("port", current.get("port", 587)),
             "username": data.get("username", current.get("username", "")),
             "use_tls": data.get("use_tls", current.get("use_tls", True)),
-            "sender_name": data.get(
-                "sender_name", current.get("sender_name", "SpacetimeCRM")
-            ),
+            "sender_name": data.get("sender_name", current.get("sender_name", "SpacetimeCRM")),
             "sender_email": data.get("sender_email", current.get("sender_email", "")),
         }
     )
@@ -69,9 +67,7 @@ def update_settings(data: dict) -> dict:
     return get_settings()
 
 
-def send_email(
-    to: str, subject: str, html_body: str, text_body: str | None = None
-) -> bool:
+def send_email(to: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
     """Send an email via configured SMTP. Returns True on success."""
     settings = _load_settings()
     if not settings:
@@ -294,6 +290,4 @@ def _notify_overdue_reminder(
         due_date=due_date,
         link=link,
     )
-    send_email(
-        customer_email, f"Overdue Invoice #{invoice_number} — ${total:.2f}", html
-    )
+    send_email(customer_email, f"Overdue Invoice #{invoice_number} — ${total:.2f}", html)

@@ -80,9 +80,7 @@ async def list_recurring_series(
         children = await _sql(
             f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{s['id']}'"
         )
-        next_time = (
-            max([c["start_time"] for c in children]) if children else s["start_time"]
-        )
+        next_time = max([c["start_time"] for c in children]) if children else s["start_time"]
         series.append(
             {
                 **s,
@@ -196,9 +194,7 @@ async def generate_next_occurrence(
         duration = parent["end_time"] - parent["start_time"]
         next_end = next_start + duration
 
-    await _call(
-        "generate_next_occurrence", [body.series_id, next_start, next_end, rule]
-    )
+    await _call("generate_next_occurrence", [body.series_id, next_start, next_end, rule])
     await _log_audit(
         user,
         "generate_occurrence",
@@ -260,9 +256,7 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
 
         email = c.get("email") or None
         if email:
-            _mail(
-                email, appt.get("title", "Appointment"), appt.get("start_time", 0), link
-            )
+            _mail(email, appt.get("title", "Appointment"), appt.get("start_time", 0), link)
             sent["email"] += 1
 
         phone = c.get("mobile") or c.get("phone") or None
@@ -289,9 +283,7 @@ async def update_appointment_status(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     await _call("update_appointment_status", [appt_id, body.status])
-    await _log_audit(
-        user, "update_status", "appointment", appt_id, f"status={body.status}"
-    )
+    await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.status}")
     return {"ok": True}
 
 

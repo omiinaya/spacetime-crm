@@ -12,9 +12,7 @@ from .conftest import (
 )
 
 
-def _create_customer(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_customer(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     suf = suffix or unique_suffix()
     c = create_customer(
         test_admin_headers,
@@ -26,9 +24,7 @@ def _create_customer(
     return c["id"]
 
 
-def _create_estimate(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_estimate(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     cid = _create_customer(test_admin_headers, session_suffix, suffix)
     notes = f"Est test {session_suffix}-{suffix or unique_suffix()}"
     httpx.post(
@@ -38,13 +34,9 @@ def _create_estimate(
         timeout=10,
     )
     result = _stdb_sql(f"SELECT id FROM estimates WHERE notes = '{notes}'")
-    assert len(result) == 1, (
-        f"Expected 1 table result for estimate with notes '{notes}'"
-    )
+    assert len(result) == 1, f"Expected 1 table result for estimate with notes '{notes}'"
     table = result[0]
-    assert table.get("rows") and len(table["rows"]) >= 1, (
-        f"Estimate not found for notes '{notes}'"
-    )
+    assert table.get("rows") and len(table["rows"]) >= 1, f"Estimate not found for notes '{notes}'"
     eid = table["rows"][0][0]  # id is first (and only) column
     _track_entity("estimate", eid)
     return eid
@@ -67,9 +59,7 @@ class TestEstimateCRUD:
         assert_ok(resp)
 
     def test_list_estimates(self, test_admin_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/estimates", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/estimates", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "estimates" in data
         assert "total" in data
@@ -133,9 +123,7 @@ class TestEstimateCRUD:
 class TestEstimateConversion:
     """Estimate-to-invoice conversion workflow."""
 
-    def test_convert_approved_estimate(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_convert_approved_estimate(self, test_admin_headers: dict, session_suffix: str):
         """Full conversion: create estimate → approve → convert → get invoice."""
         est_id = _create_estimate(test_admin_headers, session_suffix, "convert")
 
@@ -176,9 +164,7 @@ class TestEstimateConversion:
         inv_ids = [inv["id"] for inv in r2.json().get("invoices", [])]
         assert invoice_id in inv_ids, f"Invoice {invoice_id} not found in list"
 
-    def test_convert_non_approved_rejected(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_convert_non_approved_rejected(self, test_admin_headers: dict, session_suffix: str):
         """Only approved estimates can be converted."""
         est_id = _create_estimate(test_admin_headers, session_suffix, "noconvert")
 

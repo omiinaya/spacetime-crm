@@ -69,9 +69,7 @@ class TestHttpClient:
 class BaseSchedulerTest:
     """Common helpers for scheduler task tests."""
 
-    def _run_one_iteration(
-        self, task_func, interval: int = 0
-    ) -> tuple[AsyncMock, MagicMock]:
+    def _run_one_iteration(self, task_func, interval: int = 0) -> tuple[AsyncMock, MagicMock]:
         """Run a single iteration of a periodic task by making the second
         asyncio.sleep call raise CancelledError to break the loop.
 
@@ -181,9 +179,7 @@ class TestOverdueCheck(BaseSchedulerTest):
         from scheduler import overdue_check
 
         mock_client = MagicMock()
-        mock_client.post = AsyncMock(
-            side_effect=httpx.ConnectError("Connection refused")
-        )
+        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
         mock_http = MagicMock(return_value=mock_client)
         mock_sleep = AsyncMock()
@@ -203,9 +199,7 @@ class TestOverdueCheck(BaseSchedulerTest):
 
         mock_http = MagicMock(return_value=mock_client)
         mock_sleep = AsyncMock()
-        mock_sleep.side_effect = (
-            asyncio.CancelledError()
-        )  # CancelledError on first sleep
+        mock_sleep.side_effect = asyncio.CancelledError()  # CancelledError on first sleep
 
         with patch("scheduler._http", mock_http):
             with patch("scheduler.asyncio.sleep", mock_sleep):
@@ -293,9 +287,7 @@ class TestRecurringInvoices(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(recurring_invoices(0))
 
-        mock_logger.debug.assert_any_call(
-            "[scheduler:recurring] No invoices due for generation"
-        )
+        mock_logger.debug.assert_any_call("[scheduler:recurring] No invoices due for generation")
 
     def test_handles_connect_error(self) -> None:
         """Should not crash on ConnectError."""
@@ -331,9 +323,7 @@ class TestRecurringInvoices(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(recurring_invoices(0))
 
-        mock_logger.warning.assert_any_call(
-            "[scheduler:recurring] generate returned 500"
-        )
+        mock_logger.warning.assert_any_call("[scheduler:recurring] generate returned 500")
 
 
 class TestAppointmentReminders(BaseSchedulerTest):
@@ -422,9 +412,7 @@ class TestAppointmentReminders(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(appointment_reminders(0))
 
-        mock_logger.warning.assert_any_call(
-            "[scheduler:appointments] send-reminders returned 404"
-        )
+        mock_logger.warning.assert_any_call("[scheduler:appointments] send-reminders returned 404")
 
 
 class TestLowStockAlerts(BaseSchedulerTest):
@@ -493,9 +481,7 @@ class TestLowStockAlerts(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(low_stock_alerts(0))
 
-        mock_logger.warning.assert_any_call(
-            "[scheduler:lowstock] 5 low-stock products detected"
-        )
+        mock_logger.warning.assert_any_call("[scheduler:lowstock] 5 low-stock products detected")
 
     def test_handles_connect_error(self) -> None:
         """Should not crash on ConnectError."""
@@ -583,9 +569,7 @@ class TestLogCleanup(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(log_cleanup(0))
 
-        mock_logger.info.assert_any_call(
-            "[scheduler:cleanup] Archived 42 old audit log entries"
-        )
+        mock_logger.info.assert_any_call("[scheduler:cleanup] Archived 42 old audit log entries")
 
     def test_handles_connect_error(self) -> None:
         """Should not crash on ConnectError."""
@@ -636,9 +620,7 @@ class TestLogCleanup(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(log_cleanup(0))
 
-        mock_logger.debug.assert_any_call(
-            "[scheduler:cleanup] No cleanup endpoint or empty"
-        )
+        mock_logger.debug.assert_any_call("[scheduler:cleanup] No cleanup endpoint or empty")
 
     def test_uses_90_days(self) -> None:
         """Should query with days=90."""
@@ -693,9 +675,7 @@ class TestScheduledTasksConfig:
         from scheduler import SCHEDULED_TASKS
 
         for name, (func, interval) in SCHEDULED_TASKS.items():
-            assert _asyncio.iscoroutinefunction(func), (
-                f"{name} is not a coroutine function"
-            )
+            assert _asyncio.iscoroutinefunction(func), f"{name} is not a coroutine function"
             assert isinstance(interval, int), f"{name} interval is not an int"
 
 
@@ -843,9 +823,7 @@ class TestLowStockAlertsExceptions(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(low_stock_alerts(0))
 
-        mock_logger.debug.assert_any_call(
-            "[scheduler:lowstock] No low-stock endpoint or empty"
-        )
+        mock_logger.debug.assert_any_call("[scheduler:lowstock] No low-stock endpoint or empty")
 
     def test_general_exception(self) -> None:
         """Should catch and log general exceptions without crashing."""

@@ -15,9 +15,7 @@ class RecurringInvoiceLineItem(BaseModel):
 class RecurringInvoiceRuleCreate(BaseModel):
     customer_id: str = Field(..., min_length=1, max_length=100)
     name: str = Field(..., min_length=1, max_length=200)
-    frequency: str = Field(
-        ..., pattern=r"^(daily|weekly|biweekly|monthly|quarterly|yearly)$"
-    )
+    frequency: str = Field(..., pattern=r"^(daily|weekly|biweekly|monthly|quarterly|yearly)$")
     interval_count: int = Field(default=1, ge=1, le=365)
     due_date_days: int = Field(default=30, ge=0, le=365)
     line_items: list[RecurringInvoiceLineItem] = Field(default_factory=list)
@@ -26,9 +24,7 @@ class RecurringInvoiceRuleCreate(BaseModel):
 
 class RecurringInvoiceRuleUpdate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
-    frequency: str = Field(
-        ..., pattern=r"^(daily|weekly|biweekly|monthly|quarterly|yearly)$"
-    )
+    frequency: str = Field(..., pattern=r"^(daily|weekly|biweekly|monthly|quarterly|yearly)$")
     interval_count: int = Field(default=1, ge=1, le=365)
     due_date_days: int = Field(default=30, ge=0, le=365)
     line_items: list[RecurringInvoiceLineItem] = Field(default_factory=list)

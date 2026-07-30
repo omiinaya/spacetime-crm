@@ -74,17 +74,13 @@ class TestAppointmentCRUD:
 
     def test_list_appointments(self, test_admin_headers: dict):
         """List appointments returns paginated results."""
-        resp = httpx.get(
-            f"{SERVER_URL}/api/appointments", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/appointments", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "appointments" in data
         assert "total" in data
         assert isinstance(data["appointments"], list)
 
-    def test_update_appointment_status(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_update_appointment_status(self, test_admin_headers: dict, session_suffix: str):
         """Update appointment status to completed."""
         appt_id = _create_appointment(
             test_admin_headers, session_suffix, "status", title="Status Test"
@@ -125,9 +121,7 @@ class TestRecurringAppointments:
         )
         return c["id"]
 
-    def test_create_recurring_appointment(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_create_recurring_appointment(self, test_admin_headers: dict, session_suffix: str):
         """Create an appointment with recurrence rule."""
         cid = self._make_customer(test_admin_headers, session_suffix)
         resp = httpx.post(
@@ -155,9 +149,7 @@ class TestRecurringAppointments:
         assert "series" in data
         assert isinstance(data["series"], list)
 
-    def test_generate_next_occurrence(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_generate_next_occurrence(self, test_admin_headers: dict, session_suffix: str):
         """Generate next occurrence of a recurring series."""
         # Create an appointment with recurrence via the helper
         suf = unique_suffix()
@@ -195,9 +187,7 @@ class TestRecurringAppointments:
         assert data.get("start_time", 0) > 0, f"Expected start_time, got: {data}"
         assert data.get("end_time", 0) > 0
 
-    def test_set_recurrence_on_existing(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_set_recurrence_on_existing(self, test_admin_headers: dict, session_suffix: str):
         """Set recurrence rule on an existing appointment."""
         appt_id = _create_appointment(
             test_admin_headers, session_suffix, "setrecur", title="Make Recurring"
@@ -211,9 +201,7 @@ class TestRecurringAppointments:
         )
         assert_ok(resp)
 
-    def test_recurring_series_with_children(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_recurring_series_with_children(self, test_admin_headers: dict, session_suffix: str):
         """After generating occurrences, series shows child count."""
         suf = unique_suffix()
         title = f"MultiGen-{session_suffix}-{suf}"
@@ -227,9 +215,7 @@ class TestRecurringAppointments:
 
         # Get our series ID from STDB
         result = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
-        assert len(result) == 1 and result[0].get("rows"), (
-            f"Appointment '{title}' not found"
-        )
+        assert len(result) == 1 and result[0].get("rows"), f"Appointment '{title}' not found"
         appt_row = result[0]["rows"][0]
         # Map columns by schema index: 0=id, 1=tenant_id, 2=customer_id, 3=ticket_number, ... 12=series_id
         series_id = ""
@@ -250,9 +236,7 @@ class TestRecurringAppointments:
             )
 
         # Check series again via STDB SQL
-        children_result = _stdb_sql(
-            f"SELECT * FROM appointment WHERE series_id = '{series_id}'"
-        )
+        children_result = _stdb_sql(f"SELECT * FROM appointment WHERE series_id = '{series_id}'")
         children = children_result[0].get("rows", []) if children_result else []
         assert len(children) >= 2, f"Expected >=2 children, got {len(children)}"
 

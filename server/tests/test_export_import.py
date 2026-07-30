@@ -15,10 +15,7 @@ class TestExport:
             f"{SERVER_URL}/api/export/customers", headers=test_admin_headers, timeout=10
         )
         assert resp.status_code == 200
-        assert (
-            "csv" in resp.headers.get("content-type", "").lower()
-            or resp.status_code == 200
-        )
+        assert "csv" in resp.headers.get("content-type", "").lower() or resp.status_code == 200
 
     def test_export_invalid_entity(self, test_admin_headers: dict):
         resp = httpx.get(
@@ -29,16 +26,12 @@ class TestExport:
         assert resp.status_code == 400
 
     def test_export_tickets(self, test_admin_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/export/tickets", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/export/tickets", headers=test_admin_headers, timeout=10)
         assert resp.status_code == 200
 
 
 class TestImport:
-    def test_import_customers_without_id(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_import_customers_without_id(self, test_admin_headers: dict, session_suffix: str):
         """Import customers CSV without ID column."""
         suf = unique_suffix()
         csv_content = f"first_name,last_name,email,phone\nImp,Test1,imp1-{session_suffix}-{suf}@test.com,555-0101\nImp,Test2,imp2-{session_suffix}-{suf}@test.com,555-0102\n"

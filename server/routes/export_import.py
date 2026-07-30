@@ -36,9 +36,7 @@ async def export_csv(
     """Export all records of an entity type as CSV. Downloads as attachment."""
     table = ENTITY_TABLE_MAP.get(entity)
     if not table:
-        raise HTTPException(
-            400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}"
-        )
+        raise HTTPException(400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}")
 
     rows = await _sql(f"SELECT * FROM {table}")
     if not rows:
@@ -126,9 +124,7 @@ async def import_customers_csv(
                     ],
                 )
             else:
-                await _call(
-                    "create_customer", [user["tenant_id"], fn, ln, email, phone]
-                )
+                await _call("create_customer", [user["tenant_id"], fn, ln, email, phone])
             count += 1
         except Exception as e:
             errors.append(f"Row {i}: {e}")

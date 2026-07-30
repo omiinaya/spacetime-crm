@@ -31,9 +31,7 @@ def _stdb_sql(query: str) -> list[dict]:
         headers={"Content-Type": "application/sql"},
         timeout=10,
     )
-    assert resp.status_code == 200, (
-        f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
-    )
+    assert resp.status_code == 200, f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
     return resp.json()
 
 

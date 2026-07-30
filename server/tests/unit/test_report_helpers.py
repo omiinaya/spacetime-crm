@@ -54,9 +54,7 @@ class TestCalcNextRun:
         # 2024-06-13 is Thursday (weekday 3), target Monday (0)
         dt = datetime(2024, 6, 13, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
-        result = _calc_next_run(
-            "weekly", {"day_of_week": 0, "hour": 8, "minute": 0}, ms
-        )
+        result = _calc_next_run("weekly", {"day_of_week": 0, "hour": 8, "minute": 0}, ms)
         expected = datetime(2024, 6, 17, 8, 0, 0)  # next Monday
         assert result == int(expected.timestamp() * 1000)
 
@@ -66,9 +64,7 @@ class TestCalcNextRun:
         # 2024-06-17 is Monday (0). At 6 AM, target 8 AM same day.
         dt = datetime(2024, 6, 17, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
-        result = _calc_next_run(
-            "weekly", {"day_of_week": 0, "hour": 8, "minute": 0}, ms
-        )
+        result = _calc_next_run("weekly", {"day_of_week": 0, "hour": 8, "minute": 0}, ms)
         expected = datetime(2024, 6, 17, 8, 0, 0)
         assert result == int(expected.timestamp() * 1000)
 
@@ -77,9 +73,7 @@ class TestCalcNextRun:
 
         dt = datetime(2024, 6, 17, 10, 0, 0)  # Monday 10 AM, past 8 AM
         ms = int(dt.timestamp() * 1000)
-        result = _calc_next_run(
-            "weekly", {"day_of_week": 0, "hour": 8, "minute": 0}, ms
-        )
+        result = _calc_next_run("weekly", {"day_of_week": 0, "hour": 8, "minute": 0}, ms)
         expected = datetime(2024, 6, 24, 8, 0, 0)  # next Monday
         assert result == int(expected.timestamp() * 1000)
 
@@ -88,9 +82,7 @@ class TestCalcNextRun:
 
         dt = datetime(2024, 6, 10, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
-        result = _calc_next_run(
-            "monthly", {"day_of_month": 15, "hour": 8, "minute": 0}, ms
-        )
+        result = _calc_next_run("monthly", {"day_of_month": 15, "hour": 8, "minute": 0}, ms)
         expected = datetime(2024, 6, 15, 8, 0, 0)
         assert result == int(expected.timestamp() * 1000)
 
@@ -99,9 +91,7 @@ class TestCalcNextRun:
 
         dt = datetime(2024, 6, 20, 6, 0, 0)  # past the 15th
         ms = int(dt.timestamp() * 1000)
-        result = _calc_next_run(
-            "monthly", {"day_of_month": 15, "hour": 8, "minute": 0}, ms
-        )
+        result = _calc_next_run("monthly", {"day_of_month": 15, "hour": 8, "minute": 0}, ms)
         expected = datetime(2024, 7, 15, 8, 0, 0)  # next month
         assert result == int(expected.timestamp() * 1000)
 
@@ -110,9 +100,7 @@ class TestCalcNextRun:
 
         dt = datetime(2024, 1, 15, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
-        result = _calc_next_run(
-            "monthly", {"day_of_month": 31, "hour": 8, "minute": 0}, ms
-        )
+        result = _calc_next_run("monthly", {"day_of_month": 31, "hour": 8, "minute": 0}, ms)
         expected = datetime(2024, 1, 28, 8, 0, 0)  # capped at 28
         assert result == int(expected.timestamp() * 1000)
 
@@ -121,9 +109,7 @@ class TestCalcNextRun:
 
         dt = datetime(2024, 12, 20, 6, 0, 0)
         ms = int(dt.timestamp() * 1000)
-        result = _calc_next_run(
-            "monthly", {"day_of_month": 15, "hour": 8, "minute": 0}, ms
-        )
+        result = _calc_next_run("monthly", {"day_of_month": 15, "hour": 8, "minute": 0}, ms)
         expected = datetime(2025, 1, 15, 8, 0, 0)
         assert result == int(expected.timestamp() * 1000)
 
@@ -319,9 +305,7 @@ class MockRowResult:
 
     @staticmethod
     def as_tuples(*rows: tuple):
-        return [
-            {"rows": [list(r) for r in rows], "schema": {"elements": []}} for _ in [1]
-        ][0]
+        return [{"rows": [list(r) for r in rows], "schema": {"elements": []}} for _ in [1]][0]
 
 
 class TestBuildReportData:
@@ -338,9 +322,7 @@ class TestBuildReportData:
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
             mock_sql.return_value = mock_rows
-            result = await _build_report_data(
-                "revenue", "tenant-1", {"period": "last_30_days"}
-            )
+            result = await _build_report_data("revenue", "tenant-1", {"period": "last_30_days"})
 
         assert result["type"] == "revenue"
         assert result["total_revenue"] == 150.0  # 100 + 50
@@ -377,9 +359,7 @@ class TestBuildReportData:
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
             mock_sql.return_value = mock_rows
-            result = await _build_report_data(
-                "tickets", "tenant-1", {"status": "closed"}
-            )
+            result = await _build_report_data("tickets", "tenant-1", {"status": "closed"})
 
         assert result["type"] == "tickets"
         assert result["total"] == 1  # filtered to only 1 closed ticket
@@ -482,12 +462,8 @@ class TestGenerateAndDeliver:
 
         with (
             patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql,
-            patch(
-                "routes.report_helpers.send_email", new_callable=AsyncMock
-            ) as mock_send,
-            patch(
-                "routes.report_helpers._log_audit", new_callable=AsyncMock
-            ) as mock_audit,
+            patch("routes.report_helpers.send_email", new_callable=AsyncMock) as mock_send,
+            patch("routes.report_helpers._log_audit", new_callable=AsyncMock) as mock_audit,
         ):
             mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]
 
@@ -545,9 +521,7 @@ class TestGenerateAndDeliver:
             patch("routes.report_helpers._render_report_email") as mock_render,
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
-            mock_sql.return_value = [
-                ["TCK-1", "Issue", "open", "high", "2024-06-01", "Alice"]
-            ]
+            mock_sql.return_value = [["TCK-1", "Issue", "open", "high", "2024-06-01", "Alice"]]
             mock_render.side_effect = TypeError("Can't render")
 
             result = await _generate_and_deliver(schedule, user)
@@ -608,9 +582,7 @@ class TestGenerateAndDeliver:
 
         with (
             patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql,
-            patch(
-                "routes.report_helpers.send_email", new_callable=AsyncMock
-            ) as mock_send,
+            patch("routes.report_helpers.send_email", new_callable=AsyncMock) as mock_send,
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
             mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]

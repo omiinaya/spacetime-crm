@@ -83,9 +83,7 @@ async def create_ticket(
             body.priority,
         ],
     )
-    await _log_audit(
-        user, "create", "ticket", body.title, f"customer={body.customer_id}"
-    )
+    await _log_audit(user, "create", "ticket", body.title, f"customer={body.customer_id}")
     asyncio.ensure_future(
         _fire_webhook(
             "ticket.created",
@@ -102,9 +100,7 @@ async def create_ticket(
         tid = user["tenant_id"]
         # Find the most recently created ticket for this tenant
         recent = _sort(
-            await _sql(
-                f"SELECT id, status, created_at FROM ticket WHERE tenant_id = '{tid}'"
-            ),
+            await _sql(f"SELECT id, status, created_at FROM ticket WHERE tenant_id = '{tid}'"),
             key="created_at",
         )
         if recent:
@@ -151,9 +147,7 @@ async def update_ticket_status(
         rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}'")
         if rows:
             t = rows[0]
-            cust = await _sql(
-                f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'"
-            )
+            cust = await _sql(f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'")
             email = _mail_customer_email(cust[0]) if cust else None
             if email:
                 link = f"{settings.app_url}/portal/"
@@ -162,9 +156,7 @@ async def update_ticket_status(
                 )
             phone = _sms_customer_phone(cust[0]) if cust else None
             if phone:
-                _sms_ticket_status(
-                    phone, t.get("ticket_number", 0), t.get("title", ""), status
-                )
+                _sms_ticket_status(phone, t.get("ticket_number", 0), t.get("title", ""), status)
 
     asyncio.ensure_future(_notify())
 
@@ -188,9 +180,7 @@ async def assign_ticket(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     await _call("assign_ticket", [ticket_id, body.assigned_user_id])
-    await _log_audit(
-        user, "assign", "ticket", ticket_id, f"user={body.assigned_user_id}"
-    )
+    await _log_audit(user, "assign", "ticket", ticket_id, f"user={body.assigned_user_id}")
     return {"ok": True}
 
 
@@ -269,9 +259,7 @@ async def stop_ticket_timer(
 
 
 @router.delete("/api/timers/{timer_id}")
-async def delete_ticket_timer(
-    timer_id: str, user: dict = Depends(require_role("admin"))
-):
+async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_ticket_timer", [timer_id])
     await _log_audit(user, "delete", "timer", timer_id)
     return {"ok": True}
@@ -285,9 +273,7 @@ async def get_ticket_checklist(
     ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Get checklist items for a ticket."""
-    rows = await _sql(
-        f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{ticket_id}'"
-    )
+    rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{ticket_id}'")
     return {"items": _sort(rows, "sort_order")}
 
 
@@ -299,9 +285,7 @@ async def apply_checklist_to_ticket(
 ):
     """Apply a checklist template to a ticket."""
     await _call("apply_checklist_template", [ticket_id, body.template_id])
-    await _log_audit(
-        user, "apply", "checklist", ticket_id, f"template={body.template_id}"
-    )
+    await _log_audit(user, "apply", "checklist", ticket_id, f"template={body.template_id}")
     return {"ok": True}
 
 
@@ -345,9 +329,7 @@ async def _load_sla_targets(tenant_id: str) -> dict[str, float]:
             loaded = json.loads(rows[0]["targets_json"])
             # Merge with defaults so new or missing keys get a value
             merged: dict[str, float] = dict(DEFAULT_SLA_TARGETS)
-            merged.update(
-                {k: float(v) for k, v in loaded.items() if isinstance(v, (int, float))}
-            )
+            merged.update({k: float(v) for k, v in loaded.items() if isinstance(v, (int, float))})
             return merged
         except (json.JSONDecodeError, KeyError, TypeError):
             pass

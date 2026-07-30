@@ -18,9 +18,7 @@ class TestMailSettings:
     """Mail configuration read, write, test."""
 
     def test_get_mail_settings(self, test_admin_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/settings/mail", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/settings/mail", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "configured" in data
 
@@ -72,9 +70,7 @@ class TestSMSSettings:
     """SMS configuration read, write, test."""
 
     def test_get_sms_settings(self, test_admin_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "configured" in data
 
@@ -95,9 +91,7 @@ class TestSMSSettings:
             assert_ok(resp)
 
             # Verify
-            r2 = httpx.get(
-                f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10
-            )
+            r2 = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=test_admin_headers, timeout=10)
             assert r2.status_code == 200
         finally:
             # Always restore original settings
@@ -131,9 +125,7 @@ class TestUserSettings:
 
     def test_get_user_settings_default(self, test_admin_headers: dict):
         """GET user settings returns null when not yet set."""
-        resp = httpx.get(
-            f"{SERVER_URL}/api/users/settings", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/users/settings", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "settings" in data
 

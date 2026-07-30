@@ -182,8 +182,7 @@ async def get_invoice_summary(
             ),
             2,
         ),
-        "overdue_count": sent_partial_overdue
-        + summary.get("overdue", {}).get("count", 0),
+        "overdue_count": sent_partial_overdue + summary.get("overdue", {}).get("count", 0),
         "overdue_total": round(
             sent_partial_overdue_total + summary.get("overdue", {}).get("total", 0), 2
         ),
@@ -225,9 +224,7 @@ async def bulk_update_invoice_status(
 
 
 @router.post("/api/invoices/bulk-edit")
-async def bulk_edit_invoices(
-    body: BulkInvoiceEdit, user: dict = Depends(require_role("admin"))
-):
+async def bulk_edit_invoices(body: BulkInvoiceEdit, user: dict = Depends(require_role("admin"))):
     """Update terms and/or notes on multiple invoices at once."""
     updated = 0
     errors = 0
@@ -309,9 +306,7 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
         email = c.get("email") or None
         phone = c.get("phone") or None
         due_ts = inv.get("due_date", 0) / 1000
-        due_str = (
-            datetime.fromtimestamp(due_ts).strftime("%b %d, %Y") if due_ts else "\u2014"
-        )
+        due_str = datetime.fromtimestamp(due_ts).strftime("%b %d, %Y") if due_ts else "\u2014"
         link = f"{settings.app_url}/portal/"
         inv_num = inv.get("invoice_number", 0)
         total = float(inv.get("total", 0))
@@ -341,9 +336,7 @@ async def update_invoice_status(
 ):
     await _call("update_invoice_status", [invoice_id, body.status])
     new_status = body.status
-    await _log_audit(
-        user, "update_status", "invoice", invoice_id, f"status={new_status}"
-    )
+    await _log_audit(user, "update_status", "invoice", invoice_id, f"status={new_status}")
     asyncio.ensure_future(
         _fire_webhook(
             "invoice.status_changed" if new_status != "paid" else "invoice.paid",
@@ -361,9 +354,7 @@ async def update_invoice_status(
 async def get_invoice_line_items(
     invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    rows = await _sql(
-        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'"
-    )
+    rows = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
@@ -422,9 +413,7 @@ async def invoice_pdf(
     if not invs:
         raise HTTPException(404, "Invoice not found")
     inv = invs[0]
-    items = await _sql(
-        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'"
-    )
+    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
     items = _sort(items, "sort_order", desc=False)
     cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
 
@@ -467,9 +456,9 @@ async def invoice_pdf(
         if status not in ("paid", "partial")
         else [
             {
-                "date": datetime.fromtimestamp(
-                    float(p.get("created_at", 0)) / 1000
-                ).strftime("%b %d, %Y")
+                "date": datetime.fromtimestamp(float(p.get("created_at", 0)) / 1000).strftime(
+                    "%b %d, %Y"
+                )
                 if p.get("created_at")
                 else "—",
                 "method": p.get("method", "—"),
@@ -590,14 +579,10 @@ async def send_batch_invoice_email(
             link = f"{settings.app_url}/portal/"
             _notify_invoice_created(customer_email, inv_num, total, link)
             results["sent"] += 1
-            results["details"].append(
-                {"id": invoice_id, "status": "sent", "to": customer_email}
-            )
+            results["details"].append({"id": invoice_id, "status": "sent", "to": customer_email})
         except Exception as e:
             results["failed"] += 1
-            results["details"].append(
-                {"id": invoice_id, "status": "error", "error": str(e)}
-            )
+            results["details"].append({"id": invoice_id, "status": "error", "error": str(e)})
 
     await _log_audit(
         user,

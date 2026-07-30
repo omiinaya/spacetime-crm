@@ -53,9 +53,7 @@ class TestCustomerCRUD:
 
         suf = unique_suffix()
         email = f"searchme-{session_suffix}-{suf}@example.com"
-        customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, email=email
-        )
+        customer = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
         assert customer.get("id"), f"Customer creation failed: {customer}"
 
         resp = httpx.get(
@@ -143,9 +141,7 @@ class TestCustomerErrors:
             headers=test_admin_headers,
             timeout=10,
         )
-        assert resp.status_code == 422, (
-            f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
-        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
         data = resp.json()
         assert "detail" in data
 
@@ -184,9 +180,7 @@ class TestSensitiveFieldExclusion:
 
         suf = unique_suffix()
         email = f"exclude-test-{session_suffix}-{suf}@example.com"
-        customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, email=email
-        )
+        customer = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
         assert customer.get("id"), f"Customer creation failed: {customer}"
 
         resp = httpx.get(
@@ -210,9 +204,7 @@ class TestSensitiveFieldExclusion:
 
         suf = unique_suffix()
         email = f"geo-exclude-{session_suffix}-{suf}@example.com"
-        customer = create_customer(
-            test_admin_headers, session_suffix=session_suffix, email=email
-        )
+        customer = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
         assert customer.get("id"), f"Customer creation failed: {customer}"
 
         resp = httpx.get(
@@ -236,12 +228,8 @@ class TestSensitiveFieldExclusion:
         suf = unique_suffix()
         email = f"dup-exclude-{session_suffix}-{suf}@example.com"
         # Create two customers with the same email to trigger duplicate detection
-        c1 = create_customer(
-            test_admin_headers, session_suffix=session_suffix, email=email
-        )
-        c2 = create_customer(
-            test_admin_headers, session_suffix=session_suffix, email=email
-        )
+        c1 = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
+        c2 = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
         assert c1.get("id") and c2.get("id")
 
         resp = httpx.get(
@@ -261,9 +249,7 @@ class TestSensitiveFieldExclusion:
 class TestTenantIsolation:
     """Verify tenant_id is correctly set on created entities."""
 
-    def test_customer_has_tenant_id(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_customer_has_tenant_id(self, test_admin_headers: dict, session_suffix: str):
         """Created customer has a non-empty tenant_id."""
         customer = create_customer(
             test_admin_headers,

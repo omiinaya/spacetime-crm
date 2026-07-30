@@ -104,9 +104,7 @@ class TestTicketFlow:
 
     def test_add_ticket_note(self, test_admin_headers: dict, session_suffix: str):
         """Add a note to a ticket using own ticket data."""
-        tid = _create_ticket(
-            test_admin_headers, session_suffix, "note", title="Note Test"
-        )
+        tid = _create_ticket(test_admin_headers, session_suffix, "note", title="Note Test")
         resp = httpx.post(
             f"{SERVER_URL}/api/tickets/{tid}/notes",
             json={
@@ -318,9 +316,7 @@ class TestTicketSLA:
             # Exceeds max
             resp = httpx.post(
                 f"{SERVER_URL}/api/tickets/sla-settings",
-                json={
-                    "targets": {"urgent": 9000, "high": 24, "medium": 72, "low": 120}
-                },
+                json={"targets": {"urgent": 9000, "high": 24, "medium": 72, "low": 120}},
                 headers=test_admin_headers,
                 timeout=10,
             )

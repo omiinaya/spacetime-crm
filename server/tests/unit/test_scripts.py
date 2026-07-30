@@ -19,11 +19,7 @@ import pytest
 
 def _import_seed_demo() -> ModuleType:
     """Load scripts/seed-demo.py (hyphenated filename) via importlib."""
-    path = (
-        Path(__file__).resolve().parent.parent.parent.parent
-        / "scripts"
-        / "seed-demo.py"
-    )
+    path = Path(__file__).resolve().parent.parent.parent.parent / "scripts" / "seed-demo.py"
     spec = importlib.util.spec_from_file_location("seed_demo", str(path))
     assert spec is not None, f"Could not find spec for {path}"
     mod = importlib.util.module_from_spec(spec)
@@ -188,9 +184,7 @@ class TestBootstrapConfig:
 
         mock_client = _make_mock_http_client(health_ok=True)
 
-        with patch.dict(
-            "sys.modules", {"httpx": MagicMock(Client=lambda *a, **kw: mock_client)}
-        ):
+        with patch.dict("sys.modules", {"httpx": MagicMock(Client=lambda *a, **kw: mock_client)}):
             import importlib
 
             from scripts import bootstrap
@@ -213,9 +207,7 @@ class TestBootstrapConfig:
 
         mock_client = _make_mock_http_client(health_ok=True)
 
-        with patch.dict(
-            "sys.modules", {"httpx": MagicMock(Client=lambda *a, **kw: mock_client)}
-        ):
+        with patch.dict("sys.modules", {"httpx": MagicMock(Client=lambda *a, **kw: mock_client)}):
             import importlib
 
             mod = importlib.import_module("scripts.bootstrap")
@@ -232,9 +224,7 @@ class TestBootstrapConfig:
 
         mock_client = _make_mock_http_client(health_ok=True)
 
-        with patch.dict(
-            "sys.modules", {"httpx": MagicMock(Client=lambda *a, **kw: mock_client)}
-        ):
+        with patch.dict("sys.modules", {"httpx": MagicMock(Client=lambda *a, **kw: mock_client)}):
             import importlib
 
             mod = importlib.import_module("scripts.bootstrap")
@@ -625,9 +615,7 @@ class TestStartTestBackend:
                 / "scripts"
                 / "start-test-backend.py"
             )
-            spec = importlib.util.spec_from_file_location(
-                "start_test_backend", str(path)
-            )
+            spec = importlib.util.spec_from_file_location("start_test_backend", str(path))
             assert spec is not None
             assert spec.loader is not None
             mod = importlib.util.module_from_spec(spec)

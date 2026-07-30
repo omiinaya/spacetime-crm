@@ -12,8 +12,8 @@ Usage:
 Dependencies: httpx (already in project requirements), spacetime CLI
 """
 
-import json
 import gzip
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -31,9 +31,7 @@ DB_NAME = "spacetime-crm"
 STDB_SERVER = f"http://{STDB_HOST}:{STDB_PORT}"
 CALL_URL = f"{STDB_SERVER}/v1/database/{DB_NAME}/call"
 MODULE_DIR = Path(__file__).resolve().parent.parent / "server" / "spacetimedb"
-WASM_FILE = (
-    MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
-)
+WASM_FILE = MODULE_DIR / "target" / "wasm32-unknown-unknown" / "release" / "spacetime_crm.wasm"
 
 
 def confirm():
@@ -136,7 +134,7 @@ def main():
         ("audit_log", None),
     ]
 
-    print(f"\n🔄 Restoring tables...")
+    print("\n🔄 Restoring tables...")
     client = httpx.Client(timeout=30)
     restored = 0
     skipped = 0
@@ -154,9 +152,7 @@ def main():
                 args = []
                 for key, val in row.items():
                     # Coerce to match reducer parameter types
-                    if isinstance(val, bool):
-                        args.append(val)
-                    elif isinstance(val, (int, float)):
+                    if isinstance(val, (bool, int, float)):
                         args.append(val)
                     else:
                         args.append(str(val or ""))
@@ -180,11 +176,7 @@ def main():
         status = "✅" if table_ok else "⚠️"
         print(
             f"  {status} {table_name}: {len(rows)} rows restored"
-            + (
-                f" ({import_reducer})"
-                if import_reducer
-                else " [no import reducer — skipped]"
-            )
+            + (f" ({import_reducer})" if import_reducer else " [no import reducer — skipped]")
         )
 
     if skipped:
@@ -192,7 +184,7 @@ def main():
         print("   These tables need import reducers added to the STDB module.")
         print("   Tables with import reducers: customer, product")
     print(f"\n✅ Restore complete: {restored} rows restored")
-    print(f"   ⚠️  Restore any passwords, settings, or portal hashes manually")
+    print("   ⚠️  Restore any passwords, settings, or portal hashes manually")
 
 
 if __name__ == "__main__":

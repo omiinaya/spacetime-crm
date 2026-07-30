@@ -33,9 +33,7 @@ async def list_recurring_rules(user: dict = Depends(require_role("admin", "tech"
         )
         if cust:
             c = cust[0]
-            r["customer_name"] = (
-                f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
-            )
+            r["customer_name"] = f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
         else:
             r["customer_name"] = "—"
     return {"rules": result}

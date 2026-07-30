@@ -126,9 +126,7 @@ async def update_customer(
 
 
 @router.delete("/api/customers/{customer_id}")
-async def delete_customer(
-    customer_id: str, user: dict = Depends(require_role("admin"))
-):
+async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_customer", [customer_id])
     await _log_audit(user, "delete", "customer", customer_id)
     asyncio.ensure_future(
@@ -203,9 +201,7 @@ async def list_customer_geolocations(
 
 
 @router.post("/api/customers/{customer_id}/geocode")
-async def geocode_customer(
-    customer_id: str, user: dict = Depends(require_role("admin", "tech"))
-):
+async def geocode_customer(customer_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Geocode a single customer's address and store the location."""
     customers = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
     if not customers:

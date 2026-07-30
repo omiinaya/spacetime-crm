@@ -12,9 +12,7 @@ from .conftest import (
 )
 
 
-def _customer_id(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _customer_id(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     suf = suffix or unique_suffix()
     c = create_customer(
         test_admin_headers,
@@ -34,9 +32,7 @@ class TestPaymentMethods:
         data = assert_ok(resp)
         assert "payment_methods" in data
 
-    def test_list_filtered_by_customer(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_list_filtered_by_customer(self, test_admin_headers: dict, session_suffix: str):
         cid = _customer_id(test_admin_headers, session_suffix, "lst-cust")
         resp = httpx.get(
             f"{SERVER_URL}/api/payment-methods",
@@ -77,16 +73,12 @@ class TestPaymentMethods:
             for m in r2_data["payment_methods"]
             if m.get("stripe_payment_method_id") == "pm_test_12345"
         ]
-        assert len(methods) >= 1, (
-            f"Saved method not found: {r2_data['payment_methods']}"
-        )
+        assert len(methods) >= 1, f"Saved method not found: {r2_data['payment_methods']}"
         # Track for cleanup
         for m in methods:
             _track_entity("saved_payment_method", m["id"])
 
-    def test_save_method_invalid_last4(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_save_method_invalid_last4(self, test_admin_headers: dict, session_suffix: str):
         cid = _customer_id(test_admin_headers, session_suffix, "bad-last4")
         resp = httpx.post(
             f"{SERVER_URL}/api/payment-methods",
@@ -210,9 +202,7 @@ class TestPaymentMethods:
         )
         assert resp.status_code < 500
 
-    def test_setup_intent_no_stripe(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_setup_intent_no_stripe(self, test_admin_headers: dict, session_suffix: str):
         """Without Stripe configured, setup-intent should return 400."""
         cid = _customer_id(test_admin_headers, session_suffix, "si")
         resp = httpx.post(

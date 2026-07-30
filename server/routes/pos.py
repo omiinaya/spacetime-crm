@@ -48,9 +48,7 @@ async def get_pos_sale(
     if not rows:
         raise HTTPException(404, "Sale not found")
     sale = rows[0]
-    items = await _sql(
-        f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'"
-    )
+    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'")
     sale["line_items"] = sorted(items, key=lambda x: x.get("sort_order", 0))
     return {"sale": sale}
 
@@ -67,9 +65,7 @@ async def get_pos_receipt_pdf(
         raise HTTPException(404, "Sale not found")
     sale = rows[0]
 
-    items = await _sql(
-        f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'"
-    )
+    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'")
     items = sorted(items, key=lambda x: x.get("sort_order", 0))
 
     receipt_number = sale.get("receipt_number", sale.get("id", "N/A"))

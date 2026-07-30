@@ -152,9 +152,7 @@ class TestSendEmail:
     def test_not_configured_empty_sender(self) -> None:
         import mail
 
-        mail.SETTINGS_PATH.write_text(
-            json.dumps({"host": "smtp.com", "sender_email": ""})
-        )
+        mail.SETTINGS_PATH.write_text(json.dumps({"host": "smtp.com", "sender_email": ""}))
         result = mail.send_email("to@test.com", "Sub", "<p>Body</p>")
         assert result is False
 
@@ -168,9 +166,7 @@ class TestSendEmail:
             instance = MagicMock()
             mock_smtp.return_value.__enter__.return_value = instance
 
-            result = mail.send_email(
-                "to@test.com", "Hello", "<html><body>Test</body></html>"
-            )
+            result = mail.send_email("to@test.com", "Hello", "<html><body>Test</body></html>")
 
         assert result is True
         instance.ehlo.assert_called()
@@ -237,9 +233,7 @@ class TestSendEmail:
 
         with patch("mail.smtplib.SMTP") as mock_smtp:
             instance = MagicMock()
-            instance.send_message.side_effect = ConnectionRefusedError(
-                "Connection refused"
-            )
+            instance.send_message.side_effect = ConnectionRefusedError("Connection refused")
             mock_smtp.return_value.__enter__.return_value = instance
             with patch("mail.logger") as mock_logger:
                 result = mail.send_email("to@test.com", "Hello", "<p>Body</p>")
@@ -256,9 +250,7 @@ class TestSendEmail:
         with patch("mail.smtplib.SMTP") as mock_smtp:
             instance = MagicMock()
             mock_smtp.return_value.__enter__.return_value = instance
-            mail.send_email(
-                "to@test.com", "Hello", "<p>HTML</p>", text_body="Plain text"
-            )
+            mail.send_email("to@test.com", "Hello", "<p>HTML</p>", text_body="Plain text")
 
         msg = instance.send_message.call_args[0][0]
         payload_types = [p.get_content_type() for p in msg.get_payload()]
@@ -292,9 +284,7 @@ class TestSendEmail:
             with patch("mail.logger") as mock_logger:
                 mail.send_email("to@test.com", "Hello", "<p>Body</p>")
 
-        mock_logger.info.assert_called_with(
-            "Email sent to %s: %s", "to@test.com", "Hello"
-        )
+        mock_logger.info.assert_called_with("Email sent to %s: %s", "to@test.com", "Hello")
 
 
 class TestConnection:
@@ -504,9 +494,7 @@ class TestNotifications:
             mock_jinja.get_template.return_value = mock_template
 
             with patch.object(mail, "send_email") as mock_send:
-                mail._notify_ticket_status_change(
-                    "a@b.com", 1, "Test", "new", "http://link"
-                )
+                mail._notify_ticket_status_change("a@b.com", 1, "Test", "new", "http://link")
                 mock_jinja.get_template.assert_called_with("email/ticket_status.html")
                 mock_send.assert_called_once()
 

@@ -26,20 +26,14 @@ async def dashboard_stats(
     all_appointments = await _sql_t("SELECT * FROM appointment", user["tenant_id"])
     total_customers = len(all_customers)
     total_tickets = len(all_tickets)
-    open_tickets = sum(
-        1 for t in all_tickets if t.get("status") not in ("resolved", "closed")
-    )
-    revenue = sum(
-        float(i.get("total", 0)) for i in all_invoices if i.get("status") == "paid"
-    )
+    open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
+    revenue = sum(float(i.get("total", 0)) for i in all_invoices if i.get("status") == "paid")
     pending_revenue = sum(
         float(i.get("total", 0))
         for i in all_invoices
         if i.get("status") not in ("paid", "cancelled")
     )
-    upcoming_appointments = sum(
-        1 for a in all_appointments if a.get("start_time", 0) > 0
-    )
+    upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
 
     # Overdue invoices — detect on-the-fly from SQL
     now = int(datetime.utcnow().timestamp() * 1000)
@@ -54,15 +48,12 @@ async def dashboard_stats(
     # Also include invoices that are past due but not yet marked overdue (detect on-the-fly)
     combined_overdue = overdue_invoices + sent_partial
     combined_overdue.sort(key=lambda x: x.get("due_date", 0))
-    overdue_invoices_total = round(
-        sum(float(i.get("total", 0)) for i in combined_overdue), 2
-    )
+    overdue_invoices_total = round(sum(float(i.get("total", 0)) for i in combined_overdue), 2)
     overdue_invoices_sorted = combined_overdue[:5]
 
     # Today's appointments
     day_start_ms = int(
-        datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-        * 1000
+        datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000
     )
     day_end_ms = day_start_ms + 86400000
     today_appts = [
@@ -77,8 +68,7 @@ async def dashboard_stats(
     my_tickets = [
         t
         for t in all_tickets
-        if t.get("assigned_user_id") == user["id"]
-        and t.get("status") not in ("resolved", "closed")
+        if t.get("assigned_user_id") == user["id"] and t.get("status") not in ("resolved", "closed")
     ]
 
     # Priority breakdown for my tickets
@@ -95,16 +85,12 @@ async def dashboard_stats(
             my_ticket_counts[prio] += 1
 
     # Recent 5 my tickets for the dashboard card
-    my_recent = sorted(my_tickets, key=lambda x: x.get("created_at", 0), reverse=True)[
-        :5
-    ]
+    my_recent = sorted(my_tickets, key=lambda x: x.get("created_at", 0), reverse=True)[:5]
 
     # Monthly revenue vs target
     now_ms_month = int(datetime.utcnow().timestamp() * 1000)
     month_start_ms = int(
-        datetime.utcnow()
-        .replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        .timestamp()
+        datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
         * 1000
     )
     monthly_revenue = sum(
@@ -126,9 +112,7 @@ async def dashboard_stats(
         if created and updated > created and t.get("status") in ("resolved", "closed"):
             resolution_times.append((updated - created) / (1000 * 3600))
     avg_resolution_hours = (
-        round(sum(resolution_times) / len(resolution_times), 1)
-        if resolution_times
-        else 0
+        round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
     )
 
     return {
@@ -173,27 +157,21 @@ async def get_reports(
             for p in all_payments
             if month_start_ts <= p.get("created_at", 0) < month_end_ts
         )
-        revenue_by_month.append(
-            {"month": month_label, "revenue": round(month_revenue, 2)}
-        )
+        revenue_by_month.append({"month": month_label, "revenue": round(month_revenue, 2)})
 
     # Ticket counts by status
     status_counts: dict[str, int] = {}
     for t in all_tickets:
         s = t.get("status", "unknown")
         status_counts[s] = status_counts.get(s, 0) + 1
-    ticket_by_status = [
-        {"status": s, "count": c} for s, c in sorted(status_counts.items())
-    ]
+    ticket_by_status = [{"status": s, "count": c} for s, c in sorted(status_counts.items())]
 
     # Invoice by status
     inv_status_counts: dict[str, int] = {}
     for inv in all_invoices:
         s = inv.get("status", "draft")
         inv_status_counts[s] = inv_status_counts.get(s, 0) + 1
-    invoice_by_status = [
-        {"status": s, "count": c} for s, c in sorted(inv_status_counts.items())
-    ]
+    invoice_by_status = [{"status": s, "count": c} for s, c in sorted(inv_status_counts.items())]
 
     # Appointments by month (next 3 + past 9)
     appt_by_month = []
@@ -203,20 +181,14 @@ async def get_reports(
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
         month_count = sum(
-            1
-            for a in all_appointments
-            if month_start_ts <= a.get("start_time", 0) < month_end_ts
+            1 for a in all_appointments if month_start_ts <= a.get("start_time", 0) < month_end_ts
         )
         appt_by_month.append({"month": month_label, "appointments": month_count})
 
     total_revenue = sum(float(p.get("amount", 0)) for p in all_payments)
     total_tickets = len(all_tickets)
-    open_tickets = sum(
-        1 for t in all_tickets if t.get("status") not in ("resolved", "closed")
-    )
-    total_sent = sum(
-        1 for inv in all_invoices if inv.get("status") not in ("draft", "cancelled")
-    )
+    open_tickets = sum(1 for t in all_tickets if t.get("status") not in ("resolved", "closed"))
+    total_sent = sum(1 for inv in all_invoices if inv.get("status") not in ("draft", "cancelled"))
     total_paid = sum(1 for inv in all_invoices if inv.get("status") == "paid")
     outstanding_revenue = sum(
         float(inv.get("total", 0))
@@ -231,9 +203,7 @@ async def get_reports(
         if created and updated > created and t.get("status") in ("resolved", "closed"):
             resolution_times.append((updated - created) / (1000 * 3600))
     avg_resolution_hours = (
-        round(sum(resolution_times) / len(resolution_times), 1)
-        if resolution_times
-        else 0
+        round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
     )
 
     # SLA breach rate
@@ -255,9 +225,7 @@ async def get_reports(
                 breached[priority] = breached.get(priority, 0) + 1
 
     sla_breach_count = sum(breached.values())
-    sla_breach_rate = (
-        round((sla_breach_count / total_open * 100), 1) if total_open > 0 else 0
-    )
+    sla_breach_rate = round((sla_breach_count / total_open * 100), 1) if total_open > 0 else 0
 
     # Overdue invoice rate
     total_sent_invoices = sum(
@@ -275,9 +243,7 @@ async def get_reports(
             overdue_invoices += 1
             total_sent_invoices += 1
     overdue_rate = (
-        round((overdue_invoices / total_sent_invoices * 100), 1)
-        if total_sent_invoices > 0
-        else 0
+        round((overdue_invoices / total_sent_invoices * 100), 1) if total_sent_invoices > 0 else 0
     )
 
     tech_ticket_map: dict[str, int] = {}
@@ -296,9 +262,7 @@ async def get_reports(
     for inv in all_invoices:
         cid = inv.get("customer_id", "")
         if inv.get("status") == "paid":
-            customer_revenue[cid] = customer_revenue.get(cid, 0) + float(
-                inv.get("total", 0)
-            )
+            customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
     all_customers = await _sql("SELECT id, first_name, last_name FROM customer")
     cust_name_map = {
         c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
@@ -318,19 +282,13 @@ async def get_reports(
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
         month_count = sum(
-            1
-            for c in all_customers
-            if month_start_ts <= c.get("created_at", 0) < month_end_ts
+            1 for c in all_customers if month_start_ts <= c.get("created_at", 0) < month_end_ts
         )
         customers_by_month.append({"month": month_label, "new_customers": month_count})
 
     # Service vs Parts breakdown from invoice + estimate line items
-    inv_line_items = await _sql_t(
-        "SELECT * FROM invoice_line_items", user["tenant_id"]
-    )
-    est_line_items = await _sql_t(
-        "SELECT * FROM estimate_line_items", user["tenant_id"]
-    )
+    inv_line_items = await _sql_t("SELECT * FROM invoice_line_items", user["tenant_id"])
+    est_line_items = await _sql_t("SELECT * FROM estimate_line_items", user["tenant_id"])
     inv_type_breakdown: dict[str, dict[str, float]] = {}
     for li in inv_line_items:
         t = li.get("item_type", "other")

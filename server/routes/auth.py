@@ -126,9 +126,7 @@ async def login(request: Request, login_data: LoginRequest):
     # No 2FA — return full token
     tenant_id = ""
     try:
-        tm_rows = await _sql(
-            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
-        )
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
@@ -175,9 +173,7 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
     now = datetime.utcnow()
     tenant_id = ""
     try:
-        tm_rows = await _sql(
-            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
-        )
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
@@ -203,9 +199,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
     tenant_info = {}
     if user.get("tenant_id"):
         try:
-            trows = await _sql(
-                f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'"
-            )
+            trows = await _sql(f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'")
             if trows:
                 tenant_info = trows[0]
         except Exception:
@@ -241,9 +235,7 @@ async def setup_2fa(user: dict = Depends(get_current_user)):
     # Check if already enabled
     rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
     if rows and rows[0].get("totp_enabled", False):
-        raise HTTPException(
-            400, "2FA is already enabled. Disable it first to re-setup."
-        )
+        raise HTTPException(400, "2FA is already enabled. Disable it first to re-setup.")
 
     # Generate new secret
     secret = pyotp.random_base32()
@@ -305,9 +297,7 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
     """Refresh the JWT token with latest tenant_id from DB."""
     tid = ""
     try:
-        tm_rows = await _sql(
-            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
-        )
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
         if tm_rows:
             tid = tm_rows[0]["tenant_id"]
     except Exception:
@@ -318,9 +308,7 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
 
 
 @router.post("/api/auth/set-password")
-async def set_password(
-    body: SetPasswordRequest, user: dict = Depends(get_current_user)
-):
+async def set_password(body: SetPasswordRequest, user: dict = Depends(get_current_user)):
     """Set/change password for current user."""
     pw = body.password
     if len(pw) < 6:
@@ -371,9 +359,7 @@ async def pos_login(request: Request, body: PosLoginRequest):
     now = datetime.utcnow()
     tenant_id = ""
     try:
-        tm_rows = await _sql(
-            f"SELECT * FROM tenant_members WHERE username = '{user['name']}'"
-        )
+        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:

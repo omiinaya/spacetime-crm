@@ -21,9 +21,7 @@ def _reset_client():
 class BaseSchedulerTest:
     """Common helpers for scheduler task tests."""
 
-    def _run_one_iteration(
-        self, task_func, interval: int = 0
-    ) -> tuple[AsyncMock, MagicMock]:
+    def _run_one_iteration(self, task_func, interval: int = 0) -> tuple[AsyncMock, MagicMock]:
         """Run a single iteration of a periodic task by making the second
         asyncio.sleep call raise CancelledError to break the loop.
 

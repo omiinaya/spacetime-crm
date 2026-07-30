@@ -13,9 +13,7 @@ from .conftest import (
 )
 
 
-def _create_rate(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_rate(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a tax rate and return its ID.
 
     Uses unique name + session_suffix for isolation and cleanup.
@@ -37,9 +35,7 @@ def _create_rate(
     result = _stdb_sql(f"SELECT id FROM tax_rates WHERE name = '{name}'")
     assert len(result) == 1, f"Expected 1 table result for tax rate '{name}'"
     table = result[0]
-    assert table.get("rows") and len(table["rows"]) >= 1, (
-        f"Tax rate not found with name '{name}'"
-    )
+    assert table.get("rows") and len(table["rows"]) >= 1, f"Tax rate not found with name '{name}'"
     rate_id = table["rows"][0][0]  # id is first (and only) column
     _track_entity("tax_rate", rate_id)
     return rate_id
@@ -81,9 +77,7 @@ class TestTaxRateCRUD:
 
     def test_list(self, test_admin_headers: dict, session_suffix: str):
         _create_rate(test_admin_headers, session_suffix, "lst")
-        resp = httpx.get(
-            f"{SERVER_URL}/api/tax-rates", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "tax_rates" in data
         assert "total" in data

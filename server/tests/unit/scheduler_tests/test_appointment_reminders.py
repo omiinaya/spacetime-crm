@@ -96,6 +96,4 @@ class TestAppointmentReminders(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(appointment_reminders(0))
 
-        mock_logger.warning.assert_any_call(
-            "[scheduler:appointments] send-reminders returned 404"
-        )
+        mock_logger.warning.assert_any_call("[scheduler:appointments] send-reminders returned 404")

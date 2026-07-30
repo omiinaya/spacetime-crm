@@ -67,9 +67,7 @@ class TestRecurringInvoices(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(recurring_invoices(0))
 
-        mock_logger.debug.assert_any_call(
-            "[scheduler:recurring] No invoices due for generation"
-        )
+        mock_logger.debug.assert_any_call("[scheduler:recurring] No invoices due for generation")
 
     def test_handles_connect_error(self) -> None:
         """Should not crash on ConnectError."""
@@ -105,6 +103,4 @@ class TestRecurringInvoices(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(recurring_invoices(0))
 
-        mock_logger.warning.assert_any_call(
-            "[scheduler:recurring] generate returned 500"
-        )
+        mock_logger.warning.assert_any_call("[scheduler:recurring] generate returned 500")

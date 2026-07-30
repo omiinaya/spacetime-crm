@@ -76,9 +76,7 @@ STATIC_DIR = ROOT / "web" / "dist"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 if (STATIC_DIR / "assets").exists():
-    app.mount(
-        "/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets"
-    )
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 
 
 @app.get("/{full_path:path}")

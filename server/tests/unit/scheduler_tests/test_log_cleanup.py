@@ -45,9 +45,7 @@ class TestLogCleanup(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(log_cleanup(0))
 
-        mock_logger.info.assert_any_call(
-            "[scheduler:cleanup] Archived 42 old audit log entries"
-        )
+        mock_logger.info.assert_any_call("[scheduler:cleanup] Archived 42 old audit log entries")
 
     def test_handles_connect_error(self) -> None:
         """Should not crash on ConnectError."""
@@ -98,9 +96,7 @@ class TestLogCleanup(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(log_cleanup(0))
 
-        mock_logger.debug.assert_any_call(
-            "[scheduler:cleanup] No cleanup endpoint or empty"
-        )
+        mock_logger.debug.assert_any_call("[scheduler:cleanup] No cleanup endpoint or empty")
 
     def test_uses_90_days(self) -> None:
         """Should query with days=90."""

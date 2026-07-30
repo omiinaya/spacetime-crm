@@ -76,9 +76,7 @@ class TestLowStockAlerts(BaseSchedulerTest):
                 with patch("scheduler.logger") as mock_logger:
                     asyncio.run(low_stock_alerts(0))
 
-        mock_logger.warning.assert_any_call(
-            "[scheduler:lowstock] 5 low-stock products detected"
-        )
+        mock_logger.warning.assert_any_call("[scheduler:lowstock] 5 low-stock products detected")
 
     def test_handles_connect_error(self) -> None:
         """Should not crash on ConnectError."""

@@ -6,9 +6,10 @@ for flexibility with test instances (defaults: localhost:3001 / spacetime-crm / 
 """
 
 import os
-import httpx
-import bcrypt
 import time
+
+import bcrypt
+import httpx
 
 STDB_HOST = os.environ.get("STDB_HOST", "localhost")
 STDB_PORT = os.environ.get("STDB_PORT", "3001")
@@ -30,9 +31,7 @@ for i in range(10):
     time.sleep(1)
 
 # 1. Create default tenant
-r = C.post(
-    f"/v1/database/{STDB_DB}/call/create_tenant", json=["Default Corp", "default"]
-)
+r = C.post(f"/v1/database/{STDB_DB}/call/create_tenant", json=["Default Corp", "default"])
 print(f"  Tenant created: HTTP {r.status_code}")
 
 # 2. Create admin user via reducer
@@ -72,9 +71,7 @@ if tenants and tenants[0]["rows"]:
     tid = tenants[0]["rows"][0][0]
     print(f"  Tenant ID: {tid}")
     # 6. Add admin as tenant member
-    r = C.post(
-        f"/v1/database/{STDB_DB}/call/add_tenant_member", json=[tid, username, "admin"]
-    )
+    r = C.post(f"/v1/database/{STDB_DB}/call/add_tenant_member", json=[tid, username, "admin"])
     print(f"  Member added: HTTP {r.status_code}")
 else:
     print("  ERROR: Tenant not found!")
@@ -82,9 +79,7 @@ else:
 
 # 7. Verify login via API
 C2 = httpx.Client(base_url=CRM_API_URL, timeout=15)
-r = C2.post(
-    "/api/auth/login", json={"email": "admin@crm.local", "password": "admin123"}
-)
+r = C2.post("/api/auth/login", json={"email": "admin@crm.local", "password": "admin123"})
 if r.status_code == 200:
     data = r.json()
     print(f"  ✅ Login OK, token: {data['token'][:30]}...")

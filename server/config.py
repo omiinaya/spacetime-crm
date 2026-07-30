@@ -16,15 +16,11 @@ class Settings(BaseSettings):
 
     @property
     def stdb_sql_url(self) -> str:
-        return (
-            f"http://{self.stdb_host}:{self.stdb_port}/v1/database/{self.stdb_db}/sql"
-        )
+        return f"http://{self.stdb_host}:{self.stdb_port}/v1/database/{self.stdb_db}/sql"
 
     @property
     def stdb_call_url(self) -> str:
-        return (
-            f"http://{self.stdb_host}:{self.stdb_port}/v1/database/{self.stdb_db}/call"
-        )
+        return f"http://{self.stdb_host}:{self.stdb_port}/v1/database/{self.stdb_db}/call"
 
     model_config = {"env_file": ".env"}
 

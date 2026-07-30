@@ -71,9 +71,7 @@ async def mail_settings_save(
 
 @router.post("/api/settings/mail/test")
 @limiter.limit("10/minute")
-async def mail_settings_test(
-    request: Request, user: dict = Depends(require_role("admin"))
-):
+async def mail_settings_test(request: Request, user: dict = Depends(require_role("admin"))):
     """Test SMTP connection with current settings."""
     result = _mail_test()
     return result
@@ -102,9 +100,7 @@ async def sms_settings_save(
 
 @router.post("/api/settings/sms/test")
 @limiter.limit("10/minute")
-async def sms_settings_test(
-    request: Request, user: dict = Depends(require_role("admin"))
-):
+async def sms_settings_test(request: Request, user: dict = Depends(require_role("admin"))):
     """Test SMS connection with current settings."""
     result = _sms_test()
     return result

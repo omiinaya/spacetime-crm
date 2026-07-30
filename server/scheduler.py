@@ -68,9 +68,7 @@ async def overdue_check(interval: int):
                 data2 = resp2.json()
                 notified = data2.get("notified", data2.get("total_sent", 0))
                 if notified:
-                    logger.info(
-                        f"[scheduler:overdue] Sent {notified} overdue reminders"
-                    )
+                    logger.info(f"[scheduler:overdue] Sent {notified} overdue reminders")
             else:
                 logger.warning(
                     f"[scheduler:overdue] send-overdue-reminders returned {resp2.status_code}"
@@ -103,9 +101,7 @@ async def recurring_invoices(interval: int):
                 else:
                     logger.debug("[scheduler:recurring] No invoices due for generation")
             else:
-                logger.warning(
-                    f"[scheduler:recurring] generate returned {resp.status_code}"
-                )
+                logger.warning(f"[scheduler:recurring] generate returned {resp.status_code}")
 
         except asyncio.CancelledError:
             break
@@ -167,9 +163,7 @@ async def low_stock_alerts(interval: int):
                 elif isinstance(data, dict):
                     count = data.get("count", data.get("total", 0))
                     if count:
-                        logger.warning(
-                            f"[scheduler:lowstock] {count} low-stock products detected"
-                        )
+                        logger.warning(f"[scheduler:lowstock] {count} low-stock products detected")
             else:
                 logger.debug("[scheduler:lowstock] No low-stock endpoint or empty")
 
@@ -193,9 +187,7 @@ async def log_cleanup(interval: int):
                 data = resp.json()
                 deleted = data.get("deleted", data.get("count", 0))
                 if deleted:
-                    logger.info(
-                        f"[scheduler:cleanup] Archived {deleted} old audit log entries"
-                    )
+                    logger.info(f"[scheduler:cleanup] Archived {deleted} old audit log entries")
             else:
                 logger.debug("[scheduler:cleanup] No cleanup endpoint or empty")
 

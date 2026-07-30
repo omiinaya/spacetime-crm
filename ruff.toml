@@ -42,6 +42,7 @@ ignore = [
 [lint.per-file-ignores]
 "tests/**" = ["B018", "S101", "PLR2004", "N802", "N803", "N806", "RUF012"]
 "server/tests/**" = ["B018", "S101", "PLR2004", "N802", "N803", "N806", "RUF012", "B023", "RUF059"]
+"scripts/**" = ["N999", "E402", "B007", "RUF034", "F541"]
 "server/models/__init__.py" = ["RUF022"]
 "server/tests/unit/**" = ["B023", "RUF059"]
 

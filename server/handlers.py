@@ -41,9 +41,7 @@ def register_exception_handlers(app):
         )
 
     @app.exception_handler(ValidationError)
-    async def pydantic_validation_handler(
-        request: Request, exc: ValidationError
-    ) -> JSONResponse:
+    async def pydantic_validation_handler(request: Request, exc: ValidationError) -> JSONResponse:
         """Catch raw Pydantic ValidationErrors not caught by FastAPI's wrapper."""
         errors: list[dict[str, Any]] = []
         for err in exc.errors():
@@ -60,9 +58,7 @@ def register_exception_handlers(app):
         )
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(
-        request: Request, exc: HTTPException
-    ) -> JSONResponse:
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
         """Standard HTTP exceptions → JSON (not Starlette's default HTML for 5xx)."""
         headers = getattr(exc, "headers", None)
         return JSONResponse(
@@ -72,9 +68,7 @@ def register_exception_handlers(app):
         )
 
     @app.exception_handler(Exception)
-    async def unhandled_exception_handler(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         """Catch-all: return 500 JSON without leaking stack traces to clients.
 
         The traceback is logged server-side for debugging.

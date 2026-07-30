@@ -29,9 +29,7 @@ async def list_tenants(
 ):
     """List all tenants with pagination."""
     try:
-        rows, total = await _paginated(
-            "", "tenants", offset=offset, limit=limit, order_by="name"
-        )
+        rows, total = await _paginated("", "tenants", offset=offset, limit=limit, order_by="name")
         return {"tenants": rows, "total": total, "offset": offset, "limit": limit}
     except Exception as e:
         logger.warning("Failed to list tenants: %s", e)
@@ -39,9 +37,7 @@ async def list_tenants(
 
 
 @router.post("/api/tenants")
-async def create_tenant(
-    body: TenantCreate, user: dict = Depends(require_role("admin"))
-):
+async def create_tenant(body: TenantCreate, user: dict = Depends(require_role("admin"))):
     """Create a new tenant."""
     name = body.name.strip()
     slug = body.slug.strip()
@@ -62,9 +58,7 @@ async def get_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))
     if not rows:
         raise HTTPException(404, "Tenant not found")
     tenant = rows[0]
-    members = await _sql(
-        f"SELECT * FROM tenant_members WHERE tenant_id = '{tenant_id}'"
-    )
+    members = await _sql(f"SELECT * FROM tenant_members WHERE tenant_id = '{tenant_id}'")
     tenant["members"] = members
     return {"tenant": tenant}
 
@@ -103,9 +97,7 @@ async def add_tenant_member(
     if not username:
         raise HTTPException(400, "username is required")
     await _call("add_tenant_member", [tenant_id, username, role])
-    await _log_audit(
-        user, "add_member", "tenant_member", username, f"tenant={tenant_id}"
-    )
+    await _log_audit(user, "add_member", "tenant_member", username, f"tenant={tenant_id}")
     return {"ok": True}
 
 
@@ -134,9 +126,7 @@ async def update_tenant_member_role(
 
 
 @router.post("/api/tenants/migrate")
-async def migrate_to_tenant(
-    body: TenantMigrate, user: dict = Depends(require_role("admin"))
-):
+async def migrate_to_tenant(body: TenantMigrate, user: dict = Depends(require_role("admin"))):
     """One-time migration: create a default tenant and assign all existing users to it."""
     existing = await _sql("SELECT * FROM tenants")
     if existing:

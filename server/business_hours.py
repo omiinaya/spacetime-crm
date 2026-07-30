@@ -61,9 +61,7 @@ def get_settings() -> dict | None:
 
 def update_settings(data: dict) -> dict:
     """Save business hours. Data should be a dict keyed by day name."""
-    hours = {
-        day: {"enabled": False, "open": "09:00", "close": "18:00"} for day in DAY_NAMES
-    }
+    hours = {day: {"enabled": False, "open": "09:00", "close": "18:00"} for day in DAY_NAMES}
     for day in DAY_NAMES:
         if day in data:
             entry = data[day]

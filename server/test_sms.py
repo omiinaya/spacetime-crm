@@ -97,9 +97,7 @@ class TestSms:
     def test_update_settings_preserves_token_when_not_given(self, tmp_path):
         existing = tmp_path / "existing.json"
         existing.write_text(
-            json.dumps(
-                {"account_sid": "AC123", "auth_token": "oldtok", "from_number": "+1555"}
-            )
+            json.dumps({"account_sid": "AC123", "auth_token": "oldtok", "from_number": "+1555"})
         )
         with patch("server.sms.SETTINGS_PATH", existing):
             update_settings({"account_sid": "AC456"})
@@ -119,9 +117,7 @@ class TestSms:
         assert _customer_phone(None) is None
 
     def test_customer_phone_returns_mobile(self):
-        assert (
-            _customer_phone({"mobile": "555-1111", "phone": "555-2222"}) == "555-1111"
-        )
+        assert _customer_phone({"mobile": "555-1111", "phone": "555-2222"}) == "555-1111"
         assert _customer_phone({"phone": "555-2222"}) == "555-2222"
 
     def test_customer_phone_returns_none_for_no_phone(self):

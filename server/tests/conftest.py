@@ -42,9 +42,7 @@ def _stdb_sql(query: str) -> list[dict]:
         headers={"Content-Type": "application/sql"},
         timeout=10,
     )
-    assert resp.status_code == 200, (
-        f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
-    )
+    assert resp.status_code == 200, f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
     return resp.json()
 
 
@@ -522,9 +520,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
 def save_mail_settings(auth_headers: dict) -> dict | None:
     """Fetch current mail settings so they can be restored later."""
     try:
-        resp = httpx.get(
-            f"{SERVER_URL}/api/settings/mail", headers=auth_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/settings/mail", headers=auth_headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             return data.get("settings")
@@ -559,9 +555,7 @@ def restore_mail_settings(auth_headers: dict, settings: dict | None) -> None:
 def save_sms_settings(auth_headers: dict) -> dict | None:
     """Fetch current SMS settings so they can be restored later."""
     try:
-        resp = httpx.get(
-            f"{SERVER_URL}/api/settings/sms", headers=auth_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/settings/sms", headers=auth_headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             return data.get("settings")
@@ -592,9 +586,7 @@ def restore_sms_settings(auth_headers: dict, settings: dict | None) -> None:
 def save_user_settings(auth_headers: dict) -> dict | None:
     """Fetch current user settings so they can be restored later."""
     try:
-        resp = httpx.get(
-            f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/users/settings", headers=auth_headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             return data.get("settings")
@@ -666,9 +658,7 @@ def reset_sla_targets(auth_headers: dict) -> None:
 def save_default_tax_rate(auth_headers: dict) -> dict | None:
     """Fetch current default tax rate so it can be restored later."""
     try:
-        resp = httpx.get(
-            f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10)
         if resp.status_code == 200:
             rates = resp.json().get("tax_rates", [])
             for rate in rates:
@@ -689,9 +679,7 @@ def restore_default_tax_rate(auth_headers: dict, saved: dict | None) -> None:
         return
     try:
         # Remove default from all rates first
-        rates_resp = httpx.get(
-            f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10
-        )
+        rates_resp = httpx.get(f"{SERVER_URL}/api/tax-rates", headers=auth_headers, timeout=10)
         if rates_resp.status_code == 200:
             for rate in rates_resp.json().get("tax_rates", []):
                 if rate.get("is_default") and rate["id"] != saved.get("id"):

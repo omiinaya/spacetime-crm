@@ -66,9 +66,7 @@ def _create_po(test_admin_headers: dict, session_suffix: str, tag: str = "") -> 
     result = _stdb_sql(f"SELECT id FROM purchase_order WHERE vendor_name = '{vendor}'")
     assert len(result) == 1, f"Expected 1 table result for PO '{vendor}'"
     table = result[0]
-    assert table.get("rows") and len(table["rows"]) >= 1, (
-        f"PO not found for vendor '{vendor}'"
-    )
+    assert table.get("rows") and len(table["rows"]) >= 1, f"PO not found for vendor '{vendor}'"
     po_id = table["rows"][0][0]  # id is first (and only) column
     _track_entity("purchase_order", po_id)
     return po_id
@@ -425,9 +423,7 @@ class TestPOApproval:
         )
         assert r.json()["purchase_order"]["status"] == "draft"
 
-    def test_reapprove_after_rejection(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_reapprove_after_rejection(self, test_admin_headers: dict, session_suffix: str):
         po_id = _create_po(test_admin_headers, session_suffix, "reauth")
         httpx.post(
             f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval",
@@ -457,9 +453,7 @@ class TestPOApproval:
         )
         assert r.json()["purchase_order"]["status"] == "approved"
 
-    def test_cannot_approve_from_sent_status(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_cannot_approve_from_sent_status(self, test_admin_headers: dict, session_suffix: str):
         """Approve should only work from pending_approval status."""
         po_id = _create_po(test_admin_headers, session_suffix, "wrongstate")
         # Go directly to sent via status update
@@ -483,9 +477,7 @@ class TestPOApproval:
         )
         assert r.json()["purchase_order"]["status"] == "sent"
 
-    def test_approve_shows_approved_by(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_approve_shows_approved_by(self, test_admin_headers: dict, session_suffix: str):
         po_id = _create_po(test_admin_headers, session_suffix, "showappr")
         httpx.post(
             f"{SERVER_URL}/api/purchase-orders/{po_id}/submit-for-approval",

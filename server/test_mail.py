@@ -128,9 +128,7 @@ class TestMail:
 
     def test_send_email_returns_false_incomplete_settings(self):
         """send_email returns False when host or sender missing."""
-        with patch(
-            "server.mail._load_settings", return_value={"host": "", "sender_email": ""}
-        ):
+        with patch("server.mail._load_settings", return_value={"host": "", "sender_email": ""}):
             assert send_email("a@b.com", "Subj", "<p>body</p>") is False
 
     def test_test_connection_no_settings(self):
@@ -145,9 +143,7 @@ class TestMail:
         with patch("server.mail.send_email") as mock_send:
             with patch("server.mail.jinja_env") as mock_env:
                 mock_env.get_template.return_value.render.return_value = "<html/>"
-                _notify_ticket_status_change(
-                    "a@b.com", 123, "Fix pc", "new", "http://link"
-                )
+                _notify_ticket_status_change("a@b.com", 123, "Fix pc", "new", "http://link")
                 mock_send.assert_called_once()
                 args = mock_send.call_args[0]
                 assert args[0] == "a@b.com"
@@ -170,9 +166,7 @@ class TestMail:
         with patch("server.mail.send_email") as mock_send:
             with patch("server.mail.jinja_env") as mock_env:
                 mock_env.get_template.return_value.render.return_value = "<html/>"
-                _notify_appointment_created(
-                    "a@b.com", "Repair", 1700000000000, "http://link"
-                )
+                _notify_appointment_created("a@b.com", "Repair", 1700000000000, "http://link")
                 mock_send.assert_called_once()
 
     def test_notify_estimate_approved_calls_send(self):
@@ -208,16 +202,12 @@ class TestMail:
         with patch("server.mail.send_email") as mock_send:
             with patch("server.mail.jinja_env") as mock_env:
                 mock_env.get_template.return_value.render.return_value = "<html/>"
-                _notify_appointment_reminder(
-                    "a@b.com", "Checkup", 1700000000000, "http://link"
-                )
+                _notify_appointment_reminder("a@b.com", "Checkup", 1700000000000, "http://link")
                 mock_send.assert_called_once()
 
     def test_notify_overdue_reminder_calls_send(self):
         with patch("server.mail.send_email") as mock_send:
             with patch("server.mail.jinja_env") as mock_env:
                 mock_env.get_template.return_value.render.return_value = "<html/>"
-                _notify_overdue_reminder(
-                    "a@b.com", 456, 200.00, "2025-01-01", "http://link"
-                )
+                _notify_overdue_reminder("a@b.com", 456, 200.00, "2025-01-01", "http://link")
                 mock_send.assert_called_once()

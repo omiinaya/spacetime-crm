@@ -67,9 +67,7 @@ def is_configured() -> bool:
     if not settings:
         return False
     return bool(
-        settings.get("account_sid")
-        and settings.get("auth_token")
-        and settings.get("from_number")
+        settings.get("account_sid") and settings.get("auth_token") and settings.get("from_number")
     )
 
 
@@ -170,9 +168,7 @@ async def test_connection() -> dict:
 # ── Notification templates ──
 
 
-def _notify_ticket_status_change(
-    phone: str, ticket_number: int, title: str, status: str
-) -> None:
+def _notify_ticket_status_change(phone: str, ticket_number: int, title: str, status: str) -> None:
     """Send ticket status SMS notification. Fire-and-forget."""
     status_labels = {
         "new": "New",
@@ -189,15 +185,15 @@ def _notify_ticket_status_change(
 
 def _notify_invoice_created(phone: str, invoice_number: int, total: float) -> None:
     """Send invoice created SMS notification."""
-    body = f"Invoice #{invoice_number} for ${total:.2f} is ready. View & pay in your customer portal."
+    body = (
+        f"Invoice #{invoice_number} for ${total:.2f} is ready. View & pay in your customer portal."
+    )
     asyncio.ensure_future(send_sms(phone, body))
 
 
 def _notify_payment_received(phone: str, invoice_number: int, amount: float) -> None:
     """Send payment confirmation SMS."""
-    body = (
-        f"Payment of ${amount:.2f} received for Invoice #{invoice_number}. Thank you!"
-    )
+    body = f"Payment of ${amount:.2f} received for Invoice #{invoice_number}. Thank you!"
     asyncio.ensure_future(send_sms(phone, body))
 
 

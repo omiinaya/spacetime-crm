@@ -10,9 +10,7 @@ from .conftest import (
 )
 
 
-def _create_schedule(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_schedule(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a report schedule and return its ID."""
     suf = suffix or unique_suffix()
     name = f"Schedule-{session_suffix}-{suf}"

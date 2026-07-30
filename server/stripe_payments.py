@@ -79,9 +79,7 @@ async def verify_webhook(payload: bytes, sig_header: str) -> dict[str, Any] | No
     Returns the event dict on success, or None if verification fails.
     """
     if not settings.stripe_webhook_secret:
-        logger.warning(
-            "Stripe webhook secret not configured — skipping webhook verification"
-        )
+        logger.warning("Stripe webhook secret not configured — skipping webhook verification")
         return None
 
     init_stripe()

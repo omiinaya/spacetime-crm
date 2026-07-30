@@ -46,9 +46,7 @@ class TestValidation:
             headers=test_admin_headers,
             timeout=10,
         )
-        assert resp.status_code in (400, 404), (
-            f"Expected 400/404, got {resp.status_code}"
-        )
+        assert resp.status_code in (400, 404), f"Expected 400/404, got {resp.status_code}"
 
     def test_malformed_json_returns_422(self, client: httpx.Client):
         """Malformed JSON body returns 422 or 400."""
@@ -78,9 +76,7 @@ class TestValidation:
             headers=test_admin_headers,
             timeout=10,
         )
-        assert resp.status_code == 422, (
-            f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
-        )
+        assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
 
     def test_invalid_url_returns_404_or_200(self, client: httpx.Client):
         """Non-existent API route returns appropriate status.

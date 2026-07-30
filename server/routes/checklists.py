@@ -73,9 +73,7 @@ async def update_checklist_template(
 
 
 @router.delete("/api/checklist-templates/{template_id}")
-async def delete_checklist_template(
-    template_id: str, user: dict = Depends(require_role("admin"))
-):
+async def delete_checklist_template(template_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a checklist template."""
     await _call("delete_checklist_template", [template_id])
     await _log_audit(user, "delete", "checklist_template", template_id)

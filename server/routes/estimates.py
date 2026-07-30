@@ -83,9 +83,7 @@ async def update_estimate_status(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     await _call("update_estimate_status", [estimate_id, body.status])
-    await _log_audit(
-        user, "update_status", "estimate", estimate_id, f"status={body.status}"
-    )
+    await _log_audit(user, "update_status", "estimate", estimate_id, f"status={body.status}")
     return {"ok": True}
 
 
@@ -93,9 +91,7 @@ async def update_estimate_status(
 async def get_estimate_line_items(
     estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    rows = await _sql(
-        f"SELECT * FROM estimate_line_items WHERE estimate_id = '{estimate_id}'"
-    )
+    rows = await _sql(f"SELECT * FROM estimate_line_items WHERE estimate_id = '{estimate_id}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
@@ -120,9 +116,7 @@ async def add_estimate_line_item(
 
 
 @router.delete("/api/estimates/{estimate_id}")
-async def delete_estimate(
-    estimate_id: str, user: dict = Depends(require_role("admin"))
-):
+async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_estimate", [estimate_id])
     await _log_audit(user, "delete", "estimate", estimate_id)
     return {"ok": True}
@@ -142,9 +136,7 @@ async def convert_estimate(
 
     await _call("convert_estimate_to_invoice", [estimate_id])
 
-    est_rows = await _sql(
-        f"SELECT invoice_id FROM estimates WHERE id = '{estimate_id}'"
-    )
+    est_rows = await _sql(f"SELECT invoice_id FROM estimates WHERE id = '{estimate_id}'")
     inv_id = est_rows[0].get("invoice_id", "") if est_rows else ""
     if not inv_id:
         raise HTTPException(500, "Failed to get generated invoice ID")
@@ -165,14 +157,10 @@ async def convert_estimate(
     )
 
     async def _sms_notify():
-        cust = await _sql(
-            f"SELECT * FROM customer WHERE id = '{est.get('customer_id', '')}'"
-        )
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{est.get('customer_id', '')}'")
         phone = _sms_customer_phone(cust[0]) if cust else None
         if phone:
-            _sms_estimate_approved(
-                phone, est.get("estimate_number", 0), float(est.get("total", 0))
-            )
+            _sms_estimate_approved(phone, est.get("estimate_number", 0), float(est.get("total", 0)))
 
     asyncio.ensure_future(_sms_notify())
 

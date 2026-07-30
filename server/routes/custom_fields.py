@@ -98,9 +98,7 @@ async def get_custom_field_values(
     entity_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Get all custom field values for an entity."""
-    rows = await _sql(
-        f"SELECT * FROM custom_field_values WHERE entity_id = '{entity_id}'"
-    )
+    rows = await _sql(f"SELECT * FROM custom_field_values WHERE entity_id = '{entity_id}'")
     return {"values": rows}
 
 

@@ -35,9 +35,7 @@ class TestAuth:
         # We need to log in as the isolated admin — extract email from headers
         # The isolated tenant admin email is f"admin-{session_suffix}@test.local"
         # We'll verify that the existing token is valid first
-        resp = httpx.get(
-            f"{SERVER_URL}/api/auth/me", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/auth/me", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "email" in data
         assert data["role"] == "admin"
@@ -84,17 +82,13 @@ class TestAuth:
         # Craft a token that looks like a JWT but is clearly expired
         # Base64-encode a dummy expired payload
         header = (
-            base64.urlsafe_b64encode(
-                json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
-            )
+            base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
             .rstrip(b"=")
             .decode()
         )
         payload = (
             base64.urlsafe_b64encode(
-                json.dumps(
-                    {"sub": "user_test", "exp": 1000000, "role": "admin"}
-                ).encode()
+                json.dumps({"sub": "user_test", "exp": 1000000, "role": "admin"}).encode()
             )
             .rstrip(b"=")
             .decode()
@@ -111,9 +105,7 @@ class TestAuth:
 
     def test_auth_me_endpoint(self, test_admin_headers: dict):
         """GET /api/auth/me returns current user (using isolated tenant)."""
-        resp = httpx.get(
-            f"{SERVER_URL}/api/auth/me", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/auth/me", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "email" in data
         assert data["role"] == "admin"
@@ -141,9 +133,7 @@ class TestPermissions:
 
     def test_admin_access(self, test_admin_headers: dict):
         """Admin (isolated tenant) can access admin-only endpoints."""
-        resp = httpx.get(
-            f"{SERVER_URL}/api/audit-log", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/audit-log", headers=test_admin_headers, timeout=10)
         # May return empty, but shouldn't 403
         assert resp.status_code != 403
 

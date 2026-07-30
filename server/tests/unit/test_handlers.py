@@ -292,12 +292,8 @@ class TestHTTPExceptionHandler:
 
         response = await _handler(request, exc)
         # JSONResponse adds Content-Type, but no custom headers
-        custom_headers = {
-            k: v for k, v in response.headers.items() if k.lower() != "content-type"
-        }
-        assert not custom_headers or "retry-after" not in {
-            k.lower() for k in response.headers
-        }
+        custom_headers = {k: v for k, v in response.headers.items() if k.lower() != "content-type"}
+        assert not custom_headers or "retry-after" not in {k.lower() for k in response.headers}
 
 
 class TestUnhandledExceptionHandler:

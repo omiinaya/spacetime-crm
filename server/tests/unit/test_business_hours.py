@@ -153,9 +153,7 @@ class TestSaveSettings:
         from business_hours import SETTINGS_PATH, _save_settings
 
         _save_settings({"first": {"enabled": True, "open": "09:00", "close": "17:00"}})
-        _save_settings(
-            {"second": {"enabled": False, "open": "10:00", "close": "16:00"}}
-        )
+        _save_settings({"second": {"enabled": False, "open": "10:00", "close": "16:00"}})
         loaded = json.loads(SETTINGS_PATH.read_text())
         assert "first" not in loaded
 
@@ -184,9 +182,7 @@ class TestUpdateSettings:
     def test_update_settings_returns_dict(self) -> None:
         from business_hours import update_settings
 
-        result = update_settings(
-            {"monday": {"enabled": True, "open": "09:00", "close": "18:00"}}
-        )
+        result = update_settings({"monday": {"enabled": True, "open": "09:00", "close": "18:00"}})
         assert isinstance(result, dict)
 
     def test_update_settings_contains_all_days(self) -> None:
@@ -200,9 +196,7 @@ class TestUpdateSettings:
     def test_update_settings_preserves_provided_data(self) -> None:
         from business_hours import update_settings
 
-        result = update_settings(
-            {"monday": {"enabled": True, "open": "10:00", "close": "19:00"}}
-        )
+        result = update_settings({"monday": {"enabled": True, "open": "10:00", "close": "19:00"}})
         assert result["monday"]["enabled"] is True
         assert result["monday"]["open"] == "10:00"
         assert result["monday"]["close"] == "19:00"
@@ -211,9 +205,7 @@ class TestUpdateSettings:
         """Days not in the update data should get disabled defaults (enabled=False)."""
         from business_hours import update_settings
 
-        result = update_settings(
-            {"monday": {"enabled": True, "open": "09:00", "close": "18:00"}}
-        )
+        result = update_settings({"monday": {"enabled": True, "open": "09:00", "close": "18:00"}})
         for day in ["tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
             assert result[day]["enabled"] is False
             assert result[day]["open"] == "09:00"
@@ -239,9 +231,7 @@ class TestUpdateSettings:
     def test_update_settings_persists_to_file(self) -> None:
         from business_hours import _load_settings, update_settings
 
-        update_settings(
-            {"wednesday": {"enabled": True, "open": "08:00", "close": "16:00"}}
-        )
+        update_settings({"wednesday": {"enabled": True, "open": "08:00", "close": "16:00"}})
         loaded = _load_settings()
         assert loaded is not None
         assert loaded["wednesday"]["open"] == "08:00"

@@ -11,9 +11,7 @@ from .conftest import (
 )
 
 
-def _create_template(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_template(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a checklist template and return its ID.
 
     Uses unique name and STDB SQL lookup for isolation.
@@ -36,9 +34,7 @@ def _create_template(
     result = _stdb_sql(f"SELECT id FROM checklist_templates WHERE name = '{name}'")
     assert len(result) == 1, f"Expected 1 table result for checklist '{name}'"
     table = result[0]
-    assert table.get("rows") and len(table["rows"]) >= 1, (
-        f"Template not found with name '{name}'"
-    )
+    assert table.get("rows") and len(table["rows"]) >= 1, f"Template not found with name '{name}'"
     tid = table["rows"][0][0]  # id is first (and only) column
     _track_entity("checklist_template", tid)
     return tid

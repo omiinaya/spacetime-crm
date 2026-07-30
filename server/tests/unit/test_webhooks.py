@@ -87,9 +87,7 @@ class TestDeliver:
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
 
-            await _deliver(
-                "https://example.com/hook", "ticket.created", {"id": "t-1"}, "sec-123"
-            )
+            await _deliver("https://example.com/hook", "ticket.created", {"id": "t-1"}, "sec-123")
 
         call_kwargs = mock_client.post.call_args[1]
         assert call_kwargs["headers"]["Content-Type"] == "application/json"
@@ -156,9 +154,7 @@ class TestDeliver:
     async def test_request_error_retries(self) -> None:
         """Should retry on httpx request errors."""
         mock_client = MagicMock()
-        mock_client.post = AsyncMock(
-            side_effect=httpx.ConnectError("Connection refused")
-        )
+        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
         with patch("webhooks.get_http_client", return_value=mock_client):
             from webhooks import _deliver
@@ -222,9 +218,7 @@ class TestFireEvent:
         ]
 
     @pytest.mark.asyncio
-    async def test_fires_only_matching_active_subscriptions(
-        self, subscriptions
-    ) -> None:
+    async def test_fires_only_matching_active_subscriptions(self, subscriptions) -> None:
         """Should fire only to active subscriptions that subscribe to the event."""
         from webhooks import fire_event
 
@@ -329,9 +323,7 @@ class TestFireEvent:
                 "error": "HTTP 500",
             }
             with patch("webhooks.logger") as mock_logger:
-                results = await fire_event(
-                    "customer.created", {"id": "c-1"}, subscriptions
-                )
+                results = await fire_event("customer.created", {"id": "c-1"}, subscriptions)
 
         assert len(results) == 1
         assert results[0]["ok"] is False

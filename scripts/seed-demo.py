@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 """Seed demo data into SpacetimeCRM."""
 
+
 import httpx
-import json
-import sys
 
 BASE = "http://localhost:8723"
 ADMIN_EMAIL = "admin@crm.local"
 ADMIN_PW = "admin123"
 
 # Login
-resp = httpx.post(
-    f"{BASE}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PW}
-)
+resp = httpx.post(f"{BASE}/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PW})
 resp.raise_for_status()
 TOKEN = resp.json()["token"]
 H = {"Authorization": f"Bearer {TOKEN}"}
@@ -107,9 +104,7 @@ for fname, lname, email, phone, company, addr, city, state, zip_code in customer
         print(f"  ✅ Customer: {fname} {lname}")
 
 # Set portal password for Alice
-r = C.post(
-    f"/api/customers/{cust_ids[0]}/portal-password", json={"password": "alice123"}
-)
+r = C.post(f"/api/customers/{cust_ids[0]}/portal-password", json={"password": "alice123"})
 print(f"  ✅ Portal password set for Alice: {ok(r)}")
 
 # ── Products ──
@@ -219,7 +214,7 @@ if invoices:
             "notes": "Partial payment",
         },
     )
-    print(f"  ✅ Payment recorded")
+    print("  ✅ Payment recorded")
 
 # ── Appointments ──
 import time
@@ -274,9 +269,7 @@ for table in [
 ]:
     r = C.get(f"/api/{table}")
     count = len(
-        r.json().get(
-            table if table != "products" else table, r.json().get(table.rstrip("s"), [])
-        )
+        r.json().get(table if table != "products" else table, r.json().get(table.rstrip("s"), []))
     )
     print(f"  {table}: {count}")
 

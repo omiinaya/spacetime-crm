@@ -12,9 +12,7 @@ from .conftest import (
 
 class TestUserCRUD:
     def test_list(self, test_admin_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/users", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/users", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "users" in data
         assert "total" in data

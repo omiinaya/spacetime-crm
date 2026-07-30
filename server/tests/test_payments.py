@@ -95,9 +95,7 @@ class TestPaymentCRUD:
         assert "total" in data
         assert isinstance(data["payments"], list)
 
-    def test_list_payments_filter_by_invoice(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_list_payments_filter_by_invoice(self, test_admin_headers: dict, session_suffix: str):
         """Filter payments by invoice_id."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "filterbyinv")
 
@@ -127,9 +125,7 @@ class TestPaymentCRUD:
             assert p["invoice_id"] == inv_id
         assert len(data["payments"]) >= 2
 
-    def test_payment_updates_invoice_status(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_payment_updates_invoice_status(self, test_admin_headers: dict, session_suffix: str):
         """Recording a full payment marks invoice as paid."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "statuscheck")
 
@@ -199,9 +195,7 @@ class TestPaymentCRUD:
         )
         assert_ok(resp)
 
-    def test_multiple_payment_methods(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_multiple_payment_methods(self, test_admin_headers: dict, session_suffix: str):
         """Payments can use different methods: cash, card, check, bank_transfer."""
         inv_id = _create_test_invoice(test_admin_headers, session_suffix, "methods")
         methods = ["cash", "card", "check", "bank_transfer"]
@@ -258,6 +252,4 @@ class TestPaymentErrors:
             assert resp.status_code in (401, 403), f"{path} allowed unauthenticated"
         # Delete also requires auth
         resp = client.delete("/api/payments/fake", timeout=10)
-        assert resp.status_code in (401, 403), (
-            "DELETE /api/payments/fake allowed unauthenticated"
-        )
+        assert resp.status_code in (401, 403), "DELETE /api/payments/fake allowed unauthenticated"

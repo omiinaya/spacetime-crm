@@ -112,9 +112,7 @@ class TestInvoiceCRUD:
         for inv in data["invoices"]:
             assert inv["status"] == "draft"
 
-    def test_invoice_has_line_items(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_invoice_has_line_items(self, test_admin_headers: dict, session_suffix: str):
         """Create invoice with line items and verify they appear."""
         inv_id, _ = _create_invoice(
             test_admin_headers, session_suffix, "lineitems", notes="Line item test"
@@ -207,9 +205,7 @@ class TestInvoiceCRUD:
 
     def test_set_tax_rate(self, test_admin_headers: dict, session_suffix: str):
         """Set tax rate on an invoice."""
-        inv_id, _ = _create_invoice(
-            test_admin_headers, session_suffix, "tax", notes="Tax test"
-        )
+        inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "tax", notes="Tax test")
         resp = httpx.put(
             f"{SERVER_URL}/api/invoices/{inv_id}/tax-rate",
             json={"tax_rate": 8.5},
@@ -232,9 +228,7 @@ class TestInvoiceCRUD:
 
     def test_pdf_generation(self, test_admin_headers: dict, session_suffix: str):
         """PDF endpoint returns application/pdf content."""
-        inv_id, _ = _create_invoice(
-            test_admin_headers, session_suffix, "pdf", notes="PDF test"
-        )
+        inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "pdf", notes="PDF test")
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices/{inv_id}/pdf",
             headers=test_admin_headers,
@@ -303,9 +297,7 @@ class TestInvoiceErrors:
             headers=test_admin_headers,
             timeout=10,
         )
-        assert resp.status_code < 500, (
-            f"Server error on bad customer: {resp.text[:200]}"
-        )
+        assert resp.status_code < 500, f"Server error on bad customer: {resp.text[:200]}"
 
     def test_create_missing_body(self, test_admin_headers: dict):
         """POST with empty body returns 422."""
@@ -319,9 +311,7 @@ class TestInvoiceErrors:
 
     def test_invalid_status(self, test_admin_headers: dict, session_suffix: str):
         """Setting an invalid status should not crash."""
-        inv_id, _ = _create_invoice(
-            test_admin_headers, session_suffix, "badstatus", notes=""
-        )
+        inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "badstatus", notes="")
         resp = httpx.put(
             f"{SERVER_URL}/api/invoices/{inv_id}/status",
             json={"status": "nonexistent_status_xyzzy"},
@@ -490,9 +480,7 @@ class TestInvoiceEmailQueue:
 
     def test_send_email_unauthorized(self, client: httpx.Client):
         """Send email requires auth."""
-        resp = client.post(
-            "/api/invoices/send-email", json={"invoice_id": "x"}, timeout=10
-        )
+        resp = client.post("/api/invoices/send-email", json={"invoice_id": "x"}, timeout=10)
         assert resp.status_code in (401, 403)
 
     def test_batch_email_empty_ids(self, test_admin_headers: dict):

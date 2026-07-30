@@ -140,17 +140,11 @@ async def portal_stats(customer: dict = Depends(get_current_customer)):
     tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{cid}'")
     invoices = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{cid}'")
     appointments = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{cid}'")
-    open_tickets = sum(
-        1 for t in tickets if t.get("status") not in ("resolved", "closed")
-    )
+    open_tickets = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
     total_billed = sum(
-        float(i.get("total", 0))
-        for i in invoices
-        if i.get("status") not in ("cancelled", "draft")
+        float(i.get("total", 0)) for i in invoices if i.get("status") not in ("cancelled", "draft")
     )
-    total_paid = sum(
-        float(i.get("total", 0)) for i in invoices if i.get("status") == "paid"
-    )
+    total_paid = sum(float(i.get("total", 0)) for i in invoices if i.get("status") == "paid")
     upcoming = [a for a in appointments if a.get("start_time", 0) > 0]
     return {
         "total_tickets": len(tickets),
@@ -178,9 +172,7 @@ async def portal_tickets(customer: dict = Depends(get_current_customer)):
 
 
 @router.get("/api/portal/tickets/{ticket_id}")
-async def portal_ticket_detail(
-    ticket_id: str, customer: dict = Depends(get_current_customer)
-):
+async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_current_customer)):
     """Single ticket detail with notes (customer-owned only)."""
     rows = await _sql(
         f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'"
@@ -234,9 +226,7 @@ async def portal_invoices(customer: dict = Depends(get_current_customer)):
 
 
 @router.get("/api/portal/invoices/{invoice_id}")
-async def portal_invoice_detail(
-    invoice_id: str, customer: dict = Depends(get_current_customer)
-):
+async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_current_customer)):
     """Single invoice detail with line items (customer-owned only)."""
     rows = await _sql(
         f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'"
@@ -244,9 +234,7 @@ async def portal_invoice_detail(
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
-    items = await _sql(
-        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'"
-    )
+    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
     inv["line_items"] = _sort(items, "sort_order", desc=False)
     payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
     inv["payments"] = _sort(payments, "created_at")
@@ -312,9 +300,7 @@ async def portal_make_payment(
 async def portal_appointments(customer: dict = Depends(get_current_customer)):
     """Customer's appointments."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
-    rows = await _sql(
-        f"SELECT * FROM appointment WHERE customer_id = '{customer['id']}'"
-    )
+    rows = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{customer['id']}'")
     upcoming = [a for a in rows if a.get("start_time", 0) > now_ms]
     past = [a for a in rows if a.get("start_time", 0) <= now_ms]
     return {
@@ -349,9 +335,7 @@ async def portal_create_checkout_session(
 ):
     """Create a Stripe Checkout Session for an invoice payment."""
     if not stripe_configured():
-        raise HTTPException(
-            503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env"
-        )
+        raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
 
     invoice_id = body.invoice_id
     if not invoice_id:
@@ -375,9 +359,7 @@ async def portal_create_checkout_session(
     if amount_due <= 0:
         raise HTTPException(400, "Invoice is already fully paid")
 
-    line_items = await _sql(
-        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'"
-    )
+    line_items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
     items_desc = "; ".join(
         f"{li.get('description', '')} x{li.get('quantity', 1)}" for li in line_items
     )
@@ -403,9 +385,7 @@ async def portal_create_checkout_session(
 @router.get("/api/portal/payment-methods")
 async def portal_payment_methods(customer: dict = Depends(get_current_customer)):
     """List the customer's saved payment methods."""
-    rows = await _sql(
-        f"SELECT * FROM saved_payment_methods WHERE customer_id = '{customer['id']}'"
-    )
+    rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE customer_id = '{customer['id']}'")
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 
@@ -450,9 +430,7 @@ async def portal_pay_with_saved_card(
 
     # Create + confirm Stripe PaymentIntent
     if not stripe_configured():
-        raise HTTPException(
-            503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env"
-        )
+        raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
 
     result = await create_payment_intent(
         invoice_id=invoice_id,

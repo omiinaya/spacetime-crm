@@ -49,8 +49,7 @@ async def list_products(
             rows = [
                 r
                 for r in rows
-                if q in (r.get("name") or "").lower()
-                or q in (r.get("sku") or "").lower()
+                if q in (r.get("name") or "").lower() or q in (r.get("sku") or "").lower()
             ]
         if cat:
             rows = [r for r in rows if r.get("category", "") == cat]
@@ -71,9 +70,7 @@ async def list_products(
 
 
 @router.post("/api/products")
-async def create_product(
-    body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))
-):
+async def create_product(body: ProductCreate, user: dict = Depends(require_role("admin", "tech"))):
     await _call(
         "create_product",
         [
@@ -102,9 +99,7 @@ async def update_product_quantity(
     user: dict = Depends(require_role("admin", "tech")),
 ):
     await _call("update_product_quantity", [product_id, body.quantity_on_hand])
-    await _log_audit(
-        user, "update", "product_qty", product_id, f"qty={body.quantity_on_hand}"
-    )
+    await _log_audit(user, "update", "product_qty", product_id, f"qty={body.quantity_on_hand}")
     return {"ok": True}
 
 
@@ -138,9 +133,7 @@ async def update_product(
             body.location,
         ],
     )
-    await _log_audit(
-        user, "update", "product", body.name, f"min_stock={body.min_stock}"
-    )
+    await _log_audit(user, "update", "product", body.name, f"min_stock={body.min_stock}")
     return {"ok": True}
 
 
@@ -151,9 +144,7 @@ async def update_product(
 async def get_product_adjustments(
     product_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    rows = await _sql(
-        f"SELECT * FROM inventory_adjustment WHERE product_id = '{product_id}'"
-    )
+    rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{product_id}'")
     return {"adjustments": _sort(rows, "created_at")}
 
 
@@ -175,9 +166,7 @@ async def create_adjustment(
             body.user_id,
         ],
     )
-    await _log_audit(
-        user, "create", "adjustment", product_id, f"qty={body.quantity_change}"
-    )
+    await _log_audit(user, "create", "adjustment", product_id, f"qty={body.quantity_change}")
     return {"ok": True}
 
 
@@ -190,8 +179,7 @@ async def list_low_stock(
     low_stock = [
         r
         for r in rows
-        if r.get("min_stock", 0) > 0
-        and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
+        if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
     ]
     return {"products": _sort(low_stock, "name"), "count": len(low_stock)}
 
@@ -216,8 +204,7 @@ async def notify_low_stock(user: dict = Depends(require_role("admin"))):
     low_stock = [
         r
         for r in rows
-        if r.get("min_stock", 0) > 0
-        and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
+        if r.get("min_stock", 0) > 0 and r.get("quantity_on_hand", 0) <= r.get("min_stock", 0)
     ]
     if not low_stock:
         return {"ok": True, "message": "No low stock items found", "count": 0}

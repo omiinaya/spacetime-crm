@@ -33,7 +33,5 @@ class TestScheduledTasksConfig:
         from scheduler import SCHEDULED_TASKS
 
         for name, (func, interval) in SCHEDULED_TASKS.items():
-            assert _asyncio.iscoroutinefunction(func), (
-                f"{name} is not a coroutine function"
-            )
+            assert _asyncio.iscoroutinefunction(func), f"{name} is not a coroutine function"
             assert isinstance(interval, int), f"{name} interval is not an int"

@@ -41,9 +41,7 @@ def test_product_id(test_admin_headers: dict, session_suffix: str) -> str:
     return pid
 
 
-def _create_sale(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_sale(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a counter sale and return its ID.
 
     Uses unique customer_name and STDB SQL lookup for isolation.
@@ -65,9 +63,7 @@ def _create_sale(
     result = _stdb_sql(f"SELECT id FROM counter_sale WHERE customer_name = '{name}'")
     assert len(result) == 1, f"Expected 1 table result for counter sale '{name}'"
     table = result[0]
-    assert table.get("rows") and len(table["rows"]) >= 1, (
-        f"Sale not found for customer '{name}'"
-    )
+    assert table.get("rows") and len(table["rows"]) >= 1, f"Sale not found for customer '{name}'"
     sale_id = table["rows"][0][0]  # id is first (and only) column
     _track_entity("counter_sale", sale_id)
     return sale_id
@@ -95,9 +91,7 @@ class TestPOSCRUD:
         assert_ok(resp)
 
     def test_list_sales(self, test_admin_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/pos/sales", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/pos/sales", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "sales" in data
         assert "total" in data
@@ -122,9 +116,7 @@ class TestPOSCRUD:
         )
         assert resp.status_code in (404, 500)
 
-    def test_delete_sale_admin_only(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_delete_sale_admin_only(self, test_admin_headers: dict, session_suffix: str):
         sale_id = _create_sale(test_admin_headers, session_suffix, "delete")
         resp = httpx.delete(
             f"{SERVER_URL}/api/pos/sales/{sale_id}",
@@ -134,9 +126,7 @@ class TestPOSCRUD:
         assert_ok(resp)
 
     def test_list_receipts(self, test_admin_headers: dict):
-        resp = httpx.get(
-            f"{SERVER_URL}/api/pos/receipts", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/pos/receipts", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "receipts" in data
         assert "total" in data
@@ -145,9 +135,7 @@ class TestPOSCRUD:
 class TestPOSItems:
     """Counter sale line item operations."""
 
-    def test_add_item(
-        self, test_admin_headers: dict, test_product_id: str, session_suffix: str
-    ):
+    def test_add_item(self, test_admin_headers: dict, test_product_id: str, session_suffix: str):
         sale_id = _create_sale(test_admin_headers, session_suffix, "add")
         resp = httpx.post(
             f"{SERVER_URL}/api/pos/items",
@@ -247,9 +235,7 @@ class TestPOSItems:
         assert len(items) == 3
         # Verify sort_order matches insertion order
         for idx, item in enumerate(items):
-            assert item["sort_order"] == idx, (
-                f"Item {idx} has sort_order {item['sort_order']}"
-            )
+            assert item["sort_order"] == idx, f"Item {idx} has sort_order {item['sort_order']}"
 
 
 class TestPOSRefund:
@@ -276,9 +262,7 @@ class TestPOSRefund:
 class TestPOSReceiptPdf:
     """POS receipt PDF generation."""
 
-    def test_receipt_pdf_returns_pdf(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_receipt_pdf_returns_pdf(self, test_admin_headers: dict, session_suffix: str):
         """Getting receipt PDF for a completed sale returns PDF content type."""
         sale_id = _create_sale(test_admin_headers, session_suffix, "pdf")
         resp = httpx.get(

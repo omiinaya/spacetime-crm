@@ -69,9 +69,7 @@ async def record_payment(
     )
     if invoice_id:
         invoices = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
-        payments = await _sql(
-            f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'"
-        )
+        payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
         if invoices:
             inv = invoices[0]
             total_paid = sum(float(p.get("amount", 0)) for p in payments)
@@ -87,9 +85,7 @@ async def record_payment(
                 await _call("update_invoice_status", [invoice_id, new_status])
 
             async def _notify():
-                cust = await _sql(
-                    f"SELECT * FROM customer WHERE id = '{body.customer_id}'"
-                )
+                cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
                 email = _mail_customer_email(cust[0]) if cust else None
                 if email:
                     link = f"{settings.app_url}/portal/"
@@ -98,9 +94,7 @@ async def record_payment(
                     )
                 phone = _sms_customer_phone(cust[0]) if cust else None
                 if phone:
-                    _sms_payment_received(
-                        phone, inv.get("invoice_number", 0), float(body.amount)
-                    )
+                    _sms_payment_received(phone, inv.get("invoice_number", 0), float(body.amount))
 
             asyncio.ensure_future(_notify())
 

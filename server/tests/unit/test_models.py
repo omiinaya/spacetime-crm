@@ -259,15 +259,11 @@ class TestCustomerCreate:
 
     def test_email_max_length(self) -> None:
         with pytest.raises(ValidationError):
-            models.CustomerCreate(
-                first_name="Alice", last_name="Smith", email="x" * 256
-            )
+            models.CustomerCreate(first_name="Alice", last_name="Smith", email="x" * 256)
 
     def test_notes_max_length(self) -> None:
         with pytest.raises(ValidationError):
-            models.CustomerCreate(
-                first_name="Alice", last_name="Smith", notes="x" * 2001
-            )
+            models.CustomerCreate(first_name="Alice", last_name="Smith", notes="x" * 2001)
 
     def test_tags_max_length(self) -> None:
         with pytest.raises(ValidationError):
@@ -333,9 +329,7 @@ class TestTicketCreate:
 
     def test_description_max_length(self) -> None:
         with pytest.raises(ValidationError):
-            models.TicketCreate(
-                customer_id="c-001", title="Fix printer", description="x" * 5001
-            )
+            models.TicketCreate(customer_id="c-001", title="Fix printer", description="x" * 5001)
 
     def test_defaults_applied(self) -> None:
         m = models.TicketCreate(customer_id="c-001", title="Fix")
@@ -477,9 +471,7 @@ class TestInvoiceStatusUpdate:
 
 class TestInvoiceLineItemCreate:
     def test_valid(self) -> None:
-        m = models.InvoiceLineItemCreate(
-            description="Labor charge", quantity=2, unit_price=75.00
-        )
+        m = models.InvoiceLineItemCreate(description="Labor charge", quantity=2, unit_price=75.00)
         assert m.description == "Labor charge"
         assert m.quantity == 2
         assert m.unit_price == 75.00
@@ -522,9 +514,7 @@ class TestInvoiceTaxRateUpdate:
 
 class TestBulkInvoiceStatusUpdate:
     def test_valid(self) -> None:
-        m = models.BulkInvoiceStatusUpdate(
-            invoice_ids=["inv-001", "inv-002"], status="paid"
-        )
+        m = models.BulkInvoiceStatusUpdate(invoice_ids=["inv-001", "inv-002"], status="paid")
         assert m.invoice_ids == ["inv-001", "inv-002"]
         assert m.status == "paid"
 
@@ -571,9 +561,7 @@ class TestBulkInvoiceEdit:
 
 class TestPaymentCreate:
     def test_valid(self) -> None:
-        m = models.PaymentCreate(
-            invoice_id="inv-001", customer_id="c-001", amount=150.00
-        )
+        m = models.PaymentCreate(invoice_id="inv-001", customer_id="c-001", amount=150.00)
         assert m.invoice_id == "inv-001"
         assert m.customer_id == "c-001"
         assert m.amount == 150.00
@@ -794,9 +782,7 @@ class TestRecurringInvoiceRuleCreate:
 
     def test_valid_frequencies(self) -> None:
         for freq in ("daily", "weekly", "biweekly", "monthly", "quarterly", "yearly"):
-            m = models.RecurringInvoiceRuleCreate(
-                customer_id="c-001", name=freq, frequency=freq
-            )
+            m = models.RecurringInvoiceRuleCreate(customer_id="c-001", name=freq, frequency=freq)
             assert m.frequency == freq
 
     def test_interval_count_too_low(self) -> None:
@@ -836,9 +822,7 @@ class TestRecurringInvoiceRuleCreate:
         assert m.line_items[0].description == "Service fee"
 
     def test_defaults_applied(self) -> None:
-        m = models.RecurringInvoiceRuleCreate(
-            customer_id="c-001", name="Rule", frequency="monthly"
-        )
+        m = models.RecurringInvoiceRuleCreate(customer_id="c-001", name="Rule", frequency="monthly")
         assert m.interval_count == 1
         assert m.due_date_days == 30
         assert m.line_items == []
@@ -847,22 +831,16 @@ class TestRecurringInvoiceRuleCreate:
 
 class TestRecurringInvoiceRuleUpdate:
     def test_valid(self) -> None:
-        m = models.RecurringInvoiceRuleUpdate(
-            name="Updated Rule", frequency="quarterly"
-        )
+        m = models.RecurringInvoiceRuleUpdate(name="Updated Rule", frequency="quarterly")
         assert m.status == "active"
 
     def test_invalid_status(self) -> None:
         with pytest.raises(ValidationError, match="status"):
-            models.RecurringInvoiceRuleUpdate(
-                name="Rule", frequency="monthly", status="deleted"
-            )
+            models.RecurringInvoiceRuleUpdate(name="Rule", frequency="monthly", status="deleted")
 
     def test_valid_statuses(self) -> None:
         for status in ("active", "paused", "cancelled"):
-            m = models.RecurringInvoiceRuleUpdate(
-                name="Rule", frequency="monthly", status=status
-            )
+            m = models.RecurringInvoiceRuleUpdate(name="Rule", frequency="monthly", status=status)
             assert m.status == status
 
     def test_missing_name_raises(self) -> None:
@@ -893,9 +871,7 @@ class TestUserCreate:
 
     def test_invalid_role(self) -> None:
         with pytest.raises(ValidationError, match="role"):
-            models.UserCreate(
-                name="Hacker", email="hacker@example.com", role="superadmin"
-            )
+            models.UserCreate(name="Hacker", email="hacker@example.com", role="superadmin")
 
     def test_name_too_short(self) -> None:
         with pytest.raises(ValidationError):
@@ -975,9 +951,7 @@ class TestCustomFieldDefinitionCreate:
 
     def test_invalid_entity_type(self) -> None:
         with pytest.raises(ValidationError, match="entity_type"):
-            models.CustomFieldDefinitionCreate(
-                entity_type="order", label="Bad", field_type="text"
-            )
+            models.CustomFieldDefinitionCreate(entity_type="order", label="Bad", field_type="text")
 
     def test_valid_entity_types(self) -> None:
         for etype in ("customer", "ticket", "invoice", "product"):
@@ -1009,9 +983,7 @@ class TestCustomFieldDefinitionCreate:
 
     def test_label_too_short(self) -> None:
         with pytest.raises(ValidationError):
-            models.CustomFieldDefinitionCreate(
-                entity_type="customer", label="", field_type="text"
-            )
+            models.CustomFieldDefinitionCreate(entity_type="customer", label="", field_type="text")
 
     def test_label_too_long(self) -> None:
         with pytest.raises(ValidationError):
@@ -1250,9 +1222,7 @@ class TestSetDefaultPaymentMethodRequest:
 
 class TestPortalPayWithSavedCard:
     def test_valid(self) -> None:
-        m = models.PortalPayWithSavedCard(
-            invoice_id="inv-001", payment_method_id="pm_123"
-        )
+        m = models.PortalPayWithSavedCard(invoice_id="inv-001", payment_method_id="pm_123")
         assert m.invoice_id == "inv-001"
         assert m.payment_method_id == "pm_123"
 
@@ -1525,15 +1495,11 @@ class TestAppointmentCreate:
 
     def test_start_time_negative(self) -> None:
         with pytest.raises(ValidationError):
-            models.AppointmentCreate(
-                customer_id="c-001", title="Test", start_time=-1, end_time=100
-            )
+            models.AppointmentCreate(customer_id="c-001", title="Test", start_time=-1, end_time=100)
 
     def test_end_time_negative(self) -> None:
         with pytest.raises(ValidationError):
-            models.AppointmentCreate(
-                customer_id="c-001", title="Test", start_time=100, end_time=-1
-            )
+            models.AppointmentCreate(customer_id="c-001", title="Test", start_time=100, end_time=-1)
 
     def test_title_too_long(self) -> None:
         with pytest.raises(ValidationError):
@@ -2146,21 +2112,15 @@ class TestPOSAddItem:
 
     def test_missing_sale_id_raises(self) -> None:
         with pytest.raises(ValidationError):
-            models.POSAddItem(
-                product_id="prod-001", product_name="Cable", quantity=1, unit_price=5
-            )
+            models.POSAddItem(product_id="prod-001", product_name="Cable", quantity=1, unit_price=5)
 
     def test_missing_product_id_raises(self) -> None:
         with pytest.raises(ValidationError):
-            models.POSAddItem(
-                sale_id="sale-001", product_name="Cable", quantity=1, unit_price=5
-            )
+            models.POSAddItem(sale_id="sale-001", product_name="Cable", quantity=1, unit_price=5)
 
     def test_missing_product_name_raises(self) -> None:
         with pytest.raises(ValidationError):
-            models.POSAddItem(
-                sale_id="sale-001", product_id="prod-001", quantity=1, unit_price=5
-            )
+            models.POSAddItem(sale_id="sale-001", product_id="prod-001", quantity=1, unit_price=5)
 
     def test_defaults_applied(self) -> None:
         m = models.POSAddItem(

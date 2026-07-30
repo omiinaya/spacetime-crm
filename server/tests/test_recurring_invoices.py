@@ -12,9 +12,7 @@ from .conftest import (
 )
 
 
-def _customer_id(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _customer_id(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a customer and return ID."""
     suf = suffix or unique_suffix()
     c = create_customer(
@@ -25,9 +23,7 @@ def _customer_id(
     return c.get("id", "")
 
 
-def _create_rule(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_rule(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a recurring invoice rule and return its ID.
 
     Uses unique name and STDB SQL lookup for isolation.
@@ -43,9 +39,7 @@ def _create_rule(
             "frequency": "monthly",
             "interval_count": 1,
             "due_date_days": 30,
-            "line_items": [
-                {"description": "Service fee", "quantity": 1, "unit_price": 99.99}
-            ],
+            "line_items": [{"description": "Service fee", "quantity": 1, "unit_price": 99.99}],
             "next_generation_date": int(__import__("time").time() * 1000) + 86400000,
         },
         headers=test_admin_headers,
@@ -55,9 +49,7 @@ def _create_rule(
     result = _stdb_sql(f"SELECT id FROM recurring_invoice_rules WHERE name = '{name}'")
     assert len(result) == 1, f"Expected 1 table result for recurring rule '{name}'"
     table = result[0]
-    assert table.get("rows") and len(table["rows"]) >= 1, (
-        f"No rule found with name '{name}'"
-    )
+    assert table.get("rows") and len(table["rows"]) >= 1, f"No rule found with name '{name}'"
     rule_id = table["rows"][0][0]  # id is first (and only) column
     _track_entity("recurring_invoice_rule", rule_id)
     return rule_id
@@ -84,17 +76,14 @@ class TestRecurringInvoiceCRUD:
                         "unit_price": 150,
                     }
                 ],
-                "next_generation_date": int(__import__("time").time() * 1000)
-                + 86400000,
+                "next_generation_date": int(__import__("time").time() * 1000) + 86400000,
             },
             headers=test_admin_headers,
             timeout=10,
         )
         assert_ok(resp)
 
-    def test_create_invalid_frequency(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_create_invalid_frequency(self, test_admin_headers: dict, session_suffix: str):
         cid = _customer_id(test_admin_headers, session_suffix, "cr-badfreq")
         resp = httpx.post(
             f"{SERVER_URL}/api/recurring-invoices",
@@ -146,11 +135,8 @@ class TestRecurringInvoiceCRUD:
                 "frequency": "monthly",
                 "interval_count": 2,
                 "due_date_days": 45,
-                "line_items": [
-                    {"description": "Updated service", "quantity": 2, "unit_price": 75}
-                ],
-                "next_generation_date": int(__import__("time").time() * 1000)
-                + 172800000,
+                "line_items": [{"description": "Updated service", "quantity": 2, "unit_price": 75}],
+                "next_generation_date": int(__import__("time").time() * 1000) + 172800000,
                 "status": "active",
             },
             headers=test_admin_headers,
@@ -215,9 +201,7 @@ class TestRecurringInvoiceCRUD:
                 "frequency": "monthly",
                 "interval_count": 1,
                 "due_date_days": 30,
-                "line_items": [
-                    {"description": "Gen service", "quantity": 1, "unit_price": 50}
-                ],
+                "line_items": [{"description": "Gen service", "quantity": 1, "unit_price": 50}],
                 "next_generation_date": now - 1000,  # Past due
             },
             headers=test_admin_headers,

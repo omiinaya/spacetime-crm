@@ -33,9 +33,7 @@ async def list_tax_rates(
 
 
 @router.post("/api/tax-rates")
-async def create_tax_rate(
-    body: TaxRateCreate, user: dict = Depends(require_role("admin"))
-):
+async def create_tax_rate(body: TaxRateCreate, user: dict = Depends(require_role("admin"))):
     await _call(
         "create_tax_rate",
         [

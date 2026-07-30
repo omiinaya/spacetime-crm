@@ -13,9 +13,7 @@ from .conftest import (
 )
 
 
-def _create_field(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> dict:
+def _create_field(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> dict:
     """Create a custom field definition and return full response.
 
     Uses unique_suffix + session_suffix for label to prevent collisions
@@ -191,9 +189,7 @@ class TestCustomFieldValues:
         else:
             assert False, f"Field {field_id} not found in values: {values}"
 
-    def test_set_values_invalid_entity(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_set_values_invalid_entity(self, test_admin_headers: dict, session_suffix: str):
         """Set values on nonexistent entity — should still work (STDB allows it)."""
         entity_id = f"entity-nonexistent-{session_suffix}-{unique_suffix()}"
         data = _create_field(test_admin_headers, session_suffix, "inv")

@@ -58,18 +58,14 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
         json=[uid, hashed],
         timeout=30,
     )
-    assert call_resp.status_code == 200, (
-        f"Failed to set password: {call_resp.text[:200]}"
-    )
+    assert call_resp.status_code == 200, f"Failed to set password: {call_resp.text[:200]}"
 
     yield email, pw, uid
 
     # --- Cleanup ---
     # Delete the test user (regardless of 2FA state)
     try:
-        httpx.delete(
-            f"{SERVER_URL}/api/users/{uid}", headers=test_admin_headers, timeout=10
-        )
+        httpx.delete(f"{SERVER_URL}/api/users/{uid}", headers=test_admin_headers, timeout=10)
     except Exception:
         pass
 

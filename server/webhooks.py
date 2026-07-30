@@ -96,9 +96,7 @@ async def _deliver(
                     "ok": 200 <= status_code < 300,
                     "status_code": status_code,
                     "attempt": attempt,
-                    "error": None
-                    if 200 <= status_code < 300
-                    else f"HTTP {status_code}",
+                    "error": None if 200 <= status_code < 300 else f"HTTP {status_code}",
                 }
             last_error = f"HTTP {status_code}" if status_code else "No response"
         except httpx.TimeoutException:

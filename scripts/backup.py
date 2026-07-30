@@ -11,8 +11,8 @@ Usage:
 Dependencies: httpx (already in project requirements)
 """
 
-import json
 import gzip
+import json
 import sys
 import time
 from datetime import datetime
@@ -71,12 +71,10 @@ def sql_query(client: httpx.Client, query: str) -> list[dict]:
             rows = table_result.get("rows", [])
             schema = table_result.get("schema", {})
             cols = [
-                e["name"]["some"]
-                for e in schema.get("elements", [])
-                if "some" in e.get("name", {})
+                e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})
             ]
             for row in rows:
-                result.append(dict(zip(cols, row)))
+                result.append(dict(zip(cols, row, strict=False)))
     return result
 
 

@@ -53,9 +53,7 @@ class TestFireWebhook:
         subs = [{"id": "wh-1", "active": True}]
 
         with (
-            patch(
-                "helpers._get_webhook_subscriptions", new_callable=AsyncMock
-            ) as mock_get,
+            patch("helpers._get_webhook_subscriptions", new_callable=AsyncMock) as mock_get,
             patch("helpers._fire_webhook_event", new_callable=AsyncMock) as mock_fire,
         ):
             mock_get.return_value = subs
@@ -70,9 +68,7 @@ class TestFireWebhook:
     async def test_skips_if_no_subscriptions(self) -> None:
         """Should not fire_event if no subscriptions found."""
         with (
-            patch(
-                "helpers._get_webhook_subscriptions", new_callable=AsyncMock
-            ) as mock_get,
+            patch("helpers._get_webhook_subscriptions", new_callable=AsyncMock) as mock_get,
             patch("helpers._fire_webhook_event", new_callable=AsyncMock) as mock_fire,
         ):
             mock_get.return_value = []
@@ -87,9 +83,7 @@ class TestFireWebhook:
     async def test_never_raises(self) -> None:
         """Should swallow exceptions gracefully."""
         with (
-            patch(
-                "helpers._get_webhook_subscriptions", new_callable=AsyncMock
-            ) as mock_get,
+            patch("helpers._get_webhook_subscriptions", new_callable=AsyncMock) as mock_get,
         ):
             mock_get.side_effect = RuntimeError("boom")
             from helpers import _fire_webhook

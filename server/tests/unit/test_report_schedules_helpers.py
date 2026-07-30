@@ -10,9 +10,7 @@ from __future__ import annotations
 class TestCalcNextRun:
     """_calc_next_run — next-run timestamp calculations."""
 
-    def _ts(
-        self, year: int, month: int, day: int, hour: int = 0, minute: int = 0
-    ) -> int:
+    def _ts(self, year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> int:
         """Helper: return unix-ms for a naive local datetime
         (matching _calc_next_run's internal use of datetime.fromtimestamp)."""
         from datetime import datetime as dt_mod

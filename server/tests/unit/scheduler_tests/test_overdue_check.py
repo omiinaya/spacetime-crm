@@ -56,9 +56,7 @@ class TestOverdueCheck(BaseSchedulerTest):
         from scheduler import overdue_check
 
         mock_client = MagicMock()
-        mock_client.post = AsyncMock(
-            side_effect=httpx.ConnectError("Connection refused")
-        )
+        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
         mock_http = MagicMock(return_value=mock_client)
         mock_sleep = AsyncMock()
@@ -78,9 +76,7 @@ class TestOverdueCheck(BaseSchedulerTest):
 
         mock_http = MagicMock(return_value=mock_client)
         mock_sleep = AsyncMock()
-        mock_sleep.side_effect = (
-            asyncio.CancelledError()
-        )  # CancelledError on first sleep
+        mock_sleep.side_effect = asyncio.CancelledError()  # CancelledError on first sleep
 
         with patch("scheduler._http", mock_http):
             with patch("scheduler.asyncio.sleep", mock_sleep):

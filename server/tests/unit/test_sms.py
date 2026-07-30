@@ -111,9 +111,7 @@ class TestSettings:
     def test_update_settings_adds_auth_token(self) -> None:
         import sms
 
-        sms.SETTINGS_PATH.write_text(
-            json.dumps({"account_sid": "AC123", "from_number": "+1555"})
-        )
+        sms.SETTINGS_PATH.write_text(json.dumps({"account_sid": "AC123", "from_number": "+1555"}))
         sms.update_settings({"auth_token": "new_token"})
         saved = json.loads(sms.SETTINGS_PATH.read_text())
         assert saved["auth_token"] == "new_token"
@@ -182,8 +180,7 @@ class TestCustomerPhone:
         from sms import _customer_phone
 
         assert (
-            _customer_phone({"mobile": "+15551112222", "phone": "+15553334444"})
-            == "+15551112222"
+            _customer_phone({"mobile": "+15551112222", "phone": "+15553334444"}) == "+15551112222"
         )
 
     def test_falls_back_to_phone(self) -> None:
@@ -440,9 +437,7 @@ class TestSendSms:
             with patch("sms.logger") as mock_logger:
                 await sms.send_sms("+15551234567", "Test body")
 
-        mock_logger.info.assert_called_with(
-            "SMS sent to %s: %.60s", "+15551234567", "Test body"
-        )
+        mock_logger.info.assert_called_with("SMS sent to %s: %.60s", "+15551234567", "Test body")
 
 
 class TestConnection:
@@ -579,9 +574,7 @@ class TestNotifications:
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
             with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
-                sms._notify_ticket_status_change(
-                    "+15551234567", 42, "Broken", "in_progress"
-                )
+                sms._notify_ticket_status_change("+15551234567", 42, "Broken", "in_progress")
             body = mock_send.call_args[0][1]
             assert "Ticket #42" in body
             assert "In Progress" in body
@@ -633,9 +626,7 @@ class TestNotifications:
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
             with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
                 # 1710000000000ms = Sunday, March 10, 2024 12:00:00 AM GMT (approximately)
-                sms._notify_appointment_created(
-                    "+15551234567", "Oil Change", 1710000000000
-                )
+                sms._notify_appointment_created("+15551234567", "Oil Change", 1710000000000)
                 body = mock_send.call_args[0][1]
                 assert "Appointment scheduled" in body
                 assert "Oil Change" in body

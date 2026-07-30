@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Start the CRM test backend and wait for it to be ready."""
 
+import os
 import subprocess
 import sys
 import time
-import os
 import urllib.request
 
 os.chdir("/home/hindsight/spacetime-crm/server")

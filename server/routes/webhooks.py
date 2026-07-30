@@ -42,9 +42,7 @@ async def stripe_webhook(request: Request):
         stripe_session_id = session.get("id", "")
 
         if invoice_id and amount_total > 0:
-            inv_rows = await _sql(
-                f"SELECT tenant_id FROM invoices WHERE id = '{invoice_id}'"
-            )
+            inv_rows = await _sql(f"SELECT tenant_id FROM invoices WHERE id = '{invoice_id}'")
             tid = inv_rows[0]["tenant_id"] if inv_rows else ""
             await _call(
                 "record_payment",
@@ -61,9 +59,7 @@ async def stripe_webhook(request: Request):
             )
 
             # Update invoice status
-            payments = await _sql(
-                f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'"
-            )
+            payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
             invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
             if invs:
                 inv = invs[0]
@@ -143,9 +139,7 @@ async def update_webhook_subscription(
 
 
 @router.delete("/api/webhook-subscriptions/{sub_id}")
-async def delete_webhook_subscription(
-    sub_id: str, user: dict = Depends(require_role("admin"))
-):
+async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a webhook subscription."""
     await _call("delete_webhook_subscription", [sub_id])
     await _log_audit(user, "delete", "webhook_subscription", sub_id)
@@ -153,9 +147,7 @@ async def delete_webhook_subscription(
 
 
 @router.post("/api/webhook-subscriptions/{sub_id}/test")
-async def test_webhook_subscription(
-    sub_id: str, user: dict = Depends(require_role("admin"))
-):
+async def test_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
     """Send a test event to a specific subscription."""
     rows = await _sql(f"SELECT * FROM webhook_subscriptions WHERE id = '{sub_id}'")
     if not rows:

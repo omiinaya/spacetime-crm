@@ -50,9 +50,7 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
     # 3. Email each recipient
     results = {"sent": 0, "failed": 0, "errors": []}
     for recipient in recipients:
-        email_addr = (
-            recipient.get("email", "") if isinstance(recipient, dict) else recipient
-        )
+        email_addr = recipient.get("email", "") if isinstance(recipient, dict) else recipient
         if not email_addr:
             continue
         try:
@@ -77,9 +75,7 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
     return results
 
 
-async def _build_report_data(
-    report_type: str, tenant_id: str, filters: dict
-) -> dict[str, Any]:
+async def _build_report_data(report_type: str, tenant_id: str, filters: dict) -> dict[str, Any]:
     """Fetch and structure report data based on report type and optional filters."""
     if report_type == "revenue":
         rows = await _sql(

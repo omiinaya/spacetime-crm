@@ -145,9 +145,7 @@ class TestCreateCheckoutSession:
                 )
 
         call_kwargs = mock_session_class.create.call_args[1]
-        assert (
-            call_kwargs["line_items"][0]["price_data"]["unit_amount"] == 9999
-        )  # $99.99 in cents
+        assert call_kwargs["line_items"][0]["price_data"]["unit_amount"] == 9999  # $99.99 in cents
         assert call_kwargs["metadata"]["invoice_id"] == "inv-1"
         assert call_kwargs["metadata"]["customer_id"] == "cust-1"
 
@@ -255,9 +253,7 @@ class TestVerifyWebhook:
             "data": {"object": {"id": "pi_456"}},
         }
 
-        with patch.object(
-            stripe_lib.Webhook, "construct_event", return_value=mock_event
-        ):
+        with patch.object(stripe_lib.Webhook, "construct_event", return_value=mock_event):
             from stripe_payments import verify_webhook
 
             result = await verify_webhook(b'{"test": true}', "tsec_abc")
@@ -318,17 +314,13 @@ class TestCreateSetupIntent:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_creates_setup_intent_successfully(
-        self, _configured_settings
-    ) -> None:
+    async def test_creates_setup_intent_successfully(self, _configured_settings) -> None:
         """Should return client_secret and id on success."""
         mock_intent = MagicMock()
         mock_intent.client_secret = "seti_1_secret_abc"
         mock_intent.id = "seti_1"
 
-        with patch(
-            "stripe_payments.stripe_lib.SetupIntent.create", return_value=mock_intent
-        ):
+        with patch("stripe_payments.stripe_lib.SetupIntent.create", return_value=mock_intent):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_setup_intent
 
@@ -391,17 +383,13 @@ class TestCreatePaymentIntent:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_creates_payment_intent_successfully(
-        self, _configured_settings
-    ) -> None:
+    async def test_creates_payment_intent_successfully(self, _configured_settings) -> None:
         """Should return payment_intent_id and status on success."""
         mock_intent = MagicMock()
         mock_intent.id = "pi_abc123"
         mock_intent.status = "succeeded"
 
-        with patch(
-            "stripe_payments.stripe_lib.PaymentIntent.create", return_value=mock_intent
-        ):
+        with patch("stripe_payments.stripe_lib.PaymentIntent.create", return_value=mock_intent):
             with patch("stripe_payments.logger"):
                 from stripe_payments import create_payment_intent
 

@@ -22,9 +22,7 @@ from .conftest import SERVER_URL, assert_ok, assert_unauthorized
 def get_openapi_schema() -> dict:
     """Fetch the auto-generated OpenAPI spec from the running server."""
     resp = httpx.get(f"{SERVER_URL}/openapi.json", timeout=10)
-    assert resp.status_code == 200, (
-        f"Failed to fetch OpenAPI schema: {resp.status_code}"
-    )
+    assert resp.status_code == 200, f"Failed to fetch OpenAPI schema: {resp.status_code}"
     return resp.json()
 
 
@@ -304,9 +302,7 @@ class TestCORSContract:
                 "Access-Control-Request-Method": "GET",
             },
         )
-        assert resp.status_code in (200, 204), (
-            f"CORS preflight failed: {resp.status_code}"
-        )
+        assert resp.status_code in (200, 204), f"CORS preflight failed: {resp.status_code}"
 
     def test_cors_allows_all_methods(self, client: httpx.Client):
         """OPTIONS returns permissive Access-Control-Allow-Methods."""
@@ -374,9 +370,7 @@ class TestSchemaCoverage:
             if method.lower() not in schema_paths[path]:
                 missing.append(f"{method} {path} (method not documented)")
         if missing:
-            pytest.fail(
-                "Routes missing from OpenAPI spec:\n  " + "\n  ".join(missing[:20])
-            )
+            pytest.fail("Routes missing from OpenAPI spec:\n  " + "\n  ".join(missing[:20]))
 
     def test_no_orphan_schema_paths(self):
         """Every OpenAPI path (except SPA fallback) has a corresponding route handler."""
@@ -416,9 +410,7 @@ class TestSchemaCoverage:
             if path not in registered:
                 orphan.append(path)
         if orphan:
-            pytest.fail(
-                "OpenAPI paths without route handlers:\n  " + "\n  ".join(orphan[:20])
-            )
+            pytest.fail("OpenAPI paths without route handlers:\n  " + "\n  ".join(orphan[:20]))
 
 
 # ── Tests: Request Body Contract ────────────────────────────────

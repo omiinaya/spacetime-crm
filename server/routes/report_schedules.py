@@ -44,9 +44,7 @@ async def list_schedules(
 
 
 @router.post("/api/report-schedules")
-async def create_schedule(
-    body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))
-):
+async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))):
     """Create a new scheduled report."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     next_run_at = _calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
@@ -59,11 +57,7 @@ async def create_schedule(
             body.report_type,
             body.schedule_frequency,
             json.dumps(body.schedule_config),
-            json.dumps(
-                body.recipients
-                if isinstance(body.recipients, list)
-                else [body.recipients]
-            ),
+            json.dumps(body.recipients if isinstance(body.recipients, list) else [body.recipients]),
             json.dumps(body.filters),
             next_run_at,
         ],
@@ -98,9 +92,7 @@ async def update_schedule(
     recipients_raw = body.recipients
     filters = body.filters
 
-    recipients = (
-        recipients_raw if isinstance(recipients_raw, list) else [recipients_raw]
-    )
+    recipients = recipients_raw if isinstance(recipients_raw, list) else [recipients_raw]
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     next_run_at = _calc_next_run(schedule_frequency, schedule_config, now_ms)
 
@@ -123,9 +115,7 @@ async def update_schedule(
 
 
 @router.delete("/api/report-schedules/{schedule_id}")
-async def delete_schedule(
-    schedule_id: str, user: dict = Depends(require_role("admin"))
-):
+async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a scheduled report."""
     _safe_id(schedule_id)
     await _call("delete_scheduled_report", [schedule_id])
@@ -137,14 +127,10 @@ async def delete_schedule(
 
 
 @router.post("/api/report-schedules/{schedule_id}/run-now")
-async def run_schedule_now(
-    schedule_id: str, user: dict = Depends(require_role("admin", "tech"))
-):
+async def run_schedule_now(schedule_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Generate and deliver a scheduled report immediately."""
     _safe_id(schedule_id)
-    schedules = await _sql(
-        f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'"
-    )
+    schedules = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
     if not schedules:
         raise HTTPException(404, "Schedule not found")
 
@@ -157,15 +143,11 @@ async def check_due_schedules(user: dict = Depends(require_role("admin"))):
     """Find all enabled schedules past their next_run_at. Call from cron."""
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     all_rows = await _sql_t("SELECT * FROM scheduled_reports", user["tenant_id"])
-    rows = [
-        r for r in all_rows if r.get("enabled") and r.get("next_run_at", 0) <= now_ms
-    ]
+    rows = [r for r in all_rows if r.get("enabled") and r.get("next_run_at", 0) <= now_ms]
     results = []
     for schedule in rows:
         result = await _generate_and_deliver(schedule, user)
-        results.append(
-            {"id": schedule["id"], "name": schedule["name"], "result": result}
-        )
+        results.append({"id": schedule["id"], "name": schedule["name"], "result": result})
     return {"processed": len(results), "results": results}
 
 
@@ -184,9 +166,7 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
         report_data = await _build_report_data(report_type, tenant_id, filters)
 
         # 2. Render HTML email
-        html = _render_report_email(
-            report_type, schedule.get("name", "Report"), report_data
-        )
+        html = _render_report_email(report_type, schedule.get("name", "Report"), report_data)
 
         # 3. Send to each recipient
         sent_count = 0
@@ -247,9 +227,7 @@ def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
         next_dt += timedelta(days=days_ahead)
     elif frequency == "monthly":
         day_of_month = min(config.get("day_of_month", 1), 28)
-        next_dt = dt.replace(
-            day=day_of_month, hour=hour, minute=minute, second=0, microsecond=0
-        )
+        next_dt = dt.replace(day=day_of_month, hour=hour, minute=minute, second=0, microsecond=0)
         if next_dt <= dt:
             if next_dt.month == 12:
                 next_dt = next_dt.replace(year=next_dt.year + 1, month=1)
@@ -261,9 +239,7 @@ def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
     return int(next_dt.timestamp() * 1000)
 
 
-async def _build_report_data(
-    report_type: str, tenant_id: str, filters: dict
-) -> dict[str, Any]:
+async def _build_report_data(report_type: str, tenant_id: str, filters: dict) -> dict[str, Any]:
     """Query STDB and build report data for a given report type."""
     now = datetime.utcnow()
 
@@ -288,14 +264,10 @@ async def _build_report_data(
                 for p in payments
                 if ms_ts <= p.get("created_at", 0) < ms_end_ts
             )
-            revenue_by_month.append(
-                {"label": ms.strftime("%b %y"), "value": round(month_rev, 2)}
-            )
+            revenue_by_month.append({"label": ms.strftime("%b %y"), "value": round(month_rev, 2)})
 
         total_paid = sum(float(p.get("amount", 0)) for p in payments)
-        total_sent = sum(
-            1 for inv in invoices if inv.get("status") not in ("draft", "cancelled")
-        )
+        total_sent = sum(1 for inv in invoices if inv.get("status") not in ("draft", "cancelled"))
         total_paid_count = sum(1 for inv in invoices if inv.get("status") == "paid")
         outstanding = sum(
             float(inv.get("total", 0))
@@ -326,32 +298,21 @@ async def _build_report_data(
             s = t.get("status", "unknown")
             status_counts[s] = status_counts.get(s, 0) + 1
         ticket_by_status = [
-            {"label": s.capitalize(), "value": c}
-            for s, c in sorted(status_counts.items())
+            {"label": s.capitalize(), "value": c} for s, c in sorted(status_counts.items())
         ]
 
-        open_count = sum(
-            1 for t in tickets if t.get("status") not in ("resolved", "closed")
-        )
-        resolved_count = sum(
-            1 for t in tickets if t.get("status") in ("resolved", "closed")
-        )
+        open_count = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
+        resolved_count = sum(1 for t in tickets if t.get("status") in ("resolved", "closed"))
         total_tickets = len(tickets)
 
         resolution_times = []
         for t in tickets:
             created = t.get("created_at", 0)
             updated = t.get("updated_at", 0)
-            if (
-                created
-                and updated > created
-                and t.get("status") in ("resolved", "closed")
-            ):
+            if created and updated > created and t.get("status") in ("resolved", "closed"):
                 resolution_times.append((updated - created) / (1000 * 3600))
         avg_resolution = (
-            round(sum(resolution_times) / len(resolution_times), 1)
-            if resolution_times
-            else 0
+            round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else 0
         )
 
         # Tech productivity
@@ -414,8 +375,7 @@ async def _build_report_data(
                 total_rev += float(inv.get("total", 0))
 
         inv_by_status = [
-            {"label": s.capitalize(), "value": c}
-            for s, c in sorted(status_counts.items())
+            {"label": s.capitalize(), "value": c} for s, c in sorted(status_counts.items())
         ]
         outstanding = sum(
             float(inv.get("total", 0))
@@ -437,11 +397,7 @@ async def _build_report_data(
             ):
                 overdue_count += 1
                 total_sent_inv += 1
-        overdue_rate = (
-            round((overdue_count / total_sent_inv * 100), 1)
-            if total_sent_inv > 0
-            else 0
-        )
+        overdue_rate = round((overdue_count / total_sent_inv * 100), 1) if total_sent_inv > 0 else 0
 
         return {
             "title": "Invoice Report",
@@ -471,9 +427,7 @@ async def _build_report_data(
                 {
                     "label": ms.strftime("%b %y"),
                     "value": sum(
-                        1
-                        for a in appointments
-                        if ms_ts <= a.get("start_time", 0) < ms_end_ts
+                        1 for a in appointments if ms_ts <= a.get("start_time", 0) < ms_end_ts
                     ),
                 }
             )
@@ -513,11 +467,7 @@ async def _build_report_data(
                 tech_data_map[uid]["resolved"] += 1
             created = t.get("created_at", 0)
             updated = t.get("updated_at", 0)
-            if (
-                created
-                and updated > created
-                and t.get("status") in ("resolved", "closed")
-            ):
+            if created and updated > created and t.get("status") in ("resolved", "closed"):
                 tech_data_map[uid]["hours"] += (updated - created) / (1000 * 3600)
 
         tech_data = [
@@ -555,9 +505,7 @@ async def _build_report_data(
         for inv in invoices:
             cid = inv.get("customer_id", "")
             if inv.get("status") == "paid":
-                customer_revenue[cid] = customer_revenue.get(cid, 0) + float(
-                    inv.get("total", 0)
-                )
+                customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
 
         top_customers = [
             {
@@ -574,9 +522,7 @@ async def _build_report_data(
                 {"label": "Total Customers", "value": str(len(customers))},
                 {
                     "label": "Active (with invoices)",
-                    "value": str(
-                        len(set(inv.get("customer_id", "") for inv in invoices))
-                    ),
+                    "value": str(len(set(inv.get("customer_id", "") for inv in invoices))),
                 },
                 {
                     "label": "Avg Revenue/Customer",
@@ -609,7 +555,9 @@ def _render_report_email(report_type: str, name: str, data: dict) -> str:
             f"{c['value']}</div></div></div>"
             for c in data["chart"]
         )
-        chart_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart_label", "")}</h3>{bars}'
+        chart_html = (
+            f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart_label", "")}</h3>{bars}'
+        )
 
     chart2_html = ""
     if data.get("chart2"):
@@ -622,7 +570,9 @@ def _render_report_email(report_type: str, name: str, data: dict) -> str:
             f"{c['value']}</div></div></div>"
             for c in data["chart2"]
         )
-        chart2_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart2_label", "")}</h3>{bars2}'
+        chart2_html = (
+            f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart2_label", "")}</h3>{bars2}'
+        )
 
     extra_html = ""
     if data.get("chart2"):

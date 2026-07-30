@@ -75,9 +75,7 @@ async def _sql(query: str) -> list[dict[str, Any]]:
             rows = table_result.get("rows", [])
             schema = table_result.get("schema", {})
             cols = [
-                e["name"]["some"]
-                for e in schema.get("elements", [])
-                if "some" in e.get("name", {})
+                e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})
             ]
             for row in rows:
                 result.append(dict(zip(cols, row, strict=False)))
@@ -180,9 +178,7 @@ def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
     return sorted(rows, key=sort_key, reverse=desc)
 
 
-async def _log_audit(
-    user: dict, action: str, entity: str, entity_id: str, details: str = ""
-):
+async def _log_audit(user: dict, action: str, entity: str, entity_id: str, details: str = ""):
     """Record an audit log entry. Fire-and-forget — never raises."""
     try:
         await _call(

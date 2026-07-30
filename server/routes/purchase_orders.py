@@ -59,9 +59,7 @@ async def create_purchase_order(
 
 
 @router.delete("/api/purchase-orders/{po_id}")
-async def delete_purchase_order(
-    po_id: str, user: dict = Depends(require_role("admin"))
-):
+async def delete_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
     await _call("delete_purchase_order", [po_id])
     await _log_audit(user, "delete", "purchase_order", po_id)
     return {"ok": True}
@@ -81,9 +79,7 @@ async def get_purchase_order(
     po["line_items"] = _sort(items, "description", desc=False)
     total_qty = sum(float(i.get("quantity", 0)) for i in items)
     total_received = sum(float(i.get("received_quantity", 0)) for i in items)
-    po["receipt_progress"] = round(
-        (total_received / total_qty * 100) if total_qty > 0 else 0, 1
-    )
+    po["receipt_progress"] = round((total_received / total_qty * 100) if total_qty > 0 else 0, 1)
     return {"purchase_order": po}
 
 
@@ -123,9 +119,7 @@ async def update_po_status(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     await _call("update_po_status", [po_id, body.status])
-    await _log_audit(
-        user, "update_status", "purchase_order", po_id, f"status={body.status}"
-    )
+    await _log_audit(user, "update_status", "purchase_order", po_id, f"status={body.status}")
     return {"ok": True}
 
 
@@ -161,16 +155,12 @@ async def approve_purchase_order(
 ):
     """Approve a pending PO."""
     await _call("approve_po", [po_id, body.user_id])
-    await _log_audit(
-        user, "approve", "purchase_order", po_id, f"approver={body.user_id}"
-    )
+    await _log_audit(user, "approve", "purchase_order", po_id, f"approver={body.user_id}")
     return {"ok": True}
 
 
 @router.post("/api/purchase-orders/{po_id}/reject")
-async def reject_purchase_order(
-    po_id: str, user: dict = Depends(require_role("admin"))
-):
+async def reject_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
     """Reject a pending PO, sending it back to draft."""
     await _call("reject_po", [po_id])
     await _log_audit(user, "reject", "purchase_order", po_id)

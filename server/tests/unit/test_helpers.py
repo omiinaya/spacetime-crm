@@ -303,9 +303,7 @@ class TestPaginatedEdgeCases:
     @pytest.mark.asyncio
     async def test_max_fetch_zero_fetches_all(self) -> None:
         """When max_fetch=0 (falsy), should fetch all rows."""
-        mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 6)
-        ]
+        mock_rows = [{"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 6)]
 
         async def fake_sql(query: str) -> list[dict]:
             if "count(*)" in query:
@@ -316,9 +314,7 @@ class TestPaginatedEdgeCases:
             mock_sql.side_effect = fake_sql
             from helpers import _paginated
 
-            rows, total = await _paginated(
-                tenant_id="t-1", table="invoice", max_fetch=0, limit=10
-            )
+            rows, total = await _paginated(tenant_id="t-1", table="invoice", max_fetch=0, limit=10)
 
         assert total == 5
         assert len(rows) == 5
@@ -326,9 +322,7 @@ class TestPaginatedEdgeCases:
     @pytest.mark.asyncio
     async def test_max_fetch_limits_fetch(self) -> None:
         """When max_fetch < total, should only fetch max_fetch rows."""
-        mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 11)
-        ]
+        mock_rows = [{"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 11)]
 
         async def fake_sql(query: str) -> list[dict]:
             if "count(*)" in query:
@@ -340,9 +334,7 @@ class TestPaginatedEdgeCases:
             mock_sql.side_effect = fake_sql
             from helpers import _paginated
 
-            rows, total = await _paginated(
-                tenant_id="t-1", table="invoice", max_fetch=3, limit=10
-            )
+            rows, total = await _paginated(tenant_id="t-1", table="invoice", max_fetch=3, limit=10)
 
         assert total == 10
         assert len(rows) == 3
@@ -362,9 +354,7 @@ class TestPaginatedEdgeCases:
     @pytest.mark.asyncio
     async def test_ascending_order(self) -> None:
         """Should sort ascending when order_desc=False."""
-        mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 6)
-        ]
+        mock_rows = [{"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 6)]
 
         async def fake_sql(query: str) -> list[dict]:
             if "count(*)" in query:
@@ -387,9 +377,7 @@ class TestPaginatedEdgeCases:
     @pytest.mark.asyncio
     async def test_offset_beyond_total(self) -> None:
         """Offset beyond total should return empty list."""
-        mock_rows = [
-            {"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 4)
-        ]
+        mock_rows = [{"id": f"r-{i}", "created_at": f"2025-01-0{i}"} for i in range(1, 4)]
 
         async def fake_sql(query: str) -> list[dict]:
             if "count(*)" in query:
@@ -400,9 +388,7 @@ class TestPaginatedEdgeCases:
             mock_sql.side_effect = fake_sql
             from helpers import _paginated
 
-            rows, total = await _paginated(
-                tenant_id="t-1", table="invoice", offset=10, limit=5
-            )
+            rows, total = await _paginated(tenant_id="t-1", table="invoice", offset=10, limit=5)
 
         assert total == 3
         assert rows == []

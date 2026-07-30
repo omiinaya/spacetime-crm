@@ -84,9 +84,7 @@ class TestSql:
         mock_client = MagicMock()
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = [
-            {"rows": [["v1"]], "schema": {"elements": [{"name": {}}]}}
-        ]
+        mock_resp.json.return_value = [{"rows": [["v1"]], "schema": {"elements": [{"name": {}}]}}]
         mock_client.post = AsyncMock(return_value=mock_resp)
 
         with patch("helpers.get_http_client", return_value=mock_client):
@@ -162,9 +160,7 @@ class TestSqlT:
 
             await _sql_t("SELECT * FROM invoice", "t-001")
 
-        mock_sql.assert_called_once_with(
-            "SELECT * FROM invoice WHERE tenant_id = 't-001'"
-        )
+        mock_sql.assert_called_once_with("SELECT * FROM invoice WHERE tenant_id = 't-001'")
 
     @pytest.mark.asyncio
     async def test_adds_and_where_to_query_with_where(self) -> None:
@@ -203,13 +199,10 @@ class TestSqlT:
             mock_sql.return_value = []
             from helpers import _sql_t
 
-            await _sql_t(
-                "SELECT * FROM invoice WHERE status = 'paid' LIMIT 10", "t-001"
-            )
+            await _sql_t("SELECT * FROM invoice WHERE status = 'paid' LIMIT 10", "t-001")
 
         mock_sql.assert_called_once_with(
-            "SELECT * FROM invoice WHERE status = 'paid'"
-            " AND tenant_id = 't-001' LIMIT 10"
+            "SELECT * FROM invoice WHERE status = 'paid' AND tenant_id = 't-001' LIMIT 10"
         )
 
     @pytest.mark.asyncio
@@ -234,9 +227,7 @@ class TestSqlT:
 
             await _sql_t("SELECT * FROM invoice LIMIT 5", "t-001")
 
-        mock_sql.assert_called_once_with(
-            "SELECT * FROM invoice WHERE tenant_id = 't-001' LIMIT 5"
-        )
+        mock_sql.assert_called_once_with("SELECT * FROM invoice WHERE tenant_id = 't-001' LIMIT 5")
 
     @pytest.mark.asyncio
     async def test_inserts_before_group_by(self) -> None:
@@ -245,13 +236,10 @@ class TestSqlT:
             mock_sql.return_value = []
             from helpers import _sql_t
 
-            await _sql_t(
-                "SELECT status, count(*) FROM invoice GROUP BY status", "t-001"
-            )
+            await _sql_t("SELECT status, count(*) FROM invoice GROUP BY status", "t-001")
 
         mock_sql.assert_called_once_with(
-            "SELECT status, count(*) FROM invoice"
-            " WHERE tenant_id = 't-001' GROUP BY status"
+            "SELECT status, count(*) FROM invoice WHERE tenant_id = 't-001' GROUP BY status"
         )
 
     @pytest.mark.asyncio
@@ -262,8 +250,7 @@ class TestSqlT:
             from helpers import _sql_t
 
             await _sql_t(
-                "SELECT status, count(*) AS cnt FROM invoice"
-                " GROUP BY status HAVING cnt > 1",
+                "SELECT status, count(*) AS cnt FROM invoice GROUP BY status HAVING cnt > 1",
                 "t-001",
             )
 
@@ -281,9 +268,7 @@ class TestSqlT:
 
             await _sql_t("SELECT * FROM invoice;", "t-001")
 
-        mock_sql.assert_called_once_with(
-            "SELECT * FROM invoice WHERE tenant_id = 't-001'"
-        )
+        mock_sql.assert_called_once_with("SELECT * FROM invoice WHERE tenant_id = 't-001'")
 
     @pytest.mark.asyncio
     async def test_multiple_markers_order_by_limit(self) -> None:
@@ -292,13 +277,10 @@ class TestSqlT:
             mock_sql.return_value = []
             from helpers import _sql_t
 
-            await _sql_t(
-                "SELECT * FROM invoice ORDER BY created_at DESC LIMIT 10", "t-001"
-            )
+            await _sql_t("SELECT * FROM invoice ORDER BY created_at DESC LIMIT 10", "t-001")
 
         mock_sql.assert_called_once_with(
-            "SELECT * FROM invoice"
-            " WHERE tenant_id = 't-001' ORDER BY created_at DESC LIMIT 10"
+            "SELECT * FROM invoice WHERE tenant_id = 't-001' ORDER BY created_at DESC LIMIT 10"
         )
 
     @pytest.mark.asyncio
@@ -364,9 +346,7 @@ class TestPaginated:
     async def test_with_extra_condition(self) -> None:
         """Should include extra WHERE conditions."""
         with patch("helpers._sql", new_callable=AsyncMock) as mock_sql:
-            mock_sql.side_effect = lambda q: (
-                [{"cnt": 1}] if "count(*)" in q else [{"id": "r-1"}]
-            )
+            mock_sql.side_effect = lambda q: [{"cnt": 1}] if "count(*)" in q else [{"id": "r-1"}]
             from helpers import _paginated
 
             rows, total = await _paginated(
@@ -390,9 +370,7 @@ class TestPaginated:
         ]
 
         with patch("helpers._sql", new_callable=AsyncMock) as mock_sql:
-            mock_sql.side_effect = lambda q: (
-                [{"cnt": 1}] if "count(*)" in q else mock_rows
-            )
+            mock_sql.side_effect = lambda q: [{"cnt": 1}] if "count(*)" in q else mock_rows
             from helpers import _paginated
 
             rows, total = await _paginated(

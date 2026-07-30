@@ -118,9 +118,7 @@ class TestHtmlToPdf:
 
             pdf_bytes = await html_to_pdf(complex_html)
         assert isinstance(pdf_bytes, bytes)
-        mock_page.set_content.assert_awaited_once_with(
-            complex_html, wait_until="networkidle"
-        )
+        mock_page.set_content.assert_awaited_once_with(complex_html, wait_until="networkidle")
 
     @pytest.mark.asyncio
     async def test_browser_closed_after_pdf(self, _mock_playwright) -> None:

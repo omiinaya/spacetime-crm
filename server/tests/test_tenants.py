@@ -15,9 +15,7 @@ class TestTenants:
 
     def test_list_tenants(self, test_admin_headers: dict):
         """Admin can list all tenants."""
-        resp = httpx.get(
-            f"{SERVER_URL}/api/tenants", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/tenants", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "tenants" in data
         assert len(data["tenants"]) >= 1  # At least the default tenant
@@ -25,9 +23,7 @@ class TestTenants:
     def test_get_tenant(self, test_admin_headers: dict, test_tenant_id: str):
         """Admin can fetch a specific tenant."""
         tid = test_tenant_id
-        resp = httpx.get(
-            f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "tenant" in data
         assert data["tenant"]["id"] == tid
@@ -49,18 +45,14 @@ class TestTenants:
     ):
         """Tenant members list includes admin."""
         tid = test_tenant_id
-        resp = httpx.get(
-            f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/tenants/{tid}", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         tenant = data["tenant"]
         assert "members" in tenant
         member_names = [m["username"] for m in tenant["members"]]
         # The isolated tenant admin username follows the pattern test-admin-{tenant_slug}
         expected_username = f"test-admin-{test_tenant_slug}"
-        assert expected_username in member_names, (
-            f"Admin {expected_username} not in {member_names}"
-        )
+        assert expected_username in member_names, f"Admin {expected_username} not in {member_names}"
 
     def test_unauthenticated_tenant_access(self, client: httpx.Client):
         """Unauthenticated requests to tenant endpoints fail."""

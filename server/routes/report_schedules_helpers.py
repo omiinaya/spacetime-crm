@@ -27,9 +27,7 @@ def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
         next_dt += timedelta(days=days_ahead)
     elif frequency == "monthly":
         day_of_month = min(config.get("day_of_month", 1), 28)
-        next_dt = dt.replace(
-            day=day_of_month, hour=hour, minute=minute, second=0, microsecond=0
-        )
+        next_dt = dt.replace(day=day_of_month, hour=hour, minute=minute, second=0, microsecond=0)
         if next_dt <= dt:
             if next_dt.month == 12:
                 next_dt = next_dt.replace(year=next_dt.year + 1, month=1)
@@ -48,9 +46,7 @@ def _render_report_email(report_type: str, name: str, data: dict) -> str:
         rows_html += "<tr>"
         for cell in r:
             val = str(cell) if cell is not None else ""
-            rows_html += (
-                f"<td style='padding:6px 10px;border-bottom:1px solid #eee'>{val}</td>"
-            )
+            rows_html += f"<td style='padding:6px 10px;border-bottom:1px solid #eee'>{val}</td>"
         rows_html += "</tr>"
 
     summary_html = ""

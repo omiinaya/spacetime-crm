@@ -11,9 +11,7 @@ from .conftest import (
 )
 
 
-def _create_webhook(
-    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
-) -> str:
+def _create_webhook(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a webhook subscription and return its ID.
 
     Uses a unique URL and STDB SQL lookup for test isolation.
@@ -36,9 +34,7 @@ def _create_webhook(
     result = _stdb_sql(f"SELECT id FROM webhook_subscriptions WHERE url = '{url}'")
     assert len(result) == 1, f"Expected 1 table result for webhook '{url}'"
     table = result[0]
-    assert table.get("rows") and len(table["rows"]) >= 1, (
-        f"No webhook found with URL '{url}'"
-    )
+    assert table.get("rows") and len(table["rows"]) >= 1, f"No webhook found with URL '{url}'"
     wid = table["rows"][0][0]  # id is first (and only) column
     _track_entity("webhook_subscription", wid)
     return wid

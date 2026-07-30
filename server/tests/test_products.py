@@ -47,16 +47,12 @@ class TestProductCRUD:
 
     def test_list_products(self, test_admin_headers: dict):
         """List products returns paginated results."""
-        resp = httpx.get(
-            f"{SERVER_URL}/api/products", headers=test_admin_headers, timeout=10
-        )
+        resp = httpx.get(f"{SERVER_URL}/api/products", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)
         assert "products" in data
         assert "total" in data
 
-    def test_update_product_quantity(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_update_product_quantity(self, test_admin_headers: dict, session_suffix: str):
         """Update product quantity."""
         # Create product first
         sku = _unique_sku(f"QTY-{session_suffix}")
