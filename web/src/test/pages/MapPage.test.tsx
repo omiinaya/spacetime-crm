@@ -16,7 +16,9 @@ vi.mock("react-leaflet", () => ({
 		<div data-testid="map">{children}</div>
 	),
 	TileLayer: () => null,
-	Marker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+	Marker: ({ children }: { children: React.ReactNode }) => (
+		<div>{children}</div>
+	),
 	Popup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 	useMap: () => ({ fitBounds: vi.fn() }),
 }));
@@ -69,6 +71,7 @@ const locations = [
 
 beforeEach(() => {
 	mock.reset();
+	localStorage.clear();
 });
 
 describe("MapPage", () => {

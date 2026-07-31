@@ -31,6 +31,7 @@ import {
 	Repeat,
 	Gift,
 	Send,
+	WifiOff,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 import { api, DashboardStats } from "./lib/api";
@@ -40,6 +41,7 @@ import { Button } from "./components/ui/button";
 import { AuthProvider, useAuth, hasRole } from "./lib/auth";
 import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
 import { useTheme } from "./lib/theme";
+import { useNetworkStatus } from "./lib/useNetworkStatus";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { QueryProvider } from "./lib/query-client";
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -243,18 +245,27 @@ function AppShell() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const { theme, toggleTheme } = useTheme();
+	const online = useNetworkStatus();
 
 	useEffect(() => {
 		if (user) {
 			api.stats
 				.get()
 				.then(setStats)
-				.catch(() => toast.error("Failed to load dashboard stats", { id: "dashboard-stats" }));
+				.catch(() =>
+					toast.error("Failed to load dashboard stats", {
+						id: "dashboard-stats",
+					}),
+				);
 			const interval = setInterval(() => {
 				api.stats
 					.get()
 					.then(setStats)
-					.catch(() => toast.error("Failed to refresh dashboard stats", { id: "dashboard-stats-refresh" }));
+					.catch(() =>
+						toast.error("Failed to refresh dashboard stats", {
+							id: "dashboard-stats-refresh",
+						}),
+					);
 			}, 60_000);
 			return () => clearInterval(interval);
 		}
@@ -469,6 +480,18 @@ function AppShell() {
 
 				{/* Page content */}
 				<div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+					{!online && (
+						<div
+							role="status"
+							className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-500/10 border border-amber-300/60 dark:border-amber-500/30 rounded-md px-3 py-2"
+						>
+							<WifiOff className="h-3.5 w-3.5 shrink-0" />
+							<span>
+								You're offline — showing cached data. Changes will be
+								saved when your connection returns.
+							</span>
+						</div>
+					)}
 					{renderPage()}
 				</div>
 			</main>

@@ -16,6 +16,7 @@ const mock = mockFetch();
 
 beforeEach(() => {
 	mock.reset();
+	localStorage.clear();
 });
 
 afterEach(() => {

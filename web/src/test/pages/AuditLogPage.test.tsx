@@ -54,6 +54,7 @@ const entries = [
 
 beforeEach(() => {
 	mock.reset();
+	localStorage.clear();
 });
 
 describe("AuditLogPage", () => {

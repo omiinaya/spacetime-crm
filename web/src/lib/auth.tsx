@@ -5,6 +5,7 @@ import {
 	useEffect,
 	ReactNode,
 } from "react";
+import { clearApiCache } from "./api/client";
 
 const API_BASE = "/api";
 
@@ -180,6 +181,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	const logout = () => {
 		clearToken();
+		// Drop cached API responses so the next user never sees prior data.
+		clearApiCache();
 		setToken(null);
 		setUser(null);
 		setPending2FA(null);

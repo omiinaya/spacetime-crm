@@ -62,6 +62,7 @@ const tenantDetail = {
 
 beforeEach(() => {
 	mock.reset();
+	localStorage.clear();
 });
 
 describe("TenantsPage", () => {
