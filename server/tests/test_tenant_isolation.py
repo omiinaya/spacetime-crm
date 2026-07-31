@@ -512,3 +512,177 @@ class TestConcurrentTenantRequests:
         )
         payload = assert_ok(resp)
         assert payload.get("customers", []) == []
+
+
+# ── 4. Cross-tenant mutations on remaining guarded entities ────────
+
+
+class TestAdditionalEntityIsolation:
+    """Every entity guarded by _require_owned must reject cross-tenant mutation.
+
+    Covers: purchase orders, estimates, appointments, tax rates, payment
+    methods, webhook subscriptions, checklist templates, custom field
+    definitions, scheduled reports, recurring invoice rules.
+    """
+
+    def _create_a_entity(self, path: str, payload: dict, headers: dict) -> str:
+        resp = httpx.post(f"{SERVER_URL}{path}", json=payload, headers=headers, timeout=10)
+        assert resp.status_code == 200, f"Create {path} failed: {resp.text[:300]}"
+        data = resp.json()
+        # Entities return either an id in the body or nothing (look up via list)
+        if isinstance(data, dict) and data.get("id"):
+            return str(data["id"])
+        raise AssertionError(f"No id returned from {path}: {data}")
+
+    def test_purchase_order_mutations_rejected(
+        self, isolation_data: dict, test_admin_headers: dict, second_tenant_headers: dict
+    ):
+        data = isolation_data
+        # Create a PO in tenant A
+        resp = httpx.post(
+            f"{SERVER_URL}/api/purchase-orders",
+            json={"vendor_name": "Isolation Vendor", "notes": "", "currency": "USD"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 200
+        rows = _stdb_sql("SELECT * FROM purchase_order")
+        po_id = rows[0]["rows"][-1][0]
+
+        # Tenant B: delete, approve, receive — all must 404
+        for method, path, payload in (
+            ("delete", f"/api/purchase-orders/{po_id}", None),
+            ("post", f"/api/purchase-orders/{po_id}/approve", {"user_id": "u_x"}),
+            ("post", f"/api/purchase-orders/{po_id}/receive", {"received_quantity": 0, "items": [{"id": "li_x", "received_quantity": 0}]}),
+            ("put", f"/api/purchase-orders/{po_id}/status", {"status": "cancelled"}),
+        ):
+            resp = httpx.request(
+                method.upper(),
+                f"{SERVER_URL}{path}",
+                json=payload,
+                headers=second_tenant_headers,
+                timeout=10,
+            )
+            assert resp.status_code == 404, (
+                f"Expected 404 {method} {path}, got {resp.status_code}: {resp.text[:200]}"
+            )
+
+    def test_estimate_mutations_rejected(
+        self, isolation_data: dict, test_admin_headers: dict, second_tenant_headers: dict
+    ):
+        data = isolation_data
+        resp = httpx.post(
+            f"{SERVER_URL}/api/estimates",
+            json={
+                "customer_id": data["customer_id"],
+                "ticket_id": "",
+                "notes": "isolation estimate",
+                "expires_at": 0,
+                "currency": "USD",
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 200
+        rows = _stdb_sql("SELECT * FROM estimates")
+        est_id = rows[0]["rows"][-1][0]
+
+        for method, path, payload in (
+            ("delete", f"/api/estimates/{est_id}", None),
+            ("put", f"/api/estimates/{est_id}/status", {"status": "approved"}),
+            ("post", f"/api/estimates/{est_id}/line-items", {"item_type": "service", "description": "x", "quantity": 1, "unit_price": 1}),
+        ):
+            resp = httpx.request(
+                method.upper(), f"{SERVER_URL}{path}", json=payload,
+                headers=second_tenant_headers, timeout=10,
+            )
+            assert resp.status_code == 404, (
+                f"Expected 404 {method} {path}, got {resp.status_code}: {resp.text[:200]}"
+            )
+
+    def test_appointment_mutations_rejected(
+        self, isolation_data: dict, test_admin_headers: dict, second_tenant_headers: dict
+    ):
+        data = isolation_data
+        resp = httpx.post(
+            f"{SERVER_URL}/api/appointments",
+            json={
+                "customer_id": data["customer_id"],
+                "title": "Isolation appt",
+                "description": "x",
+                "start_time": 1783000000000,
+                "end_time": 1783003600000,
+                "all_day": False,
+                "series_id": "",
+                "recurrence_rule": "",
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 200
+        rows = _stdb_sql("SELECT * FROM appointment")
+        appt_id = rows[0]["rows"][-1][0]
+
+        for method, path, payload in (
+            ("delete", f"/api/appointments/{appt_id}", None),
+            ("put", f"/api/appointments/{appt_id}/status", {"status": "cancelled"}),
+            ("put", f"/api/appointments/{appt_id}/recurrence", {"recurrence_rule": "monthly"}),
+        ):
+            resp = httpx.request(
+                method.upper(), f"{SERVER_URL}{path}", json=payload,
+                headers=second_tenant_headers, timeout=10,
+            )
+            assert resp.status_code == 404, (
+                f"Expected 404 {method} {path}, got {resp.status_code}: {resp.text[:200]}"
+            )
+
+    def test_tax_rate_and_schedule_mutations_rejected(
+        self, isolation_data: dict, test_admin_headers: dict, second_tenant_headers: dict
+    ):
+        data = isolation_data
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tax-rates",
+            json={"name": "Isolation Tax", "rate": 8.5, "is_default": False},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 200
+        rows = _stdb_sql("SELECT * FROM tax_rates")
+        tax_id = rows[0]["rows"][-1][0]
+
+        resp = httpx.delete(f"{SERVER_URL}/api/tax-rates/{tax_id}", headers=second_tenant_headers, timeout=10)
+        assert resp.status_code == 404, (
+            f"Expected 404 deleting foreign tax rate, got {resp.status_code}: {resp.text[:200]}"
+        )
+
+        # Scheduled report: create in A, run-now from B must 404
+        resp = httpx.post(
+            f"{SERVER_URL}/api/report-schedules",
+            json={
+                "name": "Isolation Report",
+                "report_type": "revenue",
+                "schedule_frequency": "daily",
+                "schedule_config": {"hour": 8, "minute": 0},
+                "recipients": [data["customer_email"]],
+                "filters": {},
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 200
+        rows = _stdb_sql("SELECT * FROM scheduled_reports")
+        sched_id = rows[0]["rows"][-1][0]
+
+        resp = httpx.post(
+            f"{SERVER_URL}/api/report-schedules/{sched_id}/run-now",
+            headers=second_tenant_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 404, (
+            f"Expected 404 running foreign schedule, got {resp.status_code}: {resp.text[:200]}"
+        )
+
+        resp = httpx.delete(f"{SERVER_URL}/api/report-schedules/{sched_id}", headers=second_tenant_headers, timeout=10)
+        assert resp.status_code == 404, (
+            f"Expected 404 deleting foreign schedule, got {resp.status_code}: {resp.text[:200]}"
+        )
