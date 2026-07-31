@@ -23,8 +23,10 @@ from server.mail import (
     _save_settings,
     get_settings,
     send_email,
-    test_connection,
     update_settings,
+)
+from server.mail import (
+    test_connection as mail_test_connection,
 )
 
 
@@ -134,7 +136,7 @@ class TestMail:
     def test_test_connection_no_settings(self):
         """test_connection returns error when not configured."""
         with patch("server.mail._load_settings", return_value=None):
-            result = test_connection()
+            result = mail_test_connection()
             assert result["ok"] is False
             assert "not configured" in result["error"].lower()
 
