@@ -1,5 +1,3 @@
-// TODO (kanban): Replace 14 unwrap() call(s) with proper error handling
-
 #[cfg(test)]
 mod tests {
     use crate::purchase_order::purchase_order;
@@ -33,7 +31,14 @@ mod tests {
     fn test_add_po_line_item() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         add_po_line_item(&ctx, po_id.clone(), "".into(), "Widget".into(), 2.0, 25.0);
         let items: Vec<PurchaseOrderLineItem> = ctx.db.purchase_order_line_item().iter().collect();
         assert_eq!(items.len(), 1);
@@ -56,7 +61,14 @@ mod tests {
     fn test_update_po_status() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         update_po_status(&ctx, po_id.clone(), "cancelled".into());
         let po = ctx
             .db
@@ -71,7 +83,14 @@ mod tests {
     fn test_submit_for_approval() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         assert_eq!(
             ctx.db
                 .purchase_order()
@@ -97,7 +116,14 @@ mod tests {
     fn test_submit_already_non_draft() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         // First submit to pending_approval
         submit_for_approval(&ctx, po_id.clone());
         assert_eq!(
@@ -126,7 +152,14 @@ mod tests {
     fn test_approve_po() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         submit_for_approval(&ctx, po_id.clone());
         approve_po(&ctx, po_id.clone(), "user_1".into());
         let po = ctx
@@ -143,7 +176,14 @@ mod tests {
     fn test_reject_po() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         submit_for_approval(&ctx, po_id.clone());
         reject_po(&ctx, po_id.clone());
         let po = ctx
@@ -159,7 +199,14 @@ mod tests {
     fn test_reject_before_submit() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         // Draft PO - reject should return early because status != "pending_approval"
         assert_eq!(
             ctx.db
@@ -187,14 +234,21 @@ mod tests {
     fn test_receive_po_item() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         add_po_line_item(&ctx, po_id.clone(), "".into(), "Item".into(), 10.0, 5.0);
         let li_id = ctx
             .db
             .purchase_order_line_item()
             .iter()
             .next()
-            .unwrap()
+            .expect("line item should exist")
             .id
             .clone();
         receive_po_item(&ctx, li_id.clone(), 5.0);
@@ -219,14 +273,21 @@ mod tests {
     fn test_receive_excess() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         add_po_line_item(&ctx, po_id.clone(), "".into(), "Item".into(), 10.0, 5.0);
         let li_id = ctx
             .db
             .purchase_order_line_item()
             .iter()
             .next()
-            .unwrap()
+            .expect("line item should exist")
             .id
             .clone();
         // Receive more than ordered
@@ -244,7 +305,14 @@ mod tests {
     fn test_delete_po_line_item() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         add_po_line_item(&ctx, po_id.clone(), "".into(), "Item1".into(), 1.0, 10.0);
         add_po_line_item(&ctx, po_id.clone(), "".into(), "Item2".into(), 1.0, 20.0);
         assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 2);
@@ -254,7 +322,7 @@ mod tests {
             .purchase_order_line_item()
             .iter()
             .next()
-            .unwrap()
+            .expect("line item should exist")
             .id
             .clone();
         delete_po_line_item(&ctx, po_id.clone(), li_id);
@@ -274,7 +342,14 @@ mod tests {
     fn test_delete_purchase_order() {
         let ctx = test_ctx();
         create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
-        let po_id = ctx.db.purchase_order().iter().next().unwrap().id.clone();
+        let po_id = ctx
+            .db
+            .purchase_order()
+            .iter()
+            .next()
+            .expect("PO should exist")
+            .id
+            .clone();
         add_po_line_item(&ctx, po_id.clone(), "".into(), "Item1".into(), 1.0, 10.0);
         add_po_line_item(&ctx, po_id.clone(), "".into(), "Item2".into(), 2.0, 20.0);
         assert_eq!(ctx.db.purchase_order().iter().count(), 1);
