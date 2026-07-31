@@ -62,8 +62,6 @@ pub fn delete_inventory_adjustment(ctx: &ReducerContext, id: String) {
 
 #[cfg(test)]
 mod inventory_tests {
-    use super::*;
-
     #[test]
     fn test_inventory_basic() {
         assert!(true);

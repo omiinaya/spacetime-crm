@@ -8,6 +8,7 @@
 //! Only compiled under `#[cfg(test)]` and `#[cfg(not(target_arch = "wasm32"))]`.
 
 #![allow(non_snake_case, dead_code, unused_unsafe)]
+#![allow(private_interfaces)]
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -16,15 +17,15 @@ use std::collections::HashMap;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-struct TableId(u32);
+pub struct TableId(pub u32);
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-struct IndexId(u32);
+pub struct IndexId(pub u32);
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct RowIter(u32);
+pub struct RowIter(pub u32);
 
 impl RowIter {
     const INVALID: Self = Self(0);

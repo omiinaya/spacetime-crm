@@ -1,4 +1,3 @@
-use spacetimedb::*;
 
 #[cfg(test)]
 mod tests {

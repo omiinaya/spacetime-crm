@@ -460,7 +460,12 @@ export default function CustomersPage() {
                     >
                       <Key className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleEdit(c)} title="Edit customer">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleEdit(c)}
+                      title="Edit customer"
+                    >
                       <Edit2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button
