@@ -64,17 +64,43 @@ def _stdb_sql(query: str) -> list[dict]:
 def _stdb_write(query: str) -> None:
     """Run a write SQL statement (DELETE, INSERT, etc) against STDB.
 
+    Requires an authenticated identity (STDB denies anonymous DML).
     Ignores errors on DELETE — the table may not exist or be empty.
     """
     try:
         httpx.post(
             STDB_SQL_URL,
             content=query,
-            headers={"Content-Type": "application/sql"},
+            headers={
+                "Content-Type": "application/sql",
+                **_stdb_auth_headers(),
+            },
             timeout=30,
         )
     except Exception:
         pass
+
+
+_STDB_TOKEN_CACHE: str | None = None
+
+
+def _stdb_auth_headers() -> dict[str, str]:
+    """Return STDB identity-token auth headers, cached from cli.toml."""
+    global _STDB_TOKEN_CACHE
+    if _STDB_TOKEN_CACHE:
+        return {"Authorization": f"Bearer {_STDB_TOKEN_CACHE}"}
+    token = ""
+    try:
+        for line in open(os.path.expanduser("~/.config/spacetime/cli.toml")):
+            if line.strip().startswith("spacetimedb_token"):
+                token = line.split("=", 1)[1].strip().strip('"')
+                break
+    except Exception:
+        pass
+    if token:
+        _STDB_TOKEN_CACHE = token
+        return {"Authorization": f"Bearer {token}"}
+    return {}
 
 
 def _stdb_call(reducer: str, args: list[str]) -> None:
@@ -267,8 +293,15 @@ def _cleanup_stale_test_tenants() -> int:
                 removed += 1
             except Exception:
                 pass
-        # Purge orphaned entity rows whose tenant_id points at a stale tenant.
-        for table in (
+        # Purge orphaned entity rows: any row whose tenant_id is not present
+        # in the tenants table belongs to a tenant that no longer exists
+        # (deleted by THIS or an EARLIER cleanup run). Legacy rows with an
+        # empty tenant_id are left untouched.
+        try:
+            known = {str(r[id_idx]) for r in rows[0]["rows"]}
+        except Exception:
+            known = set()
+        orphan_tables = [
             "customer", "ticket", "invoices", "payment", "appointment",
             "products", "estimates", "purchase_order", "counter_sale",
             "recurring_invoice_rules", "webhook_subscriptions",
@@ -279,12 +312,31 @@ def _cleanup_stale_test_tenants() -> int:
             "purchase_order_line_item", "inventory_adjustment",
             "ticket_note", "ticket_timer", "counter_sale_line_item",
             "pos_line_item", "audit_log",
-        ):
-            for tid in stale_ids:
-                try:
-                    _stdb_write(f"DELETE FROM {table} WHERE tenant_id = '{tid}'")
-                except Exception:
-                    pass
+        ]
+        for table in orphan_tables:
+            try:
+                tresp = _stdb_sql(f"SELECT tenant_id FROM {table}")
+                if not tresp or not tresp[0].get("rows"):
+                    continue
+                tid_col = next(
+                    (i for i, e in enumerate(tresp[0]["schema"]["elements"])
+                     if e["name"].get("some") == "tenant_id"),
+                    0,
+                )
+                orphan_tids = {
+                    str(r[tid_col]) for r in tresp[0]["rows"]
+                    if tid_col < len(r)
+                    and isinstance(r[tid_col], str)
+                    and r[tid_col].startswith("tnt_")
+                    and r[tid_col] not in known
+                }
+                for tid in orphan_tids:
+                    try:
+                        _stdb_write(f"DELETE FROM {table} WHERE tenant_id = '{tid}'")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
         return removed
     except Exception:
         return 0
