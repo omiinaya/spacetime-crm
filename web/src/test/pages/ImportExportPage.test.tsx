@@ -1,23 +1,34 @@
 /**
- * Tests for ImportExportPage – export calls, import flow, result display.
+ * Tests for ImportExportPage – export calls (CSV/XLSX/JSON), import flow,
+ * result display.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ImportExportPage from "@/pages/ImportExportPage";
 
-const { mockExportCsv, mockImportCustomers, mockImportProducts } = vi.hoisted(
-	() => ({
-		mockExportCsv: vi.fn(),
-		mockImportCustomers: vi.fn(),
-		mockImportProducts: vi.fn(),
-	}),
-);
+const {
+	mockExportCsv,
+	mockExportXlsx,
+	mockExportJson,
+	mockImportCustomers,
+	mockImportProducts,
+} = vi.hoisted(() => ({
+	mockExportCsv: vi.fn(),
+	mockExportXlsx: vi.fn(),
+	mockExportJson: vi.fn(),
+	mockImportCustomers: vi.fn(),
+	mockImportProducts: vi.fn(),
+}));
 
 // Mock api module so we can control export/import in each test
 vi.mock("@/lib/api", () => ({
 	api: {
-		export: { csv: (...args: any[]) => mockExportCsv(...args) },
+		export: {
+			csv: (...args: any[]) => mockExportCsv(...args),
+			xlsx: (...args: any[]) => mockExportXlsx(...args),
+			json: (...args: any[]) => mockExportJson(...args),
+		},
 		import: {
 			customers: (file: File) => mockImportCustomers(file),
 			products: (file: File) => mockImportProducts(file),
@@ -29,6 +40,8 @@ vi.mock("@/lib/api", () => ({
 beforeEach(() => {
 	vi.restoreAllMocks();
 	mockExportCsv.mockReset();
+	mockExportXlsx.mockReset();
+	mockExportJson.mockReset();
 	mockImportCustomers.mockReset();
 	mockImportProducts.mockReset();
 });
@@ -53,9 +66,11 @@ it("renders entity dropdown with 10 options", () => {
 	expect(screen.getAllByText("Products").length).toBeGreaterThan(0);
 });
 
-it("shows the required CSV columns details on the Import section", () => {
+it("shows the required columns details on the Import section", () => {
 	render(<ImportExportPage />);
-	expect(screen.getByText("Required CSV columns")).toBeInTheDocument();
+	expect(
+		screen.getByText("Required columns (CSV header / XLSX first row / JSON keys)"),
+	).toBeInTheDocument();
 });
 
 // ── Export ──
@@ -81,6 +96,44 @@ it("exports the selected entity type", async () => {
 	expect(mockExportCsv).toHaveBeenCalledWith("products");
 });
 
+it("calls export.xlsx when XLSX format is selected", async () => {
+	const user = userEvent.setup();
+	render(<ImportExportPage />);
+
+	const formatSelect = screen.getByDisplayValue("CSV");
+	await user.selectOptions(formatSelect, "xlsx");
+
+	await user.click(screen.getByRole("button", { name: /export xlsx/i }));
+
+	expect(mockExportXlsx).toHaveBeenCalledWith("customers");
+});
+
+it("calls export.json when JSON format is selected", async () => {
+	const user = userEvent.setup();
+	render(<ImportExportPage />);
+
+	const formatSelect = screen.getByDisplayValue("CSV");
+	await user.selectOptions(formatSelect, "json");
+
+	await user.click(screen.getByRole("button", { name: /export json/i }));
+
+	expect(mockExportJson).toHaveBeenCalledWith("customers");
+});
+
+it("exports XLSX for the selected entity", async () => {
+	const user = userEvent.setup();
+	render(<ImportExportPage />);
+
+	const selects = screen.getAllByDisplayValue("Customers");
+	await user.selectOptions(selects[0], "products");
+	const formatSelect = screen.getByDisplayValue("CSV");
+	await user.selectOptions(formatSelect, "xlsx");
+
+	await user.click(screen.getByRole("button", { name: /export xlsx/i }));
+
+	expect(mockExportXlsx).toHaveBeenCalledWith("products");
+});
+
 // ── Import file selection ──
 
 it("shows selected file name after choosing a file", async () => {
@@ -94,6 +147,15 @@ it("shows selected file name after choosing a file", async () => {
 	await user.upload(input, file);
 
 	expect(screen.getByText("test.csv")).toBeInTheDocument();
+});
+
+it("accepts csv, xlsx and json file extensions", () => {
+	render(<ImportExportPage />);
+
+	const input = document.querySelector(
+		'input[type="file"]',
+	) as HTMLInputElement;
+	expect(input.accept).toBe(".csv,.xlsx,.json");
 });
 
 // ── Import button states ──

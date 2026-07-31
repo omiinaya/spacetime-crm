@@ -478,7 +478,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Custom fields | ✅ Complete | Per entity type |
 | Repair checklists | ✅ Complete | Templates + apply to ticket |
 | Barcode scanning | ✅ Complete | Camera + manual lookup + labels |
-| Data import/export | ✅ CSV | CSV only — no XLSX/JSON |
+| Data import/export | ✅ Complete | CSV + XLSX + JSON export; CSV/XLSX/JSON import (customers + products) |
 | Multi-tenant | ✅ Complete | 27 tables scoped |
 | POS / counter sale | ✅ Complete | Kiosk with cart, payment, receipt, refund |
 | Invoice email delivery | ✅ Complete | Single + batch + queue status |

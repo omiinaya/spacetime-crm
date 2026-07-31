@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { api } from "../lib/api";
+import type { ExportFormat } from "../lib/api/export";
 import {
 	Download,
 	Upload,
@@ -24,8 +25,15 @@ const ENTITIES = [
 	{ id: "users", label: "Users" },
 ];
 
+const EXPORT_FORMATS: { id: ExportFormat; label: string }[] = [
+	{ id: "csv", label: "CSV" },
+	{ id: "xlsx", label: "XLSX" },
+	{ id: "json", label: "JSON" },
+];
+
 export default function ImportExportPage() {
 	const [exportEntity, setExportEntity] = useState("customers");
+	const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
 	const [importType, setImportType] = useState<"customers" | "products">(
 		"customers",
 	);
@@ -38,7 +46,7 @@ export default function ImportExportPage() {
 	const fileRef = useRef<HTMLInputElement>(null);
 
 	const handleExport = () => {
-		api.export.csv(exportEntity);
+		api.export[exportFormat](exportEntity);
 	};
 
 	const handleImport = async () => {
@@ -77,7 +85,7 @@ export default function ImportExportPage() {
 					Export Data
 				</h2>
 				<p className="text-sm text-slate-400 mb-4">
-					Download all records from any entity type as a CSV file.
+					Download all records from any entity type as CSV, XLSX or JSON.
 				</p>
 				<div className="flex items-center gap-3 flex-wrap">
 					<select
@@ -91,9 +99,20 @@ export default function ImportExportPage() {
 							</option>
 						))}
 					</select>
+					<select
+						value={exportFormat}
+						onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+						className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+					>
+						{EXPORT_FORMATS.map((f) => (
+							<option key={f.id} value={f.id}>
+								{f.label}
+							</option>
+						))}
+					</select>
 					<Button onClick={handleExport} className="flex items-center gap-2">
 						<Download className="w-4 h-4" />
-						Export CSV
+						Export {exportFormat.toUpperCase()}
 					</Button>
 				</div>
 			</Card>
@@ -105,8 +124,8 @@ export default function ImportExportPage() {
 					Import Data
 				</h2>
 				<p className="text-sm text-slate-400 mb-4">
-					Upload a CSV file to bulk-import customers or products. The first row
-					must contain column headers.
+					Upload a CSV, XLSX or JSON file to bulk-import customers or products.
+					The format is detected automatically.
 				</p>
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center gap-3 flex-wrap">
@@ -125,7 +144,7 @@ export default function ImportExportPage() {
 						<input
 							ref={fileRef}
 							type="file"
-							accept=".csv"
+							accept=".csv,.xlsx,.json"
 							onChange={handleFileChange}
 							className="hidden"
 						/>
@@ -135,7 +154,7 @@ export default function ImportExportPage() {
 							className="flex items-center gap-2"
 						>
 							<FileUp className="w-4 h-4" />
-							{file ? file.name : "Choose CSV File"}
+							{file ? file.name : "Choose File"}
 						</Button>
 
 						<Button
@@ -183,7 +202,7 @@ export default function ImportExportPage() {
 					{/* ── Column Reference ── */}
 					<details className="mt-2">
 						<summary className="text-sm text-slate-500 cursor-pointer hover:text-slate-300">
-							Required CSV columns
+							Required columns (CSV header / XLSX first row / JSON keys)
 						</summary>
 						<div className="mt-2 text-xs text-slate-400 space-y-2">
 							<div>
@@ -212,6 +231,15 @@ export default function ImportExportPage() {
 								<code className="text-slate-400">category</code>,{" "}
 								<code className="text-slate-400">min_stock</code>,{" "}
 								<code className="text-slate-400">location</code>.
+							</div>
+							<div>
+								<strong className="text-slate-300">JSON format:</strong> a JSON
+								array of objects, one per record, using the same keys as the
+								columns above, e.g.{" "}
+								<code className="text-slate-400">
+									[{"{"}"first_name": "Alice", "last_name": "Smith"{"}"}]
+								</code>
+								.
 							</div>
 						</div>
 					</details>
