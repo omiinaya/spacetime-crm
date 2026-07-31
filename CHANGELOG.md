@@ -2,6 +2,30 @@
 
 All notable changes to SpacetimeCRM will be documented in this file.
 
+## [2.0.2] — 2026-07-31
+
+### Security (tenant isolation)
+- **Recurring invoice reducers now tenant-verified** — `update_recurring_invoice_rule`, `delete_recurring_invoice_rule`, and `generate_recurring_invoices` take the caller's `tenant_id` and no-op on foreign rules. `generate` previously iterated ALL tenants' rules from a single trigger; it now only generates for the caller's tenant. 3 Rust regression tests added.
+- **`_require_owned` guards added to 12 route files** — cross-tenant mutation was possible on purchase orders (delete/add-item/update-status/receive/submit/approve/reject), estimates (status/line-item/delete), appointments (recurrence/status/delete), payments (record/delete), products (quantity/update/delete/adjustment), payment methods (default/delete), POS sales (refund/delete), tax rates (delete), custom fields (delete), checklists (delete), webhook subscriptions (update/delete), report schedules (update/run-now/delete), and invoices (bulk status). All now 404 on foreign entities.
+- **Cross-tenant data exfiltration closed** — `run_schedule_now` could generate + email another tenant's financial report; `record_payment` accepted any invoice_id; CSV export was already fixed. All guarded.
+- **4 new cross-tenant mutation integration tests** (PO/estimate/appointment/tax/schedule) — 14 total isolation tests green.
+
+### Bug fixes
+- **Monotonic-clock misuse fixed** — gift card expiry, SLA breach detection, and email-campaign "recent" filters used `asyncio.get_event_loop().time()` (seconds since boot) as unix time. All now use real epoch time.
+- **Systemic 4-hour time offset** — `datetime.utcnow().timestamp()` on naive datetimes across 13 sites (invoice overdue, dashboard aggregates, report schedules, imports). Fixed to `time.time()` / tz-aware UTC.
+- **Purchase-order "Add Item" form could never open** — inverted toggle (`description !== ""` guard with button that set it to `""`). Replaced with explicit `showItemForm` state.
+- **Humanized status badges** — PurchaseOrders + RecurringInvoices now show "Pending Approval"/"Partially Received"/"Active" instead of raw snake_case.
+- **Test helper bug** — `_create_appointment` looked up by title without tenant scope, returning stale foreign appointments from failed earlier sessions. Now tenant-scoped via JWT.
+- **Zero pytest warnings** — fixed imported-production-function-as-test (`test_connection`), unregistered `pytest.mark.integration`, and 8 un-awaited `send_sms` coroutines in fire-and-forget mocks.
+- **Zero clippy warnings on `--all-targets`** — FFI stubs in `test_stubs.rs` marked `unsafe extern "C"` with `# Safety` docs; needless borrows, always-true assertions, and unit-let-bindings cleaned.
+
+### Tests
+- **41/41 frontend pages now covered** — added DashboardPage (10), PurchaseOrdersPage (7), RecurringInvoicesPage (8), TechnicianSchedulePage (6), TenantsPage (5), AuditLogPage (6), CustomFieldsPage (6), PaymentMethodsPage (6), PortalLoginPage (5), PortalDashboard (5), PortalTicketsPage (6), PortalInvoicesPage (6), PortalAppointmentsPage (5), ChecklistTemplatesPage (5), MapPage (4). 253 frontend tests total.
+- **Rust recurring-invoice tests** — 3 new tenant-isolation tests (update/delete/generate cross-tenant rejection).
+
+### CI
+- **Real Rust gates** — clippy (`-D warnings`) and `cargo test --lib` no longer `continue-on-error`; both pass.
+
 ## [2.0.1] — 2026-07-31
 
 ### Fixed
