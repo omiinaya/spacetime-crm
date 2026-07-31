@@ -282,7 +282,12 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
         unsafe { std::slice::from_raw_parts(point_ptr, point_len) }.to_vec()
     };
 
-    eprintln!("POINT SCAN: index_id={:?} point={:?} ({} bytes)", _index_id, point_bytes, point_bytes.len());
+    eprintln!(
+        "POINT SCAN: index_id={:?} point={:?} ({} bytes)",
+        _index_id,
+        point_bytes,
+        point_bytes.len()
+    );
 
     let handle = NEXT_ITER_HANDLE.with(|n| {
         let h = *n.borrow();
@@ -302,7 +307,9 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
         for (table_id, rows) in m.iter() {
             for (pk, row) in rows.iter() {
                 let matched = pk == &point_bytes || pk.starts_with(&point_bytes);
-                if matched { eprintln!("  MATCH: table={:?} pk={:?}", table_id, pk); }
+                if matched {
+                    eprintln!("  MATCH: table={:?} pk={:?}", table_id, pk);
+                }
                 if matched {
                     result.push(row.clone());
                 }
@@ -373,10 +380,6 @@ pub extern "C" fn row_iter_bsatn_advance(
     let mut rows = ITERATORS.with(|iters| iters.borrow_mut().remove(&iter.0).unwrap_or_default());
 
     if rows.is_empty() {
-        // Put it back (empty) so close doesn't fail
-        ITERATORS.with(|iters| {
-            iters.borrow_mut().insert(iter.0, rows);
-        });
         // CRITICAL: zero the buffer length on the exhausted path. RowIter::read()
         // appends buf_len bytes to its output buffer on -1; leaving the stale
         // incoming capacity (e.g. 65536) appends 64KB of uninitialized memory
@@ -390,22 +393,20 @@ pub extern "C" fn row_iter_bsatn_advance(
 
     // Put the remaining rows back
     ITERATORS.with(|iters| {
-        iters.borrow_mut().insert(iter.0, rows);
+        iters.borrow_mut().insert(iter.0, rows.clone());
     });
 
+    let is_last = rows.is_empty();
     let buf_len = unsafe { *buffer_len_ptr };
     if buffer_ptr.is_null() || buf_len < row.len() {
-        // Buffer too small - tell caller how much space we need
+        // Buffer too small - tell caller how much space we need.
         unsafe {
             *buffer_len_ptr = row.len();
         }
-        // Return BUFFER_TOO_SMALL error code (let's use a positive value)
-        // Actually, looking at the RowIter::read code, it expects:
-        // -1: exhausted
-        // 0: wrote some bytes
-        // TOO_SMALL: buffer too small
-        // Let's return the row length as a "too small" indicator
-        return 1; // Some error code
+        // errno::BUFFER_TOO_SMALL == 11 in spacetimedb-primitives. The real
+        // `RowIter::read` matches on this exact value; any other positive
+        // return is treated as an unexpected error and panics.
+        return 11;
     }
 
     // Write the row into the buffer
@@ -414,9 +415,16 @@ pub extern "C" fn row_iter_bsatn_advance(
         *buffer_len_ptr = row.len();
     }
 
-    // Debug logging removed — stubs are shipped alongside production code.
+    // Return -1 (exhausted) when this was the last row. The real runtime
+    // signals exhaustion in the same call that writes the final chunk, and
+    // callers (e.g. `UniqueColumn::find`'s `is_exhausted` assert) rely on it:
+    // a 0 here leaves the RowIter handle valid, so `find` believes a unique
+    // index scan returned more than one row and panics.
+    if is_last {
+        return -1;
+    }
 
-    0 // success, wrote some bytes
+    0 // success, more rows available
 }
 
 #[no_mangle]
