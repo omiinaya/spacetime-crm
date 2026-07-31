@@ -1,5 +1,7 @@
 """Invoice CRUD, line items, tax, PDF, and status workflow integration tests."""
 
+import time
+
 import httpx
 
 from .conftest import (
@@ -7,6 +9,8 @@ from .conftest import (
     _track_entity,
     assert_ok,
     create_customer,
+    restore_app_config,
+    save_app_config,
     unique_suffix,
 )
 
@@ -439,6 +443,76 @@ class TestInvoiceErrors:
         """Send overdue reminders requires auth."""
         resp = client.post("/api/invoices/send-overdue-reminders", timeout=10)
         assert resp.status_code in (401, 403)
+
+
+class TestOverdueReminderInterval:
+    """send-overdue-reminders respects the admin-configured reminder interval."""
+
+    def test_reminders_only_go_to_invoices_past_due_at_least_interval(
+        self, test_admin_headers: dict, session_suffix: str
+    ):
+        """Invoices overdue for less than reminder_interval_days get no reminder."""
+        prev = save_app_config(test_admin_headers)
+        try:
+            now = int(time.time() * 1000)
+            # A: due 2 days ago (below a 7-day interval), B: due 10 days ago
+            inv_a, _ = _create_invoice(
+                test_admin_headers, session_suffix, "rinta", due_date=now - 2 * 86_400_000
+            )
+            inv_b, _ = _create_invoice(
+                test_admin_headers, session_suffix, "rintb", due_date=now - 10 * 86_400_000
+            )
+            # C: explicitly marked overdue but only 2 days past due
+            inv_c, _ = _create_invoice(
+                test_admin_headers, session_suffix, "rintc", due_date=now - 2 * 86_400_000
+            )
+            for inv_id, status in ((inv_a, "sent"), (inv_b, "sent"), (inv_c, "overdue")):
+                r = httpx.put(
+                    f"{SERVER_URL}/api/invoices/{inv_id}/status",
+                    json={"status": status},
+                    headers=test_admin_headers,
+                    timeout=10,
+                )
+                assert_ok(r)
+
+            # Set a 7-day interval
+            r = httpx.post(
+                f"{SERVER_URL}/api/settings/app",
+                json={"reminder_interval_days": 7},
+                headers=test_admin_headers,
+                timeout=10,
+            )
+            assert_ok(r)
+
+            # Only invoice B (10 days past due) should get a reminder
+            resp = httpx.post(
+                f"{SERVER_URL}/api/invoices/send-overdue-reminders",
+                headers=test_admin_headers,
+                timeout=15,
+            )
+            data = assert_ok(resp)
+            assert data["interval_days"] == 7
+            assert data["total"] == 1, f"expected 1 reminder at 7d interval, got {data}"
+            assert data["email"] == 1
+
+            # Shorten to a 1-day interval — all three become eligible
+            r = httpx.post(
+                f"{SERVER_URL}/api/settings/app",
+                json={"reminder_interval_days": 1},
+                headers=test_admin_headers,
+                timeout=10,
+            )
+            assert_ok(r)
+            resp = httpx.post(
+                f"{SERVER_URL}/api/invoices/send-overdue-reminders",
+                headers=test_admin_headers,
+                timeout=15,
+            )
+            data = assert_ok(resp)
+            assert data["interval_days"] == 1
+            assert data["total"] == 3, f"expected 3 reminders at 1d interval, got {data}"
+        finally:
+            restore_app_config(test_admin_headers, prev)
 
 
 class TestInvoiceEmailQueue:
