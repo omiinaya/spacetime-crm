@@ -155,3 +155,52 @@ jobs:
         run: cargo test --manifest-path server/spacetimedb/Cargo.toml --lib
         # Unit tests execute on the host via the in-memory test stub datastore
         # (src/test_stubs.rs) — no live SpacetimeDB required.
+
+  # Container-based integration suite (ROADMAP 'Test coverage'):
+  # boots the STDB container and runs scripts/run-integration-tests.sh —
+  # build → container → publish → backend → bootstrap → pytest →
+  # Rust container tests → cleanup. This is exactly what `make test-container`
+  # resolves to when Docker is available.
+  test-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SpacetimeDB CLI
+        run: |
+          curl -L -o /tmp/spacetime.tar.gz \
+            "https://github.com/clockworklabs/SpacetimeDB/releases/download/${SPACETIME_VERSION}/spacetime-x86_64-unknown-linux-gnu.tar.gz"
+          tar xzf /tmp/spacetime.tar.gz -C /usr/local/bin/
+          rm /tmp/spacetime.tar.gz
+          if [ -f /usr/local/bin/spacetimedb-cli ] && [ ! -f /usr/local/bin/spacetime ]; then
+            mv /usr/local/bin/spacetimedb-cli /usr/local/bin/spacetime
+          fi
+          chmod +x /usr/local/bin/spacetime /usr/local/bin/spacetimedb-standalone 2>/dev/null || true
+          spacetime --version
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: wasm32-unknown-unknown
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r server/requirements.txt
+          pip install pytest
+
+      # Ports: STDB on 3002 (ephemeral container, non-conflicting with the
+      # host-gate job's :3001), backend on 8723. The runner script owns the
+      # full lifecycle and cleans up the container afterwards.
+      - name: Run container-based integration tests
+        run: bash scripts/run-integration-tests.sh
+        env:
+          STDB_PORT: "3002"
+          BACKEND_PORT: "8723"

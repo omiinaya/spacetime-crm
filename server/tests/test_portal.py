@@ -5,6 +5,7 @@ All entities tracked for session cleanup.
 Uses isolated tenant admin (not global admin) for all admin operations.
 """
 
+import os
 import time
 
 import bcrypt
@@ -14,6 +15,11 @@ import pytest
 from .conftest import SERVER_URL, _track_entity, assert_ok
 
 _PORTAL_PW = "TestPortal123!"
+# STDB host/port/db may differ from defaults in containerized test runs
+# (e.g. scripts/run-integration-tests.sh publishes to a container on :3002).
+_STDB_HOST = os.environ.get("STDB_HOST", "localhost")
+_STDB_PORT = os.environ.get("STDB_PORT", "3001")
+_STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
 
 
 @pytest.fixture(scope="session")
@@ -56,7 +62,7 @@ def portal_token(portal_email: str, test_admin_headers: dict) -> str:
     # Set password via STDB reducer
     hashed = bcrypt.hashpw(_PORTAL_PW.encode(), bcrypt.gensalt()).decode()
     r = httpx.post(
-        "http://localhost:3001/v1/database/spacetime-crm/call/set_customer_password",
+        f"http://{_STDB_HOST}:{_STDB_PORT}/v1/database/{_STDB_DB}/call/set_customer_password",
         json=[items[0]["id"], hashed],
         timeout=10,
     )

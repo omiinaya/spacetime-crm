@@ -16,6 +16,7 @@ class AppointmentCreate(BaseModel):
     series_id: str = Field(default="", max_length=100)
     recurrence_rule: str = Field(default="", max_length=50)
     color: str = Field(default="", max_length=20)
+    assigned_user_id: str = Field(default="", max_length=100)
 
 
 class AppointmentStatusUpdate(BaseModel):

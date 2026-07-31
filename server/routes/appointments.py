@@ -85,12 +85,20 @@ async def get_appointments_by_tech(
     tid = user["tenant_id"]
 
     rows = await _sql(
-        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(tid)}' AND start_time >= {start} AND end_time <= {end} ORDER BY start_time"
+        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(tid)}' AND start_time >= {start} AND end_time <= {end}"
     )
+    rows.sort(key=lambda a: a.get("start_time", 0))
 
-    # Fetch all users to resolve names
-    user_rows = await _sql(f"SELECT id, name FROM user WHERE tenant_id = '{_sqlesc(tid)}'")
+    # Users are global in this app (no tenant_id column on `user`;
+    # tenant membership lives in tenant_members).
+    user_rows = await _sql('SELECT id, name FROM "user"')
     user_map: dict[str, str] = {u["id"]: u["name"] for u in user_rows}
+
+    # Fetch customers ONCE (avoids an N+1 query per appointment)
+    customer_rows = await _sql(
+        f"SELECT id, first_name, last_name FROM customer WHERE tenant_id = '{_sqlesc(tid)}'"
+    )
+    customer_map: dict[str, dict] = {c["id"]: c for c in customer_rows}
 
     # Fetch customers for appointment enrichment
     groups: dict[str, dict] = {}
@@ -98,15 +106,9 @@ async def get_appointments_by_tech(
 
     for appt in rows:
         uid = appt.get("assigned_user_id", "") or ""
-        # Enrich with customer info
-        if "customer" not in appt:
-            cust = await _sql(
-                f"SELECT first_name, last_name FROM customer WHERE id = '{appt.get('customer_id', '')}'"
-            )
-            appt["customer"] = cust[0] if cust else {}
-        appt["customer_name"] = (
-            f"{appt['customer'].get('first_name', '')} {appt['customer'].get('last_name', '')}".strip()
-        )
+        # Enrich with customer info from the pre-fetched map
+        cust = customer_map.get(appt.get("customer_id", ""), {})
+        appt["customer_name"] = f"{cust.get('first_name', '')} {cust.get('last_name', '')}".strip()
 
         if uid:
             if uid not in groups:
@@ -167,6 +169,7 @@ async def create_appointment(
             body.all_day,
             body.series_id,
             body.recurrence_rule,
+            body.assigned_user_id,
         ],
     )
 

@@ -23,6 +23,9 @@ bash scripts/run-integration-tests.sh --quick   # Skip WASM build, reuse existin
 bash scripts/run-integration-tests.sh --no-cleanup  # Keep container for debugging
 ```
 
+Wired into CI: the `test-container` job in `.github/workflows/test.yml` boots the
+STDB container and runs `scripts/run-integration-tests.sh` on every push/PR to main.
+
 **Key differences from dev setup:**
 - STDB runs on port **3002** (non-conflicting with dev :3001)
 - Ephemeral storage (`tmpfs`) — clean state every run

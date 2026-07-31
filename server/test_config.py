@@ -12,8 +12,11 @@ from server.config import Settings
 class TestConfig:
     """Test suite for config.py."""
 
-    def test_default_values(self):
+    def test_default_values(self, monkeypatch):
         """Settings uses documented defaults."""
+        monkeypatch.delenv("STDB_HOST", raising=False)
+        monkeypatch.delenv("STDB_PORT", raising=False)
+        monkeypatch.delenv("STDB_DB", raising=False)
         s = Settings(_env_file=None)
         assert s.stdb_host == "localhost"
         assert s.stdb_port == 3001
@@ -23,13 +26,15 @@ class TestConfig:
         assert s.jwt_algorithm == "HS256"
         assert s.jwt_expire_hours == 24
 
-    def test_stdb_sql_url_property(self):
+    def test_stdb_sql_url_property(self, monkeypatch):
         """stdb_sql_url builds correctly."""
+        monkeypatch.delenv("STDB_DB", raising=False)
         s = Settings(stdb_host="test", stdb_port=9999)
         assert s.stdb_sql_url == "http://test:9999/v1/database/spacetime-crm/sql"
 
-    def test_stdb_call_url_property(self):
+    def test_stdb_call_url_property(self, monkeypatch):
         """stdb_call_url builds correctly."""
+        monkeypatch.delenv("STDB_DB", raising=False)
         s = Settings(stdb_host="test", stdb_port=9999)
         assert s.stdb_call_url == "http://test:9999/v1/database/spacetime-crm/call"
 

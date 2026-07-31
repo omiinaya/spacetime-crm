@@ -94,14 +94,16 @@ class TestComputedUrlProperties:
         expected = "http://localhost:3001/v1/database/spacetime-crm/call"
         assert s.stdb_call_url == expected
 
-    def test_stdb_sql_url_custom_host(self) -> None:
+    def test_stdb_sql_url_custom_host(self, monkeypatch) -> None:
+        monkeypatch.delenv("STDB_DB", raising=False)
         from config import Settings
 
         s = Settings(stdb_host="stdb.example.com", _env_file=None)
         expected = "http://stdb.example.com:3001/v1/database/spacetime-crm/sql"
         assert s.stdb_sql_url == expected
 
-    def test_stdb_call_url_custom_host(self) -> None:
+    def test_stdb_call_url_custom_host(self, monkeypatch) -> None:
+        monkeypatch.delenv("STDB_DB", raising=False)
         from config import Settings
 
         s = Settings(stdb_host="stdb.example.com", _env_file=None)
