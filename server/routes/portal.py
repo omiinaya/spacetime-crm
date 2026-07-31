@@ -177,13 +177,13 @@ async def portal_tickets(customer: dict = Depends(get_current_customer)):
 async def portal_ticket_detail(ticket_id: str, customer: dict = Depends(get_current_customer)):
     """Single ticket detail with notes (customer-owned only)."""
     rows = await _sql(
-        f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM ticket WHERE id = '{_sqlesc(ticket_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Ticket not found")
     ticket = rows[0]
     notes = await _sql(
-        f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}' AND internal = false"
+        f"SELECT * FROM ticket_note WHERE ticket_id = '{_sqlesc(ticket_id)}' AND internal = false"
     )
     ticket["notes"] = _sort(notes, "created_at", desc=False)
     users = await _sql("SELECT * FROM user")
@@ -200,7 +200,7 @@ async def portal_add_note(
 ):
     """Customer adds a note to their ticket."""
     rows = await _sql(
-        f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM ticket WHERE id = '{_sqlesc(ticket_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Ticket not found")
@@ -231,7 +231,7 @@ async def portal_invoices(customer: dict = Depends(get_current_customer)):
 async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_current_customer)):
     """Single invoice detail with line items (customer-owned only)."""
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_sqlesc(invoice_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -261,7 +261,7 @@ async def portal_make_payment(
     method = body.method
 
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_sqlesc(invoice_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -346,7 +346,7 @@ async def portal_create_checkout_session(
         raise HTTPException(400, "invoice_id is required")
 
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_sqlesc(invoice_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -411,7 +411,7 @@ async def portal_pay_with_saved_card(
 
     # Verify invoice belongs to customer
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_sqlesc(invoice_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Invoice not found")
@@ -422,7 +422,7 @@ async def portal_pay_with_saved_card(
 
     # Verify payment method belongs to customer
     pm_rows = await _sql(
-        f"SELECT * FROM saved_payment_methods WHERE stripe_payment_method_id = '{payment_method_id}' AND customer_id = '{customer['id']}'"
+        f"SELECT * FROM saved_payment_methods WHERE stripe_payment_method_id = '{_sqlesc(payment_method_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
     )
     if not pm_rows:
         raise HTTPException(404, "Payment method not found")

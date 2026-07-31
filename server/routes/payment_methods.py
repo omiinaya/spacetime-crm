@@ -8,6 +8,7 @@ from helpers import (
     _log_audit,
     _sort,
     _sql,
+    _sqlesc,
     require_role,
 )
 from models import SavePaymentMethodRequest, SetDefaultPaymentMethodRequest
@@ -24,11 +25,11 @@ async def list_payment_methods(
     """List saved payment methods, optionally filtered by customer."""
     if customer_id:
         rows = await _sql(
-            f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}' AND customer_id = '{customer_id}'"
+            f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND customer_id = '{_sqlesc(customer_id)}'"
         )
     else:
         rows = await _sql(
-            f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{user['tenant_id']}'"
+            f"SELECT * FROM saved_payment_methods WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'"
         )
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 

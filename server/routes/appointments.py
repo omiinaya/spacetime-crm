@@ -84,11 +84,11 @@ async def get_appointments_by_tech(
     tid = user["tenant_id"]
 
     rows = await _sql(
-        f"SELECT * FROM appointment WHERE tenant_id = '{tid}' AND start_time >= {start} AND end_time <= {end} ORDER BY start_time"
+        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(tid)}' AND start_time >= {start} AND end_time <= {end} ORDER BY start_time"
     )
 
     # Fetch all users to resolve names
-    user_rows = await _sql(f"SELECT id, name FROM user WHERE tenant_id = '{tid}'")
+    user_rows = await _sql(f"SELECT id, name FROM user WHERE tenant_id = '{_sqlesc(tid)}'")
     user_map: dict[str, str] = {u["id"]: u["name"] for u in user_rows}
 
     # Fetch customers for appointment enrichment
@@ -130,12 +130,12 @@ async def list_recurring_series(
 ):
     """List recurring appointment series (parent appointments with recurrence_rule set)."""
     rows = await _sql(
-        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND recurrence_rule != '' AND series_id = ''"
+        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND recurrence_rule != '' AND series_id = ''"
     )
     series = []
     for s in rows:
         children = await _sql(
-            f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{s['id']}'"
+            f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND series_id = '{_sqlesc(s['id'])}'"
         )
         next_time = max([c["start_time"] for c in children]) if children else s["start_time"]
         series.append(
@@ -223,7 +223,7 @@ async def generate_next_occurrence(
     """Generate the next occurrence of a recurring appointment series."""
     # Find the parent series
     rows = await _sql(
-        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND id = '{body.series_id}' AND recurrence_rule != ''"
+        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND id = '{_sqlesc(body.series_id)}' AND recurrence_rule != ''"
     )
     if not rows:
         return {"ok": False, "error": "Series not found"}
@@ -236,7 +236,7 @@ async def generate_next_occurrence(
 
     # Find the latest occurrence without ORDER BY (STDB limitation)
     children = await _sql(
-        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' AND series_id = '{body.series_id}'"
+        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND series_id = '{_sqlesc(body.series_id)}'"
     )
 
     if children:
@@ -271,7 +271,7 @@ async def get_appointments_due_soon(
     in_24h = now_ms + 86_400_000  # 24h in ms
 
     rows = await _sql(
-        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' "
+        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' "
         f"AND status != 'cancelled' AND status != 'completed' "
         f"AND start_time >= {now_ms} AND start_time <= {in_24h}"
     )
@@ -294,7 +294,7 @@ async def send_appointment_reminders(user: dict = Depends(require_role("admin"))
     in_24h = now_ms + 86_400_000
 
     rows = await _sql(
-        f"SELECT * FROM appointment WHERE tenant_id = '{user['tenant_id']}' "
+        f"SELECT * FROM appointment WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' "
         f"AND status != 'cancelled' AND status != 'completed' "
         f"AND start_time >= {now_ms} AND start_time <= {in_24h}"
     )

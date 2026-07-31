@@ -146,7 +146,7 @@ async def _paginated(
 
     Returns (rows_slice, total_count).
     """
-    conditions = [f"tenant_id = '{tenant_id}'"] if tenant_id else []
+    conditions = [f"tenant_id = '{_sqlesc(tenant_id)}'"] if tenant_id else []
     if where_extra:
         conditions.append(where_extra)
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
@@ -272,7 +272,7 @@ def require_role(*roles: str):
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(401, "Invalid token: no subject")
-        rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+        rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user_id)}'")
         if not rows:
             raise HTTPException(401, "User not found")
         user = rows[0]
@@ -318,7 +318,7 @@ async def get_current_user(
     if not user_id:
         raise HTTPException(401, "Invalid token: no subject")
 
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user_id)}'")
     if not rows:
         raise HTTPException(401, "User not found")
     user = rows[0]

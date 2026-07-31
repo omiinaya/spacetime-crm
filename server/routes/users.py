@@ -60,7 +60,7 @@ async def get_user_settings(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Get the current user's settings (theme, default_ticket_status)."""
-    rows = await _sql(f"SELECT * FROM user_settings WHERE user_id = '{user['id']}'")
+    rows = await _sql(f"SELECT * FROM user_settings WHERE user_id = '{_sqlesc(user['id'])}'")
     if not rows:
         return {"settings": None}
     return {"settings": rows[0]}

@@ -9,6 +9,7 @@ from helpers import (
     _paginated,
     _safe_id,
     _sql,
+    _sqlesc,
     logger,
     require_role,
 )
@@ -54,11 +55,11 @@ async def create_tenant(body: TenantCreate, user: dict = Depends(require_role("a
 async def get_tenant(tenant_id: str, user: dict = Depends(require_role("admin"))):
     """Get single tenant with member info."""
     _safe_id(tenant_id)
-    rows = await _sql(f"SELECT * FROM tenants WHERE id = '{tenant_id}'")
+    rows = await _sql(f"SELECT * FROM tenants WHERE id = '{_sqlesc(tenant_id)}'")
     if not rows:
         raise HTTPException(404, "Tenant not found")
     tenant = rows[0]
-    members = await _sql(f"SELECT * FROM tenant_members WHERE tenant_id = '{tenant_id}'")
+    members = await _sql(f"SELECT * FROM tenant_members WHERE tenant_id = '{_sqlesc(tenant_id)}'")
     tenant["members"] = members
     return {"tenant": tenant}
 
@@ -137,7 +138,7 @@ async def migrate_to_tenant(body: TenantMigrate, user: dict = Depends(require_ro
         slug = name.lower().replace(" ", "-").replace("[^a-z0-9-]", "")
     _safe_id(slug)
     await _call("create_tenant", [name, slug])
-    rows = await _sql(f"SELECT * FROM tenants WHERE slug = '{slug}'")
+    rows = await _sql(f"SELECT * FROM tenants WHERE slug = '{_sqlesc(slug)}'")
     if not rows:
         raise HTTPException(500, "Failed to find created tenant")
     tid = rows[0]["id"]
@@ -175,7 +176,7 @@ async def migrate_to_tenant(body: TenantMigrate, user: dict = Depends(require_ro
     updated = {}
     for tbl in tables:
         try:
-            await _sql(f"UPDATE {tbl} SET tenant_id = '{tid}' WHERE tenant_id = ''")
+            await _sql(f"UPDATE {tbl} SET tenant_id = '{_sqlesc(tid)}' WHERE tenant_id = ''")
             updated[tbl] = True
         except Exception as e:
             logger.warning("Migration update failed for %s: %s", tbl, e)

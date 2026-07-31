@@ -127,7 +127,9 @@ async def login(request: Request, login_data: LoginRequest):
     # No 2FA — return full token
     tenant_id = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{_sqlesc(user['name'])}'"
+        )
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
@@ -174,7 +176,9 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
     now = datetime.utcnow()
     tenant_id = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{_sqlesc(user['name'])}'"
+        )
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:
@@ -200,7 +204,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
     tenant_info = {}
     if user.get("tenant_id"):
         try:
-            trows = await _sql(f"SELECT * FROM tenants WHERE id = '{user['tenant_id']}'")
+            trows = await _sql(f"SELECT * FROM tenants WHERE id = '{_sqlesc(user['tenant_id'])}'")
             if trows:
                 tenant_info = trows[0]
         except Exception:
@@ -210,7 +214,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
     totp_enabled = False
     has_pin = False
     try:
-        rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+        rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user['id'])}'")
         if rows:
             totp_enabled = rows[0].get("totp_enabled", False)
             has_pin = bool(rows[0].get("pin", ""))
@@ -234,7 +238,7 @@ async def auth_me(user: dict = Depends(get_current_user)):
 async def setup_2fa(user: dict = Depends(get_current_user)):
     """Generate TOTP secret and return provisioning URI for QR code."""
     # Check if already enabled
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user['id'])}'")
     if rows and rows[0].get("totp_enabled", False):
         raise HTTPException(400, "2FA is already enabled. Disable it first to re-setup.")
 
@@ -258,7 +262,7 @@ async def setup_2fa(user: dict = Depends(get_current_user)):
 @router.post("/api/auth/verify-2fa")
 async def verify_2fa(body: Setup2FARequest, user: dict = Depends(get_current_user)):
     """Verify a TOTP code and enable 2FA."""
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user['id'])}'")
     if not rows:
         raise HTTPException(404, "User not found")
 
@@ -277,7 +281,7 @@ async def verify_2fa(body: Setup2FARequest, user: dict = Depends(get_current_use
 @router.post("/api/auth/disable-2fa")
 async def disable_2fa(body: Disable2FARequest, user: dict = Depends(get_current_user)):
     """Verify current TOTP code and disable 2FA."""
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user['id']}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user['id'])}'")
     if not rows:
         raise HTTPException(404, "User not found")
 
@@ -298,7 +302,9 @@ async def refresh_token_tenant(user: dict = Depends(get_current_user)):
     """Refresh the JWT token with latest tenant_id from DB."""
     tid = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{_sqlesc(user['name'])}'"
+        )
         if tm_rows:
             tid = tm_rows[0]["tenant_id"]
     except Exception:
@@ -360,7 +366,9 @@ async def pos_login(request: Request, body: PosLoginRequest):
     now = datetime.utcnow()
     tenant_id = ""
     try:
-        tm_rows = await _sql(f"SELECT * FROM tenant_members WHERE username = '{user['name']}'")
+        tm_rows = await _sql(
+            f"SELECT * FROM tenant_members WHERE username = '{_sqlesc(user['name'])}'"
+        )
         if tm_rows:
             tenant_id = tm_rows[0]["tenant_id"]
     except Exception:

@@ -9,6 +9,7 @@ from helpers import (
     _paginated,
     _sort,
     _sql,
+    _sqlesc,
     require_role,
 )
 from models import (
@@ -69,12 +70,14 @@ async def delete_purchase_order(po_id: str, user: dict = Depends(require_role("a
 async def get_purchase_order(
     po_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    rows = await _sql(f"SELECT * FROM purchase_order WHERE id = '{po_id}'")
+    rows = await _sql(
+        f"SELECT * FROM purchase_order WHERE id = '{_sqlesc(po_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
+    )
     if not rows:
         raise HTTPException(404, "Purchase order not found")
     po = rows[0]
     items = await _sql(
-        f"SELECT * FROM purchase_order_line_item WHERE purchase_order_id = '{po_id}'"
+        f"SELECT * FROM purchase_order_line_item WHERE purchase_order_id = '{_sqlesc(po_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     po["line_items"] = _sort(items, "description", desc=False)
     total_qty = sum(float(i.get("quantity", 0)) for i in items)

@@ -86,7 +86,7 @@ async def create_gift_card(
     await _log_audit(user, "create", "gift_card", code, f"amount={amount}")
 
     # Return the newly created gift card
-    rows = await _sql(f"SELECT * FROM gift_cards WHERE code = '{code}'")
+    rows = await _sql(f"SELECT * FROM gift_cards WHERE code = '{_sqlesc(code)}'")
     gift = rows[0] if rows else None
     return {"ok": True, "gift_card": gift}
 
@@ -105,7 +105,7 @@ async def redeem_gift_card(
         raise HTTPException(400, "Redemption amount must be positive")
 
     rows = await _sql(
-        f"SELECT * FROM gift_cards WHERE code = '{code}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM gift_cards WHERE code = '{_sqlesc(code)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Gift card not found")
@@ -146,7 +146,7 @@ async def lookup_gift_card(
         raise HTTPException(400, "Missing gift card code")
     code = code.strip().upper()
     rows = await _sql(
-        f"SELECT * FROM gift_cards WHERE code = '{code}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM gift_cards WHERE code = '{_sqlesc(code)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Gift card not found")
@@ -161,7 +161,7 @@ async def void_gift_card(
 ):
     """Void (deactivate) a gift card. Admin only, scoped to tenant."""
     rows = await _sql(
-        f"SELECT * FROM gift_cards WHERE id = '{gift_id}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM gift_cards WHERE id = '{_sqlesc(gift_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Gift card not found")

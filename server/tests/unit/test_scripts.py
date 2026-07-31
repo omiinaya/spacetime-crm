@@ -80,7 +80,7 @@ class TestBackupConstants:
 class TestBackupSqlQuery:
     """sql_query() function with mocked HTTP client."""
 
-    def test_returns_empty_on_http_error(self) -> None:
+    def test_returns_none_on_http_error(self) -> None:
         from scripts.backup import sql_query
 
         mock_client = MagicMock()
@@ -90,10 +90,12 @@ class TestBackupSqlQuery:
         mock_client.post.return_value = mock_resp
 
         result = sql_query(mock_client, "SELECT * FROM nonexistent")
-        assert result == []
+        # sql_query returns None on failure so callers can distinguish a
+        # missing table from an empty one (see backup.py main()).
+        assert result is None
         mock_client.post.assert_called_once()
 
-    def test_returns_empty_on_500(self) -> None:
+    def test_returns_none_on_500(self) -> None:
         from scripts.backup import sql_query
 
         mock_client = MagicMock()
@@ -103,7 +105,7 @@ class TestBackupSqlQuery:
         mock_client.post.return_value = mock_resp
 
         result = sql_query(mock_client, "SELECT * FROM bad")
-        assert result == []
+        assert result is None
 
     def test_parses_rows_with_schema(self) -> None:
         from scripts.backup import sql_query

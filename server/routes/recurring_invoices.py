@@ -12,6 +12,7 @@ from helpers import (
     _log_audit,
     _sort,
     _sql,
+    _sqlesc,
     require_role,
 )
 from models import RecurringInvoiceRuleCreate, RecurringInvoiceRuleUpdate
@@ -23,7 +24,7 @@ router = APIRouter()
 async def list_recurring_rules(user: dict = Depends(require_role("admin", "tech"))):
     """List all recurring invoice rules for the tenant."""
     rows = await _sql(
-        f"SELECT * FROM recurring_invoice_rules WHERE tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM recurring_invoice_rules WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     # Enrich with customer name
     result = _sort(rows, "created_at", desc=True)

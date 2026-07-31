@@ -53,9 +53,9 @@ async def list_tickets(
     """List tickets with pagination and optional status/customer filter."""
     conditions = []
     if status:
-        conditions.append(f"status = '{status}'")
+        conditions.append(f"status = '{_sqlesc(status)}'")
     if customer_id:
-        conditions.append(f"customer_id = '{customer_id}'")
+        conditions.append(f"customer_id = '{_sqlesc(customer_id)}'")
     where = " AND ".join(conditions) if conditions else ""
     rows, total = await _paginated(
         user["tenant_id"],
@@ -81,7 +81,7 @@ DEFAULT_SLA_TARGETS: dict[str, float] = {
 
 async def _load_sla_targets(tenant_id: str) -> dict[str, float]:
     """Load SLA targets from STDB sla_config, falling back to defaults."""
-    rows = await _sql(f"SELECT * FROM sla_configs WHERE tenant_id = '{tenant_id}'")
+    rows = await _sql(f"SELECT * FROM sla_configs WHERE tenant_id = '{_sqlesc(tenant_id)}'")
     if rows:
         try:
             loaded = json.loads(rows[0]["targets_json"])
@@ -110,7 +110,7 @@ async def list_sla_breaches(
             "ticket",
             offset=0,
             limit=1000,
-            where_extra=f"status = '{status}'",
+            where_extra=f"status = '{_sqlesc(status)}'",
             order_by="created_at",
             order_desc=False,
         )
@@ -150,7 +150,7 @@ async def get_sla_targets(
 async def get_sla_settings(user: dict = Depends(require_role("admin"))):
     """Get the full SLA config object from STDB."""
     tid = user["tenant_id"]
-    rows = await _sql(f"SELECT * FROM sla_configs WHERE tenant_id = '{tid}'")
+    rows = await _sql(f"SELECT * FROM sla_configs WHERE tenant_id = '{_sqlesc(tid)}'")
     if rows:
         return {
             "targets": json.loads(rows[0]["targets_json"]),
@@ -187,7 +187,7 @@ async def get_ticket(
 ):
     """Get a single ticket by ID."""
     rows = await _sql(
-        f"SELECT * FROM ticket WHERE id = '{ticket_id}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM ticket WHERE id = '{_sqlesc(ticket_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Ticket not found")
@@ -229,7 +229,9 @@ async def create_ticket(
         tid = user["tenant_id"]
         # Find the most recently created ticket for this tenant
         recent = _sort(
-            await _sql(f"SELECT id, status, created_at FROM ticket WHERE tenant_id = '{tid}'"),
+            await _sql(
+                f"SELECT id, status, created_at FROM ticket WHERE tenant_id = '{_sqlesc(tid)}'"
+            ),
             key="created_at",
         )
         if recent:
@@ -243,7 +245,7 @@ async def create_ticket(
                 counts = []
                 for s in staff:
                     open_tickets = await _sql(
-                        f"SELECT COUNT(*) AS cnt FROM ticket WHERE assigned_user_id = '{s['id']}' AND status != 'resolved' AND status != 'closed' AND status != 'cancelled'"
+                        f"SELECT COUNT(*) AS cnt FROM ticket WHERE assigned_user_id = '{_sqlesc(s['id'])}' AND status != 'resolved' AND status != 'closed' AND status != 'cancelled'"
                     )
                     cnt = int(open_tickets[0].get("cnt", 0)) if open_tickets else 0
                     counts.append((cnt, s["id"]))
@@ -262,7 +264,7 @@ async def create_ticket(
 
     # Return the newly created ticket's ID
     recent = _sort(
-        await _sql(f"SELECT id FROM ticket WHERE tenant_id = '{user['tenant_id']}'"),
+        await _sql(f"SELECT id FROM ticket WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'"),
         key="id",
     )
     new_id = recent[0]["id"] if recent else ""
@@ -380,7 +382,7 @@ async def send_ticket_email(
 ):
     """Send a ticket status email to the customer directly from the ticket detail view."""
     rows = await _sql(
-        f"SELECT * FROM ticket WHERE id = '{_sqlesc(ticket_id)}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM ticket WHERE id = '{_sqlesc(ticket_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Ticket not found")

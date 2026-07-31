@@ -11,6 +11,7 @@ from helpers import (
     _log_audit,
     _paginated,
     _sql,
+    _sqlesc,
     require_role,
 )
 from models import CustomFieldDefinitionCreate, CustomFieldValuesUpdate
@@ -98,7 +99,9 @@ async def get_custom_field_values(
     entity_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Get all custom field values for an entity."""
-    rows = await _sql(f"SELECT * FROM custom_field_values WHERE entity_id = '{entity_id}'")
+    rows = await _sql(
+        f"SELECT * FROM custom_field_values WHERE entity_id = '{_sqlesc(entity_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
+    )
     return {"values": rows}
 
 

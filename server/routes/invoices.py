@@ -66,9 +66,9 @@ async def list_invoices(
     """List invoices with pagination and optional status/customer filter."""
     conditions = []
     if status:
-        conditions.append(f"status = '{status}'")
+        conditions.append(f"status = '{_sqlesc(status)}'")
     if customer_id:
-        conditions.append(f"customer_id = '{customer_id}'")
+        conditions.append(f"customer_id = '{_sqlesc(customer_id)}'")
     where = " AND ".join(conditions) if conditions else ""
     rows, total = await _paginated(
         user["tenant_id"],
@@ -142,7 +142,7 @@ async def create_invoice(
 
     # Return the newly created invoice's ID
     recent = _sort(
-        await _sql(f"SELECT id FROM invoices WHERE tenant_id = '{user['tenant_id']}'"),
+        await _sql(f"SELECT id FROM invoices WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'"),
         key="id",
     )
     new_id = recent[0]["id"] if recent else ""
@@ -155,7 +155,7 @@ async def get_invoice_summary(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Get invoice summary: counts and totals by status."""
-    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'")
     now = int(time.time() * 1000)
     summary: dict[str, dict] = {}
     for inv in rows:
@@ -280,7 +280,7 @@ async def get_overdue_count(
     """Get count of overdue invoices and total overdue amount.
     Detects overdue on-the-fly: invoices past due_date with status sent/partial count as overdue."""
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {int(time.time() * 1000)}))"
+        f"SELECT * FROM invoices WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {int(time.time() * 1000)}))"
     )
     total = sum(float(i.get("total", 0)) for i in rows)
     return {"count": len(rows), "total": round(total, 2)}
@@ -293,7 +293,7 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
     # Detect overdue invoices that need marking
     now = int(time.time() * 1000)
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}"
+        f"SELECT * FROM invoices WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND (status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}"
     )
     marked = 0
     for inv in rows:
@@ -320,11 +320,11 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
     interval_days = int(app_cfg.get("reminder_interval_days", 3))
     cutoff = now - interval_days * 86_400_000  # days → ms
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now})) AND due_date > 0 AND due_date < {cutoff}"
+        f"SELECT * FROM invoices WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now})) AND due_date > 0 AND due_date < {cutoff}"
     )
     sent = {"email": 0, "sms": 0, "total": 0}
     for inv in rows:
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(inv['customer_id'])}'")
         if not cust:
             continue
         c = cust[0]
@@ -381,7 +381,9 @@ async def get_invoice_line_items(
     invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     await _require_owned("invoices", invoice_id, user["tenant_id"])
-    rows = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    rows = await _sql(
+        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'"
+    )
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
@@ -441,9 +443,11 @@ async def invoice_pdf(
     invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     inv = await _require_owned("invoices", invoice_id, user["tenant_id"])
-    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    items = await _sql(
+        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'"
+    )
     items = _sort(items, "sort_order", desc=False)
-    cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+    cust = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(inv['customer_id'])}'")
 
     customer = cust[0] if cust else {}
     status = inv.get("status", "draft")
@@ -496,7 +500,7 @@ async def invoice_pdf(
             }
             for p in _sort(
                 await _sql(
-                    f"SELECT amount, method, reference, created_at, notes FROM payment WHERE invoice_id = '{invoice_id}'"
+                    f"SELECT amount, method, reference, created_at, notes FROM payment WHERE invoice_id = '{_sqlesc(invoice_id)}'"
                 ),
                 key="created_at",
             )
@@ -535,13 +539,13 @@ async def send_invoice_email(
         raise HTTPException(400, "invoice_id required")
 
     invs = await _sql(
-        f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM invoices WHERE id = '{_sqlesc(invoice_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not invs:
         raise HTTPException(404, "Invoice not found")
     inv = invs[0]
 
-    cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+    cust = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(inv['customer_id'])}'")
     if not cust:
         raise HTTPException(400, "Customer not found for this invoice")
     c = cust[0]
@@ -581,7 +585,7 @@ async def send_batch_invoice_email(
 
     for invoice_id in invoice_ids:
         invs = await _sql(
-            f"SELECT * FROM invoices WHERE id = '{invoice_id}' AND tenant_id = '{user['tenant_id']}'"
+            f"SELECT * FROM invoices WHERE id = '{_sqlesc(invoice_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
         )
         if not invs:
             results["skipped"] += 1
@@ -589,7 +593,7 @@ async def send_batch_invoice_email(
             continue
         inv = invs[0]
 
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(inv['customer_id'])}'")
         if not cust:
             results["skipped"] += 1
             results["details"].append({"id": invoice_id, "status": "no_customer"})
@@ -626,7 +630,7 @@ async def send_batch_invoice_email(
 async def get_email_queue_status(user: dict = Depends(require_role("admin", "tech"))):
     """Get recent invoice email sends from audit log."""
     rows = await _sql(
-        f"SELECT * FROM audit_log WHERE tenant_id = '{user['tenant_id']}' "
+        f"SELECT * FROM audit_log WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' "
         f"AND (action = 'send_email' OR action = 'send_batch_email')"
     )
     # Manual sort — STDB doesn't support ORDER BY

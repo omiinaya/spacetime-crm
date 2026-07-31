@@ -10,6 +10,7 @@ from helpers import (
     _log_audit,
     _paginated,
     _sql,
+    _sqlesc,
     jinja_env,
     require_role,
 )
@@ -43,12 +44,12 @@ async def get_pos_sale(
 ):
     """Get a single counter sale with line items."""
     rows = await _sql(
-        f"SELECT * FROM counter_sale WHERE id = '{sale_id}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM counter_sale WHERE id = '{_sqlesc(sale_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Sale not found")
     sale = rows[0]
-    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'")
+    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{_sqlesc(sale_id)}'")
     sale["line_items"] = sorted(items, key=lambda x: x.get("sort_order", 0))
     return {"sale": sale}
 
@@ -59,13 +60,13 @@ async def get_pos_receipt_pdf(
 ):
     """Generate a printable PDF receipt for a completed counter sale."""
     rows = await _sql(
-        f"SELECT * FROM counter_sale WHERE id = '{sale_id}' AND tenant_id = '{user['tenant_id']}'"
+        f"SELECT * FROM counter_sale WHERE id = '{_sqlesc(sale_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     if not rows:
         raise HTTPException(404, "Sale not found")
     sale = rows[0]
 
-    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{sale_id}'")
+    items = await _sql(f"SELECT * FROM counter_sale_line_item WHERE sale_id = '{_sqlesc(sale_id)}'")
     items = sorted(items, key=lambda x: x.get("sort_order", 0))
 
     receipt_number = sale.get("receipt_number", sale.get("id", "N/A"))

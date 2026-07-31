@@ -36,7 +36,7 @@ async def list_payments(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List payments with pagination and optional invoice_id filter."""
-    where = f"invoice_id = '{invoice_id}'" if invoice_id else ""
+    where = f"invoice_id = '{_sqlesc(invoice_id)}'" if invoice_id else ""
     rows, total = await _paginated(
         user["tenant_id"],
         "payment",
@@ -69,8 +69,8 @@ async def record_payment(
         ],
     )
     if invoice_id:
-        invoices = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
-        payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+        invoices = await _sql(f"SELECT * FROM invoices WHERE id = '{_sqlesc(invoice_id)}'")
+        payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_sqlesc(invoice_id)}'")
         if invoices:
             inv = invoices[0]
             total_paid = sum(float(p.get("amount", 0)) for p in payments)

@@ -11,6 +11,7 @@ from helpers import (
     CUSTOMER_SENSITIVE_FIELDS,
     _call,
     _sql,
+    _sqlesc,
     require_role,
 )
 
@@ -43,7 +44,7 @@ async def export_csv(
     if not table:
         raise HTTPException(400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}")
 
-    rows = await _sql(f"SELECT * FROM {table} WHERE tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM {table} WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'")
     if entity == "customers":
         rows = [{k: v for k, v in r.items() if k not in CUSTOMER_SENSITIVE_FIELDS} for r in rows]
     if not rows:

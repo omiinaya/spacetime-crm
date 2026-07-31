@@ -13,7 +13,7 @@ import asyncio
 import json
 import os
 
-from helpers import _call, _sql, logger
+from helpers import _call, _sql, _sqlesc, logger
 
 # Optional: pywebpush for sending push notifications
 try:
@@ -77,7 +77,7 @@ def _get_vapid_private_key() -> str | None:
 
 async def get_user_subscriptions(user_id: str) -> list[dict]:
     """Fetch all push subscription endpoints for a user."""
-    rows = await _sql(f"SELECT * FROM push_subscriptions WHERE user_id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM push_subscriptions WHERE user_id = '{_sqlesc(user_id)}'")
     return rows
 
 

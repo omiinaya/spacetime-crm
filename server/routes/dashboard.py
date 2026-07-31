@@ -10,6 +10,7 @@ from helpers import (
     _paginated,
     _sql,
     _sql_t,
+    _sqlesc,
     require_role,
 )
 
@@ -353,9 +354,9 @@ async def get_audit_log(
     """Get audit log entries with pagination. Admin only."""
     where = ""
     if entity:
-        where += f"entity = '{entity}'"
+        where += f"entity = '{_sqlesc(entity)}'"
     if action:
-        where += (" AND " if where else "") + f"action = '{action}'"
+        where += (" AND " if where else "") + f"action = '{_sqlesc(action)}'"
     rows, total = await _paginated(
         "",
         "audit_log",

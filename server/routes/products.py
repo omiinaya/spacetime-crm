@@ -12,6 +12,7 @@ from helpers import (
     _paginated,
     _sort,
     _sql,
+    _sqlesc,
     require_role,
 )
 from mail import _notify_low_stock
@@ -148,7 +149,9 @@ async def update_product(
 async def get_product_adjustments(
     product_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    rows = await _sql(f"SELECT * FROM inventory_adjustment WHERE product_id = '{product_id}'")
+    rows = await _sql(
+        f"SELECT * FROM inventory_adjustment WHERE product_id = '{_sqlesc(product_id)}'"
+    )
     return {"adjustments": _sort(rows, "created_at")}
 
 
@@ -179,7 +182,7 @@ async def list_low_stock(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List products below minimum stock threshold for the current tenant."""
-    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'")
     low_stock = [
         r
         for r in rows
@@ -194,7 +197,7 @@ async def lookup_product_by_barcode(
 ):
     """Find a product by barcode (exact match, tenant-scoped)."""
     rows = await _sql(
-        f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}' AND barcode = '{barcode}'"
+        f"SELECT * FROM products WHERE tenant_id = '{_sqlesc(user['tenant_id'])}' AND barcode = '{_sqlesc(barcode)}'"
     )
     if not rows:
         raise HTTPException(404, "Product not found for this barcode")
@@ -204,7 +207,7 @@ async def lookup_product_by_barcode(
 @router.post("/api/products/low-stock/notify")
 async def notify_low_stock(user: dict = Depends(require_role("admin"))):
     """Check low stock and send email alert to admin."""
-    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{user['tenant_id']}'")
+    rows = await _sql(f"SELECT * FROM products WHERE tenant_id = '{_sqlesc(user['tenant_id'])}'")
     low_stock = [
         r
         for r in rows
@@ -237,10 +240,10 @@ async def transfer_stock(
 
     # Verify both products exist and belong to this tenant
     src_rows = await _sql(
-        f"SELECT * FROM products WHERE id = '{body.source_product_id}' AND tenant_id = '{tid}'"
+        f"SELECT * FROM products WHERE id = '{_sqlesc(body.source_product_id)}' AND tenant_id = '{_sqlesc(tid)}'"
     )
     dst_rows = await _sql(
-        f"SELECT * FROM products WHERE id = '{body.destination_product_id}' AND tenant_id = '{tid}'"
+        f"SELECT * FROM products WHERE id = '{_sqlesc(body.destination_product_id)}' AND tenant_id = '{_sqlesc(tid)}'"
     )
     if not src_rows:
         raise HTTPException(404, "Source product not found")

@@ -12,6 +12,7 @@ from helpers import (
     _paginated,
     _sort,
     _sql,
+    _sqlesc,
     require_role,
 )
 from models import EstimateCreate, EstimateLineItemCreate, EstimateStatusUpdate
@@ -33,7 +34,7 @@ async def list_estimates(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """List estimates with pagination and optional status filter."""
-    where = f"status = '{status}'" if status else ""
+    where = f"status = '{_sqlesc(status)}'" if status else ""
     rows, total = await _paginated(
         user["tenant_id"],
         "estimates",
@@ -91,7 +92,9 @@ async def update_estimate_status(
 async def get_estimate_line_items(
     estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    rows = await _sql(f"SELECT * FROM estimate_line_items WHERE estimate_id = '{estimate_id}'")
+    rows = await _sql(
+        f"SELECT * FROM estimate_line_items WHERE estimate_id = '{_sqlesc(estimate_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
+    )
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
 
@@ -127,7 +130,9 @@ async def convert_estimate(
     estimate_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Convert an approved estimate to an invoice (atomic reducer)."""
-    est_rows = await _sql(f"SELECT * FROM estimates WHERE id = '{estimate_id}'")
+    est_rows = await _sql(
+        f"SELECT * FROM estimates WHERE id = '{_sqlesc(estimate_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
+    )
     if not est_rows:
         raise HTTPException(404, "Estimate not found")
     est = est_rows[0]
@@ -136,7 +141,9 @@ async def convert_estimate(
 
     await _call("convert_estimate_to_invoice", [estimate_id])
 
-    est_rows = await _sql(f"SELECT invoice_id FROM estimates WHERE id = '{estimate_id}'")
+    est_rows = await _sql(
+        f"SELECT invoice_id FROM estimates WHERE id = '{_sqlesc(estimate_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
+    )
     inv_id = est_rows[0].get("invoice_id", "") if est_rows else ""
     if not inv_id:
         raise HTTPException(500, "Failed to get generated invoice ID")
