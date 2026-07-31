@@ -145,17 +145,12 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
         api.customers.list(),
         api.taxRates.list(),
       ]);
+      pag.setTotal(iRes.total);
+      setTaxRates(tRes.tax_rates);
       return {
         invoices: iRes.invoices,
         customers: cRes.customers,
-        tax_rates: tRes.tax_rates,
-        total: iRes.total,
       };
-    },
-    select: (res) => {
-      pag.setTotal(res.total);
-      setTaxRates(res.tax_rates);
-      return { invoices: res.invoices, customers: res.customers };
     },
   });
 

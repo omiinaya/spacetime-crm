@@ -94,15 +94,11 @@ export default function TicketsPage() {
         api.tickets.list(filter, undefined, pag.offset, PAGE_SIZE),
         api.customers.list(),
       ]);
+      pag.setTotal(tRes.total);
       return {
         tickets: tRes.tickets,
         customers: cRes.customers,
-        total: tRes.total,
       };
-    },
-    select: (res) => {
-      pag.setTotal(res.total);
-      return { tickets: res.tickets, customers: res.customers };
     },
   });
 

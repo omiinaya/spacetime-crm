@@ -206,8 +206,8 @@ export default function CustomersPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', { search, offset: pag.offset }],
-    queryFn: () => api.customers.list(search, pag.offset, PAGE_SIZE),
-    select: (res) => {
+    queryFn: async () => {
+      const res = await api.customers.list(search, pag.offset, PAGE_SIZE);
       pag.setTotal(res.total);
       return res.customers;
     },
@@ -460,10 +460,15 @@ export default function CustomersPage() {
                     >
                       <Key className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleEdit(c)}>
+                    <Button size="icon" variant="ghost" onClick={() => handleEdit(c)} title="Edit customer">
                       <Edit2 className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(c.id)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => deleteMutation.mutate(c.id)}
+                      title="Delete customer"
+                    >
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>

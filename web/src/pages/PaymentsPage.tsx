@@ -34,19 +34,11 @@ export default function PaymentsPage() {
         api.invoices.list(),
         api.customers.list(),
       ]);
+      pag.setTotal(pRes.total);
       return {
         payments: pRes.payments,
         invoices: iRes.invoices,
         customers: cRes.customers,
-        total: pRes.total,
-      };
-    },
-    select: (res) => {
-      pag.setTotal(res.total);
-      return {
-        payments: res.payments,
-        invoices: res.invoices,
-        customers: res.customers,
       };
     },
   });

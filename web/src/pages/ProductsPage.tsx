@@ -103,9 +103,6 @@ export default function ProductsPage() {
         pag.offset,
         PAGE_SIZE,
       );
-      return res;
-    },
-    select: (res) => {
       pag.setTotal(res.total);
       return { products: res.products };
     },

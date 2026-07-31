@@ -6,6 +6,7 @@ and notification template dispatch. Twilio calls are mocked.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import tempfile
@@ -13,6 +14,11 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+def _run_sms_fire_and_forget(coro, **kwargs):
+    """Await the coroutine passed to asyncio.ensure_future so no warnings leak."""
+    return asyncio.run(coro)
 
 
 @pytest.fixture(autouse=True)
@@ -533,7 +539,7 @@ class TestNotifications:
         import sms
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
-            with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
+            with patch("sms.asyncio.ensure_future", _run_sms_fire_and_forget):
                 getattr(sms, func_name)(*args)
                 mock_send.assert_called_once()
 
@@ -573,19 +579,19 @@ class TestNotifications:
         import sms
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
-            with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
+            with patch("sms.asyncio.ensure_future", _run_sms_fire_and_forget):
                 sms._notify_ticket_status_change("+15551234567", 42, "Broken", "in_progress")
             body = mock_send.call_args[0][1]
             assert "Ticket #42" in body
             assert "In Progress" in body
 
-            with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
+            with patch("sms.asyncio.ensure_future", _run_sms_fire_and_forget):
                 sms._notify_invoice_created("+15551234567", 99, 199.99)
                 body = mock_send.call_args[0][1]
                 assert "Invoice #99" in body
                 assert "$199.99" in body
 
-            with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
+            with patch("sms.asyncio.ensure_future", _run_sms_fire_and_forget):
                 sms._notify_payment_received("+15551234567", 99, 50.0)
                 body = mock_send.call_args[0][1]
                 assert "$50.00" in body
@@ -595,9 +601,15 @@ class TestNotifications:
         """Each notification should use asyncio.ensure_future for fire-and-forget."""
         import sms
 
-        with patch("sms.asyncio.ensure_future") as mock_ensure:
+        calls: list = []
+
+        def _recording_ensure_future(coro, **kw):
+            calls.append(coro)
+            return _run_sms_fire_and_forget(coro)
+
+        with patch("sms.asyncio.ensure_future", _recording_ensure_future):
             sms._notify_ticket_status_change("+15551234567", 1, "Test", "new")
-            mock_ensure.assert_called_once()
+        assert len(calls) == 1
 
     def test_ticket_status_labels(self) -> None:
         """Should use the correct status labels."""
@@ -613,7 +625,7 @@ class TestNotifications:
         ]
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
-            with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
+            with patch("sms.asyncio.ensure_future", _run_sms_fire_and_forget):
                 for status, label in status_tests:
                     sms._notify_ticket_status_change("+15551234567", 1, "Test", status)
                     body = mock_send.call_args[0][1]
@@ -624,7 +636,7 @@ class TestNotifications:
         import sms
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
-            with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
+            with patch("sms.asyncio.ensure_future", _run_sms_fire_and_forget):
                 # 1710000000000ms = Sunday, March 10, 2024 12:00:00 AM GMT (approximately)
                 sms._notify_appointment_created("+15551234567", "Oil Change", 1710000000000)
                 body = mock_send.call_args[0][1]
@@ -636,7 +648,7 @@ class TestNotifications:
         import sms
 
         with patch.object(sms, "send_sms", new_callable=AsyncMock) as mock_send:
-            with patch("sms.asyncio.ensure_future", lambda c, **kw: None):
+            with patch("sms.asyncio.ensure_future", _run_sms_fire_and_forget):
                 sms._notify_overdue_reminder("+15551234567", 401, 100.0)
                 body = mock_send.call_args[0][1]
                 assert "overdue" in body.lower()

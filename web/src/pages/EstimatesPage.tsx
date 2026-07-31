@@ -48,15 +48,11 @@ export default function EstimatesPage() {
         api.estimates.list(filter, pag.offset, PAGE_SIZE),
         api.customers.list(),
       ]);
+      pag.setTotal(eRes.total);
       return {
         estimates: eRes.estimates,
         customers: cRes.customers,
-        total: eRes.total,
       };
-    },
-    select: (res) => {
-      pag.setTotal(res.total);
-      return { estimates: res.estimates, customers: res.customers };
     },
   });
 

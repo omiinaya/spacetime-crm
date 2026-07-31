@@ -298,6 +298,7 @@ mod tests {
             12.50,
             50.0,
             5.0,
+            0.0,
             "Aisle-3".into(),
         );
         let products_list: Vec<Product> = ctx.db.products().iter().collect();
@@ -323,6 +324,7 @@ mod tests {
             5.0,
             10.0,
             0.0,
+            0.0,
             "".into(),
         );
         let p = ctx
@@ -343,6 +345,7 @@ mod tests {
             25.0,
             8.0,
             5.0,
+            0.0,
             "B-12".into(),
         );
         let updated = ctx
@@ -368,6 +371,7 @@ mod tests {
             1.0,
             0.5,
             5.0,
+            0.0,
             0.0,
             "".into(),
         );
