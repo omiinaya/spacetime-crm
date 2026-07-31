@@ -12,7 +12,7 @@ stdb: true
 1|# SpacetimeCRM — AGENTS.md
 2|
 3|> Full agent onboarding guide. Read this before making changes to the codebase.
-4|> Last updated: 2026-06-28
+4|> Last updated: 2026-07-31
 5|
 6|---
 7|
@@ -32,66 +32,77 @@ stdb: true
 21|
 22|## 2. Workspace Layout
 23|
-24|```
-25|spacetime-crm/
-26|├── server/
-27|│   ├── main.py                # FastAPI server — ALL endpoints (~2250 lines)
-28|│   ├── config.py              # Pydantic settings (STDB host/port, JWT, Stripe)
-29|│   ├── requirements.txt       # Python deps
-30|│   ├── Dockerfile             # Multi-stage: frontend build + Python runtime
-31|│   ├── mail.py                # Email notification engine
-32|│   ├── sms.py                 # Twilio SMS notification engine
-33|│   ├── webhooks.py            # HMAC-signed webhook delivery engine
-34|│   ├── stripe_payments.py     # Stripe Checkout integration
-35|│   ├── templates/             # Jinja2 PDF templates
-36|│   └── spacetimedb/           # STDB Rust module
-37|│       ├── Cargo.toml         # spacetimedb = "=2.4.0"
-38|│       └── src/
-39|│           ├── lib.rs         # Module root — table defs + reducers + helpers
-40|│           ├── customer.rs    # Customer table + reducers
-41|│           ├── ticket.rs      # Ticket + TicketNote + TicketTimer tables
-42|│           ├── invoice.rs     # (defined in lib.rs)
-43|│           ├── payment.rs     # Payment table + reducers
-44|│           ├── appointment.rs # Appointment table + reducers
-45|│           ├── product.rs     # Product/inventory table + reducers
-46|│           ├── estimate.rs    # (defined in lib.rs)
-47|│           ├── purchase_order.rs # PO + POLineItem tables
-48|│           ├── user.rs        # User + UserSettings tables
-49|│           ├── inventory.rs   # Inventory adjustment table
-50|│           ├── tax_rate.rs    # Tax rate configuration
-51|│           ├── audit.rs       # Audit log table
-52|│           ├── custom_field.rs # Custom fields per entity
-53|│           ├── customer_geolocation.rs # Geo-location cache
-54|│           ├── checklist.rs   # Repair checklist templates
-55|│           └── webhook.rs     # Webhook subscription table
-56|├── web/
-57|│   ├── src/
-58|│   │   ├── App.tsx            # Layout + sidebar + routing
-59|│   │   ├── main.tsx           # React entry point
-60|│   │   ├── lib/
-61|│   │   │   ├── api.ts         # Typed API client (783 lines, all interfaces)
-62|│   │   │   ├── auth.tsx       # JWT auth context + provider
-63|│   │   │   └── utils.ts       # cn() utility
-64|│   │   ├── components/ui/     # Button, Card, Badge, Input, Select, Label
-65|│   │   ├── components/        # MonthCalendar, etc.
-66|│   │   └── pages/             # One page per domain (see task map below)
-67|│   ├── package.json           # Scripts: dev, build, preview
-68|│   ├── vite.config.ts         # Port 5185, proxy /api → :8723
-69|│   └── index.html
-70|├── scripts/
-71|│   ├── publish-stdb.sh        # Build + publish STDB module
-72|│   ├── docker-entrypoint.sh   # Docker startup (wait for STDB, publish, start API)
-73|│   ├── seed-demo.py           # Seed demo data (customers, tickets, invoices...)
-74|│   ├── backup.py              # Full STDB backup to .json.gz
-75|│   └── restore.py             # Destructive restore from backup
-76|├── docker-compose.yml         # spacetime + backend services
-77|├── Makefile                   # build, test, lint, fmt, dev-up, clean
-78|├── AGENTS.md                  # ← This file
-79|├── CLAUDE.md                  # Quick signpost
-80|├── CONTRIBUTING.md            # Contribution guidelines
-81|├── README.md                  # Project overview + quick start
-82|└── ROADMAP.md                 # Phase progress
-83|```
+```
+spacetime-crm/
+├── server/
+│   ├── main.py                # FastAPI entrypoint — mounts routers (~109 lines)
+│   ├── routes/                # 25 route modules (auth, customers, tickets, invoices,
+│   │   │                      #   payments, appointments, products, estimates, POS,
+│   │   │                      #   purchase_orders, reports, portal, gift_cards, ...)
+│   ├── config.py              # Pydantic settings (STDB host/port, JWT, Stripe)
+│   ├── requirements.txt       # Python deps
+│   ├── Dockerfile             # Multi-stage: frontend build + Python runtime
+│   ├── helpers.py             # _sql/_call/_require_owned/_sqlesc/audit/webhook helpers
+│   ├── mail.py                # Email notification engine
+│   ├── sms.py                 # Twilio SMS notification engine
+│   ├── pdf.py                 # Jinja2 + Playwright PDF generation
+│   ├── stripe_payments.py     # Stripe Checkout integration
+│   ├── templates/             # Jinja2 PDF templates
+│   └── spacetimedb/           # STDB Rust module
+│       ├── Cargo.toml         # spacetimedb = "=2.4.0"
+│       └── src/
+│           ├── lib.rs         # Module root — table defs + reducers + helpers
+│           ├── customer.rs    # Customer table + reducers
+│           ├── ticket.rs      # Ticket + TicketNote + TicketTimer tables
+│           ├── invoice.rs     # Invoice + line items + reducers
+│           ├── payment.rs     # Payment table + reducers
+│           ├── appointment.rs # Appointment table + reducers
+│           ├── product.rs     # Product/inventory table + reducers
+│           ├── estimate.rs    # Estimate + line items + reducers
+│           ├── purchase_order.rs # PO + POLineItem tables
+│           ├── recurring_invoice_rule.rs # Recurring invoice rules
+│           ├── gift_card.rs   # Gift cards
+│           ├── user.rs        # User + UserSettings tables
+│           ├── inventory.rs   # Inventory adjustment table
+│           ├── tax_rate.rs    # Tax rate configuration
+│           ├── audit.rs       # Audit log table
+│           ├── custom_field.rs # Custom fields per entity
+│           ├── customer_geolocation.rs # Geo-location cache
+│           ├── checklist.rs   # Repair checklist templates
+│           └── webhook.rs     # Webhook subscription table
+├── web/
+│   ├── src/
+│   │   ├── App.tsx            # Layout + sidebar + routing (~550 lines)
+│   │   ├── main.tsx           # React entry point
+│   │   ├── lib/
+│   │   │   ├── api/           # Typed API client — one module per domain (25 files)
+│   │   │   ├── auth.tsx       # JWT auth context + provider
+│   │   │   ├── portal-auth.ts # Customer portal auth
+│   │   │   ├── theme.ts       # Dark/light theme + localStorage persistence
+│   │   │   ├── useNetworkStatus.ts # Offline detection
+│   │   │   └── utils.ts       # cn() utility
+│   │   ├── components/ui/     # Button, Card, Badge, Input, Select, Label
+│   │   ├── components/        # MonthCalendar, etc.
+│   │   ├── pages/             # 32 pages — one per domain (see task map below)
+│   │   └── test/              # Vitest suites: 259 tests (pages/ + components/ + lib/)
+│   ├── e2e/                   # Playwright specs (33 tests)
+│   ├── package.json           # Scripts: dev, build, preview, test
+│   ├── vite.config.ts         # Port 5185, proxy /api → :8723, PWA plugin
+│   └── index.html
+├── scripts/
+│   ├── publish-stdb.sh        # Build + publish STDB module
+│   ├── docker-entrypoint.sh   # Docker startup (wait for STDB, publish, start API)
+│   ├── seed-demo.py           # Seed demo data (customers, tickets, invoices...)
+│   ├── backup.py              # Full STDB backup to .json.gz
+│   └── restore.py             # Destructive restore from backup
+├── docker-compose.yml         # spacetime + backend services
+├── Makefile                   # build, test, lint, fmt, dev-up, clean
+├── AGENTS.md                  # ← This file
+├── CLAUDE.md                  # Quick signpost
+├── CONTRIBUTING.md            # Contribution guidelines
+├── README.md                  # Project overview + quick start
+└── ROADMAP.md                 # Phase progress
+```
 84|
 85|---
 86|
