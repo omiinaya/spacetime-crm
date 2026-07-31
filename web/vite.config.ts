@@ -12,6 +12,10 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["pwa-icon.svg"],
+      // NOTE: offline caching + push notifications are implemented in
+      // public/sw.js (NetworkFirst for /api/ reads and navigations,
+      // cache-first for static assets). No workbox runtimeCaching here to
+      // avoid conflicting with the custom service worker.
       manifest: {
         name: "SpacetimeCRM",
         short_name: "CRM",

@@ -90,3 +90,51 @@ self.addEventListener('notificationclick', (event) => {
       })
   );
 });
+
+// Fetch — offline support: NetworkFirst for API reads and pages, cache-first
+// for static assets. Writes are passed through untouched (never cached).
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  const isAPI = url.pathname.startsWith('/api/');
+  const isPage = request.mode === 'navigate';
+
+  // API + page navigations: try network, fall back to cache when offline.
+  if (isAPI || isPage) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches
+            .match(request)
+            .then((cached) => cached || caches.match('/index.html')),
+        ),
+    );
+    return;
+  }
+
+  // Static assets: cache-first with network refresh.
+  event.respondWith(
+    caches.match(request).then(
+      (cached) =>
+        cached ||
+        fetch(request).then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        }),
+    ),
+  );
+});
