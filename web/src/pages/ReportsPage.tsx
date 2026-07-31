@@ -160,16 +160,30 @@ export default function ReportsPage() {
 	}
 
 	const {
-		revenue_by_month,
-		ticket_by_status,
-		invoice_by_status,
-		appointments_by_month,
-		customers_by_month,
-		tech_closed,
-		top_customers,
-		totals,
-		invoice_item_type_breakdown,
-		estimate_item_type_breakdown,
+		revenue_by_month = [],
+		ticket_by_status = [],
+		invoice_by_status = [],
+		appointments_by_month = [],
+		customers_by_month = [],
+		tech_closed = [],
+		top_customers = [],
+		// Defensive full default — the API may return partial totals (e.g. a
+		// field added frontend-first, or a degraded response), and every
+		// usage below calls `.toFixed()` / arithmetic on these values. A bare
+		// `= {}` default crashes the page with `undefined.toFixed()`.
+		totals = {
+			total_revenue: 0,
+			outstanding_revenue: 0,
+			open_tickets: 0,
+			avg_resolution_hours: 0,
+			sla_breach_rate: 0,
+			sla_breach_count: 0,
+			overdue_invoice_rate: 0,
+			overdue_invoice_count: 0,
+			total_sent: 0,
+		},
+		invoice_item_type_breakdown = [],
+		estimate_item_type_breakdown = [],
 	} = data;
 
 	return (
@@ -189,26 +203,26 @@ export default function ReportsPage() {
 				{[
 					{
 						label: "Total Revenue",
-						value: `$${totals.total_revenue.toFixed(2)}`,
+						value: `$${Number(totals.total_revenue ?? 0).toFixed(2)}`,
 						icon: DollarSign,
 						color: "text-green-400",
 					},
 					{
 						label: "Outstanding",
-						value: `$${totals.outstanding_revenue.toFixed(2)}`,
+						value: `$${Number(totals.outstanding_revenue ?? 0).toFixed(2)}`,
 						icon: Clock,
 						color: "text-amber-400",
 					},
 					{
 						label: "Open Tickets",
-						value: totals.open_tickets,
+						value: totals.open_tickets ?? 0,
 						icon: Ticket,
 						color: "text-blue-400",
 					},
 					{
 						label: "Avg Resolution",
 						value: totals.avg_resolution_hours
-							? `${totals.avg_resolution_hours}h`
+							? `${Number(totals.avg_resolution_hours).toFixed(1)}h`
 							: "N/A",
 						icon: Award,
 						color: "text-purple-400",
