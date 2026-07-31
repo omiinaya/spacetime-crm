@@ -16,6 +16,7 @@ from helpers import (
     _safe_customer,
     _sql,
     _sql_t,
+    _sqlesc,
     logger,
     require_role,
 )
@@ -203,7 +204,7 @@ async def list_customer_geolocations(
 @router.post("/api/customers/{customer_id}/geocode")
 async def geocode_customer(customer_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Geocode a single customer's address and store the location."""
-    customers = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
+    customers = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(customer_id)}'")
     if not customers:
         raise HTTPException(404, "Customer not found")
     c = customers[0]

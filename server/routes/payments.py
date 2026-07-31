@@ -12,6 +12,7 @@ from helpers import (
     _log_audit,
     _paginated,
     _sql,
+    _sqlesc,
     require_role,
 )
 from mail import _customer_email as _mail_customer_email
@@ -85,7 +86,7 @@ async def record_payment(
                 await _call("update_invoice_status", [invoice_id, new_status])
 
             async def _notify():
-                cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
+                cust = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(body.customer_id)}'")
                 email = _mail_customer_email(cust[0]) if cust else None
                 if email:
                     link = f"{settings.app_url}/portal/"

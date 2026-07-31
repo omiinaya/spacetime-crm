@@ -17,6 +17,7 @@ from helpers import (
     _paginated,
     _sort,
     _sql,
+    _sqlesc,
     jinja_env,
     logger,
     require_role,
@@ -99,7 +100,7 @@ async def create_invoice(
     )
 
     async def _notify():
-        cust = await _sql(f"SELECT * FROM customer WHERE id = '{body.customer_id}'")
+        cust = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(body.customer_id)}'")
         email = _mail_customer_email(cust[0]) if cust else None
         invs = await _sql("SELECT * FROM invoices LIMIT 1")
         inv = invs[0] if invs else None

@@ -8,6 +8,7 @@ from helpers import (
     _log_audit,
     _paginated,
     _sql,
+    _sqlesc,
     require_role,
 )
 from models import UserCreate, UserSettingsUpdate
@@ -36,7 +37,7 @@ async def list_users(
 @router.post("/api/users")
 async def create_user(body: UserCreate, user: dict = Depends(require_role("admin"))):
     # Check for duplicate email
-    existing = await _sql(f"SELECT id FROM \"user\" WHERE email = '{body.email}'")
+    existing = await _sql(f"SELECT id FROM \"user\" WHERE email = '{_sqlesc(body.email)}'")
     if existing:
         raise HTTPException(400, f"User with email '{body.email}' already exists")
     await _call(
@@ -49,7 +50,7 @@ async def create_user(body: UserCreate, user: dict = Depends(require_role("admin
     )
     await _log_audit(user, "create", "user", body.email, f"role={body.role}")
     # Return the newly created user's ID
-    rows = await _sql(f"SELECT id FROM \"user\" WHERE email = '{body.email}'")
+    rows = await _sql(f"SELECT id FROM \"user\" WHERE email = '{_sqlesc(body.email)}'")
     new_id = rows[0]["id"] if rows else ""
     return {"ok": True, "id": new_id}
 

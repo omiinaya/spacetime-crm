@@ -49,9 +49,7 @@ class TestTestMode:
 
     async def test_test_mode_sends_to_one_address(self):
         with patch("routes.email_campaigns.send_email", return_value=True) as mock_send:
-            result = await send_email_blast(
-                {**VALID_BODY, "send_test_only": "boss@test.com"}, USER
-            )
+            result = await send_email_blast({**VALID_BODY, "send_test_only": "boss@test.com"}, USER)
             assert result["mode"] == "test"
             assert result["sent"] == 1
             assert result["recipients"] == ["boss@test.com"]

@@ -13,6 +13,7 @@ from helpers import (
     _safe_customer,
     _sort,
     _sql,
+    _sqlesc,
     security,
 )
 from models import (
@@ -62,7 +63,7 @@ async def get_current_customer(
     if not customer_id:
         raise HTTPException(401, "Invalid token: no subject")
 
-    rows = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
+    rows = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(customer_id)}'")
     if not rows:
         raise HTTPException(401, "Customer not found")
     return _safe_customer(rows[0])

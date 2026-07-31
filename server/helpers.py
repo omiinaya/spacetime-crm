@@ -58,6 +58,21 @@ def _safe_customer(c: dict) -> dict:
 # ── STDB helpers ──────────────────────────────────────────────
 
 
+def _sqlesc(value: Any) -> str:
+    """Escape a value for safe interpolation into an STDB SQL string.
+
+    STDB's SQL endpoint does not support bind parameters, so user-controlled
+    values must be escaped before being embedded in a query. Escapes single
+    quotes (standard SQL doubling) and strips control characters.
+    """
+    if value is None:
+        return "NULL"
+    text = str(value)
+    # Strip NUL and other control chars that would confuse the parser
+    text = "".join(ch for ch in text if ch >= " " or ch == "\t")
+    return text.replace("'", "''")
+
+
 async def _sql(query: str) -> list[dict[str, Any]]:
     client = get_http_client()
     resp = await client.post(

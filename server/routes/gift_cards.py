@@ -7,7 +7,7 @@ import string
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
-from helpers import _call, _log_audit, _paginated, _sql, require_role
+from helpers import _call, _log_audit, _paginated, _sql, _sqlesc, require_role
 
 router = APIRouter()
 
@@ -58,7 +58,7 @@ async def create_gift_card(
     if not customer_name:
         # Look up customer name if ID is provided
         if customer_id:
-            cust = await _sql(f"SELECT * FROM customer WHERE id = '{customer_id}'")
+            cust = await _sql(f"SELECT * FROM customer WHERE id = '{_sqlesc(customer_id)}'")
             if cust:
                 customer_name = (
                     f"{cust[0].get('first_name', '')} {cust[0].get('last_name', '')}".strip()
@@ -124,9 +124,7 @@ async def redeem_gift_card(
     except HTTPException as e:
         # Reducer-level validation failed (e.g. race condition drained balance).
         if e.status_code == 502:
-            raise HTTPException(
-                400, "Insufficient balance: card was already redeemed"
-            ) from e
+            raise HTTPException(400, "Insufficient balance: card was already redeemed") from e
         raise
     await _log_audit(
         user,

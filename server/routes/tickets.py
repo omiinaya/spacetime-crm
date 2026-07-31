@@ -15,6 +15,7 @@ from helpers import (
     _paginated,
     _sort,
     _sql,
+    _sqlesc,
     logger,
     require_role,
 )
@@ -278,7 +279,7 @@ async def update_ticket_status(
     await _call("update_ticket_status", [ticket_id, status])
 
     async def _notify():
-        rows = await _sql(f"SELECT * FROM ticket WHERE id = '{ticket_id}'")
+        rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_sqlesc(ticket_id)}'")
         if rows:
             t = rows[0]
             cust = await _sql(f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'")
@@ -333,7 +334,7 @@ async def assign_ticket(
 async def get_ticket_notes(
     ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    rows = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{ticket_id}'")
+    rows = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{_sqlesc(ticket_id)}'")
     return {"notes": _sort(rows, "created_at", desc=False)}
 
 
@@ -373,7 +374,7 @@ async def start_ticket_timer(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     await _call("start_ticket_timer", [ticket_id, body.user_id])
-    rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{ticket_id}'")
+    rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{_sqlesc(ticket_id)}'")
     return {"timers": _sort(rows, "start_time")}
 
 
@@ -386,7 +387,7 @@ async def list_all_timers(
     query = "SELECT * FROM ticket_timer"
     filters = []
     if user_id:
-        filters.append(f"user_id = '{user_id}'")
+        filters.append(f"user_id = '{_sqlesc(user_id)}'")
     if running == "true":
         filters.append("running = true")
     if filters:
@@ -418,7 +419,7 @@ async def get_ticket_checklist(
     ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Get checklist items for a ticket."""
-    rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{ticket_id}'")
+    rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{_sqlesc(ticket_id)}'")
     return {"items": _sort(rows, "sort_order")}
 
 
