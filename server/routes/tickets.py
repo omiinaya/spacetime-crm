@@ -419,7 +419,9 @@ async def get_ticket_checklist(
     ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Get checklist items for a ticket."""
-    rows = await _sql(f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{_sqlesc(ticket_id)}'")
+    rows = await _sql(
+        f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{_sqlesc(ticket_id)}'"
+    )
     return {"items": _sort(rows, "sort_order")}
 
 

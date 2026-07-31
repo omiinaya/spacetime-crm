@@ -383,18 +383,18 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-lg font-bold">{summary.total_count}</p>
+            <p className="text-lg font-bold">{summary.total_count ?? 0}</p>
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Outstanding</p>
             <p className="text-lg font-bold text-amber-400">
-              ${summary.total_outstanding.toFixed(2)}
+              ${Number(summary.total_outstanding ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="border rounded-lg p-3 relative">
             <p className="text-xs text-muted-foreground">Overdue</p>
             <p className="text-lg font-bold text-red-400">
-              {summary.overdue_count} / ${summary.overdue_total.toFixed(2)}
+              {summary.overdue_count ?? 0} / ${Number(summary.overdue_total ?? 0).toFixed(2)}
             </p>
             {summary.overdue_count > 0 && (
               <Button
@@ -414,7 +414,9 @@ export default function InvoicesPage({ onNavigate }: { onNavigate?: (page: strin
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-muted-foreground">Revenue</p>
-            <p className="text-lg font-bold text-green-400">${summary.total_revenue.toFixed(2)}</p>
+            <p className="text-lg font-bold text-green-400">
+              ${Number(summary.total_revenue ?? 0).toFixed(2)}
+            </p>
           </div>
         </div>
       )}
