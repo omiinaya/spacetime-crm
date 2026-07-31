@@ -7,6 +7,7 @@ from helpers import (
     _call,
     _get_webhook_subscriptions,
     _log_audit,
+    _require_owned,
     _sql,
     _sqlesc,
     logger,
@@ -138,6 +139,7 @@ async def update_webhook_subscription(
         if invalid:
             raise HTTPException(400, f"Invalid event(s): {', '.join(invalid)}")
 
+    await _require_owned("webhook_subscriptions", sub_id, user["tenant_id"])
     await _call("update_webhook_subscription", [sub_id, url, events, secret, active])
     await _log_audit(user, "update", "webhook_subscription", url, events)
     return {"ok": True}
@@ -146,6 +148,7 @@ async def update_webhook_subscription(
 @router.delete("/api/webhook-subscriptions/{sub_id}")
 async def delete_webhook_subscription(sub_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a webhook subscription."""
+    await _require_owned("webhook_subscriptions", sub_id, user["tenant_id"])
     await _call("delete_webhook_subscription", [sub_id])
     await _log_audit(user, "delete", "webhook_subscription", sub_id)
     return {"ok": True}

@@ -9,6 +9,7 @@ from helpers import (
     _call,
     _log_audit,
     _paginated,
+    _require_owned,
     _sql,
     _sqlesc,
     jinja_env,
@@ -161,6 +162,7 @@ async def add_pos_item(
 @router.post("/api/pos/refund/{sale_id}")
 async def refund_pos_sale(sale_id: str, user: dict = Depends(require_role("admin"))):
     """Refund/void a counter sale."""
+    await _require_owned("counter_sale", sale_id, user["tenant_id"])
     await _call("refund_counter_sale", [sale_id])
     await _log_audit(user, "refund", "counter_sale", sale_id)
     return {"ok": True}
@@ -169,6 +171,7 @@ async def refund_pos_sale(sale_id: str, user: dict = Depends(require_role("admin
 @router.delete("/api/pos/sales/{sale_id}")
 async def delete_pos_sale(sale_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a counter sale and its line items."""
+    await _require_owned("counter_sale", sale_id, user["tenant_id"])
     await _call("delete_counter_sale", [sale_id])
     await _log_audit(user, "delete", "counter_sale", sale_id)
     return {"ok": True}

@@ -11,6 +11,7 @@ from helpers import (
     _fire_webhook,
     _log_audit,
     _paginated,
+    _require_owned,
     _sql,
     _sqlesc,
     require_role,
@@ -55,6 +56,9 @@ async def record_payment(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     invoice_id = body.invoice_id
+    if invoice_id:
+        # Tenant isolation: the invoice being paid must belong to the caller's tenant.
+        await _require_owned("invoices", invoice_id, user["tenant_id"])
     await _call(
         "record_payment",
         [
@@ -118,6 +122,7 @@ async def record_payment(
 
 @router.delete("/api/payments/{payment_id}")
 async def delete_payment(payment_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("payment", payment_id, user["tenant_id"])
     await _call("delete_payment", [payment_id])
     await _log_audit(user, "delete", "payment", payment_id)
     return {"ok": True}

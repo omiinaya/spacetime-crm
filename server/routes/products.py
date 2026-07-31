@@ -10,6 +10,7 @@ from helpers import (
     _call,
     _log_audit,
     _paginated,
+    _require_owned,
     _sort,
     _sql,
     _sqlesc,
@@ -103,6 +104,7 @@ async def update_product_quantity(
     body: ProductQuantityUpdate,
     user: dict = Depends(require_role("admin", "tech")),
 ):
+    await _require_owned("products", product_id, user["tenant_id"])
     await _call("update_product_quantity", [product_id, body.quantity_on_hand])
     await _log_audit(user, "update", "product_qty", product_id, f"qty={body.quantity_on_hand}")
     return {"ok": True}
@@ -110,6 +112,7 @@ async def update_product_quantity(
 
 @router.delete("/api/products/{product_id}")
 async def delete_product(product_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("products", product_id, user["tenant_id"])
     await _call("delete_product", [product_id])
     await _log_audit(user, "delete", "product", product_id)
     return {"ok": True}
@@ -122,6 +125,7 @@ async def update_product(
     user: dict = Depends(require_role("admin", "tech")),
 ):
     """Update product fields including min_stock."""
+    await _require_owned("products", product_id, user["tenant_id"])
     await _call(
         "update_product",
         [
@@ -150,7 +154,7 @@ async def get_product_adjustments(
     product_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     rows = await _sql(
-        f"SELECT * FROM inventory_adjustment WHERE product_id = '{_sqlesc(product_id)}'"
+        f"SELECT * FROM inventory_adjustment WHERE product_id = '{_sqlesc(product_id)}' AND tenant_id = '{_sqlesc(user['tenant_id'])}'"
     )
     return {"adjustments": _sort(rows, "created_at")}
 
@@ -161,6 +165,7 @@ async def create_adjustment(
     body: InventoryAdjustmentCreate,
     user: dict = Depends(require_role("admin", "tech")),
 ):
+    await _require_owned("products", product_id, user["tenant_id"])
     await _call(
         "create_inventory_adjustment",
         [

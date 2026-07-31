@@ -11,6 +11,7 @@ from helpers import (
     _fire_webhook,
     _log_audit,
     _paginated,
+    _require_owned,
     _sql,
     _sqlesc,
     require_role,
@@ -204,6 +205,7 @@ async def set_appointment_recurrence(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Set or update the recurrence rule on an appointment (makes it a series parent)."""
+    await _require_owned("appointment", appt_id, user["tenant_id"])
     await _call("set_recurrence", [appt_id, body.recurrence_rule])
     await _log_audit(
         user,
@@ -339,6 +341,7 @@ async def update_appointment_status(
     body: AppointmentStatusUpdate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("appointment", appt_id, user["tenant_id"])
     await _call("update_appointment_status", [appt_id, body.status])
     await _log_audit(user, "update_status", "appointment", appt_id, f"status={body.status}")
     return {"ok": True}
@@ -346,6 +349,7 @@ async def update_appointment_status(
 
 @router.delete("/api/appointments/{appt_id}")
 async def delete_appointment(appt_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("appointment", appt_id, user["tenant_id"])
     await _call("delete_appointment", [appt_id])
     await _log_audit(user, "delete", "appointment", appt_id)
     return {"ok": True}

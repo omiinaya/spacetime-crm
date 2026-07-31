@@ -10,6 +10,7 @@ from helpers import (
     _fire_webhook,
     _log_audit,
     _paginated,
+    _require_owned,
     _sort,
     _sql,
     _sqlesc,
@@ -83,6 +84,7 @@ async def update_estimate_status(
     body: EstimateStatusUpdate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("estimates", estimate_id, user["tenant_id"])
     await _call("update_estimate_status", [estimate_id, body.status])
     await _log_audit(user, "update_status", "estimate", estimate_id, f"status={body.status}")
     return {"ok": True}
@@ -104,6 +106,7 @@ async def add_estimate_line_item(
     body: EstimateLineItemCreate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("estimates", estimate_id, user["tenant_id"])
     await _call(
         "add_estimate_line_item",
         [
@@ -120,6 +123,7 @@ async def add_estimate_line_item(
 
 @router.delete("/api/estimates/{estimate_id}")
 async def delete_estimate(estimate_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("estimates", estimate_id, user["tenant_id"])
     await _call("delete_estimate", [estimate_id])
     await _log_audit(user, "delete", "estimate", estimate_id)
     return {"ok": True}

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from helpers import (
     _call,
     _log_audit,
+    _require_owned,
     _sort,
     _sql,
     _sqlesc,
@@ -82,6 +83,7 @@ async def set_default_payment_method(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Set a payment method as the default for a customer."""
+    await _require_owned("saved_payment_methods", method_id, user["tenant_id"])
     await _call("set_default_payment_method", [method_id, body.customer_id])
     await _log_audit(user, "update", "payment_method", method_id, "set as default")
     return {"ok": True}
@@ -93,6 +95,7 @@ async def delete_payment_method(
     user: dict = Depends(require_role("admin")),
 ):
     """Delete a saved payment method."""
+    await _require_owned("saved_payment_methods", method_id, user["tenant_id"])
     await _call("delete_payment_method", [method_id])
     await _log_audit(user, "delete", "payment_method", method_id)
     return {"ok": True}

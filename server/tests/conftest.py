@@ -30,6 +30,21 @@ STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
 STDB_CALL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/call"
 
 
+def _jwt_tenant_id(headers: dict) -> str:
+    """Extract tenant_id from a Bearer JWT in the given headers."""
+    import base64
+    import json
+
+    token = headers.get("Authorization", "").replace("Bearer ", "").strip()
+    if not token:
+        return ""
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(token.split(".")[1] + "=="))
+        return payload.get("tenant_id", "")
+    except Exception:
+        return ""
+
+
 def _stdb_sql(query: str) -> list[dict]:
     """Run raw SQL against the STDB test instance and return rows.
 

@@ -213,6 +213,7 @@ async def bulk_update_invoice_status(
     errors = 0
     for inv_id in body.invoice_ids:
         try:
+            await _require_owned("invoices", inv_id, user["tenant_id"])
             await _call("update_invoice_status", [inv_id, body.status])
             updated += 1
         except HTTPException:

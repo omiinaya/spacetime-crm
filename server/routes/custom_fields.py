@@ -10,6 +10,7 @@ from helpers import (
     _call,
     _log_audit,
     _paginated,
+    _require_owned,
     _sql,
     _sqlesc,
     require_role,
@@ -89,6 +90,7 @@ async def delete_custom_field_definition(
     field_id: str, user: dict = Depends(require_role("admin"))
 ):
     """Delete a custom field definition."""
+    await _require_owned("custom_field_definitions", field_id, user["tenant_id"])
     await _call("delete_custom_field_definition", [field_id])
     await _log_audit(user, "delete", "custom_field_definition", field_id)
     return {"ok": True}

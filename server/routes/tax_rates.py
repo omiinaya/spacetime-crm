@@ -7,6 +7,7 @@ from helpers import (
     _call,
     _log_audit,
     _paginated,
+    _require_owned,
     require_role,
 )
 from models import TaxRateCreate, TaxRateUpdate
@@ -66,6 +67,7 @@ async def update_tax_rate(
 
 @router.delete("/api/tax-rates/{tax_id}")
 async def delete_tax_rate(tax_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("tax_rates", tax_id, user["tenant_id"])
     await _call("delete_tax_rate", [tax_id])
     await _log_audit(user, "delete", "tax_rate", tax_id)
     return {"ok": True}

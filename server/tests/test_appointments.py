@@ -7,6 +7,7 @@ import httpx
 
 from .conftest import (
     SERVER_URL,
+    _jwt_tenant_id,
     _stdb_sql,
     _track_entity,
     assert_ok,
@@ -51,13 +52,17 @@ def _create_appointment(
         timeout=10,
     )
 
-    result = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
+    result = _stdb_sql(
+        f"SELECT * FROM appointment WHERE title = '{title}' AND tenant_id = '{_jwt_tenant_id(test_admin_headers)}'"
+    )
     assert len(result) == 1, f"Expected 1 table result for appointment '{title}'"
     table = result[0]
     assert table.get("rows") and len(table["rows"]) >= 1, (
         f"No appointment found with title '{title}'"
     )
-    appt_id = table["rows"][0][0]  # id is first column
+    # Tenant-scoped lookup: rows should contain only the appointment created
+    # above; take the last (most recently inserted) as a defensive fallback.
+    appt_id = table["rows"][-1][0]  # id is first column
     _track_entity("appointment", appt_id)
     return appt_id
 

@@ -7,6 +7,7 @@ from helpers import (
     _call,
     _log_audit,
     _paginated,
+    _require_owned,
     _sort,
     _sql,
     _sqlesc,
@@ -61,6 +62,7 @@ async def create_purchase_order(
 
 @router.delete("/api/purchase-orders/{po_id}")
 async def delete_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     await _call("delete_purchase_order", [po_id])
     await _log_audit(user, "delete", "purchase_order", po_id)
     return {"ok": True}
@@ -92,6 +94,7 @@ async def add_po_line_item(
     body: POLineItemCreate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     await _call(
         "add_po_line_item",
         [
@@ -110,6 +113,7 @@ async def add_po_line_item(
 async def delete_po_line_item(
     po_id: str, item_id: str, user: dict = Depends(require_role("admin"))
 ):
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     await _call("delete_po_line_item", [po_id, item_id])
     await _log_audit(user, "delete", "po_line_item", po_id)
     return {"ok": True}
@@ -121,6 +125,7 @@ async def update_po_status(
     body: PurchaseOrderStatusUpdate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     await _call("update_po_status", [po_id, body.status])
     await _log_audit(user, "update_status", "purchase_order", po_id, f"status={body.status}")
     return {"ok": True}
@@ -135,6 +140,7 @@ async def receive_po_items(
     """Receive multiple items on a PO at once.
     Body: { items: [{ id: string, received_quantity: number }] }
     """
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     items = body.items
     for item in items:
         await _call("receive_po_item", [item["id"], item.get("received_quantity", 0)])
@@ -147,6 +153,7 @@ async def submit_po_for_approval(
     po_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Submit a draft PO for approval."""
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     await _call("submit_for_approval", [po_id])
     await _log_audit(user, "submit_approval", "purchase_order", po_id)
     return {"ok": True}
@@ -157,6 +164,7 @@ async def approve_purchase_order(
     po_id: str, body: POApprovalAction, user: dict = Depends(require_role("admin"))
 ):
     """Approve a pending PO."""
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     await _call("approve_po", [po_id, body.user_id])
     await _log_audit(user, "approve", "purchase_order", po_id, f"approver={body.user_id}")
     return {"ok": True}
@@ -165,6 +173,7 @@ async def approve_purchase_order(
 @router.post("/api/purchase-orders/{po_id}/reject")
 async def reject_purchase_order(po_id: str, user: dict = Depends(require_role("admin"))):
     """Reject a pending PO, sending it back to draft."""
+    await _require_owned("purchase_order", po_id, user["tenant_id"])
     await _call("reject_po", [po_id])
     await _log_audit(user, "reject", "purchase_order", po_id)
     return {"ok": True}

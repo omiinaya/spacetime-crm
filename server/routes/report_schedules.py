@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from helpers import (
     _call,
     _log_audit,
+    _require_owned,
     _safe_id,
     _sql,
     _sql_t,
@@ -80,6 +81,7 @@ async def update_schedule(
 ):
     """Update an existing scheduled report."""
     _safe_id(schedule_id)
+    await _require_owned("scheduled_reports", schedule_id, user["tenant_id"])
     existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
     if not existing:
         raise HTTPException(404, "Schedule not found")
@@ -119,6 +121,7 @@ async def update_schedule(
 async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a scheduled report."""
     _safe_id(schedule_id)
+    await _require_owned("scheduled_reports", schedule_id, user["tenant_id"])
     await _call("delete_scheduled_report", [schedule_id])
     await _log_audit(user, "delete", "scheduled_report", schedule_id)
     return {"ok": True}
@@ -131,6 +134,7 @@ async def delete_schedule(schedule_id: str, user: dict = Depends(require_role("a
 async def run_schedule_now(schedule_id: str, user: dict = Depends(require_role("admin", "tech"))):
     """Generate and deliver a scheduled report immediately."""
     _safe_id(schedule_id)
+    await _require_owned("scheduled_reports", schedule_id, user["tenant_id"])
     schedules = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{schedule_id}'")
     if not schedules:
         raise HTTPException(404, "Schedule not found")

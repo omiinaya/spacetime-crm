@@ -9,6 +9,7 @@ from helpers import (
     _call,
     _log_audit,
     _paginated,
+    _require_owned,
     require_role,
 )
 from models import ChecklistTemplateCreate, ChecklistTemplateUpdate
@@ -75,6 +76,7 @@ async def update_checklist_template(
 @router.delete("/api/checklist-templates/{template_id}")
 async def delete_checklist_template(template_id: str, user: dict = Depends(require_role("admin"))):
     """Delete a checklist template."""
+    await _require_owned("checklist_templates", template_id, user["tenant_id"])
     await _call("delete_checklist_template", [template_id])
     await _log_audit(user, "delete", "checklist_template", template_id)
     return {"ok": True}
