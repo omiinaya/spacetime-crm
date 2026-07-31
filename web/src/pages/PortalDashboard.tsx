@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Loader2, Ticket, FileText, Calendar, DollarSign } from "lucide-react";
 import { portalApi, PortalStats, usePortalAuth } from "../lib/portal-auth";
 import { Card, CardContent } from "../components/ui/card";
-import { Ticket, FileText, Calendar, DollarSign } from "lucide-react";
 
 export default function PortalDashboard() {
 	const { customer } = usePortalAuth();
 	const [stats, setStats] = useState<PortalStats | null>(null);
+	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		portalApi.stats
 			.get()
 			.then(setStats)
-			.catch(() => toast.error("Failed to load portal stats"));
+			.catch(() => toast.error("Failed to load portal stats"))
+			.finally(() => setLoading(false));
 	}, []);
 
 	const cards = [
@@ -51,24 +53,30 @@ export default function PortalDashboard() {
 			<p className="text-sm text-muted-foreground mt-1">
 				Here's your account at a glance
 			</p>
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-				{cards.map((c) => {
-					const Icon = c.icon;
-					return (
-						<Card key={c.label}>
-							<CardContent className="pt-6">
-								<div className="flex items-center gap-3">
-									<Icon className={`h-8 w-8 ${c.color}`} />
-									<div>
-										<p className="text-2xl font-bold">{c.value}</p>
-										<p className="text-xs text-muted-foreground">{c.label}</p>
+			{loading ? (
+				<div className="flex items-center justify-center py-16">
+					<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+				</div>
+			) : (
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+					{cards.map((c) => {
+						const Icon = c.icon;
+						return (
+							<Card key={c.label}>
+								<CardContent className="pt-6">
+									<div className="flex items-center gap-3">
+										<Icon className={`h-8 w-8 ${c.color}`} />
+										<div>
+											<p className="text-2xl font-bold">{c.value}</p>
+											<p className="text-xs text-muted-foreground">{c.label}</p>
+										</div>
 									</div>
-								</div>
-							</CardContent>
-						</Card>
-					);
-				})}
-			</div>
+								</CardContent>
+							</Card>
+						);
+					})}
+				</div>
+			)}
 		</div>
 	);
 }
