@@ -6,6 +6,7 @@ Tests Twilio SMS configuration, sending, and notification templates.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -181,37 +182,58 @@ class TestSms:
             result = await _sms_test_connection()
             assert result["ok"] is False
 
+    @staticmethod
+    def _fire_and_forget(coro, **kwargs):
+        """Await the coroutine passed to ensure_future so no warnings leak."""
+        return asyncio.run(coro)
+
+    def _patch_ensure_future(self):
+        """Return a context manager that awaits fired coroutines and records calls."""
+        calls: list = []
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _ctx():
+            def _recording(coro, **kw):
+                calls.append(coro)
+                return self._fire_and_forget(coro)
+
+            with patch("asyncio.ensure_future", _recording):
+                yield calls
+
+        return _ctx()
+
     def test_notify_ticket_status_change_calls_send(self):
-        with patch("asyncio.ensure_future") as mock_ensure:
+        with self._patch_ensure_future() as calls:
             _notify_ticket_status_change("+15551234567", 123, "Fix pc", "new")
-            mock_ensure.assert_called_once()
+            assert len(calls) == 1
 
     def test_notify_invoice_created_calls_send(self):
-        with patch("asyncio.ensure_future") as mock_ensure:
+        with self._patch_ensure_future() as calls:
             _notify_invoice_created("+15551234567", 456, 150.00)
-            mock_ensure.assert_called_once()
+            assert len(calls) == 1
 
     def test_notify_payment_received_calls_send(self):
-        with patch("asyncio.ensure_future") as mock_ensure:
+        with self._patch_ensure_future() as calls:
             _notify_payment_received("+15551234567", 456, 100.00)
-            mock_ensure.assert_called_once()
+            assert len(calls) == 1
 
     def test_notify_appointment_created_calls_send(self):
-        with patch("asyncio.ensure_future") as mock_ensure:
+        with self._patch_ensure_future() as calls:
             _notify_appointment_created("+15551234567", "Repair", 1700000000000)
-            mock_ensure.assert_called_once()
+            assert len(calls) == 1
 
     def test_notify_estimate_approved_calls_send(self):
-        with patch("asyncio.ensure_future") as mock_ensure:
+        with self._patch_ensure_future() as calls:
             _notify_estimate_approved("+15551234567", 789, 250.00)
-            mock_ensure.assert_called_once()
+            assert len(calls) == 1
 
     def test_notify_appointment_reminder_calls_send(self):
-        with patch("asyncio.ensure_future") as mock_ensure:
+        with self._patch_ensure_future() as calls:
             _notify_appointment_reminder("+15551234567", "Checkup", 1700000000000)
-            mock_ensure.assert_called_once()
+            assert len(calls) == 1
 
     def test_notify_overdue_reminder_calls_send(self):
-        with patch("asyncio.ensure_future") as mock_ensure:
+        with self._patch_ensure_future() as calls:
             _notify_overdue_reminder("+15551234567", 456, 200.00)
-            mock_ensure.assert_called_once()
+            assert len(calls) == 1

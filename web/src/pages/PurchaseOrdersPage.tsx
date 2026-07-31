@@ -43,6 +43,16 @@ const statusColors: Record<
 	cancelled: "destructive",
 };
 
+const statusLabels: Record<string, string> = {
+	draft: "Draft",
+	pending_approval: "Pending Approval",
+	approved: "Approved",
+	sent: "Sent",
+	partial: "Partially Received",
+	received: "Received",
+	cancelled: "Cancelled",
+};
+
 export default function PurchaseOrdersPage() {
 	const pag = usePagination(PAGE_SIZE);
 	const [showForm, setShowForm] = useState(false);
@@ -58,6 +68,7 @@ export default function PurchaseOrdersPage() {
 		quantity: 1,
 		unit_price: 0,
 	});
+	const [showItemForm, setShowItemForm] = useState(false);
 	const [receiveMode, setReceiveMode] = useState<string | null>(null);
 	const [receiveQuantities, setReceiveQuantities] = useState<
 		Record<string, number>
@@ -122,6 +133,7 @@ export default function PurchaseOrdersPage() {
 		},
 		onSuccess: () => {
 			toast.success("Line item added");
+			setShowItemForm(false);
 			setNewItemForm({
 				product_id: "",
 				description: "",
@@ -322,7 +334,7 @@ export default function PurchaseOrdersPage() {
 											#{po.po_number}
 										</span>
 										<Badge variant={statusColors[po.status] || "outline"}>
-											{po.status}
+											{statusLabels[po.status] || po.status}
 										</Badge>
 									</div>
 									<p className="font-medium mt-1">{po.vendor_name}</p>
@@ -377,7 +389,7 @@ export default function PurchaseOrdersPage() {
 											variant={statusColors[poDetail.status] || "outline"}
 											className="text-sm"
 										>
-											{poDetail.status}
+											{statusLabels[poDetail.status] || poDetail.status}
 										</Badge>
 									</div>
 									<p className="text-muted-foreground">
@@ -540,18 +552,16 @@ export default function PurchaseOrdersPage() {
 											<Button
 												size="sm"
 												variant="outline"
-												onClick={() =>
-													setNewItemForm({ ...newItemForm, description: "" })
-												}
+												onClick={() => setShowItemForm((v) => !v)}
 											>
 												<Plus className="h-3.5 w-3.5 mr-1" />
-												Add Item
+												{showItemForm ? "Hide Item Form" : "Add Item"}
 											</Button>
 										)}
 								</div>
 
 								{/* Add item form */}
-								{newItemForm.description !== "" &&
+								{showItemForm &&
 									poDetail.status !== "received" &&
 									poDetail.status !== "cancelled" && (
 										<Card className="border-primary/30 mb-3">
