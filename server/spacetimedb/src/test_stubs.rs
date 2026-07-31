@@ -316,12 +316,18 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
     // field of each row is exact. Scoping to the owning table is essential:
     // scanning every table returns rows that happen to share the same pk
     // value, which callers then decode as the wrong type (garbage decodes).
-    let owner_table = INDEX_ID_TO_TABLE
-        .lock()
-        .unwrap()
-        .get(&_index_id)
-        .cloned()
-        .and_then(|t| TABLE_NAME_TO_ID.lock().unwrap().get(&t).copied());
+    //
+    // Lock ordering: the ID registries are append-only (a name never maps to
+    // a different ID), so clone the owner table out of INDEX_ID_TO_TABLE and
+    // DROP that lock before acquiring TABLE_NAME_TO_ID. Holding
+    // INDEX_ID_TO_TABLE while taking TABLE_NAME_TO_ID would deadlock against
+    // `get_index_id`, which holds TABLE_NAME_TO_ID while inserting into
+    // INDEX_ID_TO_TABLE (ABBA).
+    let owner_table = {
+        let id_map = INDEX_ID_TO_TABLE.lock().unwrap();
+        id_map.get(&_index_id).cloned()
+    }
+    .and_then(|t| TABLE_NAME_TO_ID.lock().unwrap().get(&t).copied());
 
     let matching_rows: Vec<Vec<u8>> = TABLE_ROWS.with(|m| {
         let m = m.borrow();
@@ -378,12 +384,13 @@ pub extern "C" fn datastore_delete_by_index_scan_point_bsatn(
     };
 
     // Scope deletion to the index's own table, same as the point scan.
-    let owner_table = INDEX_ID_TO_TABLE
-        .lock()
-        .unwrap()
-        .get(&_index_id)
-        .cloned()
-        .and_then(|t| TABLE_NAME_TO_ID.lock().unwrap().get(&t).copied());
+    // Same lock-ordering discipline: clone out of INDEX_ID_TO_TABLE, drop the
+    // lock, then look up the TableId in TABLE_NAME_TO_ID (see ABBA note above).
+    let owner_table = {
+        let id_map = INDEX_ID_TO_TABLE.lock().unwrap();
+        id_map.get(&_index_id).cloned()
+    }
+    .and_then(|t| TABLE_NAME_TO_ID.lock().unwrap().get(&t).copied());
 
     let deleted_count: u32 = TABLE_ROWS.with(|m| {
         let mut m = m.borrow_mut();
