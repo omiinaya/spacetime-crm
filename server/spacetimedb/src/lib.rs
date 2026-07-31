@@ -120,19 +120,22 @@ pub(crate) fn now_ms(ctx: &ReducerContext) -> u64 {
         // `make_id` produces unique ids within a test. Values are guaranteed
         // strictly increasing process-wide to avoid same-ms collisions.
         if ts == 0 {
-            return test_wall_clock_micros();
+            return test_wall_clock_ms();
         }
     }
     ts
 }
 
 #[cfg(test)]
-fn test_wall_clock_micros() -> u64 {
+fn test_wall_clock_ms() -> u64 {
     use std::sync::atomic::{AtomicU64, Ordering};
     static LAST: AtomicU64 = AtomicU64::new(0);
+    // Millisecond scale, matching the production `ctx.timestamp / 1000` unit.
+    // Guaranteed strictly increasing process-wide so `make_id` still yields
+    // unique ids when several reducers run within the same millisecond.
     let wall = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_micros() as u64)
+        .map(|d| d.as_millis() as u64)
         .unwrap_or(0);
     let prev = LAST.load(Ordering::Relaxed);
     let next = if wall > prev { wall } else { prev + 1 };

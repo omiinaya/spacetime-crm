@@ -149,7 +149,9 @@ mod tests {
             .next()
             .expect("expected at least one recurring_invoice_rules record");
         assert!(rule.next_generation_date > now - 1000);
-        assert_eq!(rule.last_generated_date, now);
+        // The reducer reads the wall clock itself, so its `last_generated_date`
+        // may be a few ms ahead of the test's snapshot of `now`.
+        assert!(rule.last_generated_date >= now);
     }
 
     #[test]

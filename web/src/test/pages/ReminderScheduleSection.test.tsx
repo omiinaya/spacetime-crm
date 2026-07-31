@@ -46,7 +46,9 @@ describe("ReminderScheduleSection", () => {
 		expect(screen.getByText(/Overdue Reminder Schedule/i)).toBeTruthy();
 
 		await waitFor(() => {
-			const select = screen.getByLabelText(/reminder interval/i) as HTMLSelectElement;
+			const select = screen.getByLabelText(
+				/reminder interval/i,
+			) as HTMLSelectElement;
 			expect(select.value).toBe("7");
 		});
 	});
@@ -56,7 +58,9 @@ describe("ReminderScheduleSection", () => {
 		render(<ReminderScheduleSection />, { wrapper });
 
 		await waitFor(() => {
-			const select = screen.getByLabelText(/reminder interval/i) as HTMLSelectElement;
+			const select = screen.getByLabelText(
+				/reminder interval/i,
+			) as HTMLSelectElement;
 			expect(select.value).toBe("3");
 		});
 	});
@@ -66,7 +70,9 @@ describe("ReminderScheduleSection", () => {
 		render(<ReminderScheduleSection />, { wrapper });
 
 		await waitFor(() => {
-			const select = screen.getByLabelText(/reminder interval/i) as HTMLSelectElement;
+			const select = screen.getByLabelText(
+				/reminder interval/i,
+			) as HTMLSelectElement;
 			const options = Array.from(select.options).map((o) => o.value);
 			expect(options).toEqual(["1", "3", "7", "14"]);
 		});
@@ -78,7 +84,9 @@ describe("ReminderScheduleSection", () => {
 
 		// Wait for the fetch to finish so the select is enabled
 		await waitFor(() => {
-			const select = screen.getByLabelText(/reminder interval/i) as HTMLSelectElement;
+			const select = screen.getByLabelText(
+				/reminder interval/i,
+			) as HTMLSelectElement;
 			expect(select.disabled).toBe(false);
 		});
 
@@ -106,7 +114,9 @@ describe("ReminderScheduleSection", () => {
 		render(<ReminderScheduleSection />, { wrapper });
 
 		await waitFor(() => {
-			const select = screen.getByLabelText(/reminder interval/i) as HTMLSelectElement;
+			const select = screen.getByLabelText(
+				/reminder interval/i,
+			) as HTMLSelectElement;
 			expect(select.disabled).toBe(false);
 		});
 
@@ -127,7 +137,9 @@ describe("ReminderScheduleSection", () => {
 		render(<ReminderScheduleSection />, { wrapper });
 
 		await waitFor(() => {
-			const select = screen.getByLabelText(/reminder interval/i) as HTMLSelectElement;
+			const select = screen.getByLabelText(
+				/reminder interval/i,
+			) as HTMLSelectElement;
 			expect(select.disabled).toBe(false);
 		});
 
@@ -139,7 +151,9 @@ describe("ReminderScheduleSection", () => {
 		await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
 		await waitFor(() => {
-			expect(screen.getByText(/Failed to save reminder schedule/i)).toBeTruthy();
+			expect(
+				screen.getByText(/Failed to save reminder schedule/i),
+			).toBeTruthy();
 		});
 	});
 
@@ -148,7 +162,9 @@ describe("ReminderScheduleSection", () => {
 		render(<ReminderScheduleSection />, { wrapper });
 
 		await waitFor(() => {
-			const select = screen.getByLabelText(/reminder interval/i) as HTMLSelectElement;
+			const select = screen.getByLabelText(
+				/reminder interval/i,
+			) as HTMLSelectElement;
 			expect(select.disabled).toBe(false);
 		});
 
