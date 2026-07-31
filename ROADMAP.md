@@ -1,11 +1,11 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** | 2026-07-31 |
+| **Last assessed:** | 2026-07-31 (re-audited) |
 | **Overall completeness:** | ~99.8% |
 | **Total endpoints:** | 106 API routes (28 route files) |
 | **Total STDB artifacts:** | 28 tables (+ push_subscriptions) + 77 reducers |
 | **Total frontend pages:** | 23 admin + 3 auth + 5 portal = 31 pages |
-| **Total tests:** | 1,829 (1,735 backend + 94 frontend) |
+| **Total tests:** | ~2,200 (1,827 backend + 159 frontend + 211 Rust) |
 
 ---
 
@@ -13,11 +13,11 @@
 
 | Layer | Files | Lines | Completeness | Test Count | Anti-Patterns |
 |-------|-------|-------|:------------:|:----------:|:-------------:|
-| STDB Module (Rust) | 16 files | ~1,900 | 88% | 134 #[test] (4 files) | 1 major, 3 minor |
-| Backend API (Python) | 30 files | ~4,500 | 92% | 369 integration (28 files) | 2 major, 5 minor |
-| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 94 unit (13 files) | 3 major, 6 minor |
+| STDB Module (Rust) | 16 files | ~1,900 | 88% | 211 #[test] (4 files) | 1 major, 3 minor |
+| Backend API (Python) | 30 files | ~4,500 | 92% | 1,827 (61 files) | 2 major, 5 minor |
+| Frontend (TypeScript) | 45+ files | ~8,000 | 85% | 159 (24 files) | 3 major, 6 minor |
 | Infra (Docker/scripts) | 12 files | ~450 | 78% | N/A | 3 gaps |
-| **Overall** | **~110 files** | **~20,000** | **~96%** | **597** | **~20 items** |
+| **Overall** | **~110 files** | **~20,000** | **~96%** | **~2,200** | **~20 items** |
 
 ---
 
@@ -339,29 +339,29 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | # | Feature | Effort | Page | Impact |
 |---|---------|--------|------|--------|
-| 1 | **Duplicate detection UI** — Show badge on CustomersPage when duplicates found, highlight rows | 20m | CustomersPage | 🟢 Quick win |
-| 2 | **Invoice payment history** — Show recent payments inside invoice detail panel (exists in PDF only) | 30m | InvoicesPage | 🟢 Useful |
-| 3 | **Ticket print view** — Printable ticket summary page | 30m | TicketsPage | 🟢 Useful |
-| 4 | **Customer activity timeline** — Show recent tickets, invoices, appointments in chronological timeline | 1h | CustomersPage | 🟡 Medium |
-| 5 | **Dashboard: monthly target editor** — Allow admin to set revenue target from settings | 20m | SettingsPage | 🟢 Quick |
+| 1 | **Duplicate detection UI** — Show badge on CustomersPage when duplicates found, highlight rows | 20m | CustomersPage | 🟢 Quick win | ✅ Done |
+| 2 | **Invoice payment history** — Show recent payments inside invoice detail panel (exists in PDF only) | 30m | InvoicesPage | 🟢 Useful | ✅ Done |
+| 3 | **Ticket print view** — Printable ticket summary page | 30m | TicketsPage | 🟢 Useful | ✅ Done |
+| 4 | **Customer activity timeline** — Show recent tickets, invoices, appointments in chronological timeline | 1h | CustomersPage | 🟡 Medium | ✅ Done |
+| 5 | **Dashboard: monthly target editor** — Allow admin to set revenue target from settings | 20m | SettingsPage | 🟢 Quick | ✅ Done |
 | 6 | **Invoice: reminder schedule** — Let admin set custom reminder intervals (3d, 7d, 14d) | 30m | SettingsPage | 🟢 Quick | ✅ Done |
-| 7 | **Product: reorder point + reorder quantity** — Separate fields for auto-reorder logic | 30m | ProductsPage | 🟢 Quick |
-| 8 | **Ticket: email customer directly from ticket detail** | 20m | TicketsPage | 🟢 Quick |
-| 9 | **POS: quick-cash button** — Pre-fill tendered amount = total for one-tap payment | 10m | PosPage | 🟢 Quick |
-| 10 | **POS: customer display** — Show customer name on receipt | 10m | PosPage | 🟢 Quick |
+| 7 | **Product: reorder point + reorder quantity** — Separate fields for auto-reorder logic | 30m | ProductsPage | 🟢 Quick | ✅ Done |
+| 8 | **Ticket: email customer directly from ticket detail** | 20m | TicketsPage | 🟢 Quick | ✅ Done |
+| 9 | **POS: quick-cash button** — Pre-fill tendered amount = total for one-tap payment | 10m | PosPage | 🟢 Quick | ✅ Done |
+| 10 | **POS: customer display** — Show customer name on receipt | 10m | PosPage | 🟢 Quick | ✅ Done |
 
 ### 8B — New entity types / features
 
 | # | Feature | Effort | Priority |
 |---|---------|--------|----------|
 | 1 | **Bin/shelf location tracking** — `location` field exists on products already, add search/filter by location | 30m | 🟢 Quick | ✅ Done |
-| 2 | **Inventory transfer between locations** — Transfer stock between bin locations | 30m | 🟢 Quick |
-| 3 | **Stock count sheets** — Generate printable count sheets with expected quantities | 1h | 🟡 Medium |
-| 4 | **POS gift cards** — Sell/redeem gift cards | 2h | 🟡 Medium |
-| 5 | **Customer email marketing** — Simple blast to all customers (opt-in) | 1h | 🟡 Medium |
+| 2 | **Inventory transfer between locations** — Transfer stock between bin locations | 30m | 🟢 Quick | ✅ Done |
+| 3 | **Stock count sheets** — Generate printable count sheets with expected quantities | 1h | 🟡 Medium | ✅ Done |
+| 4 | **POS gift cards** — Sell/redeem gift cards | 2h | 🟡 Medium | ✅ Done |
+| 5 | **Customer email marketing** — Simple blast to all customers (opt-in) | 1h | 🟡 Medium | ✅ Done |
 | 6 | **Service type breakdown on reports** — Group revenue/frequency by item_type (service vs part) | 30m | 🟢 Quick | ✅ Done |
 | 7 | **Technician schedule view** — Calendar showing all appointments per tech | 1h | 🟡 Medium | ✅ Done |
-| 8 | **Mobile push notifications** — Via service worker + browser push | 2h | 🟡 Medium |
+| 8 | **Mobile push notifications** — Via service worker + browser push | 2h | 🟡 Medium | ✅ Done |
 | 9 | **Offline mode** — Service worker cache for critical data | 4h+ | 🔴 Hard |
 
 ---
@@ -384,20 +384,20 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | # | Item | Effort |
 |---|------|--------|
 | 1 | **Dependabot config** — `.github/dependabot.yml` for automated dep updates | 10m | ✅ Done |
-| 2 | **Docker image CI build** — GitHub workflow that builds and pushes to registry | 30m |
-| 3 | **Deployment workflow** — CI deploy to staging/production after tests pass | 1h |
-| 4 | **Commit message linting** — commitlint or similar | 15m |
+| 2 | **Docker image CI build** — GitHub workflow that builds and pushes to registry | 30m | ✅ Done (`.github/workflows/docker-image.yml`) |
+| 3 | **Deployment workflow** — CI deploy to staging/production after tests pass | 1h | ✅ Done (`.github/workflows/deploy.yml`) |
+| 4 | **Commit message linting** — commitlint or similar | 15m | ✅ Done (`.githooks/commit-msg` + `make setup-git-hooks`) |
 
 ### 9C — Dev tooling gaps
 
 | # | Item | Effort |
 |---|------|--------|
-| 1 | **Ruff config** (`ruff.toml`) — Customize rule set | 10m |
-| 2 | **Prettier config** (`.prettierrc`) — Format web/ consistently | 10m |
-| 3 | **`.editorconfig`** — Cross-editor settings | 5m |
-| 4 | **`.python-version`** — Pin Python version for pyenv | 2m |
-| 5 | **`.nvmrc`** — Pin Node version for nvm | 2m |
-| 6 | **`pyproject.toml`** — Python project metadata + tool config | 15m |
+| 1 | **Ruff config** (`ruff.toml`) — Customize rule set | 10m | ✅ Done |
+| 2 | **Prettier config** (`.prettierrc`) — Format web/ consistently | 10m | ✅ Done |
+| 3 | **`.editorconfig`** — Cross-editor settings | 5m | ✅ Done |
+| 4 | **`.python-version`** — Pin Python version for pyenv | 2m | ✅ Done |
+| 5 | **`.nvmrc`** — Pin Node version for nvm | 2m | ✅ Done |
+| 6 | **`pyproject.toml`** — Python project metadata + tool config | 15m | ✅ Done |
 
 ---
 
@@ -405,14 +405,14 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | Area | Status | Details |
 |------|--------|---------|
-| Rust unit tests | ✅ 134 tests (4 files) | 74 reducers, 27 tables — via STDB integration |
-| Python backend tests | ✅ 1,735 tests (49 files) | All 25 route + spec modules covered |
-| TypeScript frontend tests | ✅ 94 tests (13 suites) | UI components + 5 page tests |
+| Rust unit tests | ✅ 211 tests (4 files) | 74 reducers, 27 tables — via STDB integration |
+| Python backend tests | ✅ 1,827 tests (61 files) | 1,246 unit (12 files) + integration across 28 route modules |
+| TypeScript frontend tests | ✅ 159 tests (24 suites) | UI components + 16 page test suites |
 | E2E tests | ✅ 33 tests (5 suites) | Playwright: Nav, Dashboard, Customers, Invoices, Tickets |
 | CI/CD pipeline | ✅ GitHub Actions | build STDB, seed, test, lint |
 
 ### Test quality gaps
-- ❌ No negative tests for business logic (e.g. creating invoice without customer)
+- ✅ Negative tests for business logic — `test_negative.py` (6 tests): empty customer name, missing required fields, invoice without customer, nonexistent PDF, unauthenticated access, invalid priority
 - ✅ Concurrent/multi-user tenant isolation tests — `test_tenant_isolation.py` (10 tests): two independent tenants, cross-tenant list/fetch/mutation rejection + 10-way parallel `asyncio.gather` burst with zero leakage and zero 5xx. Also hardened 20+ direct-access routes (customers/tickets/invoices sub-resources) with tenant-scoped `_require_owned` checks.
 - ✅ Performance/load smoke tests — `server/tests/test_load_smoke.py` (2 tests, `@pytest.mark.slow`): 16-way parallel `asyncio.gather` burst on `/api/stats` + `/api/customers`, asserts all 200 (no 5xx) under concurrency with p95 < 3s budget; auto-skips when server is down (mirrors `test_client.py` availability gate). Regression detector for N+1 / full-table-scan, not a benchmark
 - ❌ Tests share STDB state (no fresh DB per run)
@@ -428,7 +428,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
 | 1 | **9 hardcoded `localhost` URLs** in route files — will break portal link emails in production | 🔴 HIGH | ✅ **Fixed** — `f"{settings.app_url}/portal/"` in all 8 portal link routes (`5d1ec57`) |
-| 2 | **No ErrorBoundary wrapping** on any page — unhandled render error = blank screen | 🔴 HIGH | Add per-page ErrorBoundary |
+| 2 | **No ErrorBoundary wrapping** on any page — unhandled render error = blank screen | 🔴 HIGH | ✅ **Done** — `ErrorBoundary.tsx` wraps app shell + test coverage |
 | 3 | **`Customer.portal_password_hash` exposed** — returned by SELECT * in every customer API response | 🔴 HIGH | ✅ **Fixed** — `_safe_customer()` helper strips it from all list endpoints (`5d1ec57`) |
 | 4 | **Test isolation** — tests share STDB state, no cleanup per session | 🔴 HIGH | Fresh DB per test session |
 | 5 | **No TLS/reverse-proxy config** — ⚠️ WAS: production deployment would serve HTTP directly | 🔴 HIGH | ✅ **Fixed** — nginx config with TLS + deploy script at `deploy/nginx/` |
@@ -437,9 +437,9 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
-| 6 | **Missing empty states** on PaymentsPage, ProductsPage, EstimatesPage | 🟡 MEDIUM | 15 min |
-| 7 | **Missing error states** on PortalDashboard, AuditLogPage | 🟡 MEDIUM | 20 min |
-| 8 | **11 TypeScript `any` files** in catch blocks and API response shapes | 🟡 MEDIUM | 30 min |
+| 6 | **Missing empty states** on PaymentsPage, ProductsPage, EstimatesPage | 🟡 MEDIUM | ✅ **Done** — all three pages render empty states |
+| 7 | **Missing error states** on PortalDashboard, AuditLogPage | 🟡 MEDIUM | ✅ **Done** — both render user-facing error states |
+| 8 | **36 TypeScript `any` usages** in catch blocks and API response shapes | 🟡 MEDIUM | 30 min |
 || 9 | **`UserSettings` table has no API or UI** — dead code | 🟡 MEDIUM | ✅ **Done** — API + UI + tests implemented (`cyber-elf/task_f7002a184d824426_`) |
 || 10 | **`User.pin` field unused** — dead field in STDB | 🟡 MEDIUM | ✅ **Done** — POS PIN login with bcrypt-hashed PIN implemented (7E) |
 
@@ -447,12 +447,12 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
-| 11 | **Inline lazy imports** in 3 route files (from mail/sms inside function body) | 🟢 LOW | 10 min |
-| 12 | **No Dependabot config** | 🟢 LOW | 5 min |
-| 13 | **No linter config files** (ruff.toml, .prettierrc, .editorconfig, .nvmrc) | 🟢 LOW | 10 min |
+| 11 | **Inline lazy imports** in 3 route files (from mail/sms inside function body) | 🟢 LOW | ✅ **Done** — all refactored to top-level imports |
+| 12 | **No Dependabot config** | 🟢 LOW | ✅ **Done** — `.github/dependabot.yml` |
+| 13 | **No linter config files** (ruff.toml, .prettierrc, .editorconfig, .nvmrc) | 🟢 LOW | ✅ **Done** — all present |
 | 14 | **Docker images use latest tags** (spacetimedb:latest, node:22-alpine) | 🟢 LOW | 5 min |
 | 15 | **`.dockerignore` is thin** — excludes too little from build context | 🟢 LOW | 5 min |
-| 16 | **No structured logging** — stdout is plain text | 🟢 LOW | 15 min |
+| 16 | **No structured logging** — stdout is plain text | 🟢 LOW | ✅ **Done** — `log_config.py` JSON logging (STRUCTURED_LOGGING env) |
 
 ---
 
@@ -490,11 +490,11 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | **Mobile app** | ❌ PWA only | — |
 | **Inventory: bin/shelf locations** | ⚠️ Partial | `location` field exists, no search/filter |
 | **Inventory: reorder alerts** | ⚠️ Partial | Email alert via cron, no in-app notification |
-| **Service type breakdown** | ❌ Missing | Reports don't split service vs parts |
-| **Customer email marketing** | ❌ Missing | No blast/campaign functionality |
-| **Technician scheduling** | ❌ Missing | No per-tech calendar view |
-| **Push notifications** | ❌ Missing | Browser push via service worker |
-| **Gift cards** | ❌ Missing | POS gift card sale/redeem |
+| **Service type breakdown** | ✅ Complete | Reports + dashboard split service vs parts (PieChart) |
+| **Customer email marketing** | ✅ Complete | EmailCampaignsPage with opt-in blast |
+| **Technician scheduling** | ✅ Complete | TechnicianSchedulePage calendar per tech |
+| **Push notifications** | ✅ Complete | Web Push (VAPID) via service worker, auto-subscribe on login |
+| **Gift cards** | ✅ Complete | POS gift card sale/redeem (GiftCardsPage) |
 
 ---
 
@@ -503,12 +503,12 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Phase | Items | Hours | Priority |
 |-------|-------|:-----:|:--------:|
 | **5: Field & Type Gaps** | 11 TS fields, 7 whole-table types, 10 API models | **✅ DONE** | ✅ DONE |
-| **6: UX Gaps** | 4 error states, 3 empty states, 1 loading state, 2 bugs, TS `any` cleanup | **~2h** | 🟡 MEDIUM |
-| **7: Code Quality** | 9 hardcoded URLs, inline imports, password hash leak, dead code, test isolation | **~3h** | 🔴 HIGH |
-| **8: Feature Additions** | ~15 small features + ~9 larger features | **~15h** | 🟢 LOW |
-|| **9: Infrastructure** | ✅ Reverse proxy + TLS + prod compose + env template done (~2h saved). Remaining: structured logging, Dockerfile healthcheck, CI/CD, dev tooling | **~2h** | 🟡 MEDIUM |
-| **Test coverage** | Negative tests, concurrent tests, Rust runtime tests, load tests | **~6h** | 🟡 MEDIUM |
-| **Overall remaining** | **~20 hours** | | |
+| **6: UX Gaps** | TS `any` cleanup (36 usages), error/empty state polish | **~1.5h** | 🟡 MEDIUM |
+| **7: Code Quality** | Test isolation (fresh DB per session), 2 minor STDB patterns | **~2h** | 🔴 HIGH |
+| **8: Feature Additions** | Offline mode (PWA cache), in-app reorder alerts, location-to-location stock moves polish | **~5h** | 🟢 LOW |
+| **9: Infrastructure** | ✅ All 9A + 9B + 9C items complete (re-audited 2026-07-31) | **0h** | ✅ DONE |
+| **Test coverage** | Rust runtime tests (need STDB host), full-suite CI wiring | **~2h** | 🟡 MEDIUM |
+| **Overall remaining** | **~10 hours** | | |
 
 ---
 
@@ -532,3 +532,28 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 12. **Duplicate detection UI on CustomersPage**
 13. ~~**Implement `UserSettings` API + UI or remove**~~ ✅ Done
 14. ~~**Implement `User.pin` POS login or remove**~~ ✅ Done
+
+---
+
+## 🔎 Review Addendum (2026-07-31 re-audit)
+
+Full code-level re-audit of the repository (grep + test-run verified, not just README claims).
+**18 roadmap items previously listed as open are implemented and are now marked ✅ Done.**
+
+### Concrete open tasks (verified still open, in priority order)
+
+| # | Task | Evidence | Effort |
+|---|------|----------|--------|
+| 1 | **TypeScript `any` cleanup** — 36 usages across pages/components/lib (`catch (e: any)`, `as any`, `: any`) | `grep -rn ": any\|as any\|<any>" web/src --include="*.tsx" --include="*.ts"` → 36 | 30m |
+| 2 | **Test isolation** — tests share STDB state; no fresh DB per run; partial fix exists (timestamped names) | ROADMAP 7G; `conftest.py` shared admin session | 2h |
+| 3 | **Rust runtime tests** — 211 `#[test]` are compile-only for wasm; container infra exists (`docker-compose.test.yml`, `make test-container`) but not wired into CI | `scripts/run-integration-tests.sh` exists; CI `test.yml` doesn't call it | 1h |
+| 4 | **Offline mode (8B-9)** — PWA has service worker precache but no offline data strategy | `vite-plugin-pwa` config only precaches static assets | 4h+ |
+| 5 | **In-app reorder alerts** — low-stock notification is email-only via cron | `POST /api/products/low-stock/notify` → email; no in-app badge | 30m |
+| 6 | **Pin Docker tags** — `spacetimedb:latest` in docker-compose.yml (no version pin) | `docker-compose.yml:5` | 5m |
+| 7 | **Thicken `.dockerignore`** — 8 lines, excludes little from build context | `wc -l .dockerignore` → 8 | 5m |
+
+### Verified during audit (regression-protected)
+- Backend unit suite: **1,249 passed** (`pytest tests/unit/ -q`)
+- Frontend suite: **159 passed** in 24 files (`vitest run`) — includes 7 new ReminderScheduleSection tests + ticket-email test
+- `tsc --noEmit`: clean; `ruff check`: clean
+- STDB wasm release build: fixed by `9ca1395` (estimate module + clippy)

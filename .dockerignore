@@ -1,8 +1,53 @@
+# Version control
 .git/
 .gitignore
+.gitattributes
+
+# Environment & secrets
 .env
+.env.*
+!.env.example
+!server/.env.example
+!deploy/.env.prod.example
+
+# Documentation (not needed in image)
 *.md
-node_modules/
-server/spacetimedb/target/
+!.github/
+!AGENTS.md
+!README.md
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+server/.venv/
+server/venv/
 server/__pycache__/
-*.pyc
+server/htmlcov/
+server/.pytest_cache/
+server/.coverage
+server/coverage.xml
+server/config/*.json
+server/*_settings.json
+.pytest_cache/
+
+# Node
+web/node_modules/
+web/dist/
+web/coverage/
+web/.vite/
+
+# Rust / STDB build artifacts
+server/spacetimedb/target/
+server/spacetimedb/Cargo.lock
+
+# Test & CI artifacts
+scripts/*.log
+*.log
+htmlcov/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
