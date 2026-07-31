@@ -82,7 +82,7 @@ async def portal_login(request: Request, body: PortalLoginRequest):
     if not email or not password:
         raise HTTPException(400, "Email and password required")
 
-    rows = await _sql(f"SELECT * FROM customer WHERE email = '{email}'")
+    rows = await _sql(f"SELECT * FROM customer WHERE email = '{_sqlesc(email)}'")
     if not rows:
         raise HTTPException(401, "Invalid email or password")
 
@@ -139,9 +139,9 @@ async def portal_me(customer: dict = Depends(get_current_customer)):
 async def portal_stats(customer: dict = Depends(get_current_customer)):
     """Dashboard stats for the customer."""
     cid = customer["id"]
-    tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{cid}'")
-    invoices = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{cid}'")
-    appointments = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{cid}'")
+    tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{_sqlesc(cid)}'")
+    invoices = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{_sqlesc(cid)}'")
+    appointments = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{_sqlesc(cid)}'")
     open_tickets = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
     total_billed = sum(
         float(i.get("total", 0)) for i in invoices if i.get("status") not in ("cancelled", "draft")
@@ -165,7 +165,7 @@ async def portal_stats(customer: dict = Depends(get_current_customer)):
 @router.get("/api/portal/tickets")
 async def portal_tickets(customer: dict = Depends(get_current_customer)):
     """Customer's tickets."""
-    rows = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{_sqlesc(customer['id'])}'")
     users = await _sql("SELECT * FROM user")
     user_map = {u["id"]: u["name"] for u in users}
     for t in rows:
@@ -223,7 +223,7 @@ async def portal_add_note(
 @router.get("/api/portal/invoices")
 async def portal_invoices(customer: dict = Depends(get_current_customer)):
     """Customer's invoices."""
-    rows = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{_sqlesc(customer['id'])}'")
     return {"invoices": _sort(rows, "created_at")}
 
 
@@ -236,9 +236,9 @@ async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_cu
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
-    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'")
     inv["line_items"] = _sort(items, "sort_order", desc=False)
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_sqlesc(invoice_id)}'")
     inv["payments"] = _sort(payments, "created_at")
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     inv["total_paid"] = total_paid
@@ -278,7 +278,7 @@ async def portal_make_payment(
         ],
     )
 
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_sqlesc(invoice_id)}'")
     inv = rows[0]
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     inv_total = float(inv.get("total", 0))
@@ -302,7 +302,7 @@ async def portal_make_payment(
 async def portal_appointments(customer: dict = Depends(get_current_customer)):
     """Customer's appointments."""
     now_ms = int(time.time() * 1000)
-    rows = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{_sqlesc(customer['id'])}'")
     upcoming = [a for a in rows if a.get("start_time", 0) > now_ms]
     past = [a for a in rows if a.get("start_time", 0) <= now_ms]
     return {
@@ -354,14 +354,14 @@ async def portal_create_checkout_session(
         raise HTTPException(400, f"Invoice is already {inv['status']}")
 
     total = float(inv.get("total", 0))
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_sqlesc(invoice_id)}'")
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     amount_due = round(total - total_paid, 2)
 
     if amount_due <= 0:
         raise HTTPException(400, "Invoice is already fully paid")
 
-    line_items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
+    line_items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'")
     items_desc = "; ".join(
         f"{li.get('description', '')} x{li.get('quantity', 1)}" for li in line_items
     )
@@ -387,7 +387,7 @@ async def portal_create_checkout_session(
 @router.get("/api/portal/payment-methods")
 async def portal_payment_methods(customer: dict = Depends(get_current_customer)):
     """List the customer's saved payment methods."""
-    rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE customer_id = '{customer['id']}'")
+    rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE customer_id = '{_sqlesc(customer['id'])}'")
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 
@@ -423,7 +423,7 @@ async def portal_pay_with_saved_card(
 
     # Calculate amount due
     total = float(inv.get("total", 0))
-    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{invoice_id}'")
+    payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_sqlesc(invoice_id)}'")
     total_paid = sum(float(p.get("amount", 0)) for p in payments)
     amount_due = round(total - total_paid, 2)
 

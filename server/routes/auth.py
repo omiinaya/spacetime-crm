@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from helpers import (
     _call,
     _sql,
+    _sqlesc,
     get_current_user,
     logger,
 )
@@ -94,7 +95,7 @@ async def login(request: Request, login_data: LoginRequest):
     if not email or not password:
         raise HTTPException(400, "Email and password required")
 
-    rows = await _sql(f"SELECT * FROM user WHERE email = '{email}'")
+    rows = await _sql(f"SELECT * FROM user WHERE email = '{_sqlesc(email)}'")
     if not rows:
         raise HTTPException(401, "Invalid email or password")
 
@@ -154,7 +155,7 @@ async def complete_login(request: Request, body: CompleteLoginRequest):
     payload = _decode_temp_token(body.temp_token)
     user_id = payload["sub"]
 
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user_id)}'")
     if not rows:
         raise HTTPException(401, "User not found")
 
@@ -344,7 +345,7 @@ async def pos_login(request: Request, body: PosLoginRequest):
     if not pin.isdigit() or len(pin) < 4 or len(pin) > 10:
         raise HTTPException(400, "PIN must be 4-10 digits")
 
-    rows = await _sql(f"SELECT * FROM user WHERE id = '{user_id}'")
+    rows = await _sql(f"SELECT * FROM user WHERE id = '{_sqlesc(user_id)}'")
     if not rows:
         raise HTTPException(401, "Invalid user ID or PIN")
 
@@ -394,12 +395,12 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 
     user = None
     user_type = None
-    rows = await _sql(f"SELECT * FROM user WHERE email = '{email}'")
+    rows = await _sql(f"SELECT * FROM user WHERE email = '{_sqlesc(email)}'")
     if rows:
         user = rows[0]
         user_type = "staff"
     else:
-        rows = await _sql(f"SELECT * FROM customer WHERE email = '{email}'")
+        rows = await _sql(f"SELECT * FROM customer WHERE email = '{_sqlesc(email)}'")
         if rows:
             user = rows[0]
             user_type = "customer"
