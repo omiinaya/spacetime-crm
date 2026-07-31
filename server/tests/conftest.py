@@ -229,6 +229,67 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
     return count
 
 
+def _cleanup_stale_test_tenants() -> int:
+    """Delete tenants from prior (possibly failed) test sessions.
+
+    Every test session creates a tenant whose slug matches `test-tenant-%`.
+    When a session is interrupted before its teardown, that tenant and ALL
+    of its rows (including entities with FIXED names like 'Status Test')
+    linger in the shared STDB database and confuse later runs (helpers that
+    look up by fixed title can return a foreign stale row).
+
+    The STDB `delete_tenant` reducer only removes the tenant + its members,
+    so this also purges every entity row referencing the stale tenant IDs
+    (customers, tickets, invoices, ...).
+    """
+    try:
+        rows = _stdb_sql("SELECT * FROM tenants")
+        if not rows or not rows[0].get("rows"):
+            return 0
+        schema = rows[0]["schema"]["elements"]
+        id_idx = next(
+            (i for i, e in enumerate(schema) if e["name"].get("some") == "id"),
+            0,
+        )
+        slug_idx = next(
+            (i for i, e in enumerate(schema) if e["name"].get("some") == "slug"),
+            1,
+        )
+        stale_ids: list[str] = []
+        for row in rows[0]["rows"]:
+            slug = row[slug_idx] if slug_idx < len(row) else ""
+            if isinstance(slug, str) and slug.startswith("test-tenant-"):
+                stale_ids.append(str(row[id_idx]))
+        removed = 0
+        for tenant_id in stale_ids:
+            try:
+                _stdb_call("delete_tenant", [tenant_id])
+                removed += 1
+            except Exception:
+                pass
+        # Purge orphaned entity rows whose tenant_id points at a stale tenant.
+        for table in (
+            "customer", "ticket", "invoices", "payment", "appointment",
+            "products", "estimates", "purchase_order", "counter_sale",
+            "recurring_invoice_rules", "webhook_subscriptions",
+            "scheduled_reports", "custom_field_definitions",
+            "checklist_templates", "tax_rates", "user", "user_settings",
+            "customer_geolocations", "saved_payment_methods",
+            "invoice_line_items", "estimate_line_items",
+            "purchase_order_line_item", "inventory_adjustment",
+            "ticket_note", "ticket_timer", "counter_sale_line_item",
+            "pos_line_item", "audit_log",
+        ):
+            for tid in stale_ids:
+                try:
+                    _stdb_write(f"DELETE FROM {table} WHERE tenant_id = '{tid}'")
+                except Exception:
+                    pass
+        return removed
+    except Exception:
+        return 0
+
+
 # ── Fixtures ──────────────────────────────────────────────────────
 
 
@@ -246,13 +307,18 @@ def session_suffix() -> str:
     suf = uuid.uuid4().hex[:12]
     # Pre-session cleanup: remove stale data from the previous session
     # that might still match this suffix (edge case for very fast re-runs)
+    _cleanup_stale_test_tenants()
     _cleanup_by_suffix(suf)
     return suf
 
 
 @pytest.fixture(scope="session")
 def admin_token() -> str:
-    """Log in as admin once per session and return the JWT."""
+    """Log in as admin once per session and return the JWT.
+
+    Self-healing: if the shared admin's password hash was clobbered by a
+    stray test (shared-STDB failure mode), reset it to ADMIN_PW and retry.
+    """
     resp = httpx.post(
         f"{SERVER_URL}/api/auth/login",
         json={
@@ -261,6 +327,21 @@ def admin_token() -> str:
         },
         timeout=10,
     )
+    if resp.status_code == 401:
+        # Attempt self-heal: reset the admin password, then retry once.
+        try:
+            rows = _stdb_sql(f"SELECT id FROM user WHERE email = '{ADMIN_EMAIL}'")
+            if rows and rows[0].get("rows"):
+                uid = rows[0]["rows"][0][0]
+                hashed = bcrypt.hashpw(ADMIN_PW.encode(), bcrypt.gensalt()).decode()
+                _stdb_call("set_user_password", [uid, hashed])
+                resp = httpx.post(
+                    f"{SERVER_URL}/api/auth/login",
+                    json={"email": ADMIN_EMAIL, "password": ADMIN_PW},
+                    timeout=10,
+                )
+        except Exception:
+            pass
     assert resp.status_code == 200, f"Admin login failed: {resp.text}"
     data = resp.json()
     assert "token" in data
