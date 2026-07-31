@@ -31,10 +31,10 @@ mod tests {
         delete_inventory_adjustment(&ctx, "adj_nope".into());
         delete_checklist_template(&ctx, "clt_nope".into());
         delete_counter_sale(&ctx, "pos_nope".into());
-        let _ = delete_customer_geolocation(&ctx, "cust_nope".into());
-        let _ = delete_ticket_checklist(&ctx, "tkt_nope".into());
+        delete_customer_geolocation(&ctx, "cust_nope".into());
+        delete_ticket_checklist(&ctx, "tkt_nope".into());
         let _ = set_custom_field_value(&ctx, "e".into(), "f".into(), "v".into(), "t_nope".into());
-        let _ = delete_custom_field_value(&ctx, "e".into(), "f".into());
+        delete_custom_field_value(&ctx, "e".into(), "f".into());
         // Untested reducers safety
         set_user_pin(&ctx, "user_nope".into(), "1234".into());
         upsert_user_settings(&ctx, "user_nope".into(), "dark".into(), "new".into());
@@ -80,12 +80,12 @@ mod tests {
             0,
             0,
         );
-        let _ = delete_po_line_item(&ctx, "po_nope".into(), "poli_nope".into());
-        let _ = submit_for_approval(&ctx, "po_nope".into());
-        let _ = approve_po(&ctx, "po_nope".into(), "u".into());
-        let _ = reject_po(&ctx, "po_nope".into());
-        let _ = receive_po_item(&ctx, "poli_nope".into(), 0.0);
-        let _ = delete_purchase_order(&ctx, "po_nope".into());
+        delete_po_line_item(&ctx, "po_nope".into(), "poli_nope".into());
+        submit_for_approval(&ctx, "po_nope".into());
+        approve_po(&ctx, "po_nope".into(), "u".into());
+        reject_po(&ctx, "po_nope".into());
+        receive_po_item(&ctx, "poli_nope".into(), 0.0);
+        delete_purchase_order(&ctx, "po_nope".into());
         delete_ticket_timer(&ctx, "tmr_nope".into());
         generate_recurring_invoices(&ctx, "t".into());
 

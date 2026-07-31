@@ -173,7 +173,7 @@ mod tests {
             ctx.db
                 .user_settings()
                 .user_id()
-                .find(&"u1".to_string())
+                .find("u1".to_string())
                 .expect("expected")
                 .theme,
             "light"

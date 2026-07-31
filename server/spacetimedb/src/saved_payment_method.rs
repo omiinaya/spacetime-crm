@@ -107,7 +107,7 @@ mod tests {
         let m = &methods[0];
         assert!(m.id.starts_with("pm_"));
         assert_eq!(m.customer_id, "customer_1");
-        assert_eq!(m.is_default, true);
+        assert!(m.is_default);
         assert_eq!(m.brand, "Visa");
         assert_eq!(m.last4, "4242");
     }

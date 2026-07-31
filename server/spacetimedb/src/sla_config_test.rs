@@ -48,7 +48,7 @@ mod tests {
             .db
             .sla_configs()
             .tenant_id()
-            .find(&"t_b".to_string())
+            .find("t_b".to_string())
             .expect("expected t_b");
         assert_eq!(t_b.targets_json, r#"{"urgent":8}"#);
     }

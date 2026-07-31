@@ -11,26 +11,44 @@ env:
   JWT_SECRET: ci-test-secret-key-change-in-production
   STDB_HOST: localhost
   STDB_PORT: "3001"
+  # Version pinned to match production (server/.local/share/spacetime/bin/2.6.1)
+  # and server/Dockerfile.test. The old `spacetimedb/spacetimedb:latest` image
+  # does NOT exist on Docker Hub — every Test run failed at `docker pull`.
+  SPACETIME_VERSION: v2.6.1
 
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      spacetimedb:
-        image: spacetimedb/spacetimedb:latest
-        ports:
-          - 3001:3001
-        options: >-
-          --health-cmd "curl -sf http://localhost:3001/ || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-          --health-start-period 20s
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install SpacetimeDB CLI + standalone server
+        run: |
+          curl -L -o /tmp/spacetime.tar.gz \
+            "https://github.com/clockworklabs/SpacetimeDB/releases/download/${SPACETIME_VERSION}/spacetime-x86_64-unknown-linux-gnu.tar.gz"
+          tar xzf /tmp/spacetime.tar.gz -C /usr/local/bin/
+          rm /tmp/spacetime.tar.gz
+          if [ -f /usr/local/bin/spacetimedb-cli ] && [ ! -f /usr/local/bin/spacetime ]; then
+            mv /usr/local/bin/spacetimedb-cli /usr/local/bin/spacetime
+          fi
+          chmod +x /usr/local/bin/spacetime /usr/local/bin/spacetimedb-standalone 2>/dev/null || true
+          spacetime --version
+
+      - name: Start SpacetimeDB standalone
+        run: |
+          spacetime start -l 0.0.0.0:3001 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/ > /dev/null 2>&1; then
+              echo "SpacetimeDB ready"
+              exit 0
+            fi
+            echo "Waiting for SpacetimeDB... ($i/30)"
+            sleep 1
+          done
+          echo "SpacetimeDB failed to start"
+          exit 1
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -128,10 +146,8 @@ jobs:
 
       - name: Run Rust clippy
         run: cargo clippy --manifest-path server/spacetimedb/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
-        continue-on-error: true
 
-      - name: Verify Rust tests compile
-        run: cargo check --manifest-path server/spacetimedb/Cargo.toml --tests 2>&1
-        # Tests type-check successfully but can't link on host (STDB runtime symbols
-        # only available in wasm). Actual execution requires the SpacetimeDB host runtime.
-        continue-on-error: true
+      - name: Run Rust tests (host)
+        run: cargo test --manifest-path server/spacetimedb/Cargo.toml --lib
+        # Unit tests execute on the host via the in-memory test stub datastore
+        # (src/test_stubs.rs) — no live SpacetimeDB required.

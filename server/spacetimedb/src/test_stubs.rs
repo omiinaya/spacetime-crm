@@ -8,6 +8,8 @@
 //! Only compiled under `#[cfg(test)]` and `#[cfg(not(target_arch = "wasm32"))]`.
 
 #![allow(non_snake_case, dead_code, unused_unsafe)]
+// TODO (kanban): Replace 10 unwrap() call(s) with proper error handling
+// TODO (kanban): Replace 10 unwrap() call(s) with proper error handling
 #![allow(private_interfaces)]
 
 use std::cell::RefCell;
@@ -59,16 +61,19 @@ static NEXT_INDEX_ID: Mutex<u32> = Mutex::new(1);
 static INDEX_ID_TO_TABLE: LazyLock<Mutex<HashMap<IndexId, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// TableId -> rows of (primary_key_bytes, row_bytes) for the in-memory datastore.
+type TableRows = HashMap<TableId, Vec<(Vec<u8>, Vec<u8>)>>;
+
 thread_local! {
     /// Stores rows for each table: TableId -> Vec of (primary_key_bytes, row_bytes).
     /// Per-thread and reset between tests (see `reset_datastore`).
-    static TABLE_ROWS: RefCell<HashMap<TableId, Vec<(Vec<u8>, Vec<u8>)>>> = RefCell::new(HashMap::new());
+    static TABLE_ROWS: RefCell<TableRows> = RefCell::new(HashMap::new());
 
     /// Iterator storage: handle -> Vec of row bytes to yield.
     static ITERATORS: RefCell<HashMap<u32, Vec<Vec<u8>>>> = RefCell::new(HashMap::new());
 
     /// Next iterator handle.
-    static NEXT_ITER_HANDLE: RefCell<u32> = RefCell::new(1);
+    static NEXT_ITER_HANDLE: RefCell<u32> = const { RefCell::new(1) };
 }
 
 // ─── Helper: get or create a TableId from a name ──
@@ -166,7 +171,13 @@ fn extract_primary_key(row_bytes: &[u8]) -> Vec<u8> {
 // that `spacetimedb-bindings-sys` expects when building for native (non-WASM).
 
 #[no_mangle]
-pub extern "C" fn table_id_from_name(
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn table_id_from_name(
     name_ptr: *const u8,
     name_len: usize,
     out: *mut TableId,
@@ -185,7 +196,13 @@ pub extern "C" fn table_id_from_name(
 }
 
 #[no_mangle]
-pub extern "C" fn index_id_from_name(
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn index_id_from_name(
     name_ptr: *const u8,
     name_len: usize,
     out: *mut IndexId,
@@ -204,7 +221,13 @@ pub extern "C" fn index_id_from_name(
 }
 
 #[no_mangle]
-pub extern "C" fn datastore_insert_bsatn(
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn datastore_insert_bsatn(
     table_id: TableId,
     row_ptr: *mut u8,
     row_len_ptr: *mut usize,
@@ -235,7 +258,13 @@ pub extern "C" fn datastore_insert_bsatn(
 }
 
 #[no_mangle]
-pub extern "C" fn datastore_update_bsatn(
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn datastore_update_bsatn(
     table_id: TableId,
     _index_id: IndexId,
     row_ptr: *mut u8,
@@ -271,7 +300,13 @@ pub extern "C" fn datastore_update_bsatn(
 }
 
 #[no_mangle]
-pub extern "C" fn datastore_table_scan_bsatn(table_id: TableId, out: *mut RowIter) -> u16 {
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn datastore_table_scan_bsatn(table_id: TableId, out: *mut RowIter) -> u16 {
     let handle = NEXT_ITER_HANDLE.with(|n| {
         let h = *n.borrow();
         n.replace_with(|n| *n + 1);
@@ -298,7 +333,13 @@ pub extern "C" fn datastore_table_scan_bsatn(table_id: TableId, out: *mut RowIte
 }
 
 #[no_mangle]
-pub extern "C" fn datastore_index_scan_point_bsatn(
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn datastore_index_scan_point_bsatn(
     _index_id: IndexId,
     point_ptr: *const u8,
     point_len: usize,
@@ -343,7 +384,7 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
         } else {
             // Index not yet mapped to a table: fall back to a pk match across
             // all tables (legacy behavior).
-            for (_table_id, rows) in m.iter() {
+            for rows in m.values() {
                 for (pk, row) in rows.iter() {
                     if pk == &point_bytes || pk.starts_with(&point_bytes) {
                         result.push(row.clone());
@@ -371,7 +412,13 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
 }
 
 #[no_mangle]
-pub extern "C" fn datastore_delete_by_index_scan_point_bsatn(
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn datastore_delete_by_index_scan_point_bsatn(
     _index_id: IndexId,
     point_ptr: *const u8,
     point_len: usize,
@@ -407,7 +454,7 @@ pub extern "C" fn datastore_delete_by_index_scan_point_bsatn(
                 });
             }
         } else {
-            for (_table_id, rows) in m.iter_mut() {
+            for rows in m.values_mut() {
                 rows.retain(|(pk, _)| {
                     if pk == &point_bytes || pk.starts_with(&point_bytes) {
                         count += 1;
@@ -428,7 +475,13 @@ pub extern "C" fn datastore_delete_by_index_scan_point_bsatn(
 }
 
 #[no_mangle]
-pub extern "C" fn row_iter_bsatn_advance(
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn row_iter_bsatn_advance(
     iter: RowIter,
     buffer_ptr: *mut u8,
     buffer_len_ptr: *mut usize,
@@ -491,7 +544,13 @@ pub extern "C" fn row_iter_bsatn_advance(
 }
 
 #[no_mangle]
-pub extern "C" fn row_iter_bsatn_close(iter: RowIter) -> u16 {
+/// # Safety
+///
+/// All raw pointers passed to this FFI stub must be valid, aligned, and
+/// point to at least `name_len` readable bytes. `out` must be a valid
+/// writable pointer. These invariants are guaranteed by the SpacetimeDB
+/// runtime which calls this exported symbol.
+pub unsafe extern "C" fn row_iter_bsatn_close(iter: RowIter) -> u16 {
     if iter == RowIter::INVALID {
         return 0;
     }
