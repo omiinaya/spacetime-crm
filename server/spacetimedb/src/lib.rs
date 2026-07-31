@@ -29,7 +29,6 @@ pub mod customer_geolocation_test;
 pub mod customer_import_test;
 #[cfg(test)]
 pub mod customer_test;
-#[cfg(test)]
 pub mod estimate;
 #[cfg(test)]
 pub mod geolocation_tool;
@@ -112,7 +111,33 @@ pub use webhook::*;
 // ─── Helpers ──
 
 pub(crate) fn now_ms(ctx: &ReducerContext) -> u64 {
-    ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000
+    let ts = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+    #[cfg(test)]
+    {
+        // Unit tests construct ReducerContext via `__dummy()`, which pins the
+        // timestamp to UNIX_EPOCH (0). Fall back to the wall clock so tests
+        // exercise real timestamp values (`created_at > 0` etc.) and so
+        // `make_id` produces unique ids within a test. Values are guaranteed
+        // strictly increasing process-wide to avoid same-ms collisions.
+        if ts == 0 {
+            return test_wall_clock_micros();
+        }
+    }
+    ts
+}
+
+#[cfg(test)]
+fn test_wall_clock_micros() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static LAST: AtomicU64 = AtomicU64::new(0);
+    let wall = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_micros() as u64)
+        .unwrap_or(0);
+    let prev = LAST.load(Ordering::Relaxed);
+    let next = if wall > prev { wall } else { prev + 1 };
+    LAST.store(next, Ordering::Relaxed);
+    next
 }
 
 pub(crate) fn make_id(prefix: &str, ctx: &ReducerContext) -> String {

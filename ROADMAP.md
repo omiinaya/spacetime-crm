@@ -344,7 +344,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | 3 | **Ticket print view** — Printable ticket summary page | 30m | TicketsPage | 🟢 Useful |
 | 4 | **Customer activity timeline** — Show recent tickets, invoices, appointments in chronological timeline | 1h | CustomersPage | 🟡 Medium |
 | 5 | **Dashboard: monthly target editor** — Allow admin to set revenue target from settings | 20m | SettingsPage | 🟢 Quick |
-| 6 | **Invoice: reminder schedule** — Let admin set custom reminder intervals (3d, 7d, 14d) | 30m | SettingsPage | 🟢 Quick |
+| 6 | **Invoice: reminder schedule** — Let admin set custom reminder intervals (3d, 7d, 14d) | 30m | SettingsPage | 🟢 Quick | ✅ Done |
 | 7 | **Product: reorder point + reorder quantity** — Separate fields for auto-reorder logic | 30m | ProductsPage | 🟢 Quick |
 | 8 | **Ticket: email customer directly from ticket detail** | 20m | TicketsPage | 🟢 Quick |
 | 9 | **POS: quick-cash button** — Pre-fill tendered amount = total for one-tap payment | 10m | PosPage | 🟢 Quick |

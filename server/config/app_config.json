@@ -1,3 +1,4 @@
 {
-  "revenue_target": 30000
+  "revenue_target": 30000.0,
+  "reminder_interval_days": 14
 }

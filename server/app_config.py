@@ -26,12 +26,20 @@ def _ensure_dir():
 
 
 def get_config() -> dict:
-    """Get current app config, or defaults if not set."""
+    """Get current app config, or defaults if not set.
+
+    Missing keys in the on-disk file are backfilled from DEFAULT_CONFIG so
+    callers always get the full config (e.g. old files written before
+    reminder_interval_days existed still return it).
+    """
     if not CONFIG_PATH.exists():
         return dict(DEFAULT_CONFIG)
     try:
         with open(CONFIG_PATH) as f:
-            return json.load(f)
+            data = json.load(f)
+        merged = dict(DEFAULT_CONFIG)
+        merged.update(data)
+        return merged
     except Exception as e:
         logger.error("Failed to load app config: %s", e)
         return dict(DEFAULT_CONFIG)
@@ -52,9 +60,7 @@ def _validate_reminder_interval(data: dict) -> None:
     try:
         value = int(raw)
     except (TypeError, ValueError):
-        raise ValueError(
-            "reminder_interval_days must be a positive integer"
-        ) from None
+        raise ValueError("reminder_interval_days must be a positive integer") from None
     if value < 1:
         raise ValueError("reminder_interval_days must be a positive integer")
     data["reminder_interval_days"] = value

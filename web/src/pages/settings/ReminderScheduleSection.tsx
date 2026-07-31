@@ -23,12 +23,20 @@ export default function ReminderScheduleSection() {
 	});
 
 	const [intervalDays, setIntervalDays] = useState(DEFAULT_INTERVAL);
+	const [touched, setTouched] = useState(false);
 
 	useEffect(() => {
-		if (data?.config?.reminder_interval_days) {
+		// Hydrate from the server only until the user makes a change —
+		// otherwise a late-arriving fetch response would clobber their selection.
+		if (data?.config?.reminder_interval_days && !touched) {
 			setIntervalDays(data.config.reminder_interval_days);
 		}
-	}, [data]);
+	}, [data, touched]);
+
+	const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		setIntervalDays(Number(e.target.value));
+		setTouched(true);
+	};
 
 	const mutation = useMutation({
 		mutationFn: () =>
@@ -50,13 +58,13 @@ export default function ReminderScheduleSection() {
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<p className="text-sm text-muted-foreground">
-					Send overdue invoice reminders only after an invoice has been
-					past due for this many days.
+					Send overdue invoice reminders only after an invoice has been past due
+					for this many days.
 				</p>
 				<div className="flex items-center gap-2 max-w-xs">
 					<Select
 						value={String(intervalDays)}
-						onChange={(e) => setIntervalDays(Number(e.target.value))}
+						onChange={handleChange}
 						aria-label="Reminder interval in days"
 						disabled={isLoading}
 					>

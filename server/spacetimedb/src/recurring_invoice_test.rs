@@ -104,7 +104,7 @@ mod tests {
     fn test_generate_recurring_invoices() {
         let ctx = test_ctx();
         // Create a recurring rule with past-due next_generation_date
-        let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+        let now = crate::now_ms(&ctx);
         let items = r#"[{"description":"Monthly rent","quantity":1,"unit_price":500}]"#;
         create_recurring_invoice_rule(
             &ctx,
@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn test_generate_recurring_paused_rule_skipped() {
         let ctx = test_ctx();
-        let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+        let now = crate::now_ms(&ctx);
         create_recurring_invoice_rule(
             &ctx,
             "t".into(),
@@ -214,7 +214,7 @@ mod tests {
     #[test]
     fn test_generate_recurring_empty_customer_skipped() {
         let ctx = test_ctx();
-        let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+        let now = crate::now_ms(&ctx);
         // Rule with empty customer_id
         create_recurring_invoice_rule(
             &ctx,

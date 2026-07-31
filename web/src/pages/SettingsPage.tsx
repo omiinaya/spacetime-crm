@@ -10,6 +10,7 @@ import {
 	PinSection,
 	TwoFactorSection,
 	RevenueTargetSection,
+	ReminderScheduleSection,
 } from "./settings";
 
 export default function SettingsPage() {
@@ -31,6 +32,7 @@ export default function SettingsPage() {
 			<TaxRateSettings />
 			<SlaConfigSection />
 			<RevenueTargetSection />
+			<ReminderScheduleSection />
 			<WebhookSettings />
 		</>
 	);

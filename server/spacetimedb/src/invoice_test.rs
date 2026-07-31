@@ -74,7 +74,7 @@ mod tests {
     fn test_mark_overdue_invoices() {
         let ctx = test_ctx();
         // Create a past-due sent invoice
-        let now = ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000;
+        let now = crate::now_ms(&ctx);
         create_invoice(
             &ctx,
             "t".into(),

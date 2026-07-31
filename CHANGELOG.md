@@ -14,6 +14,7 @@ All notable changes to SpacetimeCRM will be documented in this file.
 
 ### Added
 - **Service Type Breakdown**: Revenue reports and dashboard now include invoice/estimate item type breakdown (service vs parts) displayed as PieChart card.
+- **Invoice Reminder Schedule**: Admin-configurable overdue reminder interval (1/3/7/14 days) — new ReminderScheduleSection on SettingsPage, persisted via `/api/settings/app`, and `send-overdue-reminders` now only notifies invoices past due for at least the configured interval.
 - **Dependabot Configuration**: `.github/dependabot.yml` for automated Python, npm, and GitHub Actions dependency updates.
 - **EditorConfig**: `.editorconfig` for cross-editor consistency.
 - **Node Version Pin**: `web/.nvmrc` pinning Node 22.

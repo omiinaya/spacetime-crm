@@ -169,12 +169,12 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
             updated_at: now,
         });
         // Copy line items with unique IDs (add counter to avoid same-tick collision)
-        let mut li_idx = 0u64;
-        for item in ctx
+        for (li_idx, item) in ctx
             .db
             .estimate_line_items()
             .iter()
             .filter(|i| i.estimate_id == estimate_id)
+            .enumerate()
         {
             let li_id = format!(
                 "iln_{}_{}_{}",
@@ -182,7 +182,6 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
                 li_idx,
                 ctx.sender().to_hex().chars().take(8).collect::<String>()
             );
-            li_idx += 1;
             ctx.db.invoice_line_items().insert(InvoiceLineItem {
                 id: li_id,
                 tenant_id: est.tenant_id.clone(),

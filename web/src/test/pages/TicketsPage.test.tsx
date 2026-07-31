@@ -194,4 +194,45 @@ describe("TicketsPage", () => {
 			).toBeTruthy();
 		});
 	});
+
+	it("emails the customer from the ticket detail panel", async () => {
+		pushPage([customerAlice], [ticket1]);
+		// Detail panel data fetches on selection
+		mock.push({ timers: [] }); // timers
+		mock.push({ items: [] }); // checklist
+		mock.push({ templates: [], total: 0, offset: 0, limit: 25 }); // templates
+		mock.push({ notes: [] }); // ticket notes
+		mock.push({
+			ok: true,
+			sent_to: "alice@example.com",
+			ticket_number: 1001,
+			status: "new",
+		}); // POST send-email
+
+		render(<TicketsPage />, { wrapper });
+
+		await waitFor(() => {
+			expect(screen.getByText("Broken screen")).toBeTruthy();
+		});
+
+		// Open the detail panel
+		await userEvent.click(screen.getByText("Broken screen"));
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: /email/i })).toBeTruthy();
+		});
+
+		await userEvent.click(screen.getByRole("button", { name: /email/i }));
+
+		await waitFor(() => {
+			const calls = mock.calls();
+			const post = calls.find(
+				(c) =>
+					c.init?.method === "POST" &&
+					c.url.includes("/tickets/tkt_1/send-email"),
+			);
+			expect(post).toBeTruthy();
+			expect(screen.getByText(/sent to alice@example.com/i)).toBeTruthy();
+		});
+	});
 });
