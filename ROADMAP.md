@@ -414,7 +414,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 ### Test quality gaps
 - ❌ No negative tests for business logic (e.g. creating invoice without customer)
 - ✅ Concurrent/multi-user tenant isolation tests — `test_tenant_isolation.py` (10 tests): two independent tenants, cross-tenant list/fetch/mutation rejection + 10-way parallel `asyncio.gather` burst with zero leakage and zero 5xx. Also hardened 20+ direct-access routes (customers/tickets/invoices sub-resources) with tenant-scoped `_require_owned` checks.
-- ❌ No performance/load tests
+- ✅ Performance/load smoke tests — `server/tests/test_load_smoke.py` (2 tests, `@pytest.mark.slow`): 16-way parallel `asyncio.gather` burst on `/api/stats` + `/api/customers`, asserts all 200 (no 5xx) under concurrency with p95 < 3s budget; auto-skips when server is down (mirrors `test_client.py` availability gate). Regression detector for N+1 / full-table-scan, not a benchmark
 - ❌ Tests share STDB state (no fresh DB per run)
 - ❌ No Rust runtime tests (need STDB host)
 - ✅ OpenAPI spec tests with schema validation, auth enforcement, response contracts, error contracts, CORS contracts, and request body field requirements (30 tests in `test_openapi_spec.py`)
