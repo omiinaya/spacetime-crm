@@ -26,7 +26,7 @@ stdb: true
 15|| Backend API | FastAPI (Python, single-file server) | 8723 |
 16|| Frontend | React 18 + Vite 6 + TailwindCSS v4 + shadcn-style | 5185 |
 17|| Auth | JWT (HS256, stored in localStorage) | — |
-18|| PDF | Jinja2 + WeasyPrint (server/templates/) | — |
+18|| PDF | Jinja2 + Playwright/Chromium (server/pdf.py) | — |
 19|
 20|---
 21|

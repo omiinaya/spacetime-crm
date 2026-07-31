@@ -24,11 +24,12 @@ docker compose up -d                                    # full production stack
 ## Key Paths
 | Path | Role |
 |------|------|
-| `server/main.py` | FastAPI REST server (2249 lines) |
+| `server/main.py` | FastAPI entry point (app wiring, startup; routes live in `server/routes/`) |
+| `server/routes/` | One `.py` per domain (customers, tickets, invoices, …) |
 | `server/spacetimedb/src/lib.rs` | STDB module root — tables, reducers, helpers |
 | `server/spacetimedb/src/*.rs` | One file per domain (customer, ticket, invoice, …) |
 | `web/src/pages/` | One `.tsx` per domain page |
-| `web/src/lib/api.ts` | Typed API client |
+| `web/src/lib/api/` | Typed API client (split by domain; `index.ts` re-exports) |
 | `web/src/lib/auth.tsx` | JWT auth context + provider |
 | `scripts/` | publish-stdb.sh, backup.py, restore.py, seed-demo.py, docker-entrypoint.sh |
 
@@ -46,15 +47,15 @@ docker compose up -d                                    # full production stack
 - **STDB access**: FastAPI uses raw SQL POST or reducer calls via httpx
 - **Audit**: every mutation calls `_log_audit()` (fire-and-forget)
 - **Webhooks**: HMAC-SHA256 signed, retry with exponential backoff (3 attempts)
-- **Templates**: Jinja2 in `server/templates/` for PDF generation via WeasyPrint
+- **Templates**: Jinja2 in `server/templates/` for PDF generation via Playwright/Chromium (replaced WeasyPrint — see `server/pdf.py`)
 
 ## Pitfalls
-1. **No test suite exists** — add tests for any new logic.
+1. **Test suites live in `server/tests/` (pytest) and `web/src/test/` (vitest)** — run them for any change.
 2. **STDB wasm builds** require `--target wasm32-unknown-unknown` target installed (`rustup target add wasm32-unknown-unknown`).
-3. **Duplicate imports** in `server/main.py` (lines 5-6: `datetime`, line 8: `secrets` appear twice).
+3. **STDB SQL limits** — no `IN`/`NOT IN`/`ORDER BY` in raw SQL; sort in Python, use multiple `!=` clauses. See AGENTS.md.
 4. **JWT secret** auto-generated on startup if default — but token invalidation means existing sessions break on restart.
 5. **Docker build** needs `--network host` for the backend build stage (Rust wasm compile).
-6. **No lint/format config** for Python or Rust — follow existing style.
+6. **Lint config**: `ruff.toml` + `pyproject.toml` for Python, `make lint` for all.
 7. **Package manager**: `npm ci` for web, `pip install -r requirements.txt` for server.
 
 ## Documentation Index

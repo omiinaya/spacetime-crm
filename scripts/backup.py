@@ -30,31 +30,64 @@ STDB_PORT = 3001
 DB_NAME = "spacetime-crm"
 SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{DB_NAME}/sql"
 
-# All tables in order (use STDB accessor names — these are the SQL table names)
+# All tables in order (use STDB accessor names — these are the SQL table names).
+# Verified against server/spacetimedb/src/*.rs accessor annotations (34 tables).
+# Parents first so restore.py can insert in FK-safe order.
 TABLES = [
-    "customer",
+    # ── Auth / tenant ─────────────────────────────────────────────
+    "tenants",
+    "tenant_members",
     "user",
     "user_settings",
-    "products",  # accessor = products
-    "tax_rates",  # accessor = tax_rates
+    # ── Customers ─────────────────────────────────────────────────
+    "customer",
+    "customer_geolocations",
+    # ── Products / inventory ──────────────────────────────────────
+    "products",
+    "tax_rates",
+    "inventory_adjustment",
+    # ── Tickets ───────────────────────────────────────────────────
     "ticket",
     "ticket_note",
     "ticket_timer",
-    "invoices",  # accessor = invoices
-    "invoice_line_items",  # accessor = invoice_line_items
+    "checklist_templates",
+    "ticket_checklist_items",
+    # ── Invoicing ─────────────────────────────────────────────────
+    "invoices",
+    "invoice_line_items",
     "payment",
+    "recurring_invoice_rules",
+    "saved_payment_methods",
+    # ── Appointments ──────────────────────────────────────────────
     "appointment",
-    "estimates",  # accessor = estimates
-    "estimate_line_items",  # accessor = estimate_line_items
+    # ── Estimates ─────────────────────────────────────────────────
+    "estimates",
+    "estimate_line_items",
+    # ── Purchase orders ───────────────────────────────────────────
     "purchase_order",
     "purchase_order_line_item",
-    "inventory_adjustment",
+    # ── POS ───────────────────────────────────────────────────────
+    "counter_sale",
+    "counter_sale_line_item",
+    # ── Config / metadata ─────────────────────────────────────────
+    "custom_field_definitions",
+    "custom_field_values",
+    "gift_cards",
+    "sla_configs",
+    "scheduled_reports",
+    "webhook_subscriptions",
+    "push_subscriptions",
     "audit_log",
 ]
 
 
-def sql_query(client: httpx.Client, query: str) -> list[dict]:
-    """Run a SQL query and return rows as dicts."""
+def sql_query(client: httpx.Client, query: str) -> list[dict] | None:
+    """Run a SQL query and return rows as dicts.
+
+    Returns None when the query fails (e.g. the table does not exist in the
+    deployed module) so callers can distinguish a missing table from an
+    empty one.
+    """
     resp = client.post(
         SQL_URL,
         content=query,
@@ -63,7 +96,7 @@ def sql_query(client: httpx.Client, query: str) -> list[dict]:
     )
     if resp.status_code >= 400:
         print(f"  ⚠️  SQL error ({resp.status_code}): {resp.text[:150]}")
-        return []
+        return None
     data = resp.json()
     result: list[dict] = []
     if isinstance(data, list):
@@ -104,14 +137,25 @@ def main():
     }
 
     total_rows = 0
+    missing = []
     for table in TABLES:
         rows = sql_query(client, f"SELECT * FROM {table}")
-        snapshot[table] = rows
-        total_rows += len(rows)
-        status = "✓" if rows is not None else "✗"
-        print(f"  {status} {table}: {len(rows)} rows")
+        if rows is None:
+            missing.append(table)
+        else:
+            snapshot[table] = rows
+            total_rows += len(rows)
+            print(f"  ✓ {table}: {len(rows)} rows")
+
+    if missing:
+        print(
+            f"\n⚠️  Tables missing from the deployed module (not backed up): {', '.join(missing)}"
+        )
+        print("   The running STDB module is older than server/spacetimedb/src/. Publish")
+        print("   the current module, then re-run this backup to include them.")
 
     snapshot["meta"]["total_rows"] = total_rows
+    snapshot["meta"]["missing_tables"] = missing
 
     # Write compressed JSON
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
