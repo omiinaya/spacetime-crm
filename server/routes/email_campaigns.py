@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from helpers import _sql, require_role
@@ -53,7 +53,7 @@ async def send_email_blast(
     elif customer_filter == "recent":
         # Customers with tickets in the last N days
         days = max(int(body.get("days_since_last", 30)), 1)
-        cutoff = int(asyncio.get_event_loop().time() * 1000) - (days * 86400 * 1000)
+        cutoff = int(time.time() * 1000) - (days * 86400 * 1000)
         where_clauses.append(
             "id IN (SELECT DISTINCT customer_id FROM ticket WHERE created_at >= "
             + str(cutoff)

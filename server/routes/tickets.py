@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 
 from config import settings
 from fastapi import APIRouter, Depends, HTTPException
@@ -97,7 +98,7 @@ async def list_sla_breaches(
 ):
     """List open tickets that have exceeded their SLA threshold."""
     targets = await _load_sla_targets(user["tenant_id"])
-    now_ms = asyncio.get_event_loop().time() * 1000
+    now_ms = int(time.time() * 1000)
     # Fetch all open tickets (STDB doesn't support NOT IN)
     open_statuses = ["new", "assigned", "in_progress", "waiting_on_customer"]
     all_open = []

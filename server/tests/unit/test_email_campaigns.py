@@ -1,136 +1,175 @@
-"""Unit tests for email campaign route logic."""
+"""Unit tests for email campaign route logic — tests the actual route function."""
 
 from __future__ import annotations
 
+import time
+from unittest.mock import AsyncMock, patch
+
 import pytest
+from fastapi import HTTPException
+from routes.email_campaigns import send_email_blast
+
+USER = {"id": "user_1", "tenant_id": "tenant_1", "name": "Test User"}
+
+VALID_BODY = {
+    "subject": "Spring Sale!",
+    "html_body": "<h1>Hello {{name}}!</h1>",
+    "customer_filter": "all",
+}
 
 
 class TestSendBlastValidation:
-    """Test the validation logic in send_email_blast."""
+    """Test validation in the actual send_email_blast route."""
 
-    def test_requires_subject(self):
-        """Empty subject should return 400."""
-        from fastapi import HTTPException
-
+    async def test_requires_subject(self):
         with pytest.raises(HTTPException) as exc:
-            raise HTTPException(400, "Subject is required")
-        assert exc.value.status_code == 400
-        assert "Subject" in exc.value.detail
-
-    def test_requires_body(self):
-        """Empty HTML body should return 400."""
-        from fastapi import HTTPException
-
-        with pytest.raises(HTTPException) as exc:
-            raise HTTPException(400, "Email body is required")
-        assert exc.value.status_code == 400
-        assert "body" in exc.value.detail
-
-    def test_requires_both(self):
-        """Missing both subject and body should fail."""
-        from fastapi import HTTPException
-
-        with pytest.raises(HTTPException) as exc:
-            raise HTTPException(400, "Subject is required")
+            await send_email_blast({"subject": "", "html_body": "<p>x</p>"}, USER)
         assert exc.value.status_code == 400
 
-    def test_accepts_valid_input(self):
-        """Valid inputs pass validation."""
-        subject = "Valid Subject"
-        html_body = "<h1>Valid Body</h1>"
-        assert subject.strip()
-        assert html_body.strip()
+    async def test_requires_body(self):
+        with pytest.raises(HTTPException) as exc:
+            await send_email_blast({"subject": "S", "html_body": "  "}, USER)
+        assert exc.value.status_code == 400
 
-    def test_send_test_with_email(self):
-        """Test mode with email passes validation."""
-        test_email = "test@example.com"
-        assert "@" in test_email
-
-    @pytest.mark.parametrize("filter_type", ["all", "with_email", "recent"])
-    def test_valid_filters(self, filter_type):
-        """All filter types are valid."""
-        assert filter_type in ("all", "with_email", "recent")
-
-    def test_placeholder_substitution(self):
-        """Verify {{name}} placeholder gets replaced."""
-        body = "<h1>Hello {{name}}!</h1>"
-        name = "Alice"
-        personalized = body.replace("{{name}}", name)
-        assert personalized == "<h1>Hello Alice!</h1>"
-
-    def test_email_placeholder_substitution(self):
-        """Verify {{email}} placeholder gets replaced."""
-        body = "<p>Sent to {{email}}</p>"
-        email = "alice@test.com"
-        personalized = body.replace("{{email}}", email)
-        assert personalized == "<p>Sent to alice@test.com</p>"
-
-    def test_placeholder_default_name(self):
-        """Customers without name get 'Valued Customer'."""
-        name = "Valued Customer"
-        body = "Hi {{name}}"
-        personalized = body.replace("{{name}}", name)
-        assert personalized == "Hi Valued Customer"
-
-    def test_send_email_mock_integration(self):
-        """Test that send_email is called with correct params."""
-        from unittest.mock import MagicMock
-
-        mock_send = MagicMock(return_value=True)
-        subject = "Test Campaign"
-        html_body = "<h1>Hello {{name}}!</h1>"
-        email = "alice@test.com"
-        name = "Alice"
-        personalized = html_body.replace("{{name}}", name).replace("{{email}}", email)
-
-        result = mock_send(email, subject, personalized)
-        assert result is True
-        mock_send.assert_called_once_with(email, subject, personalized)
+    async def test_accepts_valid_input(self):
+        with (
+            patch("routes.email_campaigns._sql", new_callable=AsyncMock) as mock_sql,
+            patch("routes.email_campaigns.send_email", return_value=True),
+        ):
+            mock_sql.return_value = [
+                {"id": "c1", "first_name": "Alice", "last_name": "J", "email": "a@test.com"}
+            ]
+            result = await send_email_blast(VALID_BODY, USER)
+            assert result["ok"] is True
+            assert result["sent"] == 1
 
 
-class TestCustomerFilterLogic:
-    """Test the SQL WHERE clause construction logic."""
+class TestTestMode:
+    """Test-mode sends a single email to a given address."""
 
-    @pytest.mark.parametrize("filter_type", ["all", "with_email"])
-    def test_basic_filters(self, filter_type):
-        """Basic filters produce correct SQL clauses."""
-        where = ["tenant_id = 'tenant_1'"]
-        if filter_type in ("with_email", "all"):
-            where.append("email IS NOT NULL AND email != ''")
+    async def test_test_mode_sends_to_one_address(self):
+        with patch("routes.email_campaigns.send_email", return_value=True) as mock_send:
+            result = await send_email_blast(
+                {**VALID_BODY, "send_test_only": "boss@test.com"}, USER
+            )
+            assert result["mode"] == "test"
+            assert result["sent"] == 1
+            assert result["recipients"] == ["boss@test.com"]
+            mock_send.assert_called_once()
+            args = mock_send.call_args[0]
+            assert args[0] == "boss@test.com"
+            assert args[1] == "Spring Sale!"
 
-        sql = " AND ".join(where)
-        assert "tenant_id" in sql
-        assert "email IS NOT NULL" in sql
-        assert "email != ''" in sql
+    async def test_test_mode_failure_raises_500(self):
+        with patch("routes.email_campaigns.send_email", return_value=False):
+            with pytest.raises(HTTPException) as exc:
+                await send_email_blast({**VALID_BODY, "send_test_only": "boss@test.com"}, USER)
+            assert exc.value.status_code == 500
 
-    def test_recent_filter_uses_cutoff(self):
-        """Recent activity filter adds a time-based subquery."""
-        import time
 
-        days = 30
-        cutoff = int(time.time() * 1000) - (days * 86400 * 1000)
+class TestRecipientFiltering:
+    """Recipient queries and filter behavior."""
 
-        where = ["tenant_id = 'tenant_1'"]
-        where.append(
-            "id IN (SELECT DISTINCT customer_id FROM ticket WHERE created_at >= "
-            + str(cutoff)
-            + ")"
-        )
-        where.append("email IS NOT NULL AND email != ''")
+    async def test_all_filter_requires_email_column(self):
+        """'all' filter always appends the email-not-null clause."""
+        with (
+            patch("routes.email_campaigns._sql", new_callable=AsyncMock) as mock_sql,
+            patch("routes.email_campaigns.send_email", return_value=True),
+        ):
+            mock_sql.return_value = [
+                {"id": "c1", "first_name": "A", "last_name": "B", "email": "a@test.com"}
+            ]
+            await send_email_blast(VALID_BODY, USER)
+            query = mock_sql.call_args[0][0]
+            assert "email IS NOT NULL AND email != ''" in query
+            assert "tenant_id = 'tenant_1'" in query
 
-        sql = " AND ".join(where)
-        assert "SELECT DISTINCT customer_id" in sql
-        assert str(cutoff) in sql
+    async def test_recent_filter_uses_real_epoch_cutoff(self):
+        """Regression: the recent cutoff must be real epoch ms, not monotonic.
 
-    def test_placeholder_substitution_requires_name(self):
-        """Ensure placeholder code works correctly."""
-        body = "<p>Thank you {{name}} for your business!</p>"
-        name = "Bob"
-        assert "Bob" in body.replace("{{name}}", name)
+        Previously used asyncio.get_event_loop().time()*1000 (monotonic),
+        which produced a cutoff of ~123000 ms → the created_at >= cutoff
+        clause matched EVERY ticket, making the 'recent' filter useless.
+        """
+        with (
+            patch("routes.email_campaigns._sql", new_callable=AsyncMock) as mock_sql,
+            patch("routes.email_campaigns.send_email", return_value=True),
+        ):
+            mock_sql.return_value = [
+                {"id": "c1", "first_name": "A", "last_name": "B", "email": "a@test.com"}
+            ]
+            days = 30
+            await send_email_blast(
+                {**VALID_BODY, "customer_filter": "recent", "days_since_last": days}, USER
+            )
+            query = mock_sql.call_args[0][0]
+            # Extract the numeric cutoff from the query
+            import re
 
-    def test_placeholder_with_empty_name(self):
-        """Empty name becomes 'Valued Customer'."""
-        name = "Valued Customer"
-        body = "Dear {{name}},"
-        result = body.replace("{{name}}", name)
-        assert result == "Dear Valued Customer,"
+            match = re.search(r"created_at >= (\d+)", query)
+            assert match, f"No cutoff found in query: {query}"
+            cutoff = int(match.group(1))
+            now_ms = int(time.time() * 1000)
+            expected = now_ms - (days * 86400 * 1000)
+            # Allow a small drift between building the query and asserting
+            assert abs(cutoff - expected) < 5000, f"cutoff={cutoff} expected≈{expected}"
+
+    async def test_no_matching_customers_raises_400(self):
+        with patch("routes.email_campaigns._sql", new_callable=AsyncMock, return_value=[]):
+            with pytest.raises(HTTPException) as exc:
+                await send_email_blast(VALID_BODY, USER)
+            assert exc.value.status_code == 400
+            assert "No customers match" in exc.value.detail
+
+
+class TestBlastDelivery:
+    """Full blast delivery behavior."""
+
+    async def test_personalizes_and_sends_to_each_customer(self):
+        customers = [
+            {"id": "c1", "first_name": "Alice", "last_name": "J", "email": "a@test.com"},
+            {"id": "c2", "first_name": "Bob", "last_name": "S", "email": "b@test.com"},
+            {"id": "c3", "first_name": "", "last_name": "", "email": "c@test.com"},
+        ]
+        with (
+            patch("routes.email_campaigns._sql", new_callable=AsyncMock, return_value=customers),
+            patch("routes.email_campaigns.send_email", return_value=True) as mock_send,
+        ):
+            result = await send_email_blast(VALID_BODY, USER)
+            assert result["sent"] == 3
+            assert result["total_matched"] == 3
+            assert mock_send.call_count == 3
+
+            # First customer: name personalized
+            body1 = mock_send.call_args_list[0].args[2]
+            assert "Alice J" in body1
+            # Third customer: no name → Valued Customer
+            body3 = mock_send.call_args_list[2].args[2]
+            assert "Valued Customer" in body3
+
+    async def test_counts_failures(self):
+        customers = [
+            {"id": "c1", "first_name": "A", "last_name": "B", "email": "a@test.com"},
+            {"id": "c2", "first_name": "C", "last_name": "D", "email": "b@test.com"},
+        ]
+        with (
+            patch("routes.email_campaigns._sql", new_callable=AsyncMock, return_value=customers),
+            patch("routes.email_campaigns.send_email", side_effect=[True, False]),
+        ):
+            result = await send_email_blast(VALID_BODY, USER)
+            assert result["sent"] == 1
+            assert result["failed"] == 1
+
+    async def test_skips_rows_without_email(self):
+        customers = [
+            {"id": "c1", "first_name": "A", "last_name": "B", "email": ""},
+            {"id": "c2", "first_name": "C", "last_name": "D", "email": "  "},
+            {"id": "c3", "first_name": "E", "last_name": "F", "email": "e@test.com"},
+        ]
+        with (
+            patch("routes.email_campaigns._sql", new_callable=AsyncMock, return_value=customers),
+            patch("routes.email_campaigns.send_email", return_value=True) as mock_send,
+        ):
+            result = await send_email_blast(VALID_BODY, USER)
+            assert result["sent"] == 1
+            mock_send.assert_called_once()

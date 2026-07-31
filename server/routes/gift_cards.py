@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import random
 import string
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from helpers import _call, _log_audit, _paginated, _sql, require_role
@@ -112,16 +112,29 @@ async def redeem_gift_card(
     card = rows[0]
     if not card.get("active", True):
         raise HTTPException(400, "Gift card is no longer active")
-    if card.get("expires_at", 0) > 0 and card["expires_at"] < int(
-        asyncio.get_event_loop().time() * 1000
-    ):
+    if card.get("expires_at", 0) > 0 and card["expires_at"] < int(time.time() * 1000):
         raise HTTPException(400, "Gift card has expired")
     if card["remaining_balance"] < amount:
         raise HTTPException(
             400, f"Insufficient balance: ${card['remaining_balance']:.2f} remaining"
         )
 
-    await _call("redeem_gift_card", [card["id"], amount])
+    try:
+        await _call("redeem_gift_card", [card["id"], amount])
+    except HTTPException as e:
+        # Reducer-level validation failed (e.g. race condition drained balance).
+        if e.status_code == 502:
+            raise HTTPException(
+                400, "Insufficient balance: card was already redeemed"
+            ) from e
+        raise
+    await _log_audit(
+        user,
+        "redeem",
+        "gift_card",
+        code,
+        f"amount={amount:.2f} remaining={card['remaining_balance'] - amount:.2f}",
+    )
     return {"ok": True, "redeemed": amount, "remaining": card["remaining_balance"] - amount}
 
 
@@ -148,7 +161,15 @@ async def void_gift_card(
     gift_id: str,
     user: dict = Depends(require_role("admin")),
 ):
-    """Void (deactivate) a gift card. Admin only."""
+    """Void (deactivate) a gift card. Admin only, scoped to tenant."""
+    rows = await _sql(
+        f"SELECT * FROM gift_cards WHERE id = '{gift_id}' AND tenant_id = '{user['tenant_id']}'"
+    )
+    if not rows:
+        raise HTTPException(404, "Gift card not found")
+    card = rows[0]
+    if not card.get("active", True):
+        raise HTTPException(400, "Gift card is already voided")
     await _call("void_gift_card", [gift_id])
-    await _log_audit(user, "void", "gift_card", gift_id)
+    await _log_audit(user, "void", "gift_card", gift_id, card.get("code", ""))
     return {"ok": True}

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+import time
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -46,7 +47,7 @@ async def list_schedules(
 @router.post("/api/report-schedules")
 async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))):
     """Create a new scheduled report."""
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = int(time.time() * 1000)
     next_run_at = _calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
 
     result = await _call(
@@ -93,7 +94,7 @@ async def update_schedule(
     filters = body.filters
 
     recipients = recipients_raw if isinstance(recipients_raw, list) else [recipients_raw]
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = int(time.time() * 1000)
     next_run_at = _calc_next_run(schedule_frequency, schedule_config, now_ms)
 
     await _call(
@@ -141,7 +142,7 @@ async def run_schedule_now(schedule_id: str, user: dict = Depends(require_role("
 @router.get("/api/report-schedules/check-due")
 async def check_due_schedules(user: dict = Depends(require_role("admin"))):
     """Find all enabled schedules past their next_run_at. Call from cron."""
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = int(time.time() * 1000)
     all_rows = await _sql_t("SELECT * FROM scheduled_reports", user["tenant_id"])
     rows = [r for r in all_rows if r.get("enabled") and r.get("next_run_at", 0) <= now_ms]
     results = []
@@ -188,7 +189,7 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
                 errors.append(f"{email}: {e}")
 
         # 4. Update schedule: mark as run, calculate next run
-        now_ms = int(datetime.utcnow().timestamp() * 1000)
+        now_ms = int(time.time() * 1000)
         next_run = _calc_next_run(
             schedule.get("schedule_frequency", "daily"),
             json.loads(schedule.get("schedule_config_json", "{}") or "{}"),
@@ -241,7 +242,7 @@ def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
 
 async def _build_report_data(report_type: str, tenant_id: str, filters: dict) -> dict[str, Any]:
     """Query STDB and build report data for a given report type."""
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     def _filter_rows(rows: list[dict], field: str, value: Any) -> list[dict]:
         if not value:
@@ -255,7 +256,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
 
         revenue_by_month = []
         for i in range(period_start - 1, -1, -1):
-            ms = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+            ms = datetime(now.year, now.month, 1, tzinfo=UTC) - timedelta(days=30 * i)
             ms_end = ms + timedelta(days=30)
             ms_ts = int(ms.timestamp() * 1000)
             ms_end_ts = int(ms_end.timestamp() * 1000)
@@ -445,7 +446,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
 
         appt_by_month = []
         for i in range(11, -1, -1):
-            ms = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+            ms = datetime(now.year, now.month, 1, tzinfo=UTC) - timedelta(days=30 * i)
             ms_end = ms + timedelta(days=30)
             ms_ts = int(ms.timestamp() * 1000)
             ms_end_ts = int(ms_end.timestamp() * 1000)

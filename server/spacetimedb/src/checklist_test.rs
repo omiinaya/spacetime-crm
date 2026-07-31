@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::checklist::ticket_checklist_items;

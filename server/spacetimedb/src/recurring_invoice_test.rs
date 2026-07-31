@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::recurring_invoice_rule::recurring_invoice_rules;

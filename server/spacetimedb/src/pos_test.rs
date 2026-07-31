@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
     use crate::pos::counter_sale;

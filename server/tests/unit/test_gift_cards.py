@@ -1,11 +1,14 @@
-"""Unit tests for gift card route logic — directly tests functions."""
+"""Unit tests for gift card route logic — tests the actual route functions."""
 
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from routes.gift_cards import _generate_gift_code
+from fastapi import HTTPException
+from routes.gift_cards import _generate_gift_code, redeem_gift_card, void_gift_card
+
+USER = {"id": "user_1", "tenant_id": "tenant_1", "name": "Test User"}
 
 
 class TestGenerateGiftCode:
@@ -36,117 +39,192 @@ class TestGenerateGiftCode:
         assert len(codes) == 1000
 
 
-class TestCreateGiftCardValidation:
-    """Test the validation logic from create_gift_card route."""
-
-    @pytest.mark.parametrize("amount", [0, -1, -100])
-    async def test_rejects_non_positive_amounts(self, amount):
-        """Amount must be positive — same logic as the route."""
-        if amount <= 0:
-            from fastapi import HTTPException
-
-            try:
-                # Simulate route validation
-                if amount <= 0:
-                    raise HTTPException(400, "Gift card amount must be positive")
-                assert False, "Should have raised"
-            except HTTPException as e:
-                assert e.status_code == 400
-                assert "positive" in e.detail
-
-    @pytest.mark.parametrize("amount", [0.01, 1, 100, 999.99])
-    async def test_accepts_valid_amounts(self, amount):
-        """Valid amounts pass the route validation."""
-        assert amount > 0
-
-    async def test_generates_code_on_create(self):
-        """Verify _call receives a generated code."""
-        mock_call = AsyncMock()
-        mock_log_audit = AsyncMock()
-
-        with (
-            patch("routes.gift_cards._call", mock_call),
-            patch("routes.gift_cards._log_audit", mock_log_audit),
-            patch("routes.gift_cards._sql", new_callable=AsyncMock) as mock_sql,
-        ):
-            mock_sql.return_value = [
-                {
-                    "id": "gc_1",
-                    "code": "GC-TEST",
-                    "initial_balance": 25.0,
-                    "remaining_balance": 25.0,
-                    "active": True,
-                }
-            ]
-
-            # Call the route's internal flow
-            amount = 25.0
-            code = _generate_gift_code()
-            assert code.startswith("GC-")
-
-            await mock_call(
-                "create_gift_card", [code, "tenant_1", "", "Test", amount, "user_1", 0, ""]
-            )
-            mock_call.assert_called_once()
-
-            # Verify code was passed to the reducer
-            args = mock_call.call_args[0][1]
-            assert args[0].startswith("GC-")
-            assert args[4] == 25.0
-
-
-class TestRedeemGiftCardValidation:
-    """Test the validation logic from redeem_gift_card route."""
+class TestRedeemRoute:
+    """Test the actual redeem_gift_card route function with mocked deps."""
 
     async def test_redeem_missing_code(self):
-        """Empty code should fail validation."""
-        code = ""
-        from fastapi import HTTPException
-
-        if not code:
-            with pytest.raises(HTTPException) as exc:
-                if not code:
-                    raise HTTPException(400, "Missing gift card code")
-            assert exc.value.status_code == 400
+        """Empty code should fail with 400."""
+        with pytest.raises(HTTPException) as exc:
+            await redeem_gift_card({"code": "", "amount": 10}, USER)
+        assert exc.value.status_code == 400
 
     async def test_redeem_invalid_amount(self):
-        """Non-positive amounts should fail validation."""
-        from fastapi import HTTPException
-
+        """Non-positive amounts should fail with 400."""
         for amount in [0, -1]:
-            if amount <= 0:
-                with pytest.raises(HTTPException) as exc:
-                    if amount <= 0:
-                        raise HTTPException(400, "Redemption amount must be positive")
-                assert exc.value.status_code == 400
+            with pytest.raises(HTTPException) as exc:
+                await redeem_gift_card({"code": "GC-XYZ", "amount": amount}, USER)
+            assert exc.value.status_code == 400
 
-    async def test_redeem_active_card(self):
-        """Active card passes status check."""
-        card = {"active": True, "remaining_balance": 100, "expires_at": 0}
-        assert card["active"] is True
-        assert card["remaining_balance"] >= 10
+    async def test_redeem_nonexistent_card(self):
+        """Unknown code should fail with 404."""
+        with patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[]):
+            with pytest.raises(HTTPException) as exc:
+                await redeem_gift_card({"code": "GC-NOPE", "amount": 10}, USER)
+            assert exc.value.status_code == 404
 
     async def test_redeem_inactive_card(self):
-        """Inactive card should fail."""
-        card = {"active": False}
-        from fastapi import HTTPException
-
-        if not card.get("active", True):
+        """Inactive card should fail with 400."""
+        card = {
+            "id": "gc_1",
+            "code": "GC-OLD",
+            "active": False,
+            "expires_at": 0,
+            "remaining_balance": 100.0,
+        }
+        with patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]):
             with pytest.raises(HTTPException) as exc:
-                if not card.get("active", True):
-                    raise HTTPException(400, "Gift card is no longer active")
+                await redeem_gift_card({"code": "GC-OLD", "amount": 10}, USER)
             assert exc.value.status_code == 400
+            assert "no longer active" in exc.value.detail
+
+    async def test_redeem_expired_card(self):
+        """Expired card should fail with 400 (uses real epoch time)."""
+        card = {
+            "id": "gc_1",
+            "code": "GC-EXPIRED",
+            "active": True,
+            "expires_at": 1,  # long in the past
+            "remaining_balance": 100.0,
+        }
+        with patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]):
+            with pytest.raises(HTTPException) as exc:
+                await redeem_gift_card({"code": "GC-EXPIRED", "amount": 10}, USER)
+            assert exc.value.status_code == 400
+            assert "expired" in exc.value.detail
+
+    async def test_redeem_future_expiry_passes(self):
+        """A card expiring in the future should NOT be rejected."""
+        import time
+
+        card = {
+            "id": "gc_1",
+            "code": "GC-FUTURE",
+            "active": True,
+            "expires_at": int((time.time() + 86400 * 30) * 1000),  # 30 days from now
+            "remaining_balance": 100.0,
+        }
+        with (
+            patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]),
+            patch("routes.gift_cards._call", new_callable=AsyncMock, return_value={}),
+            patch("routes.gift_cards._log_audit", new_callable=AsyncMock),
+        ):
+            result = await redeem_gift_card({"code": "GC-FUTURE", "amount": 10}, USER)
+            assert result["ok"] is True
+            assert result["redeemed"] == 10
 
     async def test_redeem_insufficient_balance(self):
-        """Balance check should reject overspend."""
-        card = {"remaining_balance": 10}
-        amount = 25
-        from fastapi import HTTPException
-
-        if card["remaining_balance"] < amount:
+        """Balance check should reject overspend with 400."""
+        card = {
+            "id": "gc_1",
+            "code": "GC-LOW",
+            "active": True,
+            "expires_at": 0,
+            "remaining_balance": 10.0,
+        }
+        with patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]):
             with pytest.raises(HTTPException) as exc:
-                if card["remaining_balance"] < amount:
-                    raise HTTPException(
-                        400, f"Insufficient balance: ${card['remaining_balance']:.2f} remaining"
-                    )
+                await redeem_gift_card({"code": "GC-LOW", "amount": 25}, USER)
             assert exc.value.status_code == 400
+            assert "Insufficient balance" in exc.value.detail
+
+    async def test_redeem_calls_reducer_and_audits(self):
+        """Valid redemption calls the reducer and writes an audit log."""
+
+        card = {
+            "id": "gc_1",
+            "code": "GC-OK",
+            "active": True,
+            "expires_at": 0,
+            "remaining_balance": 100.0,
+        }
+        mock_call = AsyncMock(return_value={"ok": True})
+        mock_audit = AsyncMock()
+        with (
+            patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]),
+            patch("routes.gift_cards._call", mock_call),
+            patch("routes.gift_cards._log_audit", mock_audit),
+        ):
+            result = await redeem_gift_card({"code": "GC-OK", "amount": 25}, USER)
+            assert result["remaining"] == 75.0
+            mock_call.assert_awaited_once_with("redeem_gift_card", ["gc_1", 25])
+            mock_audit.assert_awaited_once()
+            audit_args = mock_audit.call_args[0]
+            assert audit_args[1] == "redeem"
+            assert audit_args[2] == "gift_card"
+            assert audit_args[3] == "GC-OK"
+
+    async def test_redeem_reducer_502_becomes_400(self):
+        """A reducer-level failure (race) surfaces as 400, not 502."""
+        card = {
+            "id": "gc_1",
+            "code": "GC-RACE",
+            "active": True,
+            "expires_at": 0,
+            "remaining_balance": 50.0,
+        }
+        with (
+            patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]),
+            patch(
+                "routes.gift_cards._call",
+                AsyncMock(side_effect=HTTPException(502, "Reducer call failed")),
+            ),
+        ):
+            with pytest.raises(HTTPException) as exc:
+                await redeem_gift_card({"code": "GC-RACE", "amount": 25}, USER)
+            assert exc.value.status_code == 400
+
+
+class TestVoidRoute:
+    """Test the actual void_gift_card route function with mocked deps."""
+
+    async def test_void_nonexistent_card_404(self):
+        """Voiding an unknown (or other-tenant) card should fail with 404."""
+        with patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[]):
+            with pytest.raises(HTTPException) as exc:
+                await void_gift_card("gc_unknown", USER)
+            assert exc.value.status_code == 404
+
+    async def test_void_other_tenant_card_404(self):
+        """Tenant isolation: a card belonging to another tenant is not visible."""
+        # The route queries with tenant_id = 'tenant_1', so another tenant's
+        # card simply won't be returned by _sql → 404.
+        with patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[]):
+            with pytest.raises(HTTPException) as exc:
+                await void_gift_card("gc_other", USER)
+            assert exc.value.status_code == 404
+
+    async def test_void_already_voided_card_400(self):
+        """Double void should fail with 400."""
+        card = {
+            "id": "gc_1",
+            "code": "GC-VOIDED",
+            "tenant_id": "tenant_1",
+            "active": False,
+        }
+        with patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]):
+            with pytest.raises(HTTPException) as exc:
+                await void_gift_card("gc_1", USER)
+            assert exc.value.status_code == 400
+            assert "already voided" in exc.value.detail
+
+    async def test_void_valid_card_calls_reducer_and_audits(self):
+        """Valid void calls the reducer scoped to the caller's tenant."""
+        card = {
+            "id": "gc_1",
+            "code": "GC-VOID",
+            "tenant_id": "tenant_1",
+            "active": True,
+        }
+        mock_call = AsyncMock(return_value={"ok": True})
+        mock_audit = AsyncMock()
+        with (
+            patch("routes.gift_cards._sql", new_callable=AsyncMock, return_value=[card]),
+            patch("routes.gift_cards._call", mock_call),
+            patch("routes.gift_cards._log_audit", mock_audit),
+        ):
+            result = await void_gift_card("gc_1", USER)
+            assert result["ok"] is True
+            mock_call.assert_awaited_once_with("void_gift_card", ["gc_1"])
+            mock_audit.assert_awaited_once()
+            audit_args = mock_audit.call_args[0]
+            assert audit_args[1] == "void"

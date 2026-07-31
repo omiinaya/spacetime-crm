@@ -91,7 +91,8 @@ mod tests {
         );
 
         let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
-        redeem_gift_card(&ctx, card_id.clone(), 30.0);
+        let result = redeem_gift_card(&ctx, card_id.clone(), 30.0);
+        assert!(result.is_ok());
 
         let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
         assert_eq!(card.remaining_balance, 70.0);
@@ -115,7 +116,8 @@ mod tests {
         );
 
         let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
-        redeem_gift_card(&ctx, card_id.clone(), 50.0);
+        let result = redeem_gift_card(&ctx, card_id.clone(), 50.0);
+        assert!(result.is_ok());
 
         let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
         assert_eq!(card.remaining_balance, 0.0);
@@ -139,20 +141,47 @@ mod tests {
         );
 
         let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
-        redeem_gift_card(&ctx, card_id.clone(), 40.0);
+        let result = redeem_gift_card(&ctx, card_id.clone(), 40.0);
+        assert!(result.is_err()); // Over-redemption is rejected atomically
 
         let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
-        assert_eq!(card.remaining_balance, 0.0); // Clamped to zero
-        assert!(!card.active);
+        assert_eq!(card.remaining_balance, 25.0); // Unchanged
+        assert!(card.active); // Still usable
     }
 
     #[test]
     fn test_redeem_nonexistent_card() {
         let ctx = test_ctx();
-        // Should not panic — just no-op
-        redeem_gift_card(&ctx, "non_existent_id".into(), 10.0);
+        // Should return an error, not panic
+        let result = redeem_gift_card(&ctx, "non_existent_id".into(), 10.0);
+        assert!(result.is_err());
         let cards: Vec<GiftCard> = ctx.db.gift_cards().iter().collect();
         assert_eq!(cards.len(), 0);
+    }
+
+    #[test]
+    fn test_redeem_inactive_card_rejected() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-INACTIVE".into(),
+            "t1".into(),
+            "".into(),
+            "Mallory".into(),
+            50.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+
+        let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
+        void_gift_card(&ctx, card_id.clone());
+        let result = redeem_gift_card(&ctx, card_id.clone(), 10.0);
+        assert!(result.is_err()); // Voided card cannot be redeemed
+        let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
+        assert_eq!(card.remaining_balance, 50.0); // Unchanged
+        assert!(!card.active);
     }
 
     #[test]
@@ -303,14 +332,26 @@ pub fn create_gift_card(
 }
 
 #[spacetimedb::reducer]
-pub fn redeem_gift_card(ctx: &ReducerContext, id: String, amount: f64) {
+pub fn redeem_gift_card(ctx: &ReducerContext, id: String, amount: f64) -> Result<(), String> {
     if let Some(mut card) = ctx.db.gift_cards().id().find(&id) {
+        if !card.active {
+            return Err("Gift card is no longer active".to_string());
+        }
+        if amount <= 0.0 {
+            return Err("Redemption amount must be positive".to_string());
+        }
+        if amount > card.remaining_balance {
+            return Err("Insufficient balance on gift card".to_string());
+        }
         card.remaining_balance -= amount;
         if card.remaining_balance <= 0.0 {
             card.remaining_balance = 0.0;
             card.active = false;
         }
         ctx.db.gift_cards().id().update(card);
+        Ok(())
+    } else {
+        Err("Gift card not found".to_string())
     }
 }
 

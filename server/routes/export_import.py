@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime
+import time
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from helpers import (
@@ -76,7 +76,7 @@ async def import_customers_csv(
     if "first_name" not in (reader.fieldnames or []):
         raise HTTPException(400, "CSV must contain 'first_name' column")
 
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = int(time.time() * 1000)
     count = 0
     errors = []
     has_id = "id" in (reader.fieldnames or [])
@@ -148,7 +148,7 @@ async def import_products_csv(
     if "name" not in (reader.fieldnames or []):
         raise HTTPException(400, "CSV must contain 'name' column")
 
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = int(time.time() * 1000)
     count = 0
     errors = []
     has_id = "id" in (reader.fieldnames or [])

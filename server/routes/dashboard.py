@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import time
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from helpers import (
@@ -36,7 +37,7 @@ async def dashboard_stats(
     upcoming_appointments = sum(1 for a in all_appointments if a.get("start_time", 0) > 0)
 
     # Overdue invoices — detect on-the-fly from SQL
-    now = int(datetime.utcnow().timestamp() * 1000)
+    now = int(time.time() * 1000)
     sent_partial = [
         i
         for i in all_invoices
@@ -53,7 +54,7 @@ async def dashboard_stats(
 
     # Today's appointments
     day_start_ms = int(
-        datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000
+        datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000
     )
     day_end_ms = day_start_ms + 86400000
     today_appts = [
@@ -88,9 +89,9 @@ async def dashboard_stats(
     my_recent = sorted(my_tickets, key=lambda x: x.get("created_at", 0), reverse=True)[:5]
 
     # Monthly revenue vs target
-    now_ms_month = int(datetime.utcnow().timestamp() * 1000)
+    now_ms_month = int(time.time() * 1000)
     month_start_ms = int(
-        datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
+        datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
         * 1000
     )
     monthly_revenue = sum(
@@ -139,7 +140,7 @@ async def get_reports(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     """Reporting data for charts."""
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     all_tickets = await _sql_t("SELECT * FROM ticket", user["tenant_id"])
     all_invoices = await _sql_t("SELECT * FROM invoices", user["tenant_id"])
     all_payments = await _sql_t("SELECT * FROM payment", user["tenant_id"])
@@ -148,7 +149,7 @@ async def get_reports(
     # Revenue by month (last 12 months)
     revenue_by_month = []
     for i in range(11, -1, -1):
-        month_start = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+        month_start = datetime(now.year, now.month, 1, tzinfo=UTC) - timedelta(days=30 * i)
         month_start_ts = int(month_start.timestamp() * 1000)
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
@@ -176,7 +177,7 @@ async def get_reports(
     # Appointments by month (next 3 + past 9)
     appt_by_month = []
     for i in range(11, -1, -1):
-        month_start = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+        month_start = datetime(now.year, now.month, 1, tzinfo=UTC) - timedelta(days=30 * i)
         month_start_ts = int(month_start.timestamp() * 1000)
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")
@@ -277,7 +278,7 @@ async def get_reports(
     all_customers = await _sql("SELECT * FROM customer")
     customers_by_month = []
     for i in range(11, -1, -1):
-        month_start = datetime(now.year, now.month, 1) - timedelta(days=30 * i)
+        month_start = datetime(now.year, now.month, 1, tzinfo=UTC) - timedelta(days=30 * i)
         month_start_ts = int(month_start.timestamp() * 1000)
         month_end_ts = int((month_start + timedelta(days=30)).timestamp() * 1000)
         month_label = month_start.strftime("%b %y")

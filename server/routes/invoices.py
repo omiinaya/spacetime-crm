@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import datetime
 
 from config import settings
@@ -153,7 +154,7 @@ async def get_invoice_summary(
 ):
     """Get invoice summary: counts and totals by status."""
     rows = await _sql(f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}'")
-    now = int(datetime.utcnow().timestamp() * 1000)
+    now = int(time.time() * 1000)
     summary: dict[str, dict] = {}
     for inv in rows:
         s = inv.get("status", "draft")
@@ -277,7 +278,7 @@ async def get_overdue_count(
     """Get count of overdue invoices and total overdue amount.
     Detects overdue on-the-fly: invoices past due_date with status sent/partial count as overdue."""
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {int(datetime.utcnow().timestamp() * 1000)}))"
+        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {int(time.time() * 1000)}))"
     )
     total = sum(float(i.get("total", 0)) for i in rows)
     return {"count": len(rows), "total": round(total, 2)}
@@ -288,7 +289,7 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
     """Mark overdue invoices — checks each sent/partial invoice past its due date
     and updates status to 'overdue' via the STDB reducer, or reports it would mark them."""
     # Detect overdue invoices that need marking
-    now = int(datetime.utcnow().timestamp() * 1000)
+    now = int(time.time() * 1000)
     rows = await _sql(
         f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}"
     )
@@ -305,7 +306,7 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
 @router.post("/api/invoices/send-overdue-reminders")
 async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
     """Find overdue invoices and send email/SMS reminders to each customer."""
-    now = int(datetime.utcnow().timestamp() * 1000)
+    now = int(time.time() * 1000)
     rows = await _sql(
         f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}))"
     )
