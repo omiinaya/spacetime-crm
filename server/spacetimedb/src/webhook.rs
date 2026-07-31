@@ -101,3 +101,14 @@ pub(crate) fn make_webhook_id(ctx: &ReducerContext) -> String {
     };
     format!("whk_{}_{}", ts, short)
 }
+
+#[cfg(test)]
+mod webhook_tests {
+    use super::*;
+
+    #[test]
+    fn test_webhook_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

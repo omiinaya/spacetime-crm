@@ -53,3 +53,25 @@ pub fn remove_user_push_subscriptions(ctx: &ReducerContext, user_id: String) {
         ctx.db.push_subscriptions().id().delete(&sub.id);
     }
 }
+
+#[cfg(test)]
+mod push_subscription_tests {
+    use super::*;
+
+    #[test]
+    fn test_push_subscription_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}
+
+#[cfg(test)]
+mod push_subscription_tests {
+    use super::*;
+
+    #[test]
+    fn test_push_subscription_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

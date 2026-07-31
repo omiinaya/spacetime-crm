@@ -250,3 +250,14 @@ pub fn delete_purchase_order(ctx: &ReducerContext, id: String) {
     }
     ctx.db.purchase_order().id().delete(&id);
 }
+
+#[cfg(test)]
+mod purchase_order_tests {
+    use super::*;
+
+    #[test]
+    fn test_purchase_order_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

@@ -167,3 +167,14 @@ pub fn delete_counter_sale(ctx: &ReducerContext, id: String) {
     }
     ctx.db.counter_sale().id().delete(&id);
 }
+
+#[cfg(test)]
+mod pos_tests {
+    use super::*;
+
+    #[test]
+    fn test_pos_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

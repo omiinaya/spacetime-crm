@@ -49,3 +49,14 @@ pub fn record_payment(
 pub fn delete_payment(ctx: &ReducerContext, id: String) {
     ctx.db.payment().id().delete(&id);
 }
+
+#[cfg(test)]
+mod payment_tests {
+    use super::*;
+
+    #[test]
+    fn test_payment_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

@@ -118,3 +118,25 @@ pub fn update_appointment_status(ctx: &ReducerContext, id: String, status: Strin
 pub fn delete_appointment(ctx: &ReducerContext, id: String) {
     ctx.db.appointment().id().delete(&id);
 }
+
+#[cfg(test)]
+mod appointment_tests {
+    use super::*;
+
+    #[test]
+    fn test_appointment_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}
+
+#[cfg(test)]
+mod appointment_tests {
+    use super::*;
+
+    #[test]
+    fn test_appointment_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

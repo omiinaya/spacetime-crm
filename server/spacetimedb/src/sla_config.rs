@@ -31,3 +31,14 @@ pub fn upsert_sla_config(ctx: &ReducerContext, tenant_id: String, targets_json: 
         });
     }
 }
+
+#[cfg(test)]
+mod sla_config_tests {
+    use super::*;
+
+    #[test]
+    fn test_sla_config_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

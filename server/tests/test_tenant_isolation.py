@@ -537,7 +537,6 @@ class TestAdditionalEntityIsolation:
     def test_purchase_order_mutations_rejected(
         self, isolation_data: dict, test_admin_headers: dict, second_tenant_headers: dict
     ):
-        data = isolation_data
         # Create a PO in tenant A
         resp = httpx.post(
             f"{SERVER_URL}/api/purchase-orders",
@@ -553,7 +552,11 @@ class TestAdditionalEntityIsolation:
         for method, path, payload in (
             ("delete", f"/api/purchase-orders/{po_id}", None),
             ("post", f"/api/purchase-orders/{po_id}/approve", {"user_id": "u_x"}),
-            ("post", f"/api/purchase-orders/{po_id}/receive", {"received_quantity": 0, "items": [{"id": "li_x", "received_quantity": 0}]}),
+            (
+                "post",
+                f"/api/purchase-orders/{po_id}/receive",
+                {"received_quantity": 0, "items": [{"id": "li_x", "received_quantity": 0}]},
+            ),
             ("put", f"/api/purchase-orders/{po_id}/status", {"status": "cancelled"}),
         ):
             resp = httpx.request(
@@ -590,11 +593,18 @@ class TestAdditionalEntityIsolation:
         for method, path, payload in (
             ("delete", f"/api/estimates/{est_id}", None),
             ("put", f"/api/estimates/{est_id}/status", {"status": "approved"}),
-            ("post", f"/api/estimates/{est_id}/line-items", {"item_type": "service", "description": "x", "quantity": 1, "unit_price": 1}),
+            (
+                "post",
+                f"/api/estimates/{est_id}/line-items",
+                {"item_type": "service", "description": "x", "quantity": 1, "unit_price": 1},
+            ),
         ):
             resp = httpx.request(
-                method.upper(), f"{SERVER_URL}{path}", json=payload,
-                headers=second_tenant_headers, timeout=10,
+                method.upper(),
+                f"{SERVER_URL}{path}",
+                json=payload,
+                headers=second_tenant_headers,
+                timeout=10,
             )
             assert resp.status_code == 404, (
                 f"Expected 404 {method} {path}, got {resp.status_code}: {resp.text[:200]}"
@@ -629,8 +639,11 @@ class TestAdditionalEntityIsolation:
             ("put", f"/api/appointments/{appt_id}/recurrence", {"recurrence_rule": "monthly"}),
         ):
             resp = httpx.request(
-                method.upper(), f"{SERVER_URL}{path}", json=payload,
-                headers=second_tenant_headers, timeout=10,
+                method.upper(),
+                f"{SERVER_URL}{path}",
+                json=payload,
+                headers=second_tenant_headers,
+                timeout=10,
             )
             assert resp.status_code == 404, (
                 f"Expected 404 {method} {path}, got {resp.status_code}: {resp.text[:200]}"
@@ -650,7 +663,9 @@ class TestAdditionalEntityIsolation:
         rows = _stdb_sql("SELECT * FROM tax_rates")
         tax_id = rows[0]["rows"][-1][0]
 
-        resp = httpx.delete(f"{SERVER_URL}/api/tax-rates/{tax_id}", headers=second_tenant_headers, timeout=10)
+        resp = httpx.delete(
+            f"{SERVER_URL}/api/tax-rates/{tax_id}", headers=second_tenant_headers, timeout=10
+        )
         assert resp.status_code == 404, (
             f"Expected 404 deleting foreign tax rate, got {resp.status_code}: {resp.text[:200]}"
         )
@@ -682,7 +697,11 @@ class TestAdditionalEntityIsolation:
             f"Expected 404 running foreign schedule, got {resp.status_code}: {resp.text[:200]}"
         )
 
-        resp = httpx.delete(f"{SERVER_URL}/api/report-schedules/{sched_id}", headers=second_tenant_headers, timeout=10)
+        resp = httpx.delete(
+            f"{SERVER_URL}/api/report-schedules/{sched_id}",
+            headers=second_tenant_headers,
+            timeout=10,
+        )
         assert resp.status_code == 404, (
             f"Expected 404 deleting foreign schedule, got {resp.status_code}: {resp.text[:200]}"
         )

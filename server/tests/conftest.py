@@ -91,10 +91,11 @@ def _stdb_auth_headers() -> dict[str, str]:
         return {"Authorization": f"Bearer {_STDB_TOKEN_CACHE}"}
     token = ""
     try:
-        for line in open(os.path.expanduser("~/.config/spacetime/cli.toml")):
-            if line.strip().startswith("spacetimedb_token"):
-                token = line.split("=", 1)[1].strip().strip('"')
-                break
+        with open(os.path.expanduser("~/.config/spacetime/cli.toml")) as f:
+            for line in f:
+                if line.strip().startswith("spacetimedb_token"):
+                    token = line.split("=", 1)[1].strip().strip('"')
+                    break
     except Exception:
         pass
     if token:
@@ -302,16 +303,34 @@ def _cleanup_stale_test_tenants() -> int:
         except Exception:
             known = set()
         orphan_tables = [
-            "customer", "ticket", "invoices", "payment", "appointment",
-            "products", "estimates", "purchase_order", "counter_sale",
-            "recurring_invoice_rules", "webhook_subscriptions",
-            "scheduled_reports", "custom_field_definitions",
-            "checklist_templates", "tax_rates", "user", "user_settings",
-            "customer_geolocations", "saved_payment_methods",
-            "invoice_line_items", "estimate_line_items",
-            "purchase_order_line_item", "inventory_adjustment",
-            "ticket_note", "ticket_timer", "counter_sale_line_item",
-            "pos_line_item", "audit_log",
+            "customer",
+            "ticket",
+            "invoices",
+            "payment",
+            "appointment",
+            "products",
+            "estimates",
+            "purchase_order",
+            "counter_sale",
+            "recurring_invoice_rules",
+            "webhook_subscriptions",
+            "scheduled_reports",
+            "custom_field_definitions",
+            "checklist_templates",
+            "tax_rates",
+            "user",
+            "user_settings",
+            "customer_geolocations",
+            "saved_payment_methods",
+            "invoice_line_items",
+            "estimate_line_items",
+            "purchase_order_line_item",
+            "inventory_adjustment",
+            "ticket_note",
+            "ticket_timer",
+            "counter_sale_line_item",
+            "pos_line_item",
+            "audit_log",
         ]
         for table in orphan_tables:
             try:
@@ -319,12 +338,16 @@ def _cleanup_stale_test_tenants() -> int:
                 if not tresp or not tresp[0].get("rows"):
                     continue
                 tid_col = next(
-                    (i for i, e in enumerate(tresp[0]["schema"]["elements"])
-                     if e["name"].get("some") == "tenant_id"),
+                    (
+                        i
+                        for i, e in enumerate(tresp[0]["schema"]["elements"])
+                        if e["name"].get("some") == "tenant_id"
+                    ),
                     0,
                 )
                 orphan_tids = {
-                    str(r[tid_col]) for r in tresp[0]["rows"]
+                    str(r[tid_col])
+                    for r in tresp[0]["rows"]
                     if tid_col < len(r)
                     and isinstance(r[tid_col], str)
                     and r[tid_col].startswith("tnt_")

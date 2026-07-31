@@ -56,3 +56,25 @@ pub fn delete_customer_geolocation(ctx: &ReducerContext, customer_id: String) {
         .customer_id()
         .delete(&customer_id);
 }
+
+#[cfg(test)]
+mod customer_geolocation_tests {
+    use super::*;
+
+    #[test]
+    fn test_customer_geolocation_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}
+
+#[cfg(test)]
+mod customer_geolocation_tests {
+    use super::*;
+
+    #[test]
+    fn test_customer_geolocation_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

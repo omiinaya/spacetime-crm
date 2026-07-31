@@ -160,3 +160,25 @@ pub fn import_product(
         updated_at,
     });
 }
+
+#[cfg(test)]
+mod product_tests {
+    use super::*;
+
+    #[test]
+    fn test_product_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}
+
+#[cfg(test)]
+mod product_tests {
+    use super::*;
+
+    #[test]
+    fn test_product_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}

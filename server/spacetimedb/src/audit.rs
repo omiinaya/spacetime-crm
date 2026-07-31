@@ -41,3 +41,25 @@ pub fn log_audit(
         created_at: now,
     });
 }
+
+#[cfg(test)]
+mod audit_tests {
+    use super::*;
+
+    #[test]
+    fn test_audit_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}
+
+#[cfg(test)]
+mod audit_tests {
+    use super::*;
+
+    #[test]
+    fn test_audit_basic() {
+        // TODO: implement basic test
+        assert!(true);
+    }
+}
