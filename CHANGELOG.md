@@ -31,6 +31,8 @@ All notable changes to SpacetimeCRM will be documented in this file.
 ### Tests
 - **Gift card unit tests**: 18 tests covering code generation (prefix, length, uniqueness, alphanumeric), create validation (rejects zero/negative, accepts valid amounts), redeem validation (missing code, invalid amount, active/inactive card, insufficient balance), and mock integration (code passed to reducer).
 - **Email campaign unit tests**: 16 tests covering validation (requires subject/body, placeholder substitution for `{{name}}`/`{{email}}`, default name fallback), send_email mock integration, customer filter SQL clause logic (all, with_email, recent activity).
+- **GiftCardsPage frontend tests**: 6 tests covering loading, empty state, card list rendering, code lookup, filter buttons, and create form toggle.
+- **EmailCampaignsPage frontend tests**: 9 tests covering page render, form inputs, template buttons and content fill, customer filter dropdown, recent filter toggle, test email input, send button, and template loading.
 
 ## [2.0.0] — 2026-07-30
 
