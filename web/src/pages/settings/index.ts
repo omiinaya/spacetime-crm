@@ -9,3 +9,4 @@ export { default as WebhookSettings } from "./WebhookSettings";
 export { default as PinSection } from "./PinSection";
 export { default as TwoFactorSection } from "./TwoFactorSection";
 export { default as RevenueTargetSection } from "./RevenueTargetSection";
+export { default as ReminderScheduleSection } from "./ReminderScheduleSection";

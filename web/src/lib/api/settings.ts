@@ -63,15 +63,20 @@ export const settings = {
 	},
 	app: {
 		get: () =>
-			apiFetch<{ config: { revenue_target: number } }>("/settings/app"),
-		save: (data: { revenue_target: number }) =>
-			apiFetch<{ ok: boolean; config: { revenue_target: number } }>(
-				"/settings/app",
-				{
-					method: "POST",
-					body: JSON.stringify(data),
-				},
-			),
+			apiFetch<{
+				config: { revenue_target: number; reminder_interval_days: number };
+			}>("/settings/app"),
+		save: (data: {
+			revenue_target?: number;
+			reminder_interval_days?: number;
+		}) =>
+			apiFetch<{
+				ok: boolean;
+				config: { revenue_target: number; reminder_interval_days: number };
+			}>("/settings/app", {
+				method: "POST",
+				body: JSON.stringify(data),
+			}),
 	},
 };
 

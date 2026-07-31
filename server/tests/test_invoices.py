@@ -430,6 +430,8 @@ class TestInvoiceErrors:
         assert "email" in data
         assert "sms" in data
         assert "total" in data
+        assert "interval_days" in data
+        assert data["interval_days"] >= 1
         assert isinstance(data["email"], int)
         assert isinstance(data["sms"], int)
 

@@ -60,7 +60,7 @@ async def list_appointments(
     """List appointments with pagination and optional customer filter."""
     conditions = []
     if customer_id:
-        conditions.append(f"customer_id = '{customer_id}'")
+        conditions.append(f"customer_id = '{_sqlesc(customer_id)}'")
     where = " AND ".join(conditions) if conditions else ""
     rows, total = await _paginated(
         user["tenant_id"],

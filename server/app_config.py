@@ -44,10 +44,17 @@ def _validate_reminder_interval(data: dict) -> None:
     """
     if "reminder_interval_days" not in data:
         return
-    try:
-        value = int(data["reminder_interval_days"])
-    except (TypeError, ValueError):
+    raw = data["reminder_interval_days"]
+    if isinstance(raw, bool):
         raise ValueError("reminder_interval_days must be a positive integer")
+    if isinstance(raw, float) and not raw.is_integer():
+        raise ValueError("reminder_interval_days must be a positive integer")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(
+            "reminder_interval_days must be a positive integer"
+        ) from None
     if value < 1:
         raise ValueError("reminder_interval_days must be a positive integer")
     data["reminder_interval_days"] = value

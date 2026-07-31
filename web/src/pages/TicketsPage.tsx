@@ -292,14 +292,12 @@ export default function TicketsPage() {
 	const sendEmailMutation = useMutation({
 		mutationFn: (ticketId: string) => api.tickets.sendEmail(ticketId),
 		onSuccess: (data) =>
-			toast.success(
-				`Ticket #${data.ticket_number} sent to ${data.sent_to}`
-			),
+			toast.success(`Ticket #${data.ticket_number} sent to ${data.sent_to}`),
 		onError: (e) =>
 			toast.error(
 				e instanceof Error && e.message.includes("400")
 					? "Customer has no email address on file"
-					: "Failed to send email"
+					: "Failed to send email",
 			),
 	});
 

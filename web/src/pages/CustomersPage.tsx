@@ -91,10 +91,7 @@ function CustomerDetailPanel({
 	onClose: () => void;
 	onNavigate?: (page: string) => void;
 }) {
-	const {
-		data: ticketsData,
-		isLoading: ticketsLoading,
-	} = useQuery({
+	const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
 		queryKey: ["customer-tickets", customer.id],
 		queryFn: () =>
 			api.tickets.list("", customer.id, 0, 5) as Promise<{
@@ -103,10 +100,7 @@ function CustomerDetailPanel({
 			}>,
 	});
 
-	const {
-		data: invoicesData,
-		isLoading: invoicesLoading,
-	} = useQuery({
+	const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
 		queryKey: ["customer-invoices", customer.id],
 		queryFn: () =>
 			api.invoices.list("", customer.id, 0, 5) as Promise<{
@@ -115,10 +109,7 @@ function CustomerDetailPanel({
 			}>,
 	});
 
-	const {
-		data: appointmentsData,
-		isLoading: appointmentsLoading,
-	} = useQuery({
+	const { data: appointmentsData, isLoading: appointmentsLoading } = useQuery({
 		queryKey: ["customer-appointments", customer.id],
 		queryFn: () =>
 			api.appointments.list(customer.id, 0, 5) as Promise<{
@@ -235,8 +226,8 @@ function CustomerDetailPanel({
 						</p>
 					) : events.length === 0 ? (
 						<p className="text-xs text-muted-foreground py-3">
-							No activity yet — tickets, invoices, and appointments will
-							appear here.
+							No activity yet — tickets, invoices, and appointments will appear
+							here.
 						</p>
 					) : (
 						<div>

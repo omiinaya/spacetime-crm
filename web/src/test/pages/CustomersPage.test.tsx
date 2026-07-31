@@ -294,9 +294,33 @@ describe("CustomersPage", () => {
 	it("navigates to entity pages when timeline events are clicked", async () => {
 		pushCustomerList([customerAlice]);
 		pushActivity(
-			[{ id: "t_1", ticket_number: 101, title: "Screen repair", status: "open", created_at: 1_752_000_000_000 }],
-			[{ id: "i_1", invoice_number: 5001, status: "paid", total: 99.0, currency: "USD", created_at: 1_751_000_000_000 }],
-			[{ id: "a_1", title: "Follow-up call", status: "completed", start_time: 1_753_000_000_000 }],
+			[
+				{
+					id: "t_1",
+					ticket_number: 101,
+					title: "Screen repair",
+					status: "open",
+					created_at: 1_752_000_000_000,
+				},
+			],
+			[
+				{
+					id: "i_1",
+					invoice_number: 5001,
+					status: "paid",
+					total: 99.0,
+					currency: "USD",
+					created_at: 1_751_000_000_000,
+				},
+			],
+			[
+				{
+					id: "a_1",
+					title: "Follow-up call",
+					status: "completed",
+					start_time: 1_753_000_000_000,
+				},
+			],
 		);
 
 		const navigate = vi.fn();
@@ -311,13 +335,17 @@ describe("CustomersPage", () => {
 			expect(screen.getByText(/activity timeline/i)).toBeTruthy();
 		});
 
-		await userEvent.click(screen.getByTitle(/open ticket — #101 screen repair/i));
+		await userEvent.click(
+			screen.getByTitle(/open ticket — #101 screen repair/i),
+		);
 		expect(navigate).toHaveBeenCalledWith("tickets");
 
 		await userEvent.click(screen.getByTitle(/open invoice — invoice #5001/i));
 		expect(navigate).toHaveBeenCalledWith("invoices");
 
-		await userEvent.click(screen.getByTitle(/open appointment — follow-up call/i));
+		await userEvent.click(
+			screen.getByTitle(/open appointment — follow-up call/i),
+		);
 		expect(navigate).toHaveBeenCalledWith("appointments");
 	});
 });

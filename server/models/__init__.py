@@ -7,6 +7,7 @@ Re-exports all model classes from domain-specific submodules.
 Import with:  from models import CustomerCreate
 """
 
+from .app_config import AppConfigUpdate
 from .appointments import (
     AppointmentCreate,
     AppointmentRecurrence,
@@ -183,6 +184,8 @@ __all__ = [
     # business hours
     "DayHours",
     "BusinessHoursUpdate",
+    # app config
+    "AppConfigUpdate",
     # custom fields
     "CustomFieldDefinitionCreate",
     "CustomFieldValuesUpdate",

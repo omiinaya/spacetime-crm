@@ -33,7 +33,6 @@ class TestDefaults:
     """get_config() — default values when no file exists."""
 
     def test_returns_defaults_when_no_file(self) -> None:
-        import app_config
 
         from app_config import CONFIG_PATH, DEFAULT_CONFIG, get_config
 

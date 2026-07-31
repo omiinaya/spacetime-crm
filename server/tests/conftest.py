@@ -668,6 +668,32 @@ def restore_sms_settings(auth_headers: dict, settings: dict | None) -> None:
         pass
 
 
+def save_app_config(auth_headers: dict) -> dict | None:
+    """Fetch current app config so it can be restored later."""
+    try:
+        resp = httpx.get(f"{SERVER_URL}/api/settings/app", headers=auth_headers, timeout=10)
+        if resp.status_code == 200:
+            return resp.json().get("config")
+    except Exception:
+        pass
+    return None
+
+
+def restore_app_config(auth_headers: dict, config: dict | None) -> None:
+    """Restore previously saved app config."""
+    if config is None:
+        return
+    try:
+        httpx.post(
+            f"{SERVER_URL}/api/settings/app",
+            json=config,
+            headers=auth_headers,
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
 def save_user_settings(auth_headers: dict) -> dict | None:
     """Fetch current user settings so they can be restored later."""
     try:

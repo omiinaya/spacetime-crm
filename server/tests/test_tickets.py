@@ -374,13 +374,9 @@ class TestTicketSLA:
 class TestTicketEmail:
     """Send ticket email to customer endpoint."""
 
-    def test_send_email_success(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_send_email_success(self, test_admin_headers: dict, session_suffix: str):
         """Send email on a valid ticket returns ok + sent_to."""
-        tid = _create_ticket(
-            test_admin_headers, session_suffix, "sendmail", title="Email Test"
-        )
+        tid = _create_ticket(test_admin_headers, session_suffix, "sendmail", title="Email Test")
         resp = httpx.post(
             f"{SERVER_URL}/api/tickets/{tid}/send-email",
             headers=test_admin_headers,
@@ -391,13 +387,9 @@ class TestTicketEmail:
         assert "sent_to" in data
         assert "ticket_number" in data
 
-    def test_send_email_no_customer_email(
-        self, test_admin_headers: dict, session_suffix: str
-    ):
+    def test_send_email_no_customer_email(self, test_admin_headers: dict, session_suffix: str):
         """Send email returns 400 when the customer has no email address."""
-        cid = _create_customer_no_email(
-            test_admin_headers, session_suffix, "noemail"
-        )
+        cid = _create_customer_no_email(test_admin_headers, session_suffix, "noemail")
         tid = _create_ticket(
             test_admin_headers,
             session_suffix,
