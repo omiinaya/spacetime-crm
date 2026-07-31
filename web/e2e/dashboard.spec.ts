@@ -41,13 +41,16 @@ test.describe("Dashboard", () => {
     await expect(page.locator("h1")).toContainText(/ticket/i);
   });
 
-  test("shows the Recent Activity card", async ({ page }) => {
-    const activityCard = page.getByText("Recent Activity", { exact: true });
-    await expect(activityCard).toBeVisible();
-
-    // Scoped within the activity card to avoid strict mode (2 elements match "open tickets")
-    await expect(page.locator("p:has-text('Open tickets:')")).toBeVisible();
-    await expect(page.locator("p:has-text('Pending revenue:')")).toBeVisible();
-    await expect(page.locator("p:has-text('Total customers:')")).toBeVisible();
+  test("shows summary stat cards", async ({ page }) => {
+    const summaryLabels = [
+      "Total Customers",
+      "Open Tickets",
+      "Revenue",
+      "Upcoming Appointments",
+    ];
+    for (const label of summaryLabels) {
+      const card = page.locator("main").getByText(label, { exact: true });
+      await expect(card).toBeVisible();
+    }
   });
 });

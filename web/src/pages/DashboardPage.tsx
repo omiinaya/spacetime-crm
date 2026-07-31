@@ -37,7 +37,11 @@ import {
 	Tooltip,
 	ResponsiveContainer,
 } from "recharts";
-import type { TooltipValueType, PieLabelRenderProps, TooltipPayloadEntry } from "recharts";
+import type {
+	TooltipValueType,
+	PieLabelRenderProps,
+	TooltipPayloadEntry,
+} from "recharts";
 
 const STATUS_COLORS = [
 	"#22c55e",
@@ -98,7 +102,7 @@ export default function DashboardPage({
 		api.reports
 			.get()
 			.then(setReports)
-			.catch(() => toast.error("Failed to load reports data"));
+			.catch(() => toast.error("Failed to load reports data", { id: "reports-data" }));
 	}, []);
 
 	// In-app low-stock alert (email notify is handled by the 7 AM cron)
@@ -515,7 +519,11 @@ export default function DashboardPage({
 												border: "1px solid var(--color-border)",
 												borderRadius: "8px",
 											}}
-											formatter={(_v: TooltipValueType | undefined, _n: number | string | undefined, item: TooltipPayloadEntry) => [
+											formatter={(
+												_v: TooltipValueType | undefined,
+												_n: number | string | undefined,
+												item: TooltipPayloadEntry,
+											) => [
 												`$${Number(item?.payload?.total || 0).toFixed(2)} (${item?.payload?.count || 0} items)`,
 												item?.payload?.item_type || "",
 											]}

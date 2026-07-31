@@ -1,4 +1,5 @@
 import { useState, useEffect, Suspense, lazy } from "react";
+import type { PageId } from "./lib/navigation";
 import { Toaster, toast } from "sonner";
 import {
 	LayoutDashboard,
@@ -81,32 +82,6 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const TechnicianSchedulePage = lazy(
 	() => import("./pages/TechnicianSchedulePage"),
 );
-
-type PageId =
-	| "dashboard"
-	| "customers"
-	| "tickets"
-	| "invoices"
-	| "payments"
-	| "appointments"
-	| "tech-schedule"
-	| "products"
-	| "estimates"
-	| "purchase-orders"
-	| "import-export"
-	| "audit-log"
-	| "pos"
-	| "health"
-	| "custom-fields"
-	| "checklist"
-	| "map"
-	| "reports"
-	| "settings"
-	| "tenants"
-	| "recurring-invoices"
-	| "payment-methods"
-	| "gift-cards"
-	| "email-campaigns";
 
 type PortalPage = "dashboard" | "tickets" | "invoices" | "appointments";
 
@@ -274,12 +249,12 @@ function AppShell() {
 			api.stats
 				.get()
 				.then(setStats)
-				.catch(() => toast.error("Failed to load dashboard stats"));
+				.catch(() => toast.error("Failed to load dashboard stats", { id: "dashboard-stats" }));
 			const interval = setInterval(() => {
 				api.stats
 					.get()
 					.then(setStats)
-					.catch(() => toast.error("Failed to refresh dashboard stats"));
+					.catch(() => toast.error("Failed to refresh dashboard stats", { id: "dashboard-stats-refresh" }));
 			}, 60_000);
 			return () => clearInterval(interval);
 		}
@@ -312,19 +287,11 @@ function AppShell() {
 							case "dashboard":
 								return <DashboardPage stats={stats} onNavigate={setPage} />;
 							case "customers":
-								return (
-									<CustomersPage
-										onNavigate={(page: string) => setPage(page as any)}
-									/>
-								);
+								return <CustomersPage onNavigate={setPage} />;
 							case "tickets":
 								return <TicketsPage />;
 							case "invoices":
-								return (
-									<InvoicesPage
-										onNavigate={(page: string) => setPage(page as any)}
-									/>
-								);
+								return <InvoicesPage onNavigate={setPage} />;
 							case "recurring-invoices":
 								return <RecurringInvoicesPage />;
 							case "payments":
