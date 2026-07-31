@@ -200,16 +200,14 @@ export default function DashboardPage({
             </div>
             <div className="h-3 bg-muted rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  (() => {
-                    const ratio =
-                      Number(stats.monthly_revenue ?? 0) / Number(stats.revenue_target ?? 0);
-                    if (ratio >= 1) return 'bg-green-500';
-                    if (ratio >= 0.75) return 'bg-blue-500';
-                    if (ratio >= 0.5) return 'bg-amber-500';
-                    return 'bg-red-500';
-                  })()
-                }`}
+                className={`h-full rounded-full transition-all duration-500 ${(() => {
+                  const ratio =
+                    Number(stats.monthly_revenue ?? 0) / Number(stats.revenue_target ?? 0);
+                  if (ratio >= 1) return 'bg-green-500';
+                  if (ratio >= 0.75) return 'bg-blue-500';
+                  if (ratio >= 0.5) return 'bg-amber-500';
+                  return 'bg-red-500';
+                })()}`}
                 style={{
                   width: `${Math.min(
                     (Number(stats.monthly_revenue ?? 0) / Number(stats.revenue_target ?? 0)) * 100,
