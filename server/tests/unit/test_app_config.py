@@ -65,6 +65,15 @@ class TestDefaults:
         assert cfg["reminder_interval_days"] == 3
         assert cfg["revenue_target"] == 25000.0
 
+    def test_old_file_backfills_missing_keys_from_defaults(self) -> None:
+        """A file written before reminder_interval_days existed still returns it."""
+        from app_config import CONFIG_PATH, get_config
+
+        CONFIG_PATH.write_text(json.dumps({"revenue_target": 50000.0}))
+        cfg = get_config()
+        assert cfg["revenue_target"] == 50000.0  # stored value kept
+        assert cfg["reminder_interval_days"] == 3  # default backfilled
+
 
 class TestUpdateConfig:
     """update_config() — merging and persistence."""
