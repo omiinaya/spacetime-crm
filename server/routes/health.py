@@ -12,6 +12,7 @@ router = APIRouter()
 
 
 @router.get("/api/health")
+@router.get("/health")
 async def health_check():
     """Health check endpoint — verifies server and STDB connectivity."""
     results: dict = {"server": "ok", "stdb": "unknown", "module": "unknown"}
@@ -54,6 +55,7 @@ async def health_check():
 
 
 @router.get("/api/health/ready")
+@router.get("/health/ready")
 async def health_ready():
     """Readiness probe — STDB must be connected."""
     try:

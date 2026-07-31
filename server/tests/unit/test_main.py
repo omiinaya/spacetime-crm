@@ -74,6 +74,30 @@ class TestHealthEndpoint:
             assert resp.status_code == 200
             assert resp.json() == {"status": "unavailable"}
 
+    def test_bare_health_returns_ok_when_stdb_up(self) -> None:
+        """Bare /health alias behaves identically to /api/health."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = AsyncMock(status_code=200)
+
+        with patch("routes.health.get_http_client", return_value=mock_client):
+            client = TestClient(main.app)
+            resp = client.get("/health")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data.get("server") == "ok"
+            assert data.get("stdb") == "ok"
+
+    def test_bare_health_ready_mirrors_api_ready(self) -> None:
+        """Bare /health/ready alias behaves identically to /api/health/ready."""
+        mock_client = AsyncMock()
+        mock_client.post.return_value = AsyncMock(status_code=200)
+
+        with patch("routes.health.get_http_client", return_value=mock_client):
+            client = TestClient(main.app)
+            resp = client.get("/health/ready")
+            assert resp.status_code == 200
+            assert resp.json() == {"status": "ok"}
+
 
 class TestLifespan:
     """The lifespan context manager starts and stops scheduler tasks."""
