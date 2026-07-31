@@ -22,6 +22,7 @@ import {
 	Cell,
 	Legend,
 } from "recharts";
+import type { TooltipValueType, PieLabelRenderProps } from "recharts";
 import {
 	TrendingUp,
 	Ticket,
@@ -348,7 +349,7 @@ export default function ReportsPage() {
 										border: "1px solid var(--color-border)",
 										borderRadius: "8px",
 									}}
-									formatter={(value: any) => [
+									formatter={(value: TooltipValueType | undefined) => [
 										`$${Number(value || 0).toFixed(2)}`,
 										"Revenue",
 									]}
@@ -376,7 +377,7 @@ export default function ReportsPage() {
 									cx="50%"
 									cy="50%"
 									outerRadius={80}
-									label={(entry: any) =>
+									label={(entry: PieLabelRenderProps) =>
 										`${entry?.payload?.status || ""}: ${entry?.payload?.count || 0}`
 									}
 									labelLine={true}
@@ -464,7 +465,7 @@ export default function ReportsPage() {
 										cx="50%"
 										cy="50%"
 										outerRadius={80}
-										label={(entry: any) =>
+										label={(entry: PieLabelRenderProps) =>
 											`${entry?.payload?.item_type || ""}: $${Number(entry?.payload?.total || 0).toFixed(0)}`
 										}
 										labelLine={true}
@@ -491,7 +492,7 @@ export default function ReportsPage() {
 											border: "1px solid var(--color-border)",
 											borderRadius: "8px",
 										}}
-										formatter={(value: any, name: any) => [
+										formatter={(value: TooltipValueType | undefined, name: number | string | undefined) => [
 											`$${Number(value || 0).toFixed(2)}`,
 											name,
 										]}
@@ -633,7 +634,7 @@ export default function ReportsPage() {
 										border: "1px solid var(--color-border)",
 										borderRadius: "8px",
 									}}
-									formatter={(value: any) => [value, "New Customers"]}
+									formatter={(value: TooltipValueType | undefined) => [value, "New Customers"]}
 								/>
 								<Bar
 									dataKey="new_customers"

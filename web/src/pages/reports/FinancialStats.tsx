@@ -16,6 +16,7 @@ import {
 	LineChart,
 	Line,
 } from "recharts";
+import type { TooltipValueType } from "recharts";
 import {
 	DollarSign,
 	Clock,
@@ -212,7 +213,7 @@ export default function FinancialStats({
 									border: "1px solid var(--color-border)",
 									borderRadius: "8px",
 								}}
-								formatter={(value: any) => [
+								formatter={(value: TooltipValueType | undefined) => [
 									`$${Number(value || 0).toFixed(2)}`,
 									"Revenue",
 								]}
@@ -298,7 +299,7 @@ export default function FinancialStats({
 									border: "1px solid var(--color-border)",
 									borderRadius: "8px",
 								}}
-								formatter={(value: any) => [value, "New Customers"]}
+								formatter={(value: TooltipValueType | undefined) => [value, "New Customers"]}
 							/>
 							<Bar
 								dataKey="new_customers"

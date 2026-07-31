@@ -19,6 +19,7 @@ import {
 	LineChart,
 	Line,
 } from "recharts";
+import type { PieLabelRenderProps } from "recharts";
 import { Ticket, Users, Award, Calendar } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -65,7 +66,7 @@ export default function TicketStats({
 								cx="50%"
 								cy="50%"
 								outerRadius={80}
-								label={(props: any) =>
+								label={(props: PieLabelRenderProps) =>
 									`${props?.payload?.status || ""}: ${props?.payload?.count || 0}`
 								}
 								labelLine={true}

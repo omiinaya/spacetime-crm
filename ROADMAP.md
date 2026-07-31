@@ -542,15 +542,16 @@ Full code-level re-audit of the repository (grep + test-run verified, not just R
 
 ### Concrete open tasks (verified still open, in priority order)
 
-| # | Task | Evidence | Effort |
-|---|------|----------|--------|
-| 1 | **TypeScript `any` cleanup** — 36 usages across pages/components/lib (`catch (e: any)`, `as any`, `: any`) | `grep -rn ": any\|as any\|<any>" web/src --include="*.tsx" --include="*.ts"` → 36 | 30m |
-| 2 | **Test isolation** — tests share STDB state; no fresh DB per run; partial fix exists (timestamped names) | ROADMAP 7G; `conftest.py` shared admin session | 2h |
-| 3 | **Rust runtime tests** — 211 `#[test]` are compile-only for wasm; container infra exists (`docker-compose.test.yml`, `make test-container`) but not wired into CI | `scripts/run-integration-tests.sh` exists; CI `test.yml` doesn't call it | 1h |
-| 4 | **Offline mode (8B-9)** — PWA has service worker precache but no offline data strategy | `vite-plugin-pwa` config only precaches static assets | 4h+ |
-| 5 | **In-app reorder alerts** — low-stock notification is email-only via cron | `POST /api/products/low-stock/notify` → email; no in-app badge | 30m |
-| 6 | **Pin Docker tags** — `spacetimedb:latest` in docker-compose.yml (no version pin) | `docker-compose.yml:5` | 5m |
-| 7 | **Thicken `.dockerignore`** — 8 lines, excludes little from build context | `wc -l .dockerignore` → 8 | 5m |
+| # | Task | Evidence | Effort | Status |
+|---|------|----------|--------|--------|
+| 1 | **TypeScript `any` cleanup** — 36 usages across pages/components/lib (`catch (e: any)`, `as any`, `: any`) | `grep -rn ": any\|as any\|<any>" web/src --include="*.tsx" --include="*.ts"` → 0 | 30m | ✅ **36/36 done** — final 12 Recharts formatter/label callbacks typed with `TooltipValueType`, `PieLabelRenderProps`, `TooltipPayloadEntry` (fixed param narrowness with `| undefined`; datum fields read via `payload`). Zero `any` in production source. |
+| 2 | **Test isolation** — tests share STDB state; no fresh DB per run; partial fix exists (timestamped names) | ROADMAP 7G; `conftest.py` shared admin session | 2h | Open |
+| 3 | **Rust runtime tests** — 211 `#[test]` are compile-only for wasm; container infra exists (`docker-compose.test.yml`, `make test-container`) but not wired into CI | `scripts/run-integration-tests.sh` exists; CI `test.yml` doesn't call it | 1h | ✅ **Host unit tests wired into CI** — `cargo test --lib` (208 tests, in-memory stub datastore) + `cargo clippy -D warnings` are now hard CI gates (were `continue-on-error`); clippy `--all-targets` cleaned to zero warnings |
+| 4 | **Offline mode (8B-9)** — PWA has service worker precache but no offline data strategy | `vite-plugin-pwa` config only precaches static assets | 4h+ | Open |
+| 5 | **In-app reorder alerts** — low-stock notification is email-only via cron | `POST /api/products/low-stock/notify` → email; no in-app badge | 30m | ✅ **Done** — amber low-stock alert card on dashboard (60s refetch, links to Products) |
+| 6 | **Pin Docker tags** — `spacetimedb:latest` in docker-compose.yml (no version pin) | `docker-compose.yml:5` | 5m | ✅ **Done + root cause** — `spacetimedb/spacetimedb:*` does **NOT exist on Docker Hub**; pinned official `clockworklabs/spacetime:v2.6.1` (matches production 2.6.1) in docker-compose.yml, docker-compose.test.yml, run-integration-tests.sh |
+| 7 | **Thicken `.dockerignore`** — 8 lines, excludes little from build context | `wc -l .dockerignore` → 8 | 5m | ✅ **Done** — added Playwright artifacts, root `target/`, `deploy/`, `.ruff_cache/`, `.daemon-locks/` |
+| 8 | **🔴 CI Test workflow broken at first step** — every Test run failed in <35s since at least 2026-07-07 | `gh run list` → all `failure`; log: `docker pull spacetimedb/spacetimedb:latest` → "repository does not exist"; no `spacetime` CLI installed on runner | 30m | ✅ **Done** — replaced phantom service container with direct install of `spacetime-x86_64-unknown-linux-gnu.tar.gz` (v2.6.1) + `spacetime start -l 0.0.0.0:3001`; validated end-to-end locally (fresh HOME → auto direct-login → publish "Created new database") |
 
 ### Verified during audit (regression-protected)
 - Backend unit suite: **1,249 passed** (`pytest tests/unit/ -q`)

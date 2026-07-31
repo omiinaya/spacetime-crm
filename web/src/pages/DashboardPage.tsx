@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
+import type { PageId } from "../lib/navigation";
 import {
 	Users,
 	Ticket,
@@ -12,6 +13,7 @@ import {
 	CheckCircle,
 	ArrowRight,
 	Loader2,
+	AlertTriangle,
 	type LucideIcon,
 } from "lucide-react";
 import { api, DashboardStats, ReportsData, Invoice } from "../lib/api";
@@ -35,6 +37,7 @@ import {
 	Tooltip,
 	ResponsiveContainer,
 } from "recharts";
+import type { TooltipValueType, PieLabelRenderProps, TooltipPayloadEntry } from "recharts";
 
 const STATUS_COLORS = [
 	"#22c55e",
@@ -45,29 +48,6 @@ const STATUS_COLORS = [
 	"#ec4899",
 	"#6366f1",
 ];
-
-type PageId =
-	| "dashboard"
-	| "customers"
-	| "tickets"
-	| "invoices"
-	| "payments"
-	| "appointments"
-	| "products"
-	| "estimates"
-	| "purchase-orders"
-	| "import-export"
-	| "audit-log"
-	| "pos"
-	| "health"
-	| "custom-fields"
-	| "checklist"
-	| "map"
-	| "reports"
-	| "settings"
-	| "tenants"
-	| "recurring-invoices"
-	| "payment-methods";
 
 export default function DashboardPage({
 	stats,
@@ -120,6 +100,14 @@ export default function DashboardPage({
 			.then(setReports)
 			.catch(() => toast.error("Failed to load reports data"));
 	}, []);
+
+	// In-app low-stock alert (email notify is handled by the 7 AM cron)
+	const { data: lowStockData } = useQuery({
+		queryKey: ["products", "low-stock"],
+		queryFn: () => api.products.lowStock.list(),
+		refetchInterval: 60_000,
+	});
+	const lowStockCount = lowStockData?.count ?? 0;
 
 	const summaryCards: {
 		label: string;
@@ -201,6 +189,35 @@ export default function DashboardPage({
 					);
 				})}
 			</div>
+
+			{/* Low stock alert */}
+			{lowStockCount > 0 && (
+				<Card className="border-amber-500/30 bg-amber-500/5">
+					<CardContent className="pt-4 flex items-center justify-between gap-4 flex-wrap">
+						<div className="flex items-center gap-3">
+							<div className="p-2 rounded-lg bg-amber-500/15 text-amber-400">
+								<AlertTriangle className="h-5 w-5" />
+							</div>
+							<div>
+								<p className="text-sm font-medium">
+									{lowStockCount} product
+									{lowStockCount !== 1 ? "s" : ""} low on stock
+								</p>
+								<p className="text-xs text-muted-foreground">
+									Reorder before stock runs out
+								</p>
+							</div>
+						</div>
+						<Button
+							size="sm"
+							variant="outline"
+							onClick={() => onNavigate("products")}
+						>
+							View Products
+						</Button>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Revenue vs Target progress bar */}
 			{stats && (
@@ -317,7 +334,7 @@ export default function DashboardPage({
 											border: "1px solid var(--color-border)",
 											borderRadius: "8px",
 										}}
-										formatter={(v: any) => [
+										formatter={(v: TooltipValueType | undefined) => [
 											`$${Number(v || 0).toFixed(2)}`,
 											"Revenue",
 										]}
@@ -352,8 +369,8 @@ export default function DashboardPage({
 										cx="50%"
 										cy="50%"
 										outerRadius={80}
-										label={(props: any) =>
-											`${props?.status || props?.payload?.status || ""}: ${props?.count || props?.payload?.count || 0}`
+										label={(props: PieLabelRenderProps) =>
+											`${props?.payload?.status || ""}: ${props?.payload?.count || 0}`
 										}
 									>
 										{reports.ticket_by_status.map((_, i) => (
@@ -477,8 +494,8 @@ export default function DashboardPage({
 											cx="50%"
 											cy="50%"
 											outerRadius={70}
-											label={(props: any) =>
-												`${props?.item_type || props?.payload?.item_type || ""}: $${Number(props?.total || props?.payload?.total || 0).toFixed(0)}`
+											label={(props: PieLabelRenderProps) =>
+												`${props?.payload?.item_type || ""}: $${Number(props?.payload?.total || 0).toFixed(0)}`
 											}
 										>
 											{stats.invoice_item_type_breakdown.map((_entry, idx) => (
@@ -498,9 +515,9 @@ export default function DashboardPage({
 												border: "1px solid var(--color-border)",
 												borderRadius: "8px",
 											}}
-											formatter={(_v: any, _n: any, props: any) => [
-												`$${Number(props?.payload?.total || 0).toFixed(2)} (${props?.payload?.count || 0} items)`,
-												props?.payload?.item_type || "",
+											formatter={(_v: TooltipValueType | undefined, _n: number | string | undefined, item: TooltipPayloadEntry) => [
+												`$${Number(item?.payload?.total || 0).toFixed(2)} (${item?.payload?.count || 0} items)`,
+												item?.payload?.item_type || "",
 											]}
 										/>
 									</PieChart>
