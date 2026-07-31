@@ -194,27 +194,36 @@ export default function DashboardPage({
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Monthly Revenue Target</span>
               <span className="text-sm text-muted-foreground">
-                ${stats.monthly_revenue.toFixed(2)} / ${stats.revenue_target.toFixed(2)}
+                ${Number(stats.monthly_revenue ?? 0).toFixed(2)} / $
+                {Number(stats.revenue_target ?? 0).toFixed(2)}
               </span>
             </div>
             <div className="h-3 bg-muted rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  stats.monthly_revenue / stats.revenue_target >= 1
-                    ? 'bg-green-500'
-                    : stats.monthly_revenue / stats.revenue_target >= 0.75
-                      ? 'bg-blue-500'
-                      : stats.monthly_revenue / stats.revenue_target >= 0.5
-                        ? 'bg-amber-500'
-                        : 'bg-red-500'
+                  (() => {
+                    const ratio =
+                      Number(stats.monthly_revenue ?? 0) / Number(stats.revenue_target ?? 0);
+                    if (ratio >= 1) return 'bg-green-500';
+                    if (ratio >= 0.75) return 'bg-blue-500';
+                    if (ratio >= 0.5) return 'bg-amber-500';
+                    return 'bg-red-500';
+                  })()
                 }`}
                 style={{
-                  width: `${Math.min((stats.monthly_revenue / stats.revenue_target) * 100, 100)}%`,
+                  width: `${Math.min(
+                    (Number(stats.monthly_revenue ?? 0) / Number(stats.revenue_target ?? 0)) * 100,
+                    100,
+                  )}%`,
                 }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {((stats.monthly_revenue / stats.revenue_target) * 100).toFixed(0)}% of monthly target
+              {(() => {
+                const target = Number(stats.revenue_target ?? 0);
+                if (target <= 0) return '0% of monthly target';
+                return `${Math.min((Number(stats.monthly_revenue ?? 0) / target) * 100, 100).toFixed(0)}% of monthly target`;
+              })()}
             </p>
           </CardContent>
         </Card>

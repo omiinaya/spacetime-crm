@@ -227,12 +227,12 @@ export default function GiftCardsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Initial Balance</span>
-                <span>${lookupResult.initial_balance.toFixed(2)}</span>
+                <span>${Number(lookupResult.initial_balance ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Remaining Balance</span>
                 <span className="font-bold text-green-600">
-                  ${lookupResult.remaining_balance.toFixed(2)}
+                  ${Number(lookupResult.remaining_balance ?? 0).toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -323,9 +323,11 @@ export default function GiftCardsPage() {
                   <div className="text-right flex items-center gap-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Balance</p>
-                      <p className="font-bold text-sm">${card.remaining_balance.toFixed(2)}</p>
+                      <p className="font-bold text-sm">
+                        ${Number(card.remaining_balance ?? 0).toFixed(2)}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        of ${card.initial_balance.toFixed(2)}
+                        of ${Number(card.initial_balance ?? 0).toFixed(2)}
                       </p>
                     </div>
                     {card.active && (
