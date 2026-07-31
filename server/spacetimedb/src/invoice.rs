@@ -51,7 +51,8 @@ pub fn create_invoice(
     terms: String,
     due_date: u64,
     currency: String,
-) {
+) -> Result<(), String> {
+    super::currency::validate_currency(&currency)?;
     let id = super::make_id("inv", ctx);
     let now = super::now_ms(ctx);
     let invoice_number = ctx.db.invoices().iter().count() as u64 + 10001;
@@ -75,6 +76,7 @@ pub fn create_invoice(
         created_at: now,
         updated_at: now,
     });
+    Ok(())
 }
 
 #[spacetimedb::reducer]
@@ -207,7 +209,8 @@ mod tests {
             "Net 30".into(),
             1700100000000,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let invoices: Vec<Invoice> = ctx.db.invoices().iter().collect();
         assert_eq!(invoices.len(), 1);
         let i = &invoices[0];
@@ -229,7 +232,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let id = ctx
             .db
             .invoices()
@@ -272,7 +276,8 @@ mod tests {
             "".into(),
             now - 86400000,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let id = ctx
             .db
             .invoices()
@@ -310,7 +315,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let inv_id = ctx
             .db
             .invoices()
@@ -356,7 +362,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let inv_id = ctx
             .db
             .invoices()
@@ -391,7 +398,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         assert_eq!(ctx.db.invoices().iter().count(), 1);
         let id = ctx
             .db
@@ -417,7 +425,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let inv_id = ctx
             .db
             .invoices()
@@ -437,5 +446,26 @@ mod tests {
         assert!((inv.tax_rate - 8.875).abs() < 0.001);
         assert!((inv.tax_amount - 8.875).abs() < 0.001);
         assert!((inv.total - 108.875).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_create_invoice_rejects_unsupported_currency() {
+        let ctx = test_ctx();
+        let err = create_invoice(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            0,
+            "JPY".into(),
+        )
+        .unwrap_err();
+        assert!(
+            err.contains("Unsupported currency"),
+            "unexpected error: {err}"
+        );
+        assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
 }

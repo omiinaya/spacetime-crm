@@ -215,14 +215,3 @@ mod ticket_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod ticket_tests {
-    use super::*;
-
-    #[test]
-    fn test_ticket_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

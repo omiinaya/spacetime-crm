@@ -18,7 +18,8 @@ mod tests {
             "Estimate notes".into(),
             1700500000000,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let estimates: Vec<Estimate> = ctx.db.estimates().iter().collect();
         assert_eq!(estimates.len(), 1);
         let e = &estimates[0];
@@ -38,7 +39,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let id = ctx
             .db
             .estimates()
@@ -79,7 +81,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let est_id = ctx
             .db
             .estimates()
@@ -124,7 +127,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         assert_eq!(ctx.db.estimates().iter().count(), 1);
         let id = ctx
             .db
@@ -149,7 +153,8 @@ mod tests {
             "Convert me".into(),
             1000,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let est_id = ctx
             .db
             .estimates()

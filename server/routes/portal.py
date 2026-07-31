@@ -276,7 +276,7 @@ async def portal_make_payment(
             method,
             body.reference,
             "Online payment via customer portal",
-            "USD",
+            rows[0].get("currency") or "USD",
         ],
     )
 
@@ -463,7 +463,7 @@ async def portal_pay_with_saved_card(
             "card",
             result.get("payment_intent_id", ""),
             f"Stripe saved card payment — {result.get('payment_intent_id', '')}",
-            "USD",
+            inv.get("currency") or "USD",
         ],
     )
 

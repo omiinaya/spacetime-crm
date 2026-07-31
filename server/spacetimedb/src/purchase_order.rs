@@ -48,7 +48,8 @@ pub fn create_purchase_order(
     vendor_name: String,
     notes: String,
     currency: String,
-) {
+) -> Result<(), String> {
+    super::currency::validate_currency(&currency)?;
     let id = super::make_id("po", ctx);
     let now = super::now_ms(ctx);
     let po_number = ctx.db.purchase_order().iter().count() as u64 + 1001;
@@ -69,6 +70,7 @@ pub fn create_purchase_order(
         currency,
         approved_at: 0,
     });
+    Ok(())
 }
 
 fn recalc_po(ctx: &ReducerContext, po_id: &str) {

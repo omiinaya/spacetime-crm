@@ -129,14 +129,3 @@ mod appointment_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod appointment_tests {
-    use super::*;
-
-    #[test]
-    fn test_appointment_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

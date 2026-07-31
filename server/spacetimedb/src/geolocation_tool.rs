@@ -18,14 +18,3 @@ mod geolocation_tool_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod geolocation_tool_tests {
-    use super::*;
-
-    #[test]
-    fn test_geolocation_tool_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

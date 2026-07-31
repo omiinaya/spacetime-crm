@@ -125,14 +125,3 @@ mod tenant_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod tenant_tests {
-    use super::*;
-
-    #[test]
-    fn test_tenant_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

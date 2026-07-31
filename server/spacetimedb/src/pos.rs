@@ -54,7 +54,8 @@ pub fn create_counter_sale(
     tax_rate: f64,
     discount_amount: f64,
     currency: String,
-) {
+) -> Result<(), String> {
+    super::currency::validate_currency(&currency)?;
     let id = super::make_id("pos", ctx);
     let now = super::now_ms(ctx);
     let receipt_number = ctx.db.counter_sale().iter().count() as u64 + 1001;
@@ -79,6 +80,7 @@ pub fn create_counter_sale(
         created_by: String::new(),
         refunded_at: 0,
     });
+    Ok(())
 }
 
 #[spacetimedb::reducer]

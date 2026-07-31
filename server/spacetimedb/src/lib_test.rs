@@ -241,7 +241,8 @@ mod tests {
             "REF-001".into(),
             "Walk-in payment".into(),
             "USD".into(),
-        );
+        )
+        .unwrap();
         use crate::payment::payment;
         let payments: Vec<Payment> = ctx.db.payment().iter().collect();
         assert_eq!(payments.len(), 1);
@@ -264,7 +265,8 @@ mod tests {
             "".into(),
             "".into(),
             "USD".into(),
-        );
+        )
+        .unwrap();
         use crate::payment::payment;
         assert_eq!(ctx.db.payment().iter().count(), 1);
         let id = ctx
@@ -401,7 +403,8 @@ mod tests {
             "vendor_1".into(),
             "notes".into(),
             "USD".into(),
-        );
+        )
+        .unwrap();
         let pos: Vec<PurchaseOrder> = ctx.db.purchase_order().iter().collect();
         assert_eq!(pos.len(), 1);
         let po = &pos[0];
@@ -412,7 +415,7 @@ mod tests {
     #[test]
     fn test_update_po_status() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "v1".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "v1".into(), "".into(), "USD".into()).unwrap();
         let po = ctx
             .db
             .purchase_order()

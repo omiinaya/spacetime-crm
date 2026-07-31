@@ -28,7 +28,9 @@ pub fn record_payment(
     reference: String,
     notes: String,
     currency: String,
-) {
+) -> Result<(), String> {
+    super::currency::validate_currency(&currency)?;
+    super::currency::ensure_payment_matches_invoice(ctx, &invoice_id, &currency)?;
     let id = super::make_id("pmt", ctx);
     let now = super::now_ms(ctx);
     ctx.db.payment().insert(Payment {
@@ -43,6 +45,7 @@ pub fn record_payment(
         currency,
         created_at: now,
     });
+    Ok(())
 }
 
 #[spacetimedb::reducer]

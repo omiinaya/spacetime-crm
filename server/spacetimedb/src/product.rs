@@ -171,14 +171,3 @@ mod product_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod product_tests {
-    use super::*;
-
-    #[test]
-    fn test_product_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

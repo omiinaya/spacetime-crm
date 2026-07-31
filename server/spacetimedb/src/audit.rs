@@ -52,14 +52,3 @@ mod audit_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod audit_tests {
-    use super::*;
-
-    #[test]
-    fn test_audit_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

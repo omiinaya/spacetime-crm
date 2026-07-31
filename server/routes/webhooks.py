@@ -45,7 +45,7 @@ async def stripe_webhook(request: Request):
 
         if invoice_id and amount_total > 0:
             inv_rows = await _sql(
-                f"SELECT tenant_id FROM invoices WHERE id = '{_sqlesc(invoice_id)}'"
+                f"SELECT tenant_id, currency FROM invoices WHERE id = '{_sqlesc(invoice_id)}'"
             )
             tid = inv_rows[0]["tenant_id"] if inv_rows else ""
             await _call(
@@ -58,7 +58,7 @@ async def stripe_webhook(request: Request):
                     "stripe",
                     payment_intent,
                     f"Stripe payment via session {stripe_session_id}",
-                    "USD",
+                    (inv_rows[0].get("currency") or "USD") if inv_rows else "USD",
                 ],
             )
 

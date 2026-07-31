@@ -16,7 +16,8 @@ mod tests {
             "Vendor A".into(),
             "Test order".into(),
             "USD".into(),
-        );
+        )
+        .unwrap();
         let pos: Vec<PurchaseOrder> = ctx.db.purchase_order().iter().collect();
         assert_eq!(pos.len(), 1);
         let po = &pos[0];
@@ -30,7 +31,7 @@ mod tests {
     #[test]
     fn test_add_po_line_item() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -60,7 +61,7 @@ mod tests {
     #[test]
     fn test_update_po_status() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -82,7 +83,7 @@ mod tests {
     #[test]
     fn test_submit_for_approval() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -115,7 +116,7 @@ mod tests {
     #[test]
     fn test_submit_already_non_draft() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -151,7 +152,7 @@ mod tests {
     #[test]
     fn test_approve_po() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -175,7 +176,7 @@ mod tests {
     #[test]
     fn test_reject_po() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -198,7 +199,7 @@ mod tests {
     #[test]
     fn test_reject_before_submit() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -233,7 +234,7 @@ mod tests {
     #[test]
     fn test_receive_po_item() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -272,7 +273,7 @@ mod tests {
     #[test]
     fn test_receive_excess() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -304,7 +305,7 @@ mod tests {
     #[test]
     fn test_delete_po_line_item() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -341,7 +342,7 @@ mod tests {
     #[test]
     fn test_delete_purchase_order() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "V".into(), "".into(), "USD".into()).unwrap();
         let po_id = ctx
             .db
             .purchase_order()
@@ -357,5 +358,23 @@ mod tests {
         delete_purchase_order(&ctx, po_id);
         assert_eq!(ctx.db.purchase_order().iter().count(), 0);
         assert_eq!(ctx.db.purchase_order_line_item().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_create_purchase_order_rejects_unsupported_currency() {
+        let ctx = test_ctx();
+        let err = create_purchase_order(
+            &ctx,
+            "t_po".into(),
+            "Vendor A".into(),
+            "Test order".into(),
+            "JPY".into(),
+        )
+        .unwrap_err();
+        assert!(
+            err.contains("Unsupported currency"),
+            "unexpected error: {err}"
+        );
+        assert_eq!(ctx.db.purchase_order().iter().count(), 0);
     }
 }

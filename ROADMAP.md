@@ -482,7 +482,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Multi-tenant | ✅ Complete | 27 tables scoped |
 | POS / counter sale | ✅ Complete | Kiosk with cart, payment, receipt, refund |
 | Invoice email delivery | ✅ Complete | Single + batch + queue status |
-| Multi-currency | ✅ Foundation | On entities + API, not in STDB reducers |
+| Multi-currency | ✅ Foundation | Same-currency enforcement in STDB reducers (payment↔invoice linkage); conversion deferred — no rate table |
 | 2FA / TOTP | ✅ Complete | QR setup, challenge login, disable |
 | SLA tracking | ✅ Complete | Priority thresholds, configurable |
 | Purchase order approvals | ✅ Complete | Submit/approve/reject flow |

@@ -2,6 +2,19 @@
 
 All notable changes to SpacetimeCRM will be documented in this file.
 
+## [2.0.3] — 2026-07-31
+
+### Multi-currency consistency
+- **`record_payment` enforces same-currency on payment/invoice linkage** — a payment in USD can no longer silently settle an invoice in EUR. Returns a clear `Currency mismatch` error naming both currencies; no payment row is stored. Payments without an invoice link or referencing a missing invoice are still allowed (legacy behavior preserved).
+- **Currency validation on all money-bearing create reducers** — `create_invoice`, `create_estimate`, `create_purchase_order`, `create_counter_sale`, and `record_payment` now accept only ISO 4217 codes from `SUPPORTED_CURRENCIES` (USD/EUR/GBP/CAD — matches frontend pickers). Lowercase or unknown codes are rejected with a clear error.
+- **`convert_estimate_to_invoice` no longer hardcodes USD** — the generated invoice now inherits the estimate's currency (was silently converting EUR estimates into USD invoices).
+- **Portal/Stripe payment flows pass the invoice's currency** — `portal.py` and the Stripe webhook previously recorded every payment as USD regardless of the invoice's currency; they now use the invoice's currency so enforcement never false-triggers on legitimate flows.
+- **PaymentsPage defaults payment currency to the selected invoice's currency** — prevents recording a mismatched payment from the UI.
+- 10 new Rust reducer tests (mismatch rejected, matching accepted, unlinked payment allowed, unsupported/lowercase currency rejected, estimate→invoice currency preserved).
+
+### Housekeeping
+- **Fixed duplicate test module definitions** — 10 `src/*.rs` files declared `mod *_tests` twice (verbatim copies), which broke `cargo test` compilation on `feat/split-large-files`. Duplicate blocks removed; 226 pre-existing tests green.
+
 ## [2.0.2] — 2026-07-31
 
 ### Security (tenant isolation)

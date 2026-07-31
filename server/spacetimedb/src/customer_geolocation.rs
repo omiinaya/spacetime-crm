@@ -67,14 +67,3 @@ mod customer_geolocation_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod customer_geolocation_tests {
-    use super::*;
-
-    #[test]
-    fn test_customer_geolocation_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

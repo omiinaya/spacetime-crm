@@ -165,14 +165,3 @@ mod customer_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod customer_tests {
-    use super::*;
-
-    #[test]
-    fn test_customer_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

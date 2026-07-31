@@ -64,14 +64,3 @@ mod push_subscription_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod push_subscription_tests {
-    use super::*;
-
-    #[test]
-    fn test_push_subscription_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

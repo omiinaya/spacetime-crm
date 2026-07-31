@@ -18,7 +18,8 @@ mod tests {
             "Net 30".into(),
             1700100000000,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let invoices: Vec<Invoice> = ctx.db.invoices().iter().collect();
         assert_eq!(invoices.len(), 1);
         let i = &invoices[0];
@@ -40,7 +41,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let id = ctx
             .db
             .invoices()
@@ -84,7 +86,8 @@ mod tests {
             "".into(),
             now - 86400000,
             "USD".into(),
-        ); // due yesterday
+        )
+        .unwrap(); // due yesterday
         let id = ctx
             .db
             .invoices()
@@ -122,7 +125,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let inv_id = ctx
             .db
             .invoices()
@@ -169,7 +173,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let inv_id = ctx
             .db
             .invoices()
@@ -204,7 +209,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         assert_eq!(ctx.db.invoices().iter().count(), 1);
         let id = ctx
             .db
@@ -230,7 +236,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let inv_id = ctx
             .db
             .invoices()

@@ -127,7 +127,16 @@ export default function PaymentsPage() {
 					<CardContent className="space-y-3">
 						<Select
 							value={form.invoice_id}
-							onChange={(e) => setForm({ ...form, invoice_id: e.target.value })}
+							onChange={(e) => {
+								const inv = invoices.find((i) => i.id === e.target.value);
+								// Keep payment currency consistent with the selected invoice
+								// (reducer enforces same-currency on payment/invoice linkage).
+								setForm({
+									...form,
+									invoice_id: e.target.value,
+									currency: inv?.currency || form.currency || "USD",
+								});
+							}}
 						>
 							<option value="">Select invoice...</option>
 							{invoices.map((inv) => (

@@ -18,6 +18,7 @@ pub mod checklist;
 pub mod checklist_test;
 #[cfg(test)]
 pub mod container_test;
+pub mod currency;
 pub mod custom_field;
 #[cfg(test)]
 pub mod custom_field_test;

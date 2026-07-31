@@ -86,14 +86,3 @@ mod tax_rate_tests {
         assert!(true);
     }
 }
-
-#[cfg(test)]
-mod tax_rate_tests {
-    use super::*;
-
-    #[test]
-    fn test_tax_rate_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

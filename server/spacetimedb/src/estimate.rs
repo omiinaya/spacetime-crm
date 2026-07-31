@@ -49,7 +49,8 @@ pub fn create_estimate(
     notes: String,
     expires_at: u64,
     currency: String,
-) {
+) -> Result<(), String> {
+    super::currency::validate_currency(&currency)?;
     let id = super::make_id("est", ctx);
     let now = super::now_ms(ctx);
     let estimate_number = ctx.db.estimates().iter().count() as u64 + 1001;
@@ -72,6 +73,7 @@ pub fn create_estimate(
         created_at: now,
         updated_at: now,
     });
+    Ok(())
 }
 
 #[spacetimedb::reducer]
@@ -164,7 +166,7 @@ pub fn convert_estimate_to_invoice(ctx: &ReducerContext, estimate_id: String) {
             notes: est.notes.clone(),
             terms: String::new(),
             due_date: 0,
-            currency: "USD".to_string(),
+            currency: est.currency.clone(),
             created_at: now,
             updated_at: now,
         });
@@ -225,7 +227,8 @@ mod tests {
             "Estimate notes".into(),
             1700500000000,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let estimates: Vec<Estimate> = ctx.db.estimates().iter().collect();
         assert_eq!(estimates.len(), 1);
         let e = &estimates[0];
@@ -249,7 +252,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let id = ctx
             .db
             .estimates()
@@ -290,7 +294,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let est_id = ctx
             .db
             .estimates()
@@ -335,7 +340,8 @@ mod tests {
             "".into(),
             0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         assert_eq!(ctx.db.estimates().iter().count(), 1);
         let id = ctx
             .db
@@ -360,7 +366,8 @@ mod tests {
             "Convert me".into(),
             1000,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let est_id = ctx
             .db
             .estimates()
@@ -459,5 +466,59 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].tenant_id, "");
         assert_eq!(ctx.db.estimates().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_create_estimate_rejects_unsupported_currency() {
+        let ctx = test_ctx();
+        let err = create_estimate(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "".into(),
+            "".into(),
+            0,
+            "JPY".into(),
+        )
+        .unwrap_err();
+        assert!(
+            err.contains("Unsupported currency"),
+            "unexpected error: {err}"
+        );
+        assert_eq!(ctx.db.estimates().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_convert_estimate_preserves_currency() {
+        let ctx = test_ctx();
+        create_estimate(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "".into(),
+            "EUR estimate".into(),
+            1000,
+            "EUR".into(),
+        )
+        .unwrap();
+        let est_id = ctx
+            .db
+            .estimates()
+            .iter()
+            .next()
+            .expect("expected at least one estimates record")
+            .id
+            .clone();
+        convert_estimate_to_invoice(&ctx, est_id);
+        let inv = ctx
+            .db
+            .invoices()
+            .iter()
+            .next()
+            .expect("expected the converted invoice");
+        assert_eq!(
+            inv.currency, "EUR",
+            "converted invoice must keep the estimate currency"
+        );
     }
 }

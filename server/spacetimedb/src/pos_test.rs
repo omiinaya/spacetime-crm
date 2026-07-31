@@ -21,7 +21,8 @@ mod tests {
             8.0,
             0.0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let sales: Vec<CounterSale> = ctx.db.counter_sale().iter().collect();
         assert_eq!(sales.len(), 1);
         let s = &sales[0];
@@ -43,7 +44,8 @@ mod tests {
             8.0,
             0.0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let sale_id = ctx
             .db
             .counter_sale()
@@ -117,7 +119,8 @@ mod tests {
             0.0,
             0.0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         let sale_id = ctx
             .db
             .counter_sale()
@@ -159,7 +162,8 @@ mod tests {
             0.0,
             0.0,
             "USD".into(),
-        );
+        )
+        .unwrap();
         assert_eq!(ctx.db.counter_sale().iter().count(), 1);
         let id = ctx
             .db
@@ -170,6 +174,28 @@ mod tests {
             .id
             .clone();
         delete_counter_sale(&ctx, id);
+        assert_eq!(ctx.db.counter_sale().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_create_counter_sale_rejects_unsupported_currency() {
+        let ctx = test_ctx();
+        let err = create_counter_sale(
+            &ctx,
+            "t_pos".into(),
+            "cust_1".into(),
+            "Walk-in".into(),
+            "cash".into(),
+            100.0,
+            8.0,
+            0.0,
+            "JPY".into(),
+        )
+        .unwrap_err();
+        assert!(
+            err.contains("Unsupported currency"),
+            "unexpected error: {err}"
+        );
         assert_eq!(ctx.db.counter_sale().iter().count(), 0);
     }
 }
