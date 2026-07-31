@@ -54,6 +54,7 @@ mod tests {
         update_recurring_invoice_rule(
             &ctx,
             id.clone(),
+            "t".into(),
             "New Name".into(),
             "weekly".into(),
             2,
@@ -96,7 +97,7 @@ mod tests {
             .expect("expected at least one recurring_invoice_rules record")
             .id
             .clone();
-        delete_recurring_invoice_rule(&ctx, id);
+        delete_recurring_invoice_rule(&ctx, id, "t".into());
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 0);
     }
 
@@ -119,7 +120,7 @@ mod tests {
         ); // due now
            // Generate invoices
         assert_eq!(ctx.db.invoices().iter().count(), 0);
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t_gr".into());
         // Should have created 1 invoice
         assert_eq!(ctx.db.invoices().iter().count(), 1);
         let inv = ctx
@@ -170,7 +171,7 @@ mod tests {
             "[]".into(),
             far_future,
         );
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t".into());
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
 
@@ -201,6 +202,7 @@ mod tests {
         update_recurring_invoice_rule(
             &ctx,
             id,
+            "t".into(),
             "Paused".into(),
             "monthly".into(),
             1,
@@ -209,7 +211,7 @@ mod tests {
             now - 1000,
             "paused".into(),
         );
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t".into());
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
 
@@ -229,7 +231,7 @@ mod tests {
             "[]".into(),
             now - 1000,
         );
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t".into());
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
 }

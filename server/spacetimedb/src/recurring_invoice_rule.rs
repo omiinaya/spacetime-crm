@@ -57,6 +57,7 @@ pub fn create_recurring_invoice_rule(
 pub fn update_recurring_invoice_rule(
     ctx: &ReducerContext,
     id: String,
+    tenant_id: String,
     name: String,
     frequency: String,
     interval_count: u32,
@@ -66,6 +67,10 @@ pub fn update_recurring_invoice_rule(
     status: String,
 ) {
     if let Some(rule) = ctx.db.recurring_invoice_rules().id().find(&id) {
+        // Tenant isolation: only the owning tenant may update the rule.
+        if rule.tenant_id != tenant_id {
+            return;
+        }
         ctx.db
             .recurring_invoice_rules()
             .id()
@@ -84,24 +89,32 @@ pub fn update_recurring_invoice_rule(
 }
 
 #[spacetimedb::reducer]
-pub fn delete_recurring_invoice_rule(ctx: &ReducerContext, id: String) {
-    ctx.db.recurring_invoice_rules().id().delete(&id);
+pub fn delete_recurring_invoice_rule(ctx: &ReducerContext, id: String, tenant_id: String) {
+    // Tenant isolation: only the owning tenant may delete the rule.
+    if let Some(rule) = ctx.db.recurring_invoice_rules().id().find(&id) {
+        if rule.tenant_id == tenant_id {
+            ctx.db.recurring_invoice_rules().id().delete(&id);
+        }
+    }
 }
 
 #[spacetimedb::reducer]
-pub fn generate_recurring_invoices(ctx: &ReducerContext) {
+pub fn generate_recurring_invoices(ctx: &ReducerContext, tenant_id: String) {
     use crate::invoice::*;
 
     let now = super::now_ms(ctx);
     let mut invoice_counter: u64 = 0;
 
-    // Collect all active rules whose next generation date is now or in the past
+    // Collect all active rules for THIS tenant whose next generation date is now or in the past
     let due_rules: Vec<RecurringInvoiceRule> = ctx
         .db
         .recurring_invoice_rules()
         .iter()
         .filter(|r| {
-            r.status == "active" && r.next_generation_date > 0 && r.next_generation_date <= now
+            r.tenant_id == tenant_id
+                && r.status == "active"
+                && r.next_generation_date > 0
+                && r.next_generation_date <= now
         })
         .collect();
 
@@ -282,6 +295,7 @@ mod tests {
         update_recurring_invoice_rule(
             &ctx,
             id.clone(),
+            "t_1".into(),
             "Updated Name".into(),
             "monthly".into(),
             2,
@@ -328,7 +342,7 @@ mod tests {
             .expect("expected rule to exist")
             .id
             .clone();
-        delete_recurring_invoice_rule(&ctx, id);
+        delete_recurring_invoice_rule(&ctx, id, "t_1".into());
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 0);
     }
 
@@ -364,7 +378,7 @@ mod tests {
             .expect("expected rule to exist")
             .next_generation_date;
 
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t_1".into());
 
         // An invoice should have been created
         use crate::invoice::invoices;
@@ -407,7 +421,7 @@ mod tests {
         );
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
 
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t_1".into());
 
         // No invoice should have been created
         use crate::invoice::invoices;
@@ -450,7 +464,7 @@ mod tests {
             1000, // past timestamp
         );
 
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t_1".into());
 
         // Invoice should have been created
         use crate::invoice::{invoice_line_items, invoices};
@@ -490,7 +504,138 @@ mod tests {
     fn test_delete_nonexistent() {
         let ctx = test_ctx();
         // Deleting a non-existent id should not panic
-        delete_recurring_invoice_rule(&ctx, "rir_nonexistent".into());
+        delete_recurring_invoice_rule(&ctx, "rir_nonexistent".into(), "t_1".into());
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_update_rule_cross_tenant_isolation() {
+        let ctx = test_ctx();
+        create_recurring_invoice_rule(
+            &ctx,
+            "t_1".into(),
+            "cust_1".into(),
+            "Original".into(),
+            "weekly".into(),
+            1,
+            14,
+            String::new(),
+            1700000000000,
+        );
+        let id = ctx
+            .db
+            .recurring_invoice_rules()
+            .iter()
+            .next()
+            .expect("expected rule to exist")
+            .id
+            .clone();
+
+        // A different tenant tries to update the rule — must be a no-op.
+        update_recurring_invoice_rule(
+            &ctx,
+            id.clone(),
+            "t_2".into(),
+            "Hijacked".into(),
+            "daily".into(),
+            1,
+            0,
+            String::new(),
+            1,
+            "cancelled".into(),
+        );
+
+        let rule = ctx
+            .db
+            .recurring_invoice_rules()
+            .id()
+            .find(&id)
+            .expect("expected rule to exist");
+        assert_eq!(rule.name, "Original", "cross-tenant update must not apply");
+        assert_eq!(rule.frequency, "weekly");
+        assert_eq!(rule.status, "active");
+    }
+
+    #[test]
+    fn test_delete_rule_cross_tenant_isolation() {
+        let ctx = test_ctx();
+        create_recurring_invoice_rule(
+            &ctx,
+            "t_1".into(),
+            "cust_1".into(),
+            "Keep Me".into(),
+            "daily".into(),
+            1,
+            0,
+            String::new(),
+            1700000000000,
+        );
+        assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
+        let id = ctx
+            .db
+            .recurring_invoice_rules()
+            .iter()
+            .next()
+            .expect("expected rule to exist")
+            .id
+            .clone();
+
+        // A different tenant tries to delete — must be a no-op.
+        delete_recurring_invoice_rule(&ctx, id.clone(), "t_2".into());
+        assert_eq!(
+            ctx.db.recurring_invoice_rules().iter().count(),
+            1,
+            "cross-tenant delete must not remove the rule"
+        );
+
+        // The owning tenant can still delete it.
+        delete_recurring_invoice_rule(&ctx, id, "t_1".into());
+        assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_generate_invoices_tenant_isolation() {
+        let ctx = test_ctx();
+        // Two tenants, both with a due rule.
+        create_recurring_invoice_rule(
+            &ctx,
+            "t_1".into(),
+            "cust_1".into(),
+            "T1 Due".into(),
+            "monthly".into(),
+            1,
+            30,
+            String::new(),
+            1000, // past timestamp
+        );
+        create_recurring_invoice_rule(
+            &ctx,
+            "t_2".into(),
+            "cust_2".into(),
+            "T2 Due".into(),
+            "monthly".into(),
+            1,
+            30,
+            String::new(),
+            1000, // past timestamp
+        );
+        assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 2);
+
+        // Generate for tenant t_1 only.
+        generate_recurring_invoices(&ctx, "t_1".into());
+
+        use crate::invoice::{invoices, Invoice};
+        let invoices: Vec<Invoice> = ctx.db.invoices().iter().collect();
+        assert_eq!(invoices.len(), 1, "only t_1's rule should generate");
+        assert_eq!(invoices[0].tenant_id, "t_1");
+
+        // t_2's rule must still be due (untouched).
+        let t2_rule = ctx
+            .db
+            .recurring_invoice_rules()
+            .iter()
+            .find(|r| r.tenant_id == "t_2")
+            .expect("expected t_2 rule");
+        assert_eq!(t2_rule.last_generated_date, 0, "t_2 rule must be untouched");
     }
 }

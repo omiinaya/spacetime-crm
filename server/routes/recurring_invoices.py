@@ -87,6 +87,7 @@ async def update_recurring_rule(
         "update_recurring_invoice_rule",
         [
             rule_id,
+            user["tenant_id"],
             body.name,
             body.frequency,
             body.interval_count,
@@ -106,7 +107,7 @@ async def delete_recurring_rule(
     user: dict = Depends(require_role("admin")),
 ):
     """Delete a recurring invoice rule."""
-    await _call("delete_recurring_invoice_rule", [rule_id])
+    await _call("delete_recurring_invoice_rule", [rule_id, user["tenant_id"]])
     await _log_audit(user, "delete", "recurring_invoice_rule", rule_id)
     return {"ok": True}
 
@@ -115,7 +116,7 @@ async def delete_recurring_rule(
 async def generate_recurring_invoices(
     user: dict = Depends(require_role("admin", "tech")),
 ):
-    """Trigger generation of due recurring invoices."""
-    await _call("generate_recurring_invoices", [])
+    """Trigger generation of due recurring invoices for the caller's tenant."""
+    await _call("generate_recurring_invoices", [user["tenant_id"]])
     await _log_audit(user, "generate", "recurring_invoices", "manual trigger")
     return {"ok": True}

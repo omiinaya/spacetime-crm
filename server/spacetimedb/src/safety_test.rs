@@ -24,7 +24,7 @@ mod tests {
         delete_appointment(&ctx, "appt_nope".into());
         delete_webhook_subscription(&ctx, "whk_nope".into());
         delete_payment_method(&ctx, "pm_nope".into());
-        delete_recurring_invoice_rule(&ctx, "rir_nope".into());
+        delete_recurring_invoice_rule(&ctx, "rir_nope".into(), "t".into());
         delete_scheduled_report(&ctx, "srpt_nope".into());
         delete_custom_field_definition(&ctx, "cfd_nope".into());
         delete_invoice_line_item(&ctx, "iln_nope".into());
@@ -87,7 +87,7 @@ mod tests {
         let _ = receive_po_item(&ctx, "poli_nope".into(), 0.0);
         let _ = delete_purchase_order(&ctx, "po_nope".into());
         delete_ticket_timer(&ctx, "tmr_nope".into());
-        generate_recurring_invoices(&ctx);
+        generate_recurring_invoices(&ctx, "t".into());
 
         // No crash = success
     }
