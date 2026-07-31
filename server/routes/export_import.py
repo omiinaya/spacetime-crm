@@ -8,6 +8,7 @@ import time
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from helpers import (
+    CUSTOMER_SENSITIVE_FIELDS,
     _call,
     _sql,
     require_role,
@@ -33,12 +34,23 @@ ENTITY_TABLE_MAP = {
 async def export_csv(
     entity: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    """Export all records of an entity type as CSV. Downloads as attachment."""
+    """Export all records of an entity type as CSV. Downloads as attachment.
+
+    Scoped to the caller's tenant; sensitive fields (e.g. customer password
+    hashes) are stripped.
+    """
     table = ENTITY_TABLE_MAP.get(entity)
     if not table:
         raise HTTPException(400, f"Unknown entity: {entity}. Valid: {', '.join(ENTITY_TABLE_MAP)}")
 
-    rows = await _sql(f"SELECT * FROM {table}")
+    rows = await _sql(
+        f"SELECT * FROM {table} WHERE tenant_id = '{user['tenant_id']}'"
+    )
+    if entity == "customers":
+        rows = [
+            {k: v for k, v in r.items() if k not in CUSTOMER_SENSITIVE_FIELDS}
+            for r in rows
+        ]
     if not rows:
         return Response(
             content="",

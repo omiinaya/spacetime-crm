@@ -264,7 +264,7 @@ async def get_reports(
         cid = inv.get("customer_id", "")
         if inv.get("status") == "paid":
             customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
-    all_customers = await _sql("SELECT id, first_name, last_name FROM customer")
+    all_customers = await _sql_t("SELECT id, first_name, last_name FROM customer", user["tenant_id"])
     cust_name_map = {
         c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
         for c in all_customers
@@ -275,7 +275,7 @@ async def get_reports(
     ]
 
     # Customer acquisition by month (last 12 months)
-    all_customers = await _sql("SELECT * FROM customer")
+    all_customers = await _sql_t("SELECT * FROM customer", user["tenant_id"])
     customers_by_month = []
     for i in range(11, -1, -1):
         month_start = datetime(now.year, now.month, 1, tzinfo=UTC) - timedelta(days=30 * i)
