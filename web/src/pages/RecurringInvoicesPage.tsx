@@ -53,6 +53,12 @@ const statusColors: Record<string, "success" | "outline" | "destructive"> = {
 	cancelled: "destructive",
 };
 
+const statusLabels: Record<string, string> = {
+	active: "Active",
+	paused: "Paused",
+	cancelled: "Cancelled",
+};
+
 function tsDate(ts: number): string {
 	if (!ts) return "—";
 	const d = new Date(ts);
@@ -238,7 +244,8 @@ export default function RecurringInvoicesPage() {
 		value: string | number,
 	) => {
 		const updated = [...lineItems];
-		(updated[idx] as any)[field] = value;
+		(updated[idx] as Record<keyof RecurringLineItem, string | number>)[field] =
+			value;
 		setLineItems(updated);
 	};
 
@@ -490,7 +497,7 @@ export default function RecurringInvoicesPage() {
 												<Repeat className="h-4 w-4 text-primary" />
 												<span className="font-medium">{rule.name}</span>
 												<Badge variant={statusColors[rule.status] || "outline"}>
-													{rule.status}
+													{statusLabels[rule.status] || rule.status}
 												</Badge>
 											</div>
 											<div className="mt-1 text-sm text-muted-foreground space-y-0.5">
