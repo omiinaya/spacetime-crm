@@ -4,15 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
-import {
-  Send,
-  Loader2,
-  Mail,
-  Users,
-  CheckCircle2,
-  XCircle,
-  TestTube,
-} from 'lucide-react';
+import { Send, Loader2, Mail, Users, CheckCircle2, XCircle, TestTube } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth';
 
@@ -101,11 +93,7 @@ export default function EmailCampaignsPage() {
           return;
         }
         setResult(data);
-        toast.success(
-          isTest
-            ? 'Test email sent'
-            : `Campaign sent to ${data.sent} recipient(s)`,
-        );
+        toast.success(isTest ? 'Test email sent' : `Campaign sent to ${data.sent} recipient(s)`);
       } catch {
         toast.error('Network error');
       } finally {
@@ -280,7 +268,9 @@ export default function EmailCampaignsPage() {
             </div>
             {result.recipients && result.recipients.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs text-muted-foreground mb-1">First {result.recipients.length} recipients:</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  First {result.recipients.length} recipients:
+                </p>
                 <div className="flex flex-wrap gap-1">
                   {result.recipients.map((r) => (
                     <Badge key={r} variant="outline" className="text-xs">

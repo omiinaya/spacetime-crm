@@ -17,9 +17,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => {
   });
   return (
     <AuthProvider>
-      <QueryClientProvider client={qc}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
     </AuthProvider>
   );
 };
@@ -63,9 +61,7 @@ it('fills the body when a template is clicked', async () => {
   const promoBtn = screen.getByText('Promotional Offer');
   await userEvent.click(promoBtn);
 
-  const textarea = screen.getByPlaceholderText(
-    /<h1>Hello.*name/i,
-  ) as HTMLTextAreaElement;
+  const textarea = screen.getByPlaceholderText(/<h1>Hello.*name/i) as HTMLTextAreaElement;
   expect(textarea.value).toContain('Special Offer');
 });
 
@@ -109,9 +105,7 @@ it('loads service reminder template', async () => {
 
   await userEvent.click(screen.getByText('Service Reminder'));
 
-  const textarea = screen.getByPlaceholderText(
-    /<h1>Hello.*name/i,
-  ) as HTMLTextAreaElement;
+  const textarea = screen.getByPlaceholderText(/<h1>Hello.*name/i) as HTMLTextAreaElement;
   expect(textarea.value).toContain('Service Reminder');
   expect(textarea.value).toContain('due for service');
 });

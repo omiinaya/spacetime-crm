@@ -38,6 +38,5 @@ export const giftCards = {
       body: JSON.stringify(data),
     }),
 
-  void_: (id: string) =>
-    apiFetch<{ ok: boolean }>(`/gift-cards/${id}/void`, { method: 'POST' }),
+  void_: (id: string) => apiFetch<{ ok: boolean }>(`/gift-cards/${id}/void`, { method: 'POST' }),
 };

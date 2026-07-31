@@ -290,9 +290,7 @@ export default function PosPage() {
         customer_name: sellGiftCardCustomer || 'Walk-in',
       });
       if (res.ok) {
-        toast.success(
-          `Gift card sold: ${res.gift_card.code} — $${amount.toFixed(2)}`,
-        );
+        toast.success(`Gift card sold: ${res.gift_card.code} — $${amount.toFixed(2)}`);
         setSellGiftCardAmount('');
         setSellGiftCardCustomer('');
         setShowSellGiftCard(false);
@@ -808,7 +806,11 @@ export default function PosPage() {
                     <Button
                       size="sm"
                       onClick={handleSellGiftCard}
-                      disabled={sellGiftCardLoading || !sellGiftCardAmount || parseFloat(sellGiftCardAmount) <= 0}
+                      disabled={
+                        sellGiftCardLoading ||
+                        !sellGiftCardAmount ||
+                        parseFloat(sellGiftCardAmount) <= 0
+                      }
                     >
                       {sellGiftCardLoading ? (
                         <Loader2 className="w-3 h-3 animate-spin" />

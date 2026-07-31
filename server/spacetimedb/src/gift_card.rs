@@ -1,5 +1,260 @@
 use spacetimedb::*;
 
+/// Tests for gift card reducers — create, redeem, void.
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    fn test_ctx() -> ReducerContext {
+        ReducerContext::__dummy()
+    }
+
+    #[test]
+    fn test_create_gift_card() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-TEST-001".into(),
+            "tenant_1".into(),
+            "cust_1".into(),
+            "Alice".into(),
+            100.0,
+            "user_1".into(),
+            0, // no expiry
+            "".into(),
+        );
+
+        let cards: Vec<GiftCard> = ctx.db.gift_cards().iter().collect();
+        assert_eq!(cards.len(), 1);
+        let card = &cards[0];
+
+        assert!(card.id.starts_with("gift_"));
+        assert_eq!(card.code, "GC-TEST-001");
+        assert_eq!(card.initial_balance, 100.0);
+        assert_eq!(card.remaining_balance, 100.0);
+        assert!(card.active);
+        assert_eq!(card.customer_name, "Alice");
+        assert_eq!(card.created_by, "user_1");
+        assert!(card.created_at > 0);
+    }
+
+    #[test]
+    fn test_create_multiple_gift_cards() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-AAA".into(),
+            "t1".into(),
+            "".into(),
+            "A".into(),
+            50.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+        create_gift_card(
+            &ctx,
+            "GC-BBB".into(),
+            "t1".into(),
+            "".into(),
+            "B".into(),
+            75.0,
+            "u1".into(),
+            0,
+            "notes".into(),
+        );
+
+        let cards: Vec<GiftCard> = ctx.db.gift_cards().iter().collect();
+        assert_eq!(cards.len(), 2);
+
+        let codes: Vec<&str> = cards.iter().map(|c| c.code.as_str()).collect();
+        assert!(codes.contains(&"GC-AAA"));
+        assert!(codes.contains(&"GC-BBB"));
+    }
+
+    #[test]
+    fn test_redeem_gift_card_partial() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-REDEEM".into(),
+            "t1".into(),
+            "".into(),
+            "Bob".into(),
+            100.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+
+        let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
+        redeem_gift_card(&ctx, card_id.clone(), 30.0);
+
+        let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
+        assert_eq!(card.remaining_balance, 70.0);
+        assert!(card.active); // Still has balance
+    }
+
+    #[test]
+    fn test_redeem_gift_card_full() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-FULL".into(),
+            "t1".into(),
+            "".into(),
+            "Carol".into(),
+            50.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+
+        let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
+        redeem_gift_card(&ctx, card_id.clone(), 50.0);
+
+        let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
+        assert_eq!(card.remaining_balance, 0.0);
+        assert!(!card.active); // Exhausted — automatically voided
+    }
+
+    #[test]
+    fn test_redeem_gift_card_over() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-OVER".into(),
+            "t1".into(),
+            "".into(),
+            "Dave".into(),
+            25.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+
+        let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
+        redeem_gift_card(&ctx, card_id.clone(), 40.0);
+
+        let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
+        assert_eq!(card.remaining_balance, 0.0); // Clamped to zero
+        assert!(!card.active);
+    }
+
+    #[test]
+    fn test_redeem_nonexistent_card() {
+        let ctx = test_ctx();
+        // Should not panic — just no-op
+        redeem_gift_card(&ctx, "non_existent_id".into(), 10.0);
+        let cards: Vec<GiftCard> = ctx.db.gift_cards().iter().collect();
+        assert_eq!(cards.len(), 0);
+    }
+
+    #[test]
+    fn test_void_gift_card() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-VOID".into(),
+            "t1".into(),
+            "".into(),
+            "Eve".into(),
+            200.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+
+        let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
+        void_gift_card(&ctx, card_id.clone());
+
+        let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
+        assert!(!card.active); // Voided
+        assert_eq!(card.remaining_balance, 200.0); // Balance preserved
+    }
+
+    #[test]
+    fn test_void_nonexistent_card() {
+        let ctx = test_ctx();
+        // Should not panic
+        void_gift_card(&ctx, "ghost_id".into());
+    }
+
+    #[test]
+    fn test_void_already_voided_card() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-DBL".into(),
+            "t1".into(),
+            "".into(),
+            "Frank".into(),
+            10.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+
+        let card_id = ctx.db.gift_cards().iter().next().unwrap().id.clone();
+        void_gift_card(&ctx, card_id.clone());
+        void_gift_card(&ctx, card_id.clone()); // Double void
+
+        let card = ctx.db.gift_cards().id().find(&card_id).unwrap();
+        assert!(!card.active); // Still voided
+    }
+
+    #[test]
+    fn test_gift_card_initial_balance_matches_remaining() {
+        let ctx = test_ctx();
+
+        create_gift_card(
+            &ctx,
+            "GC-BAL".into(),
+            "t1".into(),
+            "".into(),
+            "Grace".into(),
+            150.0,
+            "u1".into(),
+            0,
+            "".into(),
+        );
+
+        let card = ctx.db.gift_cards().iter().next().unwrap();
+        assert_eq!(card.initial_balance, card.remaining_balance);
+        assert_eq!(card.initial_balance, 150.0);
+    }
+
+    #[test]
+    fn test_gift_card_expiry_field() {
+        let ctx = test_ctx();
+        let future_ts: u64 = 1893456000000; // 2030-01-01
+
+        create_gift_card(
+            &ctx,
+            "GC-EXP".into(),
+            "t1".into(),
+            "".into(),
+            "Heidi".into(),
+            50.0,
+            "u1".into(),
+            future_ts,
+            "has expiry".into(),
+        );
+
+        let card = ctx.db.gift_cards().iter().next().unwrap();
+        assert_eq!(card.expires_at, future_ts);
+        assert_eq!(card.notes, "has expiry");
+        assert!(card.active);
+    }
+}
+
 #[spacetimedb::table(accessor = gift_cards, public)]
 #[derive(Debug, Clone)]
 pub struct GiftCard {
@@ -13,7 +268,7 @@ pub struct GiftCard {
     pub remaining_balance: f64,
     pub created_by: String,
     pub created_at: u64,
-    pub expires_at: u64,        // 0 = never expires
+    pub expires_at: u64, // 0 = never expires
     pub notes: String,
     pub active: bool,
 }

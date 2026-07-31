@@ -24,6 +24,7 @@ mod tests {
             false,
             String::new(),
             String::new(),
+            String::new(),
         );
         let appts: Vec<Appointment> = ctx.db.appointment().iter().collect();
         assert_eq!(appts.len(), 1);
@@ -51,6 +52,7 @@ mod tests {
             1000,
             2000,
             false,
+            "".into(),
             "".into(),
             "".into(),
         );
@@ -85,6 +87,7 @@ mod tests {
             1000,
             2000,
             false,
+            "".into(),
             "".into(),
             "".into(),
         );
@@ -122,6 +125,7 @@ mod tests {
             false,
             "".into(),
             "FREQ=WEEKLY".into(),
+            "".into(),
         );
         let parent = ctx
             .db
@@ -148,6 +152,7 @@ mod tests {
             1000,
             2000,
             false,
+            "".into(),
             "".into(),
             "".into(),
         );

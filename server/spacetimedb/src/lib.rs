@@ -91,6 +91,7 @@ pub use custom_field::*;
 pub use customer::*;
 pub use customer_geolocation::*;
 pub use estimate::*;
+pub use gift_card::*;
 pub use inventory::*;
 pub use invoice::*;
 pub use payment::*;
