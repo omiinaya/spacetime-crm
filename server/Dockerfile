@@ -1,5 +1,5 @@
 # ── Frontend Builder ───────────────────────────────────────
-FROM node:22-alpine AS frontend
+FROM node:22.23.2-alpine AS frontend
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json* ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY web/ ./
 RUN npm run build
 
 # ── Runtime ────────────────────────────────────────────────
-FROM python:3.12-slim
+FROM python:3.12.13-slim
 
 # Minimal system deps — Playwright install --with-deps handles Chromium deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
