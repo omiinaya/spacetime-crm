@@ -39,9 +39,12 @@ export const customers = {
 				error?: string;
 			}>(`/customers/${customerId}/geocode`, { method: "POST" }),
 		geocodeAll: () =>
-			apiFetch<{ geocoded: number; results: any[] }>("/customers/geocode-all", {
-				method: "POST",
-			}),
+			apiFetch<{ geocoded: number; failed: number; skipped: number }>(
+				"/customers/geocode-all",
+				{
+					method: "POST",
+				},
+			),
 	},
 	setPortalPassword: (id: string, password: string) =>
 		apiFetch<{ ok: boolean }>(`/customers/${id}/portal-password`, {

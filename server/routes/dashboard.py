@@ -264,7 +264,9 @@ async def get_reports(
         cid = inv.get("customer_id", "")
         if inv.get("status") == "paid":
             customer_revenue[cid] = customer_revenue.get(cid, 0) + float(inv.get("total", 0))
-    all_customers = await _sql_t("SELECT id, first_name, last_name FROM customer", user["tenant_id"])
+    all_customers = await _sql_t(
+        "SELECT id, first_name, last_name FROM customer", user["tenant_id"]
+    )
     cust_name_map = {
         c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
         for c in all_customers

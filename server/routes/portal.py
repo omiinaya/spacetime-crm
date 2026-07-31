@@ -236,7 +236,9 @@ async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_cu
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
-    items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'")
+    items = await _sql(
+        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'"
+    )
     inv["line_items"] = _sort(items, "sort_order", desc=False)
     payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_sqlesc(invoice_id)}'")
     inv["payments"] = _sort(payments, "created_at")
@@ -361,7 +363,9 @@ async def portal_create_checkout_session(
     if amount_due <= 0:
         raise HTTPException(400, "Invoice is already fully paid")
 
-    line_items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'")
+    line_items = await _sql(
+        f"SELECT * FROM invoice_line_items WHERE invoice_id = '{_sqlesc(invoice_id)}'"
+    )
     items_desc = "; ".join(
         f"{li.get('description', '')} x{li.get('quantity', 1)}" for li in line_items
     )
@@ -387,7 +391,9 @@ async def portal_create_checkout_session(
 @router.get("/api/portal/payment-methods")
 async def portal_payment_methods(customer: dict = Depends(get_current_customer)):
     """List the customer's saved payment methods."""
-    rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE customer_id = '{_sqlesc(customer['id'])}'")
+    rows = await _sql(
+        f"SELECT * FROM saved_payment_methods WHERE customer_id = '{_sqlesc(customer['id'])}'"
+    )
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 
