@@ -593,3 +593,10 @@ class BusinessHoursUpdate(BaseModel):
     friday: DayHours = DayHours()
     saturday: DayHours = DayHours(enabled=False, open="10:00", close="14:00")
     sunday: DayHours = DayHours(enabled=False, open="10:00", close="14:00")
+
+
+class AppConfigUpdate(BaseModel):
+    """App-level config (revenue target, reminder schedule)."""
+
+    revenue_target: float | None = Field(default=None, ge=0)
+    reminder_interval_days: int | None = Field(default=None, ge=1, le=365)

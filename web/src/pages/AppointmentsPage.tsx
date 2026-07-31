@@ -65,7 +65,7 @@ export default function AppointmentsPage() {
 	// ── React Query: appointments list ──
 	const { data: apptsData, isLoading } = useQuery({
 		queryKey: ["appointments", { offset: pag.offset }],
-		queryFn: () => api.appointments.list(pag.offset, PAGE_SIZE),
+		queryFn: () => api.appointments.list(undefined, pag.offset, PAGE_SIZE),
 		placeholderData: keepPreviousData,
 	});
 

@@ -80,6 +80,61 @@ class TestAppointmentCRUD:
         assert "total" in data
         assert isinstance(data["appointments"], list)
 
+    def test_list_appointments_filter_by_customer(
+        self, test_admin_headers: dict, session_suffix: str
+    ):
+        """customer_id filter returns only that customer's appointments."""
+        suf = session_suffix
+        c = create_customer(
+            test_admin_headers,
+            session_suffix=suf,
+            first_name="Timeline",
+            last_name=f"Filter{suf}",
+            email=f"timeline_filter_{suf}@example.com",
+        )
+        cid = c.get("id")
+        assert cid, "Expected customer id"
+        title = f"Timeline Filter {suf}"
+        resp = httpx.post(
+            f"{SERVER_URL}/api/appointments",
+            json={
+                "customer_id": cid,
+                "title": title,
+                "description": "filter test",
+                "start_time": 1783000000000,
+                "end_time": 1783003600000,
+                "all_day": False,
+                "recurrence_rule": "",
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert_ok(resp)
+
+        resp = httpx.get(
+            f"{SERVER_URL}/api/appointments",
+            params={"customer_id": cid},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        data = assert_ok(resp)
+        appts = data["appointments"]
+        assert appts, "Expected at least one appointment for the customer"
+        assert all(a.get("customer_id") == cid for a in appts)
+        assert any(a.get("title") == title for a in appts)
+
+    def test_list_appointments_filter_by_customer_no_match(self, test_admin_headers: dict):
+        """customer_id filter with no matches returns an empty list."""
+        resp = httpx.get(
+            f"{SERVER_URL}/api/appointments",
+            params={"customer_id": "cust_nonexistent_xyz"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        data = assert_ok(resp)
+        assert data["appointments"] == []
+        assert data["total"] == 0
+
     def test_update_appointment_status(self, test_admin_headers: dict, session_suffix: str):
         """Update appointment status to completed."""
         appt_id = _create_appointment(

@@ -28,6 +28,8 @@ import {
 	Play,
 	ListChecks,
 	AlertTriangle,
+	Mail,
+	Loader2,
 	Printer,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -285,6 +287,20 @@ export default function TicketsPage() {
 		mutationFn: ({ id, status }: { id: string; status: string }) =>
 			api.tickets.updateStatus(id, status),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+	});
+
+	const sendEmailMutation = useMutation({
+		mutationFn: (ticketId: string) => api.tickets.sendEmail(ticketId),
+		onSuccess: (data) =>
+			toast.success(
+				`Ticket #${data.ticket_number} sent to ${data.sent_to}`
+			),
+		onError: (e) =>
+			toast.error(
+				e instanceof Error && e.message.includes("400")
+					? "Customer has no email address on file"
+					: "Failed to send email"
+			),
 	});
 
 	const viewTicket = async (t: Ticket) => {
@@ -559,18 +575,34 @@ export default function TicketsPage() {
 							← Back to list
 						</button>
 						<Card>
-							<CardHeader className="flex flex-row items-center justify-between">
+							<CardHeader className="flex flex-row items-center justify-between gap-2">
 								<CardTitle>
 									#{selectedTicket.ticket_number} — {selectedTicket.title}
 								</CardTitle>
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={() => printTicket(selectedTicket)}
-									title="Print ticket summary"
-								>
-									<Printer className="h-3.5 w-3.5" />
-								</Button>
+								<div className="flex items-center gap-2 shrink-0">
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => sendEmailMutation.mutate(selectedTicket.id)}
+										disabled={sendEmailMutation.isPending}
+										title="Email customer about this ticket"
+									>
+										{sendEmailMutation.isPending ? (
+											<Loader2 className="h-3.5 w-3.5 animate-spin" />
+										) : (
+											<Mail className="h-3.5 w-3.5" />
+										)}
+										Email
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => printTicket(selectedTicket)}
+										title="Print ticket summary"
+									>
+										<Printer className="h-3.5 w-3.5" />
+									</Button>
+								</div>
 							</CardHeader>
 							<CardContent className="space-y-3">
 								<p className="text-sm text-muted-foreground">

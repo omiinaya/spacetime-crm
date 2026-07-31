@@ -52,11 +52,16 @@ _RECURRENCE_INTERVALS: dict[str, int] = {
 
 @router.get("/api/appointments")
 async def list_appointments(
+    customer_id: str = "",
     offset: int = 0,
     limit: int = 50,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
-    """List appointments with pagination."""
+    """List appointments with pagination and optional customer filter."""
+    conditions = []
+    if customer_id:
+        conditions.append(f"customer_id = '{customer_id}'")
+    where = " AND ".join(conditions) if conditions else ""
     rows, total = await _paginated(
         user["tenant_id"],
         "appointment",
@@ -64,6 +69,7 @@ async def list_appointments(
         limit=limit,
         order_by="start_time",
         order_desc=False,
+        where_extra=where,
     )
     return {"appointments": rows, "total": total, "offset": offset, "limit": limit}
 

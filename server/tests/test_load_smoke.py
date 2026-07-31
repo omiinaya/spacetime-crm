@@ -64,9 +64,7 @@ def _p95(durations: list[float]) -> float:
 class TestLoadSmoke:
     """Concurrent smoke tests for read-heavy endpoints."""
 
-    async def test_concurrent_stats_and_customers_within_p95_budget(
-        self, auth_headers: dict
-    ):
+    async def test_concurrent_stats_and_customers_within_p95_budget(self, auth_headers: dict):
         """A 16-way parallel burst must succeed with p95 < 3s and no 5xx."""
         headers = {"Authorization": auth_headers["Authorization"]}
         # Rotate through the two endpoints so load is interleaved.
@@ -97,9 +95,7 @@ class TestLoadSmoke:
 
         # (2) No 5xx under concurrency — every request must succeed.
         failures = [(p, s) for p, s in zip(plan, statuses, strict=True) if s != 200]
-        assert not failures, (
-            f"Concurrent load produced non-200 responses: {failures}"
-        )
+        assert not failures, f"Concurrent load produced non-200 responses: {failures}"
         assert all(s < 500 for s in statuses), "5xx detected under concurrency"
 
         # (1) Generous p95 budget — regression detector, not a benchmark.

@@ -30,7 +30,6 @@ pub mod customer_import_test;
 #[cfg(test)]
 pub mod customer_test;
 #[cfg(test)]
-pub mod debug_test;
 pub mod estimate;
 #[cfg(test)]
 pub mod geolocation_tool;

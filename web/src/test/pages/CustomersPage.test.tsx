@@ -55,6 +55,18 @@ function pushCustomerList(customers: unknown[], total = customers.length) {
 	mock.push({ duplicates: [], count: 0 });
 }
 
+/** Push the three activity fetches fired when a detail panel expands:
+ * tickets → invoices → appointments (React Query hook order). */
+function pushActivity(
+	tickets: unknown[] = [],
+	invoices: unknown[] = [],
+	appointments: unknown[] = [],
+) {
+	mock.push({ tickets, total: tickets.length, offset: 0, limit: 5 });
+	mock.push({ invoices, total: invoices.length, offset: 0, limit: 5 });
+	mock.push({ appointments, total: appointments.length, offset: 0, limit: 5 });
+}
+
 beforeEach(() => {
 	mock.reset();
 });
@@ -182,5 +194,130 @@ describe("CustomersPage", () => {
 				),
 			).toBeTruthy();
 		});
+	});
+
+	it("shows unified activity timeline with tickets, invoices, appointments sorted newest first", async () => {
+		pushCustomerList([customerAlice]);
+		// Fixed timestamps so ordering is deterministic (appointment newest).
+		const day = 86_400_000;
+		pushActivity(
+			[
+				{
+					id: "t_1",
+					ticket_number: 101,
+					title: "Screen repair",
+					status: "in_progress",
+					created_at: 1_752_000_000_000 + 3 * day,
+				},
+			],
+			[
+				{
+					id: "i_1",
+					invoice_number: 5001,
+					status: "sent",
+					total: 199.99,
+					currency: "USD",
+					created_at: 1_752_000_000_000 + 1 * day,
+				},
+			],
+			[
+				{
+					id: "a_1",
+					title: "Follow-up call",
+					status: "scheduled",
+					start_time: 1_752_000_000_000 + 5 * day,
+				},
+			],
+		);
+
+		render(<CustomersPage />, { wrapper });
+
+		// Expand the panel
+		await waitFor(() => {
+			expect(screen.getByText("Alice Johnson")).toBeTruthy();
+		});
+		await userEvent.click(screen.getByText("Alice Johnson"));
+
+		await waitFor(() => {
+			expect(screen.getByText(/activity timeline/i)).toBeTruthy();
+		});
+
+		// Appointments are fetched with the customer_id filter
+		await waitFor(() => {
+			const calls = mock.calls();
+			expect(
+				calls.some((c) => c.url.includes("/appointments?customer_id=cust_1")),
+			).toBeTruthy();
+			expect(
+				calls.some((c) => c.url.includes("/tickets?customer_id=cust_1")),
+			).toBeTruthy();
+			expect(
+				calls.some((c) => c.url.includes("/invoices?customer_id=cust_1")),
+			).toBeTruthy();
+		});
+
+		// All three entity types render
+		expect(screen.getByText(/screen repair/i)).toBeTruthy();
+		expect(screen.getByText(/invoice #5001/i)).toBeTruthy();
+		expect(screen.getByText(/follow-up call/i)).toBeTruthy();
+
+		// Timeline order: appointment (5d) → ticket (3d) → invoice (1d)
+		const timelineButtons = screen
+			.getAllByRole("button")
+			.filter((b) => b.getAttribute("title")?.startsWith("Open "));
+		expect(timelineButtons).toHaveLength(3);
+		const labels = timelineButtons.map((b) => b.textContent ?? "");
+		const apptIdx = labels.findIndex((l) => l.includes("Follow-up call"));
+		const ticketIdx = labels.findIndex((l) => l.includes("Screen repair"));
+		const invoiceIdx = labels.findIndex((l) => l.includes("Invoice #5001"));
+		expect(apptIdx).toBeGreaterThan(-1);
+		expect(ticketIdx).toBeGreaterThan(apptIdx);
+		expect(invoiceIdx).toBeGreaterThan(ticketIdx);
+	});
+
+	it("shows empty state when customer has no activity", async () => {
+		pushCustomerList([customerAlice]);
+		pushActivity(); // all three empty
+
+		render(<CustomersPage />, { wrapper });
+
+		await waitFor(() => {
+			expect(screen.getByText("Alice Johnson")).toBeTruthy();
+		});
+		await userEvent.click(screen.getByText("Alice Johnson"));
+
+		await waitFor(() => {
+			expect(screen.getByText(/no activity yet/i)).toBeTruthy();
+		});
+	});
+
+	it("navigates to entity pages when timeline events are clicked", async () => {
+		pushCustomerList([customerAlice]);
+		pushActivity(
+			[{ id: "t_1", ticket_number: 101, title: "Screen repair", status: "open", created_at: 1_752_000_000_000 }],
+			[{ id: "i_1", invoice_number: 5001, status: "paid", total: 99.0, currency: "USD", created_at: 1_751_000_000_000 }],
+			[{ id: "a_1", title: "Follow-up call", status: "completed", start_time: 1_753_000_000_000 }],
+		);
+
+		const navigate = vi.fn();
+		render(<CustomersPage onNavigate={navigate} />, { wrapper });
+
+		await waitFor(() => {
+			expect(screen.getByText("Alice Johnson")).toBeTruthy();
+		});
+		await userEvent.click(screen.getByText("Alice Johnson"));
+
+		await waitFor(() => {
+			expect(screen.getByText(/activity timeline/i)).toBeTruthy();
+		});
+
+		await userEvent.click(screen.getByTitle(/open ticket — #101 screen repair/i));
+		expect(navigate).toHaveBeenCalledWith("tickets");
+
+		await userEvent.click(screen.getByTitle(/open invoice — invoice #5001/i));
+		expect(navigate).toHaveBeenCalledWith("invoices");
+
+		await userEvent.click(screen.getByTitle(/open appointment — follow-up call/i));
+		expect(navigate).toHaveBeenCalledWith("appointments");
 	});
 });

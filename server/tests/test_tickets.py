@@ -28,18 +28,22 @@ def _create_ticket(
     Uses a unique serial number and direct STDB SQL to find the ticket,
     ensuring full isolation from other test data.
     session_suffix ensures cleanup by suffix works across sessions.
+    Pass customer_id in overrides to attach the ticket to an existing customer
+    (skips creating a new one).
     """
     suf = suffix or unique_suffix()
-    email = f"tkt-cust-{session_suffix}-{suf}@example.com"
-    cust = create_customer(
-        test_admin_headers,
-        session_suffix=session_suffix,
-        first_name="Ticket",
-        last_name=f"Test{suf}",
-        email=email,
-    )
-    cid = cust.get("id")
-    assert cid, f"Failed to create customer: {cust}"
+    cid = overrides.get("customer_id")
+    if not cid:
+        email = f"tkt-cust-{session_suffix}-{suf}@example.com"
+        cust = create_customer(
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Ticket",
+            last_name=f"Test{suf}",
+            email=email,
+        )
+        cid = cust.get("id")
+        assert cid, f"Failed to create customer: {cust}"
 
     device_serial = overrides.get("device_serial", f"SN-{session_suffix}-{suf}")
     resp = httpx.post(
@@ -68,6 +72,36 @@ def _create_ticket(
     tid = table["rows"][0][0]  # id is first column
     _track_entity("ticket", tid)
     return tid
+
+
+def _create_customer_no_email(
+    test_admin_headers: dict, session_suffix: str = "", suffix: str = ""
+) -> str:
+    """Create a customer with no email address and return its ID."""
+    suf = suffix or unique_suffix()
+    last_name = f"NoEmail{session_suffix}{suf}"
+    resp = httpx.post(
+        f"{SERVER_URL}/api/customers",
+        json={
+            "first_name": "NoEmail",
+            "last_name": last_name,
+            "email": "",
+            "phone": "555-0000",
+        },
+        headers=test_admin_headers,
+        timeout=10,
+    )
+    assert_ok(resp)
+
+    # Look up customer by unique last_name via STDB SQL
+    result = _stdb_sql(f"SELECT * FROM customer WHERE last_name = '{last_name}'")
+    table = result[0]
+    assert table.get("rows") and len(table["rows"]) == 1, (
+        f"Expected 1 customer with last_name {last_name}"
+    )
+    cid = table["rows"][0][0]
+    _track_entity("customer", cid)
+    return cid
 
 
 class TestTicketFlow:
@@ -334,4 +368,61 @@ class TestTicketSLA:
             json={"targets": {"urgent": 4, "high": 24, "medium": 72, "low": 120}},
             timeout=10,
         )
+        assert resp.status_code in (401, 403)
+
+
+class TestTicketEmail:
+    """Send ticket email to customer endpoint."""
+
+    def test_send_email_success(
+        self, test_admin_headers: dict, session_suffix: str
+    ):
+        """Send email on a valid ticket returns ok + sent_to."""
+        tid = _create_ticket(
+            test_admin_headers, session_suffix, "sendmail", title="Email Test"
+        )
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets/{tid}/send-email",
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        data = assert_ok(resp)
+        assert data["ok"] is True
+        assert "sent_to" in data
+        assert "ticket_number" in data
+
+    def test_send_email_no_customer_email(
+        self, test_admin_headers: dict, session_suffix: str
+    ):
+        """Send email returns 400 when the customer has no email address."""
+        cid = _create_customer_no_email(
+            test_admin_headers, session_suffix, "noemail"
+        )
+        tid = _create_ticket(
+            test_admin_headers,
+            session_suffix,
+            "noemail",
+            customer_id=cid,
+            title="No Email Test",
+        )
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets/{tid}/send-email",
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 400
+        assert "no email" in resp.text
+
+    def test_send_email_missing_ticket(self, test_admin_headers: dict):
+        """Send email on a nonexistent ticket returns 404."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets/nonexistent-ticket-id/send-email",
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 404
+
+    def test_send_email_unauthorized(self, client: httpx.Client):
+        """Send email requires auth."""
+        resp = client.post("/api/tickets/any-id/send-email", timeout=10)
         assert resp.status_code in (401, 403)

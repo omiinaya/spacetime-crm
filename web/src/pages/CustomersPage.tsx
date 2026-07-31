@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api, Customer } from "../lib/api";
-import type { Ticket as TicketType, Invoice } from "../lib/api";
+import type { Ticket as TicketType, Invoice, Appointment } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { queryClient } from "../lib/query-client";
 import {
@@ -26,6 +26,7 @@ import {
 	Key,
 	Ticket as TicketIcon,
 	Receipt,
+	Calendar,
 	ChevronDown,
 	ChevronUp,
 	Copy,
@@ -71,14 +72,29 @@ const STATUS_COLORS: Record<string, string> = {
 	approved: "bg-green-500",
 };
 
+interface TimelineEvent {
+	id: string;
+	ts: number;
+	kind: "ticket" | "invoice" | "appointment";
+	label: string;
+	status: string;
+	detail: string;
+	page: string;
+}
+
 function CustomerDetailPanel({
 	customer,
 	onClose,
+	onNavigate,
 }: {
 	customer: Customer;
 	onClose: () => void;
+	onNavigate?: (page: string) => void;
 }) {
-	const { data: ticketsData } = useQuery({
+	const {
+		data: ticketsData,
+		isLoading: ticketsLoading,
+	} = useQuery({
 		queryKey: ["customer-tickets", customer.id],
 		queryFn: () =>
 			api.tickets.list("", customer.id, 0, 5) as Promise<{
@@ -87,7 +103,10 @@ function CustomerDetailPanel({
 			}>,
 	});
 
-	const { data: invoicesData } = useQuery({
+	const {
+		data: invoicesData,
+		isLoading: invoicesLoading,
+	} = useQuery({
 		queryKey: ["customer-invoices", customer.id],
 		queryFn: () =>
 			api.invoices.list("", customer.id, 0, 5) as Promise<{
@@ -96,16 +115,39 @@ function CustomerDetailPanel({
 			}>,
 	});
 
+	const {
+		data: appointmentsData,
+		isLoading: appointmentsLoading,
+	} = useQuery({
+		queryKey: ["customer-appointments", customer.id],
+		queryFn: () =>
+			api.appointments.list(customer.id, 0, 5) as Promise<{
+				appointments: Appointment[];
+				total: number;
+			}>,
+	});
+
 	const tickets = ticketsData?.tickets ?? [];
 	const invoices = invoicesData?.invoices ?? [];
+	const appointments = appointmentsData?.appointments ?? [];
+	const loading = ticketsLoading || invoicesLoading || appointmentsLoading;
 
 	const formatDate = (ts: number) => {
 		if (!ts) return "—";
-		const d = new Date(ts);
-		return d.toLocaleDateString("en-US", {
+		return new Date(ts).toLocaleDateString("en-US", {
 			month: "short",
 			day: "numeric",
 			year: "numeric",
+		});
+	};
+
+	const formatDateTime = (ts: number) => {
+		if (!ts) return "—";
+		return new Date(ts).toLocaleString("en-US", {
+			month: "short",
+			day: "numeric",
+			hour: "numeric",
+			minute: "2-digit",
 		});
 	};
 
@@ -115,9 +157,49 @@ function CustomerDetailPanel({
 		return `${sym}${val.toFixed(2)}`;
 	};
 
+	// Merge tickets (created_at), invoices (created_at), and appointments
+	// (start_time) into one chronological timeline, newest first.
+	const events: TimelineEvent[] = [
+		...tickets.map((t) => ({
+			id: `ticket-${t.id}`,
+			ts: t.created_at,
+			kind: "ticket" as const,
+			label: `#${t.ticket_number} ${t.title || "Untitled"}`,
+			status: t.status,
+			detail: formatDate(t.created_at),
+			page: "tickets",
+		})),
+		...invoices.map((inv) => ({
+			id: `invoice-${inv.id}`,
+			ts: inv.created_at,
+			kind: "invoice" as const,
+			label: `Invoice #${inv.invoice_number}`,
+			status: inv.status,
+			detail: `${formatCurrency(inv.total, inv.currency)} · ${formatDate(
+				inv.created_at,
+			)}`,
+			page: "invoices",
+		})),
+		...appointments.map((a) => ({
+			id: `appointment-${a.id}`,
+			ts: a.start_time,
+			kind: "appointment" as const,
+			label: a.title || "Appointment",
+			status: a.status,
+			detail: formatDateTime(a.start_time),
+			page: "appointments",
+		})),
+	].sort((a, b) => b.ts - a.ts);
+
+	const KIND_META = {
+		ticket: { icon: TicketIcon, bg: "bg-blue-500/15 text-blue-400" },
+		invoice: { icon: Receipt, bg: "bg-green-500/15 text-green-400" },
+		appointment: { icon: Calendar, bg: "bg-purple-500/15 text-purple-400" },
+	} as const;
+
 	return (
 		<div className="col-span-full border border-primary/20 rounded-lg bg-muted/30 p-4 animate-in slide-in-from-top-2 duration-200">
-			<div className="flex items-start justify-between mb-3">
+			<div className="flex items-start justify-between mb-4">
 				<div>
 					<h3 className="font-semibold text-lg">
 						{customer.first_name} {customer.last_name}
@@ -135,95 +217,88 @@ function CustomerDetailPanel({
 				</Button>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				{/* Recent Tickets */}
-				<Card>
-					<CardHeader className="py-2 px-3">
-						<CardTitle className="text-sm font-medium flex items-center gap-1.5">
-							<TicketIcon className="h-3.5 w-3.5" /> Recent Tickets (
-							{tickets.length})
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="py-1 px-3">
-						{tickets.length === 0 ? (
-							<p className="text-xs text-muted-foreground py-2">No tickets</p>
-						) : (
-							<div className="space-y-1.5">
-								{tickets.map((t) => (
-									<div
-										key={t.id}
-										className="flex items-center justify-between text-xs py-1"
-									>
-										<div className="flex items-center gap-2 min-w-0">
-											<span
-												className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[t.status] || "bg-zinc-400"}`}
-											/>
-											<span className="truncate">
-												#{t.ticket_number} {t.title}
-											</span>
+			{/* Unified chronological activity timeline */}
+			<Card>
+				<CardHeader className="py-2 px-3">
+					<CardTitle className="text-sm font-medium flex items-center gap-1.5">
+						<Calendar className="h-3.5 w-3.5" /> Activity Timeline
+						<span className="text-muted-foreground font-normal">
+							({tickets.length} tickets · {invoices.length} invoices ·{" "}
+							{appointments.length} appointments)
+						</span>
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="py-2 px-3">
+					{loading ? (
+						<p className="text-xs text-muted-foreground py-3">
+							Loading activity…
+						</p>
+					) : events.length === 0 ? (
+						<p className="text-xs text-muted-foreground py-3">
+							No activity yet — tickets, invoices, and appointments will
+							appear here.
+						</p>
+					) : (
+						<div>
+							{events.map((ev, i) => {
+								const meta = KIND_META[ev.kind];
+								const Icon = meta.icon;
+								return (
+									<div key={ev.id} className="flex gap-3">
+										{/* Icon + connector line */}
+										<div className="flex flex-col items-center">
+											<div
+												className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${meta.bg}`}
+											>
+												<Icon className="h-3.5 w-3.5" />
+											</div>
+											{i < events.length - 1 && (
+												<div className="w-px flex-1 bg-border" />
+											)}
 										</div>
-										<Badge
-											variant="outline"
-											className="text-[10px] px-1 py-0 h-4 shrink-0"
+										{/* Event content — click navigates to entity page */}
+										<button
+											type="button"
+											className="flex-1 min-w-0 text-left py-1 pb-3 group"
+											onClick={() => onNavigate?.(ev.page)}
+											title={`Open ${ev.kind} — ${ev.label}`}
 										>
-											{t.status.replace(/_/g, " ")}
-										</Badge>
-									</div>
-								))}
-							</div>
-						)}
-					</CardContent>
-				</Card>
-
-				{/* Recent Invoices */}
-				<Card>
-					<CardHeader className="py-2 px-3">
-						<CardTitle className="text-sm font-medium flex items-center gap-1.5">
-							<Receipt className="h-3.5 w-3.5" /> Recent Invoices (
-							{invoices.length})
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="py-1 px-3">
-						{invoices.length === 0 ? (
-							<p className="text-xs text-muted-foreground py-2">No invoices</p>
-						) : (
-							<div className="space-y-1.5">
-								{invoices.map((inv) => (
-									<div
-										key={inv.id}
-										className="flex items-center justify-between text-xs py-1"
-									>
-										<div className="flex items-center gap-2 min-w-0">
-											<span
-												className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[inv.status] || "bg-zinc-400"}`}
-											/>
-											<span className="truncate">
-												#{inv.invoice_number} — {formatDate(inv.created_at)}
-											</span>
-										</div>
-										<div className="flex items-center gap-2 shrink-0">
-											<span className="font-medium">
-												{formatCurrency(inv.total, inv.currency)}
-											</span>
+											<div className="flex items-center gap-2">
+												<span
+													className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+														STATUS_COLORS[ev.status] || "bg-zinc-400"
+													}`}
+												/>
+												<span className="text-xs font-medium truncate group-hover:text-primary transition-colors">
+													{ev.label}
+												</span>
+												<span className="text-[10px] text-muted-foreground shrink-0 ml-auto">
+													{ev.detail}
+												</span>
+											</div>
 											<Badge
 												variant="outline"
-												className="text-[10px] px-1 py-0 h-4"
+												className="text-[10px] px-1 py-0 h-4 mt-1 ml-3.5"
 											>
-												{inv.status}
+												{ev.status.replace(/_/g, " ")}
 											</Badge>
-										</div>
+										</button>
 									</div>
-								))}
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			</div>
+								);
+							})}
+						</div>
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 }
 
-export default function CustomersPage() {
+export default function CustomersPage({
+	onNavigate,
+}: {
+	onNavigate?: (page: string) => void;
+}) {
 	const pag = usePagination(PAGE_SIZE);
 	const [search, setSearch] = useState("");
 	const [showForm, setShowForm] = useState(false);
@@ -564,6 +639,7 @@ export default function CustomersPage() {
 							<CustomerDetailPanel
 								customer={c}
 								onClose={() => setExpandedCustomerId(null)}
+								onNavigate={onNavigate}
 							/>
 						)}
 					</div>

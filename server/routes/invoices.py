@@ -307,10 +307,20 @@ async def trigger_overdue_check(user: dict = Depends(require_role("admin"))):
 
 @router.post("/api/invoices/send-overdue-reminders")
 async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
-    """Find overdue invoices and send email/SMS reminders to each customer."""
+    """Find overdue invoices and send email/SMS reminders to each customer.
+
+    Uses the admin-configurable reminder interval (app config
+    ``reminder_interval_days``): only invoices whose due date is at least
+    that many days in the past get a reminder. Defaults to 3 days.
+    """
+    from app_config import get_config as _app_get
+
     now = int(time.time() * 1000)
+    app_cfg = _app_get()
+    interval_days = int(app_cfg.get("reminder_interval_days", 3))
+    cutoff = now - interval_days * 86_400_000  # days → ms
     rows = await _sql(
-        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now}))"
+        f"SELECT * FROM invoices WHERE tenant_id = '{user['tenant_id']}' AND (status = 'overdue' OR ((status = 'sent' OR status = 'partial') AND due_date > 0 AND due_date < {now})) AND due_date > 0 AND due_date < {cutoff}"
     )
     sent = {"email": 0, "sms": 0, "total": 0}
     for inv in rows:
@@ -338,9 +348,9 @@ async def send_overdue_reminders(user: dict = Depends(require_role("admin"))):
         user,
         "send_overdue_reminders",
         "invoice",
-        f"email={sent['email']} sms={sent['sms']}",
+        f"email={sent['email']} sms={sent['sms']} interval_days={interval_days}",
     )
-    return {"ok": True, **sent}
+    return {"ok": True, "interval_days": interval_days, **sent}
 
 
 @router.put("/api/invoices/{invoice_id}/status")

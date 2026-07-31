@@ -12,6 +12,7 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
 
 // ─── Type aliases matching spacetimedb_bindings_sys raw types ──
 
@@ -32,19 +33,35 @@ impl RowIter {
 }
 
 // ─── Global in-memory datastore ──
+//
+// IMPORTANT: table/index ID assignment must be PROCESS-GLOBAL, not per-thread.
+// The `#[table]` macro caches `table_id()` / `index_id()` in process-global
+// `OnceLock`s, so the very first thread to touch a table pins its ID for the
+// whole test binary. If the stub assigned IDs from thread-local counters,
+// parallel test threads would disagree about which TableId means which table,
+// and point/table scans would return rows from the wrong table (garbage
+// decodes, `Failed to decode row!` panics).
+
+/// Maps table names to TableIds (process-global).
+static TABLE_NAME_TO_ID: LazyLock<Mutex<HashMap<String, TableId>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Maps index names to IndexIds (process-global).
+static INDEX_NAME_TO_ID: LazyLock<Mutex<HashMap<String, IndexId>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Auto-incrementing counters for table/index IDs (process-global).
+static NEXT_TABLE_ID: Mutex<u32> = Mutex::new(1);
+static NEXT_INDEX_ID: Mutex<u32> = Mutex::new(1);
+
+/// Maps IndexId -> owning table name, parsed from the canonical index name
+/// (`{table}_{cols}_idx_{kind}`). Used to scope point scans to one table.
+static INDEX_ID_TO_TABLE: LazyLock<Mutex<HashMap<IndexId, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 thread_local! {
-    /// Maps table names to TableIds.
-    static TABLE_NAME_TO_ID: RefCell<HashMap<String, TableId>> = RefCell::new(HashMap::new());
-
-    /// Maps index names to IndexIds.
-    static INDEX_NAME_TO_ID: RefCell<HashMap<String, IndexId>> = RefCell::new(HashMap::new());
-
-    /// Auto-incrementing counter for table/index IDs.
-    static NEXT_TABLE_ID: RefCell<u32> = RefCell::new(1);
-    static NEXT_INDEX_ID: RefCell<u32> = RefCell::new(1);
-
     /// Stores rows for each table: TableId -> Vec of (primary_key_bytes, row_bytes).
+    /// Per-thread and reset between tests (see `reset_datastore`).
     static TABLE_ROWS: RefCell<HashMap<TableId, Vec<(Vec<u8>, Vec<u8>)>>> = RefCell::new(HashMap::new());
 
     /// Iterator storage: handle -> Vec of row bytes to yield.
@@ -57,33 +74,45 @@ thread_local! {
 // ─── Helper: get or create a TableId from a name ──
 
 fn get_table_id(name: &str) -> TableId {
-    TABLE_NAME_TO_ID.with(|m| {
-        let mut m = m.borrow_mut();
-        if let Some(id) = m.get(name) {
-            return *id;
-        }
-        let id = NEXT_TABLE_ID.with(|n| {
-            let n = n.replace_with(|n| *n + 1);
-            TableId(n)
-        });
-        m.insert(name.to_string(), id);
-        id
-    })
+    let mut m = TABLE_NAME_TO_ID.lock().unwrap();
+    if let Some(id) = m.get(name) {
+        return *id;
+    }
+    let mut n = NEXT_TABLE_ID.lock().unwrap();
+    let id = TableId(*n);
+    *n += 1;
+    m.insert(name.to_string(), id);
+    id
 }
 
 fn get_index_id(name: &str) -> IndexId {
-    INDEX_NAME_TO_ID.with(|m| {
-        let mut m = m.borrow_mut();
-        if let Some(id) = m.get(name) {
-            return *id;
+    let mut m = INDEX_NAME_TO_ID.lock().unwrap();
+    if let Some(id) = m.get(name) {
+        return *id;
+    }
+    let mut n = NEXT_INDEX_ID.lock().unwrap();
+    let id = IndexId(*n);
+    *n += 1;
+    m.insert(name.to_string(), id);
+
+    // Canonical index names look like `{table}_{cols}_idx_{kind}` (see
+    // spacetimedb-bindings-macro table.rs). Recover the owning table by
+    // taking the longest registered table name that prefixes the
+    // `{table}_{cols}` portion. Table names may themselves contain
+    // underscores (e.g. `customer_geolocation`), hence longest-prefix match.
+    if let Some(idx_marker) = name.rfind("_idx_") {
+        let prefix = &name[..idx_marker];
+        let tables = TABLE_NAME_TO_ID.lock().unwrap();
+        let best = tables
+            .keys()
+            .filter(|t| prefix == t.as_str() || prefix.starts_with(&format!("{}_", t)))
+            .max_by_key(|t| t.len())
+            .cloned();
+        if let Some(table) = best {
+            INDEX_ID_TO_TABLE.lock().unwrap().insert(id, table);
         }
-        let id = NEXT_INDEX_ID.with(|n| {
-            let n = n.replace_with(|n| *n + 1);
-            IndexId(n)
-        });
-        m.insert(name.to_string(), id);
-        id
-    })
+    }
+    id
 }
 
 /// Reset the entire in-memory datastore for the current thread.
@@ -96,10 +125,9 @@ fn get_index_id(name: &str) -> IndexId {
 /// before it starts (see `dummy_ctx`).
 #[cfg(test)]
 pub fn reset_datastore() {
-    TABLE_NAME_TO_ID.with(|m| m.borrow_mut().clear());
-    INDEX_NAME_TO_ID.with(|m| m.borrow_mut().clear());
-    NEXT_TABLE_ID.with(|n| *n.borrow_mut() = 1);
-    NEXT_INDEX_ID.with(|n| *n.borrow_mut() = 1);
+    // Only per-test DATA is cleared. Table/index ID registries are
+    // process-global (the `#[table]` macro caches them in OnceLocks) and must
+    // stay stable across tests.
     TABLE_ROWS.with(|m| m.borrow_mut().clear());
     ITERATORS.with(|m| m.borrow_mut().clear());
     NEXT_ITER_HANDLE.with(|n| *n.borrow_mut() = 1);
@@ -282,42 +310,49 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
         unsafe { std::slice::from_raw_parts(point_ptr, point_len) }.to_vec()
     };
 
-    eprintln!(
-        "POINT SCAN: index_id={:?} point={:?} ({} bytes)",
-        _index_id,
-        point_bytes,
-        point_bytes.len()
-    );
+    // For point index scans, find rows of the index's OWN table whose index
+    // column matches the point. The primary key is the first field, so for the
+    // pk index (`{table}_id_idx_pk`) comparing the point against the first
+    // field of each row is exact. Scoping to the owning table is essential:
+    // scanning every table returns rows that happen to share the same pk
+    // value, which callers then decode as the wrong type (garbage decodes).
+    let owner_table = INDEX_ID_TO_TABLE
+        .lock()
+        .unwrap()
+        .get(&_index_id)
+        .cloned()
+        .and_then(|t| TABLE_NAME_TO_ID.lock().unwrap().get(&t).copied());
+
+    let matching_rows: Vec<Vec<u8>> = TABLE_ROWS.with(|m| {
+        let m = m.borrow();
+        let mut result = Vec::new();
+        if let Some(owner_tid) = owner_table {
+            if let Some(rows) = m.get(&owner_tid) {
+                for (pk, row) in rows.iter() {
+                    if pk == &point_bytes || pk.starts_with(&point_bytes) {
+                        result.push(row.clone());
+                    }
+                }
+            }
+        } else {
+            // Index not yet mapped to a table: fall back to a pk match across
+            // all tables (legacy behavior).
+            for (_table_id, rows) in m.iter() {
+                for (pk, row) in rows.iter() {
+                    if pk == &point_bytes || pk.starts_with(&point_bytes) {
+                        result.push(row.clone());
+                    }
+                }
+            }
+        }
+        result
+    });
 
     let handle = NEXT_ITER_HANDLE.with(|n| {
         let h = *n.borrow();
         n.replace_with(|n| *n + 1);
         h
     });
-
-    // For point index scans, we need to find rows where the index column matches the point.
-    // The point is a BSATN-encoded value (e.g., a String for the primary key).
-    // We scan all tables and find rows whose primary key matches the point.
-    // Since the primary key is the first field, and the point is the BSATN encoding
-    // of the primary key value, we can compare the point bytes with the first
-    // field of each row.
-    let matching_rows: Vec<Vec<u8>> = TABLE_ROWS.with(|m| {
-        let m = m.borrow();
-        let mut result = Vec::new();
-        for (table_id, rows) in m.iter() {
-            for (pk, row) in rows.iter() {
-                let matched = pk == &point_bytes || pk.starts_with(&point_bytes);
-                if matched {
-                    eprintln!("  MATCH: table={:?} pk={:?}", table_id, pk);
-                }
-                if matched {
-                    result.push(row.clone());
-                }
-            }
-        }
-        result
-    });
-    eprintln!("POINT SCAN result: {} rows", matching_rows.len());
 
     ITERATORS.with(|iters| {
         iters.borrow_mut().insert(handle, matching_rows);
@@ -342,18 +377,39 @@ pub extern "C" fn datastore_delete_by_index_scan_point_bsatn(
         unsafe { std::slice::from_raw_parts(point_ptr, point_len) }.to_vec()
     };
 
+    // Scope deletion to the index's own table, same as the point scan.
+    let owner_table = INDEX_ID_TO_TABLE
+        .lock()
+        .unwrap()
+        .get(&_index_id)
+        .cloned()
+        .and_then(|t| TABLE_NAME_TO_ID.lock().unwrap().get(&t).copied());
+
     let deleted_count: u32 = TABLE_ROWS.with(|m| {
         let mut m = m.borrow_mut();
         let mut count = 0u32;
-        for (_table_id, rows) in m.iter_mut() {
-            rows.retain(|(pk, _)| {
-                if pk == &point_bytes || pk.starts_with(&point_bytes) {
-                    count += 1;
-                    false // remove
-                } else {
-                    true // keep
-                }
-            });
+        if let Some(owner_tid) = owner_table {
+            if let Some(rows) = m.get_mut(&owner_tid) {
+                rows.retain(|(pk, _)| {
+                    if pk == &point_bytes || pk.starts_with(&point_bytes) {
+                        count += 1;
+                        false // remove
+                    } else {
+                        true // keep
+                    }
+                });
+            }
+        } else {
+            for (_table_id, rows) in m.iter_mut() {
+                rows.retain(|(pk, _)| {
+                    if pk == &point_bytes || pk.starts_with(&point_bytes) {
+                        count += 1;
+                        false // remove
+                    } else {
+                        true // keep
+                    }
+                });
+            }
         }
         count
     });
@@ -436,28 +492,4 @@ pub extern "C" fn row_iter_bsatn_close(iter: RowIter) -> u16 {
         iters.borrow_mut().remove(&iter.0);
     });
     0 // success
-}
-
-/// TEMPORARY DEBUG — dump datastore contents.
-#[cfg(test)]
-pub fn debug_dump() {
-    TABLE_ROWS.with(|m| {
-        for (tid, rows) in m.borrow().iter() {
-            eprintln!("TABLE {:?}: {} rows", tid, rows.len());
-            for (i, (pk, row)) in rows.iter().enumerate() {
-                eprintln!(
-                    "  row {}: pk={:?} len={} bytes={:?}",
-                    i,
-                    pk,
-                    row.len(),
-                    &row[..row.len().min(48)]
-                );
-            }
-        }
-    });
-    TABLE_NAME_TO_ID.with(|m| {
-        for (name, id) in m.borrow().iter() {
-            eprintln!("  name {:?} -> {:?}", name, id);
-        }
-    });
 }

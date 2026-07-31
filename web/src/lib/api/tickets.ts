@@ -36,6 +36,15 @@ export const tickets = {
 			method: "PUT",
 			body: JSON.stringify({ assigned_user_id }),
 		}),
+	sendEmail: (ticketId: string) =>
+		apiFetch<{
+			ok: boolean;
+			sent_to: string;
+			ticket_number: number;
+			status: string;
+		}>(`/tickets/${ticketId}/send-email`, {
+			method: "POST",
+		}),
 	notes: {
 		list: (ticketId: string) =>
 			apiFetch<{ notes: TicketNote[] }>(`/tickets/${ticketId}/notes`),

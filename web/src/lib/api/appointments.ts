@@ -2,8 +2,9 @@ import { apiFetch, buildPaginationParams } from "./client";
 import type { Appointment } from "./types";
 
 export const appointments = {
-	list: (offset?: number, limit?: number) => {
+	list: (customerId?: string, offset?: number, limit?: number) => {
 		const p = new URLSearchParams();
+		if (customerId) p.set("customer_id", customerId);
 		if (offset !== undefined) p.set("offset", String(offset));
 		if (limit !== undefined) p.set("limit", String(limit));
 		const qs = p.toString();

@@ -312,7 +312,11 @@ function AppShell() {
 							case "dashboard":
 								return <DashboardPage stats={stats} onNavigate={setPage} />;
 							case "customers":
-								return <CustomersPage />;
+								return (
+									<CustomersPage
+										onNavigate={(page: string) => setPage(page as any)}
+									/>
+								);
 							case "tickets":
 								return <TicketsPage />;
 							case "invoices":

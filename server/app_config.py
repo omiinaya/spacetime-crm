@@ -12,8 +12,12 @@ logger = logging.getLogger(__name__)
 CONFIG_DIR = Path(__file__).resolve().parent / "config"
 CONFIG_PATH = CONFIG_DIR / "app_config.json"
 
+# Admin-selectable overdue reminder intervals (days after due date).
+REMINDER_INTERVAL_OPTIONS = (1, 3, 7, 14)
+
 DEFAULT_CONFIG = {
     "revenue_target": 25000.0,
+    "reminder_interval_days": 3,
 }
 
 
@@ -33,8 +37,25 @@ def get_config() -> dict:
         return dict(DEFAULT_CONFIG)
 
 
+def _validate_reminder_interval(data: dict) -> None:
+    """Validate reminder_interval_days if present — must be a positive integer.
+
+    Raises ValueError on invalid input so callers can surface a 4xx response.
+    """
+    if "reminder_interval_days" not in data:
+        return
+    try:
+        value = int(data["reminder_interval_days"])
+    except (TypeError, ValueError):
+        raise ValueError("reminder_interval_days must be a positive integer")
+    if value < 1:
+        raise ValueError("reminder_interval_days must be a positive integer")
+    data["reminder_interval_days"] = value
+
+
 def update_config(data: dict) -> dict:
     """Merge data into app config and persist."""
+    _validate_reminder_interval(data)
     _ensure_dir()
     current = get_config()
     current.update(data)

@@ -370,6 +370,50 @@ async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin
     return {"ok": True}
 
 
+# ── TICKET EMAIL ──
+
+
+@router.post("/api/tickets/{ticket_id}/send-email")
+async def send_ticket_email(
+    ticket_id: str,
+    user: dict = Depends(require_role("admin", "tech", "front_desk")),
+):
+    """Send a ticket status email to the customer directly from the ticket detail view."""
+    rows = await _sql(
+        f"SELECT * FROM ticket WHERE id = '{_sqlesc(ticket_id)}' AND tenant_id = '{user['tenant_id']}'"
+    )
+    if not rows:
+        raise HTTPException(404, "Ticket not found")
+    t = rows[0]
+
+    cust = await _sql(f"SELECT * FROM customer WHERE id = '{t.get('customer_id', '')}'")
+    if not cust:
+        raise HTTPException(400, "Customer not found for this ticket")
+    customer_email = _mail_customer_email(cust[0])
+    if not customer_email:
+        raise HTTPException(400, "Customer has no email address on file")
+
+    status = t.get("status", "open")
+    link = f"{settings.app_url}/portal/"
+    _notify_ticket_status_change(
+        customer_email, t.get("ticket_number", 0), t.get("title", ""), status, link
+    )
+
+    await _log_audit(
+        user,
+        "send_email",
+        "ticket",
+        ticket_id,
+        f"to={customer_email} ticket={t.get('ticket_number', 0)}",
+    )
+    return {
+        "ok": True,
+        "sent_to": customer_email,
+        "ticket_number": t.get("ticket_number", 0),
+        "status": status,
+    }
+
+
 # ── TICKET TIMERS ──
 
 

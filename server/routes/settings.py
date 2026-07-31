@@ -24,7 +24,12 @@ from mail import (
 from mail import (
     update_settings as _mail_update,
 )
-from models import BusinessHoursUpdate, MailSettingsUpdate, SMSSettingsUpdate
+from models import (
+    AppConfigUpdate,
+    BusinessHoursUpdate,
+    MailSettingsUpdate,
+    SMSSettingsUpdate,
+)
 from rate_limit import limiter
 from sms import (
     get_settings as _sms_get,
@@ -149,9 +154,10 @@ async def app_config_get(
 @limiter.limit("30/minute")
 async def app_config_save(
     request: Request,
-    body: dict,
+    body: AppConfigUpdate,
     user: dict = Depends(require_role("admin")),
 ):
-    """Save app-level config."""
-    result = _app_update(body)
+    """Save app-level config (revenue target, reminder schedule)."""
+    data = body.model_dump(exclude_unset=True)
+    result = _app_update(data)
     return {"ok": True, "config": result}
