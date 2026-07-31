@@ -223,7 +223,7 @@ mod tests {
     use super::*;
 
     fn test_ctx() -> ReducerContext {
-        ReducerContext::__dummy()
+        crate::test_stubs::dummy_ctx()
     }
 
     #[test]

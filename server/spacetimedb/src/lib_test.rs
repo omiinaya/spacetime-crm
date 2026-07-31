@@ -11,7 +11,7 @@ mod tests {
     use crate::purchase_order::purchase_order;
 
     fn test_ctx() -> ReducerContext {
-        ReducerContext::__dummy()
+        crate::test_stubs::dummy_ctx()
     }
 
     // ──────────────────────────────────────────────

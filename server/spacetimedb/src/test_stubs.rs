@@ -86,6 +86,34 @@ fn get_index_id(name: &str) -> IndexId {
     })
 }
 
+/// Reset the entire in-memory datastore for the current thread.
+///
+/// The stub datastore is `thread_local!`, so it survives across `#[test]`
+/// functions that run on the same worker thread. Without a reset, rows from
+/// one test leak into the next, tripping unique-index assertions
+/// (`datastore_index_scan_point_bsatn on unique field cannot return >1 rows`)
+/// and corrupting row decoding with stale schemas. Every test must call this
+/// before it starts (see `dummy_ctx`).
+#[cfg(test)]
+pub fn reset_datastore() {
+    TABLE_NAME_TO_ID.with(|m| m.borrow_mut().clear());
+    INDEX_NAME_TO_ID.with(|m| m.borrow_mut().clear());
+    NEXT_TABLE_ID.with(|n| *n.borrow_mut() = 1);
+    NEXT_INDEX_ID.with(|n| *n.borrow_mut() = 1);
+    TABLE_ROWS.with(|m| m.borrow_mut().clear());
+    ITERATORS.with(|m| m.borrow_mut().clear());
+    NEXT_ITER_HANDLE.with(|n| *n.borrow_mut() = 1);
+}
+
+/// Create a fresh `ReducerContext` for a unit test, starting from a clean
+/// in-memory datastore. Use this everywhere instead of
+/// `ReducerContext::__dummy()` so tests are isolated from each other.
+#[cfg(test)]
+pub fn dummy_ctx() -> spacetimedb::ReducerContext {
+    reset_datastore();
+    spacetimedb::ReducerContext::__dummy()
+}
+
 /// Extract the primary key bytes from a BSATN-encoded row.
 /// For all tables in spacetime-crm, the primary key is the first field (`id: String`).
 /// BSATN encodes a String as: u32 length prefix + UTF-8 bytes.
@@ -254,6 +282,8 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
         unsafe { std::slice::from_raw_parts(point_ptr, point_len) }.to_vec()
     };
 
+    eprintln!("POINT SCAN: index_id={:?} point={:?} ({} bytes)", _index_id, point_bytes, point_bytes.len());
+
     let handle = NEXT_ITER_HANDLE.with(|n| {
         let h = *n.borrow();
         n.replace_with(|n| *n + 1);
@@ -269,16 +299,18 @@ pub extern "C" fn datastore_index_scan_point_bsatn(
     let matching_rows: Vec<Vec<u8>> = TABLE_ROWS.with(|m| {
         let m = m.borrow();
         let mut result = Vec::new();
-        for (_table_id, rows) in m.iter() {
+        for (table_id, rows) in m.iter() {
             for (pk, row) in rows.iter() {
-                // The primary key bytes should match the point bytes
-                if pk == &point_bytes || pk.starts_with(&point_bytes) {
+                let matched = pk == &point_bytes || pk.starts_with(&point_bytes);
+                if matched { eprintln!("  MATCH: table={:?} pk={:?}", table_id, pk); }
+                if matched {
                     result.push(row.clone());
                 }
             }
         }
         result
     });
+    eprintln!("POINT SCAN result: {} rows", matching_rows.len());
 
     ITERATORS.with(|iters| {
         iters.borrow_mut().insert(handle, matching_rows);
@@ -332,6 +364,9 @@ pub extern "C" fn row_iter_bsatn_advance(
     buffer_len_ptr: *mut usize,
 ) -> i16 {
     if iter == RowIter::INVALID {
+        // Caller uses buf_len to size the returned chunk; leaving it stale
+        // makes RowIter::read append uninitialized memory to the buffer.
+        unsafe { *buffer_len_ptr = 0 };
         return -1; // exhausted
     }
 
@@ -342,6 +377,11 @@ pub extern "C" fn row_iter_bsatn_advance(
         ITERATORS.with(|iters| {
             iters.borrow_mut().insert(iter.0, rows);
         });
+        // CRITICAL: zero the buffer length on the exhausted path. RowIter::read()
+        // appends buf_len bytes to its output buffer on -1; leaving the stale
+        // incoming capacity (e.g. 65536) appends 64KB of uninitialized memory
+        // and every subsequent row decode fails with garbage.
+        unsafe { *buffer_len_ptr = 0 };
         return -1; // exhausted
     }
 
@@ -354,7 +394,6 @@ pub extern "C" fn row_iter_bsatn_advance(
     });
 
     let buf_len = unsafe { *buffer_len_ptr };
-    // Debug logging removed — stubs are shipped alongside production code.
     if buffer_ptr.is_null() || buf_len < row.len() {
         // Buffer too small - tell caller how much space we need
         unsafe {
@@ -389,4 +428,28 @@ pub extern "C" fn row_iter_bsatn_close(iter: RowIter) -> u16 {
         iters.borrow_mut().remove(&iter.0);
     });
     0 // success
+}
+
+/// TEMPORARY DEBUG — dump datastore contents.
+#[cfg(test)]
+pub fn debug_dump() {
+    TABLE_ROWS.with(|m| {
+        for (tid, rows) in m.borrow().iter() {
+            eprintln!("TABLE {:?}: {} rows", tid, rows.len());
+            for (i, (pk, row)) in rows.iter().enumerate() {
+                eprintln!(
+                    "  row {}: pk={:?} len={} bytes={:?}",
+                    i,
+                    pk,
+                    row.len(),
+                    &row[..row.len().min(48)]
+                );
+            }
+        }
+    });
+    TABLE_NAME_TO_ID.with(|m| {
+        for (name, id) in m.borrow().iter() {
+            eprintln!("  name {:?} -> {:?}", name, id);
+        }
+    });
 }

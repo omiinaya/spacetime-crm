@@ -193,6 +193,26 @@ def _sort(rows: list[dict], key: str, desc: bool = True) -> list[dict]:
     return sorted(rows, key=sort_key, reverse=desc)
 
 
+async def _require_owned(table: str, row_id: str, tenant_id: str) -> dict[str, Any]:
+    """Fetch a row scoped to the caller's tenant, or raise 404.
+
+    Tenant-isolation guard for direct entity access by ID. Returns the
+    row only if it exists AND belongs to ``tenant_id``; otherwise raises
+    ``HTTPException(404)`` — the same response as "not found", so a
+    cross-tenant probe can never distinguish an existing foreign entity
+    from a missing one (no existence oracle).
+    """
+    if not row_id or not tenant_id:
+        raise HTTPException(404, "Not found")
+    rows = await _sql(
+        f"SELECT * FROM {table} "
+        f"WHERE id = '{_sqlesc(row_id)}' AND tenant_id = '{_sqlesc(tenant_id)}'"
+    )
+    if not rows:
+        raise HTTPException(404, "Not found")
+    return rows[0]
+
+
 async def _log_audit(user: dict, action: str, entity: str, entity_id: str, details: str = ""):
     """Record an audit log entry. Fire-and-forget — never raises."""
     try:

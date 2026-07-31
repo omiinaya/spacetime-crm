@@ -420,6 +420,91 @@ def isolated_tenant(
 
 
 @pytest.fixture(scope="session")
+def second_isolated_tenant(session_suffix: str, auth_headers_session: dict) -> dict:
+    """Create a SECOND isolated tenant (tenant B) with its own admin user.
+
+    Mirrors the ``isolated_tenant`` fixture (tenant A) so multi-tenant
+    isolation tests can exercise cross-tenant access with two fully
+    independent admin tokens. Cleanup happens at session end.
+    """
+    slug = f"test-tenant-b-{session_suffix}"
+    name = f"Test Tenant B {session_suffix}"
+    email = f"admin-b-{session_suffix}@test.local"
+    password = "testadmin123"
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/tenants",
+        json={"name": name, "slug": slug},
+        headers=auth_headers_session,
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Failed to create tenant B: {resp.text}"
+
+    rows = _stdb_sql(f"SELECT * FROM tenants WHERE slug = '{slug}'")
+    assert rows and rows[0]["rows"], f"Tenant B not found: {slug}"
+    tenant_id = rows[0]["rows"][0][0]
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/users",
+        json={"name": f"test-admin-{slug}", "email": email, "role": "admin"},
+        headers=auth_headers_session,
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Failed to create admin user B: {resp.text}"
+
+    rows = _stdb_sql(f"SELECT * FROM user WHERE email = '{email}'")
+    assert rows and rows[0]["rows"], f"Admin user B not found: {email}"
+    admin_user_id = rows[0]["rows"][0][0]
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/tenants/{tenant_id}/members",
+        json={"username": f"test-admin-{slug}", "role": "admin"},
+        headers=auth_headers_session,
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Failed to add tenant B member: {resp.text}"
+
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    _stdb_call("set_user_password", [admin_user_id, hashed])
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/login",
+        json={"email": email, "password": password},
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Tenant B admin login failed: {resp.text}"
+    admin_token = resp.json()["token"]
+
+    tenant_info = {
+        "tenant_id": tenant_id,
+        "tenant_slug": slug,
+        "admin_user_id": admin_user_id,
+        "admin_email": email,
+        "admin_token": admin_token,
+    }
+
+    _CREATED_ENTITIES.setdefault("tenant", []).append(tenant_id)
+    _CREATED_ENTITIES.setdefault("user", []).append(admin_user_id)
+
+    yield tenant_info
+
+    try:
+        httpx.delete(
+            f"{SERVER_URL}/api/tenants/{tenant_id}",
+            headers=auth_headers_session,
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="session")
+def second_tenant_headers(second_isolated_tenant: dict) -> dict:
+    """Bearer auth header dict for the second (tenant B) admin."""
+    return {"Authorization": f"Bearer {second_isolated_tenant['admin_token']}"}
+
+
+@pytest.fixture(scope="session")
 def test_admin_token(isolated_tenant: dict) -> str:
     """JWT token for the isolated test admin user."""
     return isolated_tenant["admin_token"]

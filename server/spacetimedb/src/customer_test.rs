@@ -5,7 +5,7 @@ mod tests {
 
     /// Helper to create a test ReducerContext.
     fn test_ctx() -> ReducerContext {
-        ReducerContext::__dummy()
+        crate::test_stubs::dummy_ctx()
     }
 
     /// Test that create_customer inserts a row with correct fields.

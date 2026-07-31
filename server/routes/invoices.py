@@ -15,6 +15,7 @@ from helpers import (
     _fire_webhook,
     _log_audit,
     _paginated,
+    _require_owned,
     _sort,
     _sql,
     _sqlesc,
@@ -348,6 +349,7 @@ async def update_invoice_status(
     body: InvoiceStatusUpdate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("invoices", invoice_id, user["tenant_id"])
     await _call("update_invoice_status", [invoice_id, body.status])
     new_status = body.status
     await _log_audit(user, "update_status", "invoice", invoice_id, f"status={new_status}")
@@ -368,6 +370,7 @@ async def update_invoice_status(
 async def get_invoice_line_items(
     invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
+    await _require_owned("invoices", invoice_id, user["tenant_id"])
     rows = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
     return {"line_items": _sort(rows, "sort_order", desc=False)}
 
@@ -378,6 +381,7 @@ async def add_invoice_line_item(
     body: InvoiceLineItemCreate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("invoices", invoice_id, user["tenant_id"])
     await _call(
         "add_invoice_line_item",
         [
@@ -396,6 +400,7 @@ async def add_invoice_line_item(
 async def delete_invoice_line_item(
     invoice_id: str, item_id: str, user: dict = Depends(require_role("admin"))
 ):
+    await _require_owned("invoices", invoice_id, user["tenant_id"])
     await _call("delete_invoice_line_item", [item_id])
     await _log_audit(user, "delete", "line_item", invoice_id)
     return {"ok": True}
@@ -403,6 +408,7 @@ async def delete_invoice_line_item(
 
 @router.delete("/api/invoices/{invoice_id}")
 async def delete_invoice(invoice_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("invoices", invoice_id, user["tenant_id"])
     await _call("delete_invoice", [invoice_id])
     await _log_audit(user, "delete", "invoice", invoice_id)
     return {"ok": True}
@@ -414,6 +420,7 @@ async def set_invoice_tax_rate(
     body: InvoiceTaxRateUpdate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("invoices", invoice_id, user["tenant_id"])
     await _call("set_invoice_tax_rate", [invoice_id, body.tax_rate])
     await _log_audit(user, "update", "invoice_tax", invoice_id, f"rate={body.tax_rate}")
     return {"ok": True}
@@ -423,10 +430,7 @@ async def set_invoice_tax_rate(
 async def invoice_pdf(
     invoice_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
-    invs = await _sql(f"SELECT * FROM invoices WHERE id = '{invoice_id}'")
-    if not invs:
-        raise HTTPException(404, "Invoice not found")
-    inv = invs[0]
+    inv = await _require_owned("invoices", invoice_id, user["tenant_id"])
     items = await _sql(f"SELECT * FROM invoice_line_items WHERE invoice_id = '{invoice_id}'")
     items = _sort(items, "sort_order", desc=False)
     cust = await _sql(f"SELECT * FROM customer WHERE id = '{inv['customer_id']}'")

@@ -1,6 +1,6 @@
-import { apiFetch } from './client';
-import type { DashboardStats } from './types';
+import { apiFetch } from "./client";
+import type { DashboardStats } from "./types";
 
 export const stats = {
-  get: () => apiFetch<DashboardStats>('/stats'),
+	get: () => apiFetch<DashboardStats>("/stats"),
 };

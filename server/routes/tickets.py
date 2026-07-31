@@ -13,6 +13,7 @@ from helpers import (
     _fire_webhook,
     _log_audit,
     _paginated,
+    _require_owned,
     _sort,
     _sql,
     _sqlesc,
@@ -276,6 +277,7 @@ async def update_ticket_status(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     status = body.status
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call("update_ticket_status", [ticket_id, status])
 
     async def _notify():
@@ -325,6 +327,7 @@ async def assign_ticket(
     body: TicketAssign,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call("assign_ticket", [ticket_id, body.assigned_user_id])
     await _log_audit(user, "assign", "ticket", ticket_id, f"user={body.assigned_user_id}")
     return {"ok": True}
@@ -334,6 +337,7 @@ async def assign_ticket(
 async def get_ticket_notes(
     ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     rows = await _sql(f"SELECT * FROM ticket_note WHERE ticket_id = '{_sqlesc(ticket_id)}'")
     return {"notes": _sort(rows, "created_at", desc=False)}
 
@@ -344,6 +348,7 @@ async def add_ticket_note(
     body: TicketNoteCreate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call(
         "add_ticket_note",
         [
@@ -359,6 +364,7 @@ async def add_ticket_note(
 
 @router.delete("/api/tickets/{ticket_id}")
 async def delete_ticket(ticket_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call("delete_ticket", [ticket_id])
     await _log_audit(user, "delete", "ticket", ticket_id)
     return {"ok": True}
@@ -373,6 +379,7 @@ async def start_ticket_timer(
     body: TicketTimerStart,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call("start_ticket_timer", [ticket_id, body.user_id])
     rows = await _sql(f"SELECT * FROM ticket_timer WHERE ticket_id = '{_sqlesc(ticket_id)}'")
     return {"timers": _sort(rows, "start_time")}
@@ -385,7 +392,7 @@ async def list_all_timers(
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
     query = "SELECT * FROM ticket_timer"
-    filters = []
+    filters = [f"tenant_id = '{_sqlesc(user['tenant_id'])}'"]
     if user_id:
         filters.append(f"user_id = '{_sqlesc(user_id)}'")
     if running == "true":
@@ -400,12 +407,14 @@ async def list_all_timers(
 async def stop_ticket_timer(
     timer_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
+    await _require_owned("ticket_timer", timer_id, user["tenant_id"])
     await _call("stop_ticket_timer", [timer_id])
     return {"ok": True}
 
 
 @router.delete("/api/timers/{timer_id}")
 async def delete_ticket_timer(timer_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("ticket_timer", timer_id, user["tenant_id"])
     await _call("delete_ticket_timer", [timer_id])
     await _log_audit(user, "delete", "timer", timer_id)
     return {"ok": True}
@@ -419,6 +428,7 @@ async def get_ticket_checklist(
     ticket_id: str, user: dict = Depends(require_role("admin", "tech", "front_desk"))
 ):
     """Get checklist items for a ticket."""
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     rows = await _sql(
         f"SELECT * FROM ticket_checklist_items WHERE ticket_id = '{_sqlesc(ticket_id)}'"
     )
@@ -432,6 +442,7 @@ async def apply_checklist_to_ticket(
     user: dict = Depends(require_role("admin", "tech")),
 ):
     """Apply a checklist template to a ticket."""
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call("apply_checklist_template", [ticket_id, body.template_id])
     await _log_audit(user, "apply", "checklist", ticket_id, f"template={body.template_id}")
     return {"ok": True}
@@ -445,6 +456,7 @@ async def update_checklist_item(
     user: dict = Depends(require_role("admin", "tech")),
 ):
     """Toggle a checklist item completed/uncompleted."""
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call("update_checklist_item", [item_id, body.completed])
     return {"ok": True}
 
@@ -454,6 +466,7 @@ async def delete_ticket_checklist(
     ticket_id: str, user: dict = Depends(require_role("admin", "tech"))
 ):
     """Remove all checklist items from a ticket."""
+    await _require_owned("ticket", ticket_id, user["tenant_id"])
     await _call("delete_ticket_checklist", [ticket_id])
     await _log_audit(user, "delete", "checklist", ticket_id)
     return {"ok": True}

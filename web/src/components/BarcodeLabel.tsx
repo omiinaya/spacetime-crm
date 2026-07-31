@@ -2,11 +2,16 @@
  * Print a barcode label for a product.
  * Opens a new window with the barcode SVG and triggers the print dialog.
  */
-export function printBarcodeLabel(barcode: string, name: string, price: number, sku: string) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
+export function printBarcodeLabel(
+	barcode: string,
+	name: string,
+	price: number,
+	sku: string,
+) {
+	const printWindow = window.open("", "_blank");
+	if (!printWindow) return;
 
-  const label = `
+	const label = `
     <html>
       <head>
         <title>Barcode Label - ${sku}</title>
@@ -50,19 +55,22 @@ export function printBarcodeLabel(barcode: string, name: string, price: number, 
     </html>
   `;
 
-  printWindow.document.write(label);
-  printWindow.document.close();
+	printWindow.document.write(label);
+	printWindow.document.close();
 }
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+	return s
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
 }
 
 function escapeJs(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\&quot;');
+	return s
+		.replace(/\\/g, "\\\\")
+		.replace(/'/g, "\\'")
+		.replace(/"/g, "\\&quot;");
 }

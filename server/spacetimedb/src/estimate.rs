@@ -212,7 +212,7 @@ mod tests {
     use crate::invoice::{invoice_line_items, invoices, InvoiceLineItem};
 
     fn test_ctx() -> ReducerContext {
-        ReducerContext::__dummy()
+        crate::test_stubs::dummy_ctx()
     }
 
     #[test]

@@ -13,6 +13,7 @@ from helpers import (
     _fire_webhook,
     _log_audit,
     _paginated,
+    _require_owned,
     _safe_customer,
     _sql,
     _sql_t,
@@ -94,6 +95,7 @@ async def update_customer(
     body: CustomerUpdate,
     user: dict = Depends(require_role("admin", "tech", "front_desk")),
 ):
+    await _require_owned("customer", customer_id, user["tenant_id"])
     await _call(
         "update_customer",
         [
@@ -128,6 +130,7 @@ async def update_customer(
 
 @router.delete("/api/customers/{customer_id}")
 async def delete_customer(customer_id: str, user: dict = Depends(require_role("admin"))):
+    await _require_owned("customer", customer_id, user["tenant_id"])
     await _call("delete_customer", [customer_id])
     await _log_audit(user, "delete", "customer", customer_id)
     asyncio.ensure_future(
@@ -149,6 +152,7 @@ async def set_customer_portal_password(
     user: dict = Depends(require_role("admin")),
 ):
     """Admin sets/resets a customer's portal password."""
+    await _require_owned("customer", customer_id, user["tenant_id"])
     pw = body.password
     if len(pw) < 6:
         raise HTTPException(400, "Password must be at least 6 characters")

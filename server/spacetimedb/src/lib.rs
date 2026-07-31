@@ -3,7 +3,7 @@
 use spacetimedb::*;
 
 // FFI stub implementations for native test builds (non-WASM).
-// Provides an in-memory datastore so tests using ReducerContext::__dummy() can run.
+// Provides an in-memory datastore so tests using crate::test_stubs::dummy_ctx() can run.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 pub mod test_stubs;
 
@@ -29,6 +29,8 @@ pub mod customer_geolocation_test;
 pub mod customer_import_test;
 #[cfg(test)]
 pub mod customer_test;
+#[cfg(test)]
+pub mod debug_test;
 pub mod estimate;
 #[cfg(test)]
 pub mod geolocation_tool;
