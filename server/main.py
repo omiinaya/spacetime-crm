@@ -69,6 +69,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# hermes-id agent authentication (env: HERMES_AUTH_SERVER_URL / HERMES_AUTH_PROJECT / HERMES_AUTH_VERIFY)
+from hermes_id.fastapi_plugin import install_agent_auth
+
+install_agent_auth(app)
+
 # ── Route registration ────────────────────────────────────────
 from rate_limit import limiter  # noqa: E402
 from slowapi import _rate_limit_exceeded_handler  # noqa: E402
