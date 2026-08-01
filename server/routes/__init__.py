@@ -13,6 +13,7 @@ from routes.estimates import router as estimates_router
 from routes.export_import import router as export_import_router
 from routes.gift_cards import router as gift_cards_router
 from routes.health import router as health_router
+from routes.hermes_id_agents import router as hermes_id_agents_router
 from routes.invoices import router as invoices_router
 from routes.payment_methods import router as payment_methods_router
 from routes.payments import router as payments_router
@@ -44,6 +45,7 @@ def register_routers(app):
     app.include_router(export_import_router)
     app.include_router(gift_cards_router)
     app.include_router(health_router)
+    app.include_router(hermes_id_agents_router)
     app.include_router(invoices_router)
     app.include_router(payments_router)
     app.include_router(payment_methods_router)

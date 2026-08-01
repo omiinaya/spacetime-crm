@@ -28,4 +28,5 @@ export type PageId =
 	| "recurring-invoices"
 	| "payment-methods"
 	| "gift-cards"
-	| "email-campaigns";
+	| "email-campaigns"
+	| "agent-access";

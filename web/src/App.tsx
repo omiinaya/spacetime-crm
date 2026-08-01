@@ -31,6 +31,7 @@ import {
 	Repeat,
 	Gift,
 	Send,
+	Bot,
 	WifiOff,
 } from "lucide-react";
 import { cn } from "./lib/utils";
@@ -79,6 +80,7 @@ const RecurringInvoicesPage = lazy(
 const PaymentMethodsPage = lazy(() => import("./pages/PaymentMethodsPage"));
 const GiftCardsPage = lazy(() => import("./pages/GiftCardsPage"));
 const EmailCampaignsPage = lazy(() => import("./pages/EmailCampaignsPage"));
+const AgentAccessPage = lazy(() => import("./pages/AgentAccess"));
 const PosPage = lazy(() => import("./pages/PosPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const TechnicianSchedulePage = lazy(
@@ -119,6 +121,7 @@ const navItems: NavItem[] = [
 	{ id: "reports", label: "Reports", icon: BarChart3 },
 	{ id: "settings", label: "Settings", icon: Settings },
 	{ id: "tenants", label: "Tenants", icon: Building2 },
+	{ id: "agent-access", label: "Agent Access", icon: Bot },
 ];
 
 // ── Portal App ──
@@ -343,7 +346,9 @@ function AppShell() {
 								return <SettingsPage />;
 							case "tenants":
 								return <TenantsPage />;
-						}
+							case "agent-access":
+								return <AgentAccessPage />;
+							}
 					})()}
 				</Suspense>
 			</ErrorBoundary>
@@ -380,6 +385,7 @@ function AppShell() {
 								"settings",
 								"import-export",
 								"audit-log",
+								"agent-access",
 							].includes(item.id);
 						// front_desk
 						return ![
@@ -392,6 +398,7 @@ function AppShell() {
 							"import-export",
 							"audit-log",
 							"estimates",
+							"agent-access",
 						].includes(item.id);
 					})
 					.map((item) => {

@@ -29,6 +29,7 @@ import { pos } from "./pos";
 import { auth } from "./auth";
 import { customFields } from "./custom-fields";
 import { giftCards } from "./gift-cards";
+import { hermesIdAgents } from "./hermes-id-agents";
 
 // Combined API client object (mirrors the original api.ts export)
 export const api = {
@@ -60,4 +61,5 @@ export const api = {
 	auth,
 	userSettings,
 	giftCards,
+	hermesIdAgents,
 };
