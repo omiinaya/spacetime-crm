@@ -36,6 +36,12 @@ export default defineConfig({
       "/api": { target: "http://127.0.0.1:8723", changeOrigin: true },
     },
   },
+  preview: {
+    port: 5185,
+    proxy: {
+      "/api": { target: "http://127.0.0.1:8723", changeOrigin: true },
+    },
+  },
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },

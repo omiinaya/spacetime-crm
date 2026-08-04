@@ -139,14 +139,35 @@ jobs:
         run: npx playwright install chromium
         working-directory: web
 
-      - name: Run E2E tests
-        run: npx playwright test --workers=2
-        working-directory: web
-        # E2E tests use fake JWT auth (no real backend needed for UI rendering tests)
-
       - name: Build frontend
         run: npm run build
         working-directory: web
+
+      - name: Start frontend preview server (built assets)
+        run: |
+          nohup npm run preview > /tmp/vite-preview.log 2>&1 &
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:5185/ > /dev/null 2>&1; then
+              echo "Frontend preview ready on :5185"
+              exit 0
+            fi
+            echo "Waiting for preview server... ($i/15)"
+            sleep 2
+          done
+          echo "Frontend preview failed to start:"
+          cat /tmp/vite-preview.log
+          exit 1
+        working-directory: web
+
+      - name: Run E2E tests
+        run: npx playwright test
+        working-directory: web
+        # E2E tests use fake JWT auth (no real backend needed for UI rendering tests).
+        # They run against the BUILT frontend served by the preview server above
+        # (webServer is undefined in CI — Playwright does not auto-start the dev
+        # server, so E2E would otherwise hit connection-refused on :5185).
+        # Workers stay at config default (1): parallel workers contend on one
+        # Vite server and cause timeouts (documented pitfall in playwright.config.ts).
 
       - name: Run Rust clippy
         run: cargo clippy --manifest-path server/spacetimedb/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
