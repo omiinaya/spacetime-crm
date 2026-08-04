@@ -8,7 +8,18 @@ echo "🔍 Running pre-commit checks..."
 if [ -f Makefile ]; then
   if grep -q '^fmt:' Makefile; then
     echo "  Running fmt check..."
-    make fmt-check 2>/dev/null || make fmt 2>/dev/null
+    # fmt-check is non-mutating: it reports unformatted code without touching
+    # the working tree. If it fails, the author must run `make fmt` and re-stage
+    # — the hook must NOT auto-modify staged files (that produced dirty previews
+    # and recurring "style" commits after every real commit).
+    if grep -q '^fmt-check:' Makefile; then
+      if ! make fmt-check >/dev/null 2>&1; then
+        echo "❌ Formatting not clean. Run 'make fmt' then re-stage your changes and commit again."
+        exit 1
+      fi
+    else
+      make fmt 2>/dev/null
+    fi
   fi
   if grep -q '^lint:' Makefile; then
     echo "  Running lint check..."

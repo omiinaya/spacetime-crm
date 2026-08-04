@@ -68,6 +68,22 @@ lint-web: ## Lint TypeScript/React code
 
 fmt: fmt-py fmt-rs fmt-web ## Format all code
 
+fmt-check: ## Verify formatting WITHOUT modifying files (used by pre-commit hook)
+	@echo "  Checking Python formatting..."
+	@if python3 -m ruff --version >/dev/null 2>&1; then \
+		python3 -m ruff format --check server/ scripts/; \
+	else \
+		echo "⚠️  ruff not installed — skipping py check"; \
+	fi
+	@echo "  Checking Rust formatting..."
+	@cargo fmt --manifest-path server/spacetimedb/Cargo.toml -- --check
+	@echo "  Checking frontend formatting..."
+	@if [ -f web/node_modules/.bin/prettier ]; then \
+		cd web && npx prettier --check src/; \
+	else \
+		echo "⚠️  prettier not installed — skipping web check"; \
+	fi
+
 fmt-py: ## Format Python code (ruff)
 	@if python3 -m ruff --version >/dev/null 2>&1; then \
 		python3 -m ruff format server/ scripts/; \
