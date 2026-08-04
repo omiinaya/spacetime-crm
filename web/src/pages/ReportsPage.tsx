@@ -162,12 +162,10 @@ export default function ReportsPage() {
 				<div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
 					<BarChart3 className="h-6 w-6 text-muted-foreground" />
 				</div>
-				<h3 className="text-lg font-semibold mb-1">
-					Unable to load reports
-				</h3>
+				<h3 className="text-lg font-semibold mb-1">Unable to load reports</h3>
 				<p className="text-sm text-muted-foreground max-w-sm mb-4">
-					We couldn't fetch your reporting data right now. Check your
-					connection and try again.
+					We couldn't fetch your reporting data right now. Check your connection
+					and try again.
 				</p>
 				<Button variant="outline" onClick={() => refetch()}>
 					Retry

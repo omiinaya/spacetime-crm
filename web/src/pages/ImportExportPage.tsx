@@ -233,9 +233,9 @@ export default function ImportExportPage() {
 								<code className="text-muted-foreground">location</code>.
 							</div>
 							<div>
-								<strong className="text-foreground/80">JSON format:</strong> a JSON
-								array of objects, one per record, using the same keys as the
-								columns above, e.g.{" "}
+								<strong className="text-foreground/80">JSON format:</strong> a
+								JSON array of objects, one per record, using the same keys as
+								the columns above, e.g.{" "}
 								<code className="text-muted-foreground">
 									[{"{"}"first_name": "Alice", "last_name": "Smith"{"}"}]
 								</code>

@@ -132,7 +132,9 @@ export default function AuditLogPage() {
 			{/* Log table */}
 			<Card className="overflow-hidden">
 				{isLoading ? (
-					<div className="p-8 text-center text-muted-foreground">Loading...</div>
+					<div className="p-8 text-center text-muted-foreground">
+						Loading...
+					</div>
 				) : entries.length === 0 ? (
 					<div className="p-8 text-center text-muted-foreground">
 						No audit log entries yet.

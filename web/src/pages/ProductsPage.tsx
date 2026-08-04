@@ -605,7 +605,9 @@ export default function ProductsPage() {
 					className={`space-y-3 ${selectedProduct ? "hidden lg:block" : ""}`}
 				>
 					{isLoading ? (
-						<div className="p-8 text-center text-muted-foreground">Loading...</div>
+						<div className="p-8 text-center text-muted-foreground">
+							Loading...
+						</div>
 					) : products.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-16 text-center">
 							<Package className="h-12 w-12 text-muted-foreground/40 mb-4" />
