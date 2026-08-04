@@ -54,6 +54,7 @@ export default function Pagination({
 					size="icon"
 					disabled={!hasPrev}
 					onClick={onPrev}
+					aria-label="Previous page"
 					className="h-8 w-8"
 				>
 					<ChevronLeft className="h-4 w-4" />
@@ -80,6 +81,7 @@ export default function Pagination({
 					size="icon"
 					disabled={!hasNext}
 					onClick={onNext}
+					aria-label="Next page"
 					className="h-8 w-8"
 				>
 					<ChevronRight className="h-4 w-4" />

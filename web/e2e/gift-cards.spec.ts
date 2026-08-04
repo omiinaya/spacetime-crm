@@ -8,7 +8,7 @@ test.describe("Gift Cards", () => {
   });
 
   test("page heading is visible", async ({ page }) => {
-    await expect(page.locator("h1, h2").first()).toContainText("Gift Cards");
+    await expect(page.locator("h1").first()).toContainText("Gift Cards");
   });
 
   test("'New Gift Card' button is visible", async ({ page }) => {

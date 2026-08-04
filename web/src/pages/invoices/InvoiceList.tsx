@@ -504,7 +504,7 @@ export default function InvoiceList({
 										}
 										className="w-24"
 									/>
-									<Button size="sm" onClick={addLineItem}>
+									<Button size="sm" onClick={addLineItem} aria-label="Add line item">
 										<Plus className="h-3 w-3" />
 									</Button>
 								</div>

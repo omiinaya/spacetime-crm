@@ -112,7 +112,7 @@ export default function ProductSearch({
 											<p className="font-semibold">
 												${product.price.toFixed(2)}
 											</p>
-											<Button size="icon" variant="ghost" className="w-7 h-7">
+											<Button size="icon" variant="ghost" className="w-7 h-7" aria-label="Add to cart">
 												<Plus className="w-3 h-3" />
 											</Button>
 										</div>

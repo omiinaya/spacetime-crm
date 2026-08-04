@@ -6,7 +6,6 @@ import {
 	Card,
 	CardContent,
 	CardHeader,
-	CardTitle,
 } from "../components/ui/card";
 import { toast } from "sonner";
 
@@ -43,7 +42,9 @@ export default function PortalLoginPage({
 					<div className="mx-auto mb-2 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
 						<span className="text-2xl">🔧</span>
 					</div>
-					<CardTitle className="text-xl">Customer Portal</CardTitle>
+					<h1 className="text-xl font-semibold leading-none tracking-tight">
+						Customer Portal
+					</h1>
 					<p className="text-sm text-muted-foreground mt-1">
 						Sign in to view your tickets, invoices, and appointments
 					</p>

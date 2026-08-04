@@ -318,7 +318,7 @@ function FieldForm({
 			<CardHeader>
 				<CardTitle className="text-sm flex items-center justify-between">
 					<span>{initial ? `Edit: ${initial.label}` : "New Custom Field"}</span>
-					<Button variant="ghost" size="sm" onClick={onCancel}>
+					<Button variant="ghost" size="sm" onClick={onCancel} aria-label="Close editor">
 						<X className="h-4 w-4" />
 					</Button>
 				</CardTitle>

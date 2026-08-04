@@ -668,9 +668,9 @@ export default function PosPage() {
 		return (
 			<div className="p-4 max-w-4xl mx-auto">
 				<div className="flex items-center gap-4 mb-6">
-					<h2 className="text-xl font-bold flex items-center gap-2">
+					<h1 className="text-xl font-bold flex items-center gap-2">
 						<Receipt className="w-5 h-5" /> Sale History
-					</h2>
+					</h1>
 					<Button variant="outline" size="sm" onClick={() => setMode("sale")}>
 						<ShoppingCart className="w-4 h-4 mr-1" /> New Sale
 					</Button>
@@ -747,9 +747,9 @@ export default function PosPage() {
 	return (
 		<div className="p-4 max-w-6xl mx-auto">
 			<div className="flex items-center justify-between mb-4">
-				<h2 className="text-xl font-bold flex items-center gap-2">
+				<h1 className="text-xl font-bold flex items-center gap-2">
 					<ShoppingCart className="w-5 h-5" /> Point of Sale
-				</h2>
+				</h1>
 				<div className="flex gap-2">
 					<Button
 						variant="outline"
@@ -819,6 +819,7 @@ export default function PosPage() {
 														size="icon"
 														variant="ghost"
 														className="w-7 h-7"
+														aria-label="Add to cart"
 													>
 														<Plus className="w-3 h-3" />
 													</Button>

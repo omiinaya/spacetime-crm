@@ -154,7 +154,7 @@ test.describe("Sub-tab navigation (consolidation)", () => {
     await expect(page.locator("h1").first()).toContainText("Payment Methods");
     await page.getByRole("tab", { name: "Gift Cards", exact: true }).click();
     await waitForLoad(page);
-    await expect(page.locator("h1, h2").first()).toContainText("Gift Cards");
+    await expect(page.locator("h1").first()).toContainText("Gift Cards");
   });
 
   test("Appointments page exposes a Tech Schedule sub-tab", async ({ page }) => {

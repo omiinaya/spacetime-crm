@@ -199,6 +199,8 @@ Located in `web/e2e/`. Run with `npm run test:e2e` (or `npx playwright test` fro
 - **Config** (`playwright.config.ts`): `workers: 1`, `timeout: 90000` — single worker avoids Vite dev-server degradation; see `e2e/_warmup.spec.ts` which pre-compiles every heavy page to avoid cold-start timeouts.
 - **Navigation helpers:** `navTo(page, label)` (sidebar), `navToSubTab(page, parent, sub)` (sub-tab pages), `navToSettingsTab(page, tab)` (Settings tabs).
 - **One spec per page/domain** — add a spec when adding a page.
+- **Accessibility:** `e2e/accessibility.spec.ts` regression-protects aria-labels on icon-only buttons, prev/next month controls, pagination, and per-page `<h1>` structure. It uses `test.use({ contextOptions: { serviceWorkers: "block" } })` **and route mocking** (`page.route`) to render data-dependent components.
+- **Pitfall:** the PWA service worker (`public/sw.js`) intercepts `/api/` with NetworkFirst and serves cached bodies itself — it **bypasses `page.route()` mocks**. If you mock API routes in a spec, block service workers for that spec (see accessibility.spec.ts) or the mock silently never fires.
 
 ## 6. Navigation Architecture
 

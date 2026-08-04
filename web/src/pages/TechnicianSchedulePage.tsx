@@ -142,7 +142,7 @@ export default function TechnicianSchedulePage() {
 				<CardContent className="pt-4">
 					<div className="flex items-center gap-3 flex-wrap">
 						<div className="flex items-center gap-1">
-							<Button variant="ghost" size="icon" onClick={prevMonth}>
+							<Button variant="ghost" size="icon" onClick={prevMonth} aria-label="Previous month">
 								<ChevronLeft className="h-4 w-4" />
 							</Button>
 							<span className="text-sm font-medium min-w-[140px] text-center">
@@ -151,7 +151,7 @@ export default function TechnicianSchedulePage() {
 									year: "numeric",
 								})}
 							</span>
-							<Button variant="ghost" size="icon" onClick={nextMonth}>
+							<Button variant="ghost" size="icon" onClick={nextMonth} aria-label="Next month">
 								<ChevronRight className="h-4 w-4" />
 							</Button>
 							{!isCurrentMonth && (

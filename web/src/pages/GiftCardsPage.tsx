@@ -113,9 +113,9 @@ export default function GiftCardsPage() {
 	return (
 		<div className="p-4 max-w-5xl mx-auto space-y-6">
 			<div className="flex items-center justify-between">
-				<h2 className="text-xl font-bold flex items-center gap-2">
+				<h1 className="text-xl font-bold flex items-center gap-2">
 					<Gift className="w-5 h-5" /> Gift Cards
-				</h2>
+				</h1>
 				<Button onClick={() => setShowCreate(!showCreate)} size="sm">
 					{showCreate ? (
 						<>
