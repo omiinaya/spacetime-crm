@@ -83,9 +83,16 @@ test.describe("Navigation", () => {
 
   test("reports page renders its graceful error state", async ({ page }) => {
     await navTo(page, "Reports");
-    await expect(page.getByText("Failed to load reports.").first()).toBeVisible({
+    await expect(page.getByText("Unable to load reports").first()).toBeVisible({
       timeout: 10_000,
     });
+    // The error state offers a retry control — clicking it must not crash
+    const retry = page.getByRole("button", { name: "Retry" }).first();
+    if (await retry.isVisible().catch(() => false)) {
+      await retry.click();
+      await waitForLoad(page);
+      await expect(page.locator("main")).toBeVisible();
+    }
   });
 
   test("theme toggle switches between light and dark", async ({ page }) => {

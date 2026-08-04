@@ -81,17 +81,17 @@ export default function ImportExportPage() {
 			{/* ── Export Section ── */}
 			<Card className="p-5">
 				<h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
-					<Download className="w-5 h-5 text-blue-400" />
+					<Download className="w-5 h-5 text-primary" />
 					Export Data
 				</h2>
-				<p className="text-sm text-slate-400 mb-4">
+				<p className="text-sm text-muted-foreground mb-4">
 					Download all records from any entity type as CSV, XLSX or JSON.
 				</p>
 				<div className="flex items-center gap-3 flex-wrap">
 					<select
 						value={exportEntity}
 						onChange={(e) => setExportEntity(e.target.value)}
-						className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+						className="bg-muted border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
 					>
 						{ENTITIES.map((e) => (
 							<option key={e.id} value={e.id}>
@@ -102,7 +102,7 @@ export default function ImportExportPage() {
 					<select
 						value={exportFormat}
 						onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
-						className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+						className="bg-muted border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
 					>
 						{EXPORT_FORMATS.map((f) => (
 							<option key={f.id} value={f.id}>
@@ -123,7 +123,7 @@ export default function ImportExportPage() {
 					<Upload className="w-5 h-5 text-green-400" />
 					Import Data
 				</h2>
-				<p className="text-sm text-slate-400 mb-4">
+				<p className="text-sm text-muted-foreground mb-4">
 					Upload a CSV, XLSX or JSON file to bulk-import customers or products.
 					The format is detected automatically.
 				</p>
@@ -135,7 +135,7 @@ export default function ImportExportPage() {
 								setImportType(e.target.value as "customers" | "products");
 								setResult(null);
 							}}
-							className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+							className="bg-muted border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
 						>
 							<option value="customers">Customers</option>
 							<option value="products">Products</option>
@@ -201,42 +201,42 @@ export default function ImportExportPage() {
 
 					{/* ── Column Reference ── */}
 					<details className="mt-2">
-						<summary className="text-sm text-slate-500 cursor-pointer hover:text-slate-300">
+						<summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground/80">
 							Required columns (CSV header / XLSX first row / JSON keys)
 						</summary>
-						<div className="mt-2 text-xs text-slate-400 space-y-2">
+						<div className="mt-2 text-xs text-muted-foreground space-y-2">
 							<div>
-								<strong className="text-slate-300">Customers:</strong>{" "}
-								<code className="text-blue-300">first_name</code>,{" "}
-								<code className="text-blue-300">last_name</code> (required).
-								Optional: <code className="text-slate-400">email</code>,{" "}
-								<code className="text-slate-400">phone</code>,{" "}
-								<code className="text-slate-400">mobile</code>,{" "}
-								<code className="text-slate-400">company</code>,{" "}
-								<code className="text-slate-400">address_line1</code>,{" "}
-								<code className="text-slate-400">city</code>,{" "}
-								<code className="text-slate-400">state</code>,{" "}
-								<code className="text-slate-400">zip</code>,{" "}
-								<code className="text-slate-400">notes</code>,{" "}
-								<code className="text-slate-400">tags</code>.
+								<strong className="text-foreground/80">Customers:</strong>{" "}
+								<code className="text-primary/80">first_name</code>,{" "}
+								<code className="text-primary/80">last_name</code> (required).
+								Optional: <code className="text-muted-foreground">email</code>,{" "}
+								<code className="text-muted-foreground">phone</code>,{" "}
+								<code className="text-muted-foreground">mobile</code>,{" "}
+								<code className="text-muted-foreground">company</code>,{" "}
+								<code className="text-muted-foreground">address_line1</code>,{" "}
+								<code className="text-muted-foreground">city</code>,{" "}
+								<code className="text-muted-foreground">state</code>,{" "}
+								<code className="text-muted-foreground">zip</code>,{" "}
+								<code className="text-muted-foreground">notes</code>,{" "}
+								<code className="text-muted-foreground">tags</code>.
 							</div>
 							<div>
-								<strong className="text-slate-300">Products:</strong>{" "}
-								<code className="text-blue-300">name</code> (required).
-								Optional: <code className="text-slate-400">sku</code>,{" "}
-								<code className="text-slate-400">price</code>,{" "}
-								<code className="text-slate-400">cost</code>,{" "}
-								<code className="text-slate-400">quantity_on_hand</code>,{" "}
-								<code className="text-slate-400">description</code>,{" "}
-								<code className="text-slate-400">category</code>,{" "}
-								<code className="text-slate-400">min_stock</code>,{" "}
-								<code className="text-slate-400">location</code>.
+								<strong className="text-foreground/80">Products:</strong>{" "}
+								<code className="text-primary/80">name</code> (required).
+								Optional: <code className="text-muted-foreground">sku</code>,{" "}
+								<code className="text-muted-foreground">price</code>,{" "}
+								<code className="text-muted-foreground">cost</code>,{" "}
+								<code className="text-muted-foreground">quantity_on_hand</code>,{" "}
+								<code className="text-muted-foreground">description</code>,{" "}
+								<code className="text-muted-foreground">category</code>,{" "}
+								<code className="text-muted-foreground">min_stock</code>,{" "}
+								<code className="text-muted-foreground">location</code>.
 							</div>
 							<div>
-								<strong className="text-slate-300">JSON format:</strong> a JSON
+								<strong className="text-foreground/80">JSON format:</strong> a JSON
 								array of objects, one per record, using the same keys as the
 								columns above, e.g.{" "}
-								<code className="text-slate-400">
+								<code className="text-muted-foreground">
 									[{"{"}"first_name": "Alice", "last_name": "Smith"{"}"}]
 								</code>
 								.

@@ -251,7 +251,7 @@ export default function EstimatesPage() {
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				<div className="space-y-3">
 					{isLoading ? (
-						<div className="p-8 text-center text-slate-400">Loading...</div>
+						<div className="p-8 text-center text-muted-foreground">Loading...</div>
 					) : estimates.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-16 text-center">
 							<FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />

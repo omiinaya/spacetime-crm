@@ -7,6 +7,7 @@ import {
 	CardTitle,
 } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import {
 	BarChart,
 	Bar,
@@ -32,6 +33,7 @@ import {
 	Clock,
 	Users,
 	Award,
+	BarChart3,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
@@ -61,7 +63,7 @@ const getInvStatusColor = (status: string) =>
 	INV_STATUS_COLORS[status.toLowerCase()] || "#6b7280";
 
 export default function ReportsPage() {
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, refetch } = useQuery({
 		queryKey: ["reports"],
 		queryFn: () => api.reports.get(),
 	});
@@ -156,7 +158,21 @@ export default function ReportsPage() {
 
 	if (!data) {
 		return (
-			<p className="text-sm text-muted-foreground">Failed to load reports.</p>
+			<div className="flex flex-col items-center justify-center py-20 text-center">
+				<div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+					<BarChart3 className="h-6 w-6 text-muted-foreground" />
+				</div>
+				<h3 className="text-lg font-semibold mb-1">
+					Unable to load reports
+				</h3>
+				<p className="text-sm text-muted-foreground max-w-sm mb-4">
+					We couldn't fetch your reporting data right now. Check your
+					connection and try again.
+				</p>
+				<Button variant="outline" onClick={() => refetch()}>
+					Retry
+				</Button>
+			</div>
 		);
 	}
 

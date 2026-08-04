@@ -15,9 +15,10 @@ test.describe("Reports", () => {
 
   test("graceful error state when reports fail to load", async ({ page }) => {
     // Without a valid backend session the reports endpoint 401s — the page
-    // must degrade gracefully instead of crashing.
-    await expect(page.getByText("Failed to load reports.").first()).toBeVisible({
+    // must degrade gracefully with a retry affordance instead of crashing.
+    await expect(page.getByText("Unable to load reports").first()).toBeVisible({
       timeout: 10_000,
     });
+    await expect(page.getByRole("button", { name: "Retry" }).first()).toBeVisible();
   });
 });

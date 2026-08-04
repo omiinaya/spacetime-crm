@@ -22,7 +22,7 @@ const STATUS_COLORS: Record<string, string> = {
 	scheduled: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 	confirmed: "bg-green-500/20 text-green-400 border-green-500/30",
 	"in progress": "bg-amber-500/20 text-amber-400 border-amber-500/30",
-	completed: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+	completed: "bg-slate-500/20 text-muted-foreground border-slate-500/30",
 	cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
 	"no-show": "bg-red-500/20 text-red-400 border-red-500/30",
 };
@@ -30,7 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 function getStatusBadge(status: string) {
 	const cls =
 		STATUS_COLORS[status.toLowerCase()] ||
-		"bg-slate-500/20 text-slate-400 border-slate-500/30";
+		"bg-slate-500/20 text-muted-foreground border-slate-500/30";
 	return (
 		<span
 			className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${cls}`}

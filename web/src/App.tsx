@@ -451,8 +451,10 @@ function AppShell() {
 
 			{/* User info */}
 			<div className="px-4 py-3 border-b border-border shrink-0">
-				<p className="text-sm font-medium">{user.name}</p>
-				<p className="text-xs text-muted-foreground">{user.role}</p>
+				<p className="text-sm font-medium truncate">{user.name}</p>
+				<p className="text-xs text-muted-foreground capitalize">
+					{user.role.replace(/_/g, " ")}
+				</p>
 			</div>
 
 			{/* Nav items */}
