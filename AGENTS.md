@@ -195,12 +195,15 @@ cd server && cp -n .env.example .env 2>/dev/null; python3 main.py
 
 Located in `web/e2e/`. Run with `npm run test:e2e` (or `npx playwright test` from `web/`).
 
-- **Auth:** tests inject a fake JWT into `localStorage` (`e2e/helpers.ts` -> `loginAs()`), so the app boots authenticated but every API call 401s. Tests are **UI-structure + interaction** tests (headings, buttons, filters, overlays, tabs, navigation) — they never mutate data. Real CRUD is covered by backend pytest + vitest.
+- **Auth:** two complementary layers.
+  - **UI-structure tests** inject a fake JWT into `localStorage` (`e2e/helpers.ts` -> `loginAs()`), so the app boots authenticated but every API call 401s. They cover headings, buttons, filters, overlays, tabs, navigation, accessibility — they never mutate data.
+  - **Full-stack flow tests** (`e2e/flows.spec.ts`, `e2e/flows-lifecycle.spec.ts`, helpers in `e2e/flows-helpers.ts`) log in through the REAL auth form against the live FastAPI + SpacetimeDB stack and run CRUD journeys (customer → ticket → invoice → payment, appointments, products) that round-trip through every layer. They verify persistence via the backend API and use unique timestamped names so runs never collide. These REQUIRE the backend (:8723) + STDB (:3001) to be up and the seeded admin (`admin@crm.local` / `admin123`).
 - **Config** (`playwright.config.ts`): `workers: 1`, `timeout: 90000` — single worker avoids Vite dev-server degradation; see `e2e/_warmup.spec.ts` which pre-compiles every heavy page to avoid cold-start timeouts.
-- **Navigation helpers:** `navTo(page, label)` (sidebar), `navToSubTab(page, parent, sub)` (sub-tab pages), `navToSettingsTab(page, tab)` (Settings tabs).
+- **Navigation helpers:** `navTo(page, label)` (sidebar), `navToSubTab(page, parent, sub)` (sub-tab pages), `navToSettingsTab(page, tab)` (Settings tabs); `loginReal()` + `navToFlow()` for full-stack specs.
 - **One spec per page/domain** — add a spec when adding a page.
 - **Accessibility:** `e2e/accessibility.spec.ts` regression-protects aria-labels on icon-only buttons, prev/next month controls, pagination, and per-page `<h1>` structure. It uses `test.use({ contextOptions: { serviceWorkers: "block" } })` **and route mocking** (`page.route`) to render data-dependent components.
 - **Pitfall:** the PWA service worker (`public/sw.js`) intercepts `/api/` with NetworkFirst and serves cached bodies itself — it **bypasses `page.route()` mocks**. If you mock API routes in a spec, block service workers for that spec (see accessibility.spec.ts) or the mock silently never fires.
+- **Real-flow flakiness:** under the busy single worker, list selects (e.g. invoice picker) may not have populated when the form opens — `expect.poll(...).toBeGreaterThan(1)` before counting/selecting options.
 
 ## 6. Navigation Architecture
 
