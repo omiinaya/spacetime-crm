@@ -168,14 +168,3 @@ pub fn delete_custom_field_value(ctx: &ReducerContext, entity_id: String, field_
 fn now_ms(ctx: &ReducerContext) -> u64 {
     ctx.timestamp.to_micros_since_unix_epoch() as u64 / 1000
 }
-
-#[cfg(test)]
-mod custom_field_tests {
-    use super::*;
-
-    #[test]
-    fn test_custom_field_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

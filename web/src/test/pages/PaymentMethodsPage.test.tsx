@@ -57,8 +57,18 @@ const methods = [
 ];
 
 const customers = [
-	{ id: "cust_1", first_name: "Alice", last_name: "Smith", email: "alice@test.com" },
-	{ id: "cust_2", first_name: "Bob", last_name: "Jones", email: "bob@test.com" },
+	{
+		id: "cust_1",
+		first_name: "Alice",
+		last_name: "Smith",
+		email: "alice@test.com",
+	},
+	{
+		id: "cust_2",
+		first_name: "Bob",
+		last_name: "Jones",
+		email: "bob@test.com",
+	},
 ];
 
 function pushPage() {

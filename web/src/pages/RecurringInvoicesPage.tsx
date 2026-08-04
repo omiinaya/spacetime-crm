@@ -35,6 +35,7 @@ interface RecurringRule {
 	status: string;
 	created_at: number;
 	updated_at: number;
+	currency: string;
 	customer_name?: string;
 }
 
@@ -88,6 +89,7 @@ export default function RecurringInvoicesPage() {
 		interval_count: 1,
 		due_date_days: 30,
 		next_generation_date: "",
+		currency: "USD",
 	});
 	const [lineItems, setLineItems] = useState<RecurringLineItem[]>([
 		{ description: "", quantity: 1, unit_price: 0, item_type: "service" },
@@ -115,6 +117,7 @@ export default function RecurringInvoicesPage() {
 			interval_count: 1,
 			due_date_days: 30,
 			next_generation_date: "",
+			currency: "USD",
 		});
 		setLineItems([
 			{ description: "", quantity: 1, unit_price: 0, item_type: "service" },
@@ -135,6 +138,7 @@ export default function RecurringInvoicesPage() {
 					? new Date(form.next_generation_date).getTime()
 					: 0,
 				line_items: lineItems.filter((li) => li.description.trim()),
+				currency: form.currency,
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["recurring-invoices"] });
@@ -187,6 +191,7 @@ export default function RecurringInvoicesPage() {
 			next_generation_date: rule.next_generation_date
 				? new Date(rule.next_generation_date).toISOString().slice(0, 10)
 				: "",
+			currency: rule.currency || "USD",
 		});
 		setLineItems(parseLineItems(rule.line_items_json));
 		if (parseLineItems(rule.line_items_json).length === 0) {
@@ -387,7 +392,23 @@ export default function RecurringInvoicesPage() {
 									}
 								/>
 							</div>
-						</div>
+							<div>
+								<label className="text-sm font-medium mb-1 block">
+									Currency
+								</label>
+								<Select
+									value={form.currency}
+									onChange={(e) =>
+										setForm({ ...form, currency: e.target.value })
+									}
+								>
+									<option value="USD">USD ($)</option>
+									<option value="EUR">EUR (€)</option>
+									<option value="GBP">GBP (£)</option>
+									<option value="CAD">CAD (C$)</option>
+								</Select>
+							</div>
+							</div>
 
 						{/* Line items */}
 						<div>
@@ -529,7 +550,12 @@ export default function RecurringInvoicesPage() {
 													{rule.due_date_days > 0
 														? `${rule.due_date_days}d after`
 														: "upon creation"}
-												</p>
+													{" · "}
+													Currency:{" "}
+													<span className="text-foreground">
+														{rule.currency || "USD"}
+													</span>
+													</p>
 												{items.length > 0 && (
 													<p className="text-xs mt-1">
 														{items.length} line item

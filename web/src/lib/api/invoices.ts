@@ -6,6 +6,41 @@ import type {
 	RecurringInvoiceRule,
 } from "./types";
 
+export interface RecurringInvoiceLineItemInput {
+	description: string;
+	quantity: number;
+	unit_price: number;
+	item_type: string;
+}
+
+export interface RecurringInvoiceRuleInput {
+	customer_id: string;
+	name: string;
+	frequency: string;
+	interval_count: number;
+	due_date_days: number;
+	line_items: RecurringInvoiceLineItemInput[];
+	next_generation_date?: number;
+	status?: string;
+	currency?: string;
+}
+
+export interface BatchEmailDetail {
+	id: string;
+	status: string;
+	error?: string;
+}
+
+export interface EmailQueueEntry {
+	id: string;
+	action: string;
+	entity_type: string;
+	entity_id: string;
+	details: string;
+	created_at: number;
+	user_email?: string;
+}
+
 export const invoices = {
 	list: (
 		status?: string,
@@ -87,7 +122,7 @@ export const invoices = {
 			sent: number;
 			failed: number;
 			skipped: number;
-			details: any[];
+			details: BatchEmailDetail[];
 		}>("/invoices/send-batch-email", {
 			method: "POST",
 			body: JSON.stringify({ invoice_ids: invoiceIds }),
@@ -101,18 +136,20 @@ export const invoices = {
 			},
 		),
 	emailQueueStatus: () =>
-		apiFetch<{ sends: any[]; count: number }>("/invoices/email-queue-status"),
+		apiFetch<{ sends: EmailQueueEntry[]; count: number }>(
+			"/invoices/email-queue-status",
+		),
 };
 
 export const recurringInvoices = {
 	list: () =>
 		apiFetch<{ rules: RecurringInvoiceRule[] }>("/recurring-invoices"),
-	create: (data: any) =>
+	create: (data: RecurringInvoiceRuleInput) =>
 		apiFetch<{ ok: boolean }>("/recurring-invoices", {
 			method: "POST",
 			body: JSON.stringify(data),
 		}),
-	update: (id: string, data: any) =>
+	update: (id: string, data: Partial<RecurringInvoiceRuleInput>) =>
 		apiFetch<{ ok: boolean }>(`/recurring-invoices/${id}`, {
 			method: "PUT",
 			body: JSON.stringify(data),

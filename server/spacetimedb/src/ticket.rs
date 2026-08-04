@@ -204,14 +204,3 @@ pub fn stop_ticket_timer(ctx: &ReducerContext, id: String) {
 pub fn delete_ticket_timer(ctx: &ReducerContext, id: String) {
     ctx.db.ticket_timer().id().delete(&id);
 }
-
-#[cfg(test)]
-mod ticket_tests {
-    use super::*;
-
-    #[test]
-    fn test_ticket_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

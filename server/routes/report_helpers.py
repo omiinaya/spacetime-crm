@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from helpers import _log_audit, _sql, logger
+from helpers import _log_audit, _sql, _sqlesc, logger
 from mail import send_email
 
 from .report_schedules_helpers import _render_report_email
@@ -76,104 +76,120 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
 
 
 async def _build_report_data(report_type: str, tenant_id: str, filters: dict) -> dict[str, Any]:
-    """Fetch and structure report data based on report type and optional filters."""
+    """Fetch and structure report data based on report type and optional filters.
+
+    NOTE: STDB SQL supports no JOINs, no ORDER BY, and no bind params —
+    all joining/sorting happens in Python.
+    """
     if report_type == "revenue":
         rows = await _sql(
-            "SELECT i.total, i.created_at, i.status, c.name "
-            "FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id "
-            "WHERE i.tenant_id = ? ORDER BY i.created_at DESC",
-            [tenant_id],
+            f"SELECT total, created_at, status, customer_id FROM invoices "
+            f"WHERE tenant_id = '{_sqlesc(tenant_id)}'"
         )
-        total_revenue = sum(r[0] for r in rows if r[2] in ("paid", "sent"))
+        rows.sort(key=lambda r: r.get("created_at", 0), reverse=True)
+        customers = await _sql(
+            f"SELECT id, first_name, last_name FROM customer WHERE tenant_id = '{_sqlesc(tenant_id)}'"
+        )
+        name_by_id = {
+            c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+            for c in customers
+        }
+        decorated = [
+            {
+                "total": r.get("total"),
+                "created_at": r.get("created_at"),
+                "status": r.get("status"),
+                "customer_name": name_by_id.get(r.get("customer_id", ""), ""),
+            }
+            for r in rows
+        ]
+        total_revenue = sum(
+            float(r["total"] or 0) for r in decorated if r["status"] in ("paid", "sent")
+        )
         period = filters.get("period", "all")
         return {
             "type": "revenue",
             "total_revenue": total_revenue,
-            "invoice_count": len(rows),
+            "invoice_count": len(decorated),
             "period": period,
-            "rows": rows[:50],
+            "rows": decorated[:50],
         }
     elif report_type == "tickets":
         rows = await _sql(
-            "SELECT t.ticket_number, t.title, t.status, t.priority, "
-            "t.created_at, c.name "
-            "FROM tickets t LEFT JOIN customers c ON t.customer_id = c.id "
-            "WHERE t.tenant_id = ? ORDER BY t.created_at DESC",
-            [tenant_id],
+            f"SELECT ticket_number, title, status, priority, created_at, "
+            f"customer_id FROM ticket WHERE tenant_id = '{_sqlesc(tenant_id)}'"
         )
+        rows.sort(key=lambda r: r.get("created_at", 0), reverse=True)
+        customers = await _sql(
+            f"SELECT id, first_name, last_name FROM customer WHERE tenant_id = '{_sqlesc(tenant_id)}'"
+        )
+        name_by_id = {
+            c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+            for c in customers
+        }
+        decorated = [
+            {
+                "ticket_number": r.get("ticket_number"),
+                "title": r.get("title"),
+                "status": r.get("status"),
+                "priority": r.get("priority"),
+                "created_at": r.get("created_at"),
+                "customer_name": name_by_id.get(r.get("customer_id", ""), ""),
+            }
+            for r in rows
+        ]
         status_filter = filters.get("status", "")
         if status_filter:
-            rows = _filter_rows(
-                [
-                    dict(
-                        zip(
-                            [
-                                "ticket_number",
-                                "title",
-                                "status",
-                                "priority",
-                                "created_at",
-                                "customer_name",
-                            ],
-                            r,
-                            strict=False,
-                        )
-                    )
-                    for r in rows
-                ],
-                "status",
-                status_filter,
-            )
+            decorated = _filter_rows(decorated, "status", status_filter)
         open_count = sum(
-            1
-            for r in rows
-            if (
-                r
-                if isinstance(r, dict)
-                else dict(
-                    zip(
-                        [
-                            "ticket_number",
-                            "title",
-                            "status",
-                            "priority",
-                            "created_at",
-                            "customer_name",
-                        ],
-                        r,
-                        strict=False,
-                    )
-                )
-            ).get("status", "")
-            in ("new", "open", "in_progress")
+            1 for r in decorated if r.get("status", "") in ("new", "open", "in_progress")
         )
         return {
             "type": "tickets",
-            "total": len(rows),
+            "total": len(decorated),
             "open": open_count,
-            "rows": rows[:50],
+            "rows": decorated[:50],
         }
     elif report_type == "payments":
         rows = await _sql(
-            "SELECT p.amount, p.method, p.created_at, c.name "
-            "FROM payments p LEFT JOIN customers c ON p.customer_id = c.id "
-            "WHERE p.tenant_id = ? ORDER BY p.created_at DESC",
-            [tenant_id],
+            f"SELECT amount, method, created_at, customer_id FROM payment "
+            f"WHERE tenant_id = '{_sqlesc(tenant_id)}'"
         )
-        total_collected = sum(r[0] for r in rows)
+        rows.sort(key=lambda r: r.get("created_at", 0), reverse=True)
+        customers = await _sql(
+            f"SELECT id, first_name, last_name FROM customer WHERE tenant_id = '{_sqlesc(tenant_id)}'"
+        )
+        name_by_id = {
+            c["id"]: f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+            for c in customers
+        }
+        decorated = [
+            {
+                "amount": r.get("amount"),
+                "method": r.get("method"),
+                "created_at": r.get("created_at"),
+                "customer_name": name_by_id.get(r.get("customer_id", ""), ""),
+            }
+            for r in rows
+        ]
+        total_collected = sum(float(r.get("amount") or 0) for r in decorated)
         return {
             "type": "payments",
             "total_collected": total_collected,
-            "payment_count": len(rows),
-            "rows": rows[:50],
+            "payment_count": len(decorated),
+            "rows": decorated[:50],
         }
     elif report_type in ("inventory", "products"):
         rows = await _sql(
-            "SELECT p.name, p.sku, p.quantity, p.price, p.category "
-            "FROM products p WHERE p.tenant_id = ? ORDER BY p.name",
-            [tenant_id],
+            f"SELECT name, sku, quantity_on_hand, price, category FROM products "
+            f"WHERE tenant_id = '{_sqlesc(tenant_id)}'"
         )
-        low_stock = [r for r in rows if r[2] is not None and r[2] < 5]
+        rows.sort(key=lambda r: str(r.get("name", "")))
+        low_stock = [
+            r
+            for r in rows
+            if r.get("quantity_on_hand") is not None and (r.get("quantity_on_hand") or 0) < 5
+        ]
         return {
             "type": report_type,
             "total_products": len(rows),

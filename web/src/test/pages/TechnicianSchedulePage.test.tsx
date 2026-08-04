@@ -118,7 +118,9 @@ describe("TechnicianSchedulePage", () => {
 		// Front desk user filtered out of the tech selector options
 		expect(screen.queryByText("Front Desk")).toBeNull();
 		// Summary line: 3 appointment(s) across 2 tech(s)
-		expect(screen.getByText(/3 appointment\(s\) across 2 tech\(s\)/)).toBeTruthy();
+		expect(
+			screen.getByText(/3 appointment\(s\) across 2 tech\(s\)/),
+		).toBeTruthy();
 	});
 
 	it("filters appointments when a tech is selected", async () => {

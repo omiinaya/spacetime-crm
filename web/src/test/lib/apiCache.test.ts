@@ -33,9 +33,7 @@ afterEach(() => {
 describe("apiFetch read-through cache", () => {
 	it("serves fresh data from the network and caches it", async () => {
 		pushResponse({ customers: [{ id: "c1" }] });
-		const data = await apiFetch<{ customers: { id: string }[] }>(
-			"/customers",
-		);
+		const data = await apiFetch<{ customers: { id: string }[] }>("/customers");
 		expect(data.customers).toHaveLength(1);
 		expect(localStorage.getItem("crm-api-cache:/customers")).toBeTruthy();
 	});
@@ -45,9 +43,7 @@ describe("apiFetch read-through cache", () => {
 		await apiFetch("/customers"); // populate cache
 
 		pushNetworkError(); // now offline
-		const data = await apiFetch<{ customers: { id: string }[] }>(
-			"/customers",
-		);
+		const data = await apiFetch<{ customers: { id: string }[] }>("/customers");
 		expect(data.customers).toHaveLength(1);
 	});
 
@@ -59,10 +55,7 @@ describe("apiFetch read-through cache", () => {
 			localStorage.getItem("crm-api-cache:/health-check")!,
 		);
 		raw.ts = Date.now() - 6 * 60 * 1000;
-		localStorage.setItem(
-			"crm-api-cache:/health-check",
-			JSON.stringify(raw),
-		);
+		localStorage.setItem("crm-api-cache:/health-check", JSON.stringify(raw));
 
 		pushNetworkError();
 		await expect(apiFetch("/health-check")).rejects.toThrow();

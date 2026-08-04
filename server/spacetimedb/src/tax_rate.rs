@@ -75,14 +75,3 @@ pub fn update_tax_rate(
 pub fn delete_tax_rate(ctx: &ReducerContext, id: String) {
     ctx.db.tax_rates().id().delete(&id);
 }
-
-#[cfg(test)]
-mod tax_rate_tests {
-    use super::*;
-
-    #[test]
-    fn test_tax_rate_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

@@ -1,5 +1,9 @@
 import { apiFetch, buildPaginationParams } from "./client";
-import type { ChecklistTemplate, TicketChecklistItem } from "./types";
+import type {
+	ChecklistItem,
+	ChecklistTemplate,
+	TicketChecklistItem,
+} from "./types";
 
 export const checklist = {
 	templates: {
@@ -15,14 +19,18 @@ export const checklist = {
 				limit: number;
 			}>(`/checklist-templates${qs ? `?${qs}` : ""}`);
 		},
-		create: (data: { name: string; description?: string; items?: any[] }) =>
+		create: (data: {
+			name: string;
+			description?: string;
+			items?: ChecklistItem[];
+		}) =>
 			apiFetch<{ ok: boolean }>("/checklist-templates", {
 				method: "POST",
 				body: JSON.stringify(data),
 			}),
 		update: (
 			id: string,
-			data: { name: string; description?: string; items?: any[] },
+			data: { name: string; description?: string; items?: ChecklistItem[] },
 		) =>
 			apiFetch<{ ok: boolean }>(`/checklist-templates/${id}`, {
 				method: "PUT",

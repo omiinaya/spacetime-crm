@@ -92,9 +92,42 @@ async def _sql(query: str) -> list[dict[str, Any]]:
             cols = [
                 e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})
             ]
+            # Column types tell us which values are STDB Options — those come
+            # back as [0, val] (Some) / [1, []] (None) and must be unwrapped
+            # before they reach routes/frontends. Only match the canonical
+            # Option shape (Sum with exactly `some`/`none` variants) so real
+            # enums with other variants are never touched.
+            def _is_option(e: dict) -> bool:
+                alg = e.get("algebraic_type", {})
+                variants = alg.get("Sum", {}).get("variants", [])
+                names = {
+                    v.get("name", {}).get("some", "") for v in variants
+                }
+                return names == {"some", "none"}
+
+            option_cols = {
+                i for i, e in enumerate(schema.get("elements", [])) if _is_option(e)
+            }
             for row in rows:
+                if option_cols:
+                    row = [
+                        _unwrap_stdb_option(val) if i in option_cols else val
+                        for i, val in enumerate(row)
+                    ]
                 result.append(dict(zip(cols, row, strict=False)))
     return result
+
+
+def _unwrap_stdb_option(value: Any) -> Any:
+    """Convert STDB JSON Option encoding ([0, val] / [1, []]) to val / None."""
+    if not isinstance(value, list) or len(value) != 2:
+        return value
+    tag, payload = value[0], value[1]
+    if tag == 0:
+        return payload
+    if tag == 1:
+        return None
+    return value
 
 
 async def _sql_t(query: str, tenant_id: str) -> list[dict[str, Any]]:

@@ -37,14 +37,26 @@ web/dist/
 web/coverage/
 web/.vite/
 
+# Playwright E2E artifacts
+web/e2e/
+web/playwright-report/
+web/test-results/
+web/playwright.config.ts
+
 # Rust / STDB build artifacts
 server/spacetimedb/target/
 server/spacetimedb/Cargo.lock
+target/
 
 # Test & CI artifacts
 scripts/*.log
 *.log
 htmlcov/
+
+# Local dev / deploy-only files (not needed in image)
+deploy/
+.daemon-locks/
+.ruff_cache/
 
 # OS / editor
 .DS_Store

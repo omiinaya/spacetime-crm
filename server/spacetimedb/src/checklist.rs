@@ -169,14 +169,3 @@ pub fn delete_ticket_checklist(ctx: &ReducerContext, ticket_id: String) {
         ctx.db.ticket_checklist_items().id().delete(&item.id);
     }
 }
-
-#[cfg(test)]
-mod checklist_tests {
-    use super::*;
-
-    #[test]
-    fn test_checklist_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

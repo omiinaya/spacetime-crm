@@ -41,7 +41,14 @@ export const paymentMethods = {
 				body: JSON.stringify({ customer_id }),
 			},
 		),
-	save: (data: any) =>
+	save: (data: {
+		customer_id: string;
+		stripe_payment_method_id: string;
+		brand: string;
+		last4: string;
+		exp_month: number;
+		exp_year: number;
+	}) =>
 		apiFetch<{ ok: boolean }>("/payment-methods", {
 			method: "POST",
 			body: JSON.stringify(data),

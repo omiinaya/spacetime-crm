@@ -10,6 +10,9 @@ import { Select } from "../../components/ui/select";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { ClipboardList, ArrowRightLeft } from "lucide-react";
 
+/** Mutations whose mutationFn takes no arguments (reads state via closure). */
+type VoidMutation = UseMutationResult<unknown, Error, void, unknown>;
+
 interface Product {
 	id: string;
 	name: string;
@@ -69,7 +72,7 @@ interface ProductAdjustmentProps {
 	transferProducts:
 		| { products: { id: string; name: string; quantity_on_hand: number }[] }
 		| undefined;
-	transferMutation: UseMutationResult;
+	transferMutation: VoidMutation;
 	adjustments: Adjustment[];
 	fmtDate: (ts: number) => string;
 	setSelectedProduct: (product: Product | null) => void;
@@ -328,7 +331,7 @@ export default function ProductAdjustment({
 						}
 					/>
 					<Button
-						onClick={() => transferMutation.mutate(undefined as any)}
+						onClick={() => transferMutation.mutate()}
 						disabled={!transferForm.destProductId || transferMutation.isPending}
 					>
 						{transferMutation.isPending ? "Transferring..." : "Transfer"}

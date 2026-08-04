@@ -56,11 +56,104 @@ pub fn remove_user_push_subscriptions(ctx: &ReducerContext, user_id: String) {
 
 #[cfg(test)]
 mod push_subscription_tests {
-    use super::*;
+    use crate::*;
+
+    fn test_ctx() -> ReducerContext {
+        crate::test_stubs::dummy_ctx()
+    }
 
     #[test]
-    fn test_push_subscription_basic() {
-        // TODO: implement basic test
-        assert!(true);
+    fn test_save_push_subscription() {
+        let ctx = test_ctx();
+        save_push_subscription(
+            &ctx,
+            "u_1".into(),
+            "t_1".into(),
+            "https://push.example.com/endpoint".into(),
+            "p256dh_value".into(),
+            "auth_value".into(),
+            "Mozilla/5.0".into(),
+        );
+        let subs: Vec<PushSubscription> = ctx.db.push_subscriptions().iter().collect();
+        assert_eq!(subs.len(), 1);
+        let s = &subs[0];
+        assert!(s.id.starts_with("push_"), "id should start with push_");
+        assert_eq!(s.user_id, "u_1");
+        assert_eq!(s.tenant_id, "t_1");
+        assert_eq!(s.endpoint, "https://push.example.com/endpoint");
+        assert_eq!(s.p256dh_key, "p256dh_value");
+        assert_eq!(s.auth_key, "auth_value");
+        assert_eq!(s.user_agent, "Mozilla/5.0");
+        assert!(s.created_at > 0, "created_at should be positive");
+    }
+
+    #[test]
+    fn test_remove_push_subscription() {
+        let ctx = test_ctx();
+        save_push_subscription(
+            &ctx,
+            "u_1".into(),
+            "t_1".into(),
+            "ep1".into(),
+            "k1".into(),
+            "a1".into(),
+            "ua".into(),
+        );
+        let id = ctx
+            .db
+            .push_subscriptions()
+            .iter()
+            .next()
+            .expect("expected a subscription")
+            .id
+            .clone();
+        assert_eq!(ctx.db.push_subscriptions().iter().count(), 1);
+        remove_push_subscription(&ctx, id);
+        assert_eq!(ctx.db.push_subscriptions().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_remove_nonexistent_push_subscription_is_noop() {
+        let ctx = test_ctx();
+        remove_push_subscription(&ctx, "push_nonexistent".into());
+        assert_eq!(ctx.db.push_subscriptions().iter().count(), 0);
+    }
+
+    #[test]
+    fn test_remove_user_push_subscriptions_removes_all_for_user() {
+        let ctx = test_ctx();
+        for n in 0..3 {
+            save_push_subscription(
+                &ctx,
+                "u_1".into(),
+                "t_1".into(),
+                format!("ep{n}"),
+                format!("k{n}"),
+                format!("a{n}"),
+                "ua".into(),
+            );
+        }
+        // Another user's subscription must survive.
+        save_push_subscription(
+            &ctx,
+            "u_2".into(),
+            "t_1".into(),
+            "other_ep".into(),
+            "other_k".into(),
+            "other_a".into(),
+            "ua".into(),
+        );
+        assert_eq!(ctx.db.push_subscriptions().iter().count(), 4);
+        remove_user_push_subscriptions(&ctx, "u_1".into());
+        let remaining: Vec<PushSubscription> = ctx.db.push_subscriptions().iter().collect();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].user_id, "u_2");
+    }
+
+    #[test]
+    fn test_remove_user_push_subscriptions_noop_for_unknown_user() {
+        let ctx = test_ctx();
+        remove_user_push_subscriptions(&ctx, "u_ghost".into());
+        assert_eq!(ctx.db.push_subscriptions().iter().count(), 0);
     }
 }

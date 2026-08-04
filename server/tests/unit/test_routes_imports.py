@@ -105,6 +105,11 @@ class TestRouteImports:
 
         assert router is not None
 
+    def test_push(self) -> None:
+        from routes.push import router
+
+        assert router is not None
+
     def test_recurring_invoices(self) -> None:
         from routes.recurring_invoices import router
 

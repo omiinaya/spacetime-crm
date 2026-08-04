@@ -18,6 +18,8 @@ pub struct RecurringInvoiceRule {
     pub status: String,
     pub created_at: u64,
     pub updated_at: u64,
+    #[default(None::<String>)]
+    pub currency: Option<String>,
 }
 
 #[spacetimedb::reducer]
@@ -31,7 +33,9 @@ pub fn create_recurring_invoice_rule(
     due_date_days: u32,
     line_items_json: String,
     next_generation_date: u64,
-) {
+    currency: String,
+) -> Result<(), String> {
+    super::currency::validate_currency(&currency)?;
     let id = super::make_id("rir", ctx);
     let now = super::now_ms(ctx);
     ctx.db
@@ -50,7 +54,9 @@ pub fn create_recurring_invoice_rule(
             status: "active".to_string(),
             created_at: now,
             updated_at: now,
+            currency: Some(currency),
         });
+    Ok(())
 }
 
 #[spacetimedb::reducer]
@@ -159,7 +165,7 @@ pub fn generate_recurring_invoices(ctx: &ReducerContext, tenant_id: String) {
             notes: format!("Auto-generated from recurring rule: {}", rule.name),
             terms: String::new(),
             due_date,
-            currency: "USD".to_string(),
+            currency: rule.currency.clone().unwrap_or_else(|| "USD".to_string()),
             created_at: now,
             updated_at: now,
         });
@@ -233,7 +239,7 @@ pub fn generate_recurring_invoices(ctx: &ReducerContext, tenant_id: String) {
 // ─── Tests ────────────────────────────────────────────────────
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::*;
 
     fn test_ctx() -> ReducerContext {
         crate::test_stubs::dummy_ctx()
@@ -252,7 +258,9 @@ mod tests {
             30,
             r#"[{"description":"Support","quantity":1,"unit_price":99.99}]"#.into(),
             1700000000000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         let rules: Vec<RecurringInvoiceRule> = ctx.db.recurring_invoice_rules().iter().collect();
         assert_eq!(rules.len(), 1);
         let r = &rules[0];
@@ -283,7 +291,9 @@ mod tests {
             14,
             String::new(),
             1700000000000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         let id = ctx
             .db
             .recurring_invoice_rules()
@@ -332,7 +342,9 @@ mod tests {
             0,
             String::new(),
             1700000000000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
         let id = ctx
             .db
@@ -360,7 +372,9 @@ mod tests {
             30,
             String::new(),
             1000, // past timestamp
-        );
+            "USD".into(),
+        )
+        .unwrap();
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
         let rule_id = ctx
             .db
@@ -418,7 +432,9 @@ mod tests {
             30,
             String::new(),
             999999999999999, // far future
-        );
+            "USD".into(),
+        )
+        .unwrap();
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
 
         generate_recurring_invoices(&ctx, "t_1".into());
@@ -462,7 +478,9 @@ mod tests {
             14,
             items_json.into(),
             1000, // past timestamp
-        );
+            "USD".into(),
+        )
+        .unwrap();
 
         generate_recurring_invoices(&ctx, "t_1".into());
 
@@ -521,7 +539,9 @@ mod tests {
             14,
             String::new(),
             1700000000000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         let id = ctx
             .db
             .recurring_invoice_rules()
@@ -569,7 +589,9 @@ mod tests {
             0,
             String::new(),
             1700000000000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
         let id = ctx
             .db
@@ -607,7 +629,9 @@ mod tests {
             30,
             String::new(),
             1000, // past timestamp
-        );
+            "USD".into(),
+        )
+        .unwrap();
         create_recurring_invoice_rule(
             &ctx,
             "t_2".into(),
@@ -618,7 +642,9 @@ mod tests {
             30,
             String::new(),
             1000, // past timestamp
-        );
+            "USD".into(),
+        )
+        .unwrap();
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 2);
 
         // Generate for tenant t_1 only.
@@ -637,5 +663,78 @@ mod tests {
             .find(|r| r.tenant_id == "t_2")
             .expect("expected t_2 rule");
         assert_eq!(t2_rule.last_generated_date, 0, "t_2 rule must be untouched");
+    }
+
+    #[test]
+    fn test_generate_invoice_preserves_rule_currency() {
+        let ctx = test_ctx();
+        // Rule in EUR must generate an invoice in EUR, not silently fall back to USD.
+        create_recurring_invoice_rule(
+            &ctx,
+            "t_1".into(),
+            "cust_1".into(),
+            "EUR Subscription".into(),
+            "monthly".into(),
+            1,
+            30,
+            r#"[{"description":"Support","quantity":1,"unit_price":99.99}]"#.into(),
+            1000, // past timestamp
+            "EUR".into(),
+        )
+        .unwrap();
+
+        // The stored rule must keep the currency it was created with.
+        let rule = ctx
+            .db
+            .recurring_invoice_rules()
+            .iter()
+            .next()
+            .expect("expected rule to exist");
+        assert_eq!(
+            rule.currency.as_deref(),
+            Some("EUR"),
+            "stored rule currency should be EUR"
+        );
+
+        generate_recurring_invoices(&ctx, "t_1".into());
+
+        use crate::invoice::Invoice;
+        let invoices: Vec<Invoice> = ctx.db.invoices().iter().collect();
+        assert_eq!(invoices.len(), 1, "should have created one invoice");
+        assert_eq!(
+            invoices[0].currency, "EUR",
+            "generated invoice must inherit the rule's currency"
+        );
+    }
+
+    #[test]
+    fn test_create_rule_rejects_unsupported_currency() {
+        let ctx = test_ctx();
+        let result = create_recurring_invoice_rule(
+            &ctx,
+            "t_1".into(),
+            "cust_1".into(),
+            "Bad Currency".into(),
+            "monthly".into(),
+            1,
+            30,
+            String::new(),
+            1700000000000,
+            "XYZ".into(),
+        );
+        assert!(
+            result.is_err(),
+            "unsupported currency must be rejected by the reducer"
+        );
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("Unsupported currency"),
+            "error should mention unsupported currency, got: {err}"
+        );
+        assert_eq!(
+            ctx.db.recurring_invoice_rules().iter().count(),
+            0,
+            "no rule should be inserted for an invalid currency"
+        );
     }
 }

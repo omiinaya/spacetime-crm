@@ -6,7 +6,7 @@ interface PaginationState {
 	total: number;
 }
 
-interface UsePaginationReturn {
+export interface UsePaginationReturn {
 	offset: number;
 	limit: number;
 	total: number;

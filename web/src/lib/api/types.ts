@@ -168,6 +168,12 @@ export interface Appointment {
 	customer?: { first_name: string; last_name: string };
 	customer_name?: string;
 }
+
+/** Recurring series parent appointment — enriched by GET /api/appointments/recurring. */
+export interface RecurringAppointmentSeries extends Appointment {
+	occurrence_count: number;
+	next_occurrence: number;
+}
 export interface Product {
 	id: string;
 	name: string;
@@ -546,6 +552,7 @@ export interface RecurringInvoiceRule {
 	status: string;
 	created_at: number;
 	updated_at: number;
+	currency: string;
 }
 
 export interface SavedPaymentMethod {

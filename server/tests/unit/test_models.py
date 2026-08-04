@@ -1,4 +1,4 @@
-"""Unit tests for server/models.py — Pydantic request/response models.
+"""Unit tests for server/models — Pydantic request/response models.
 
 Tests validation rules enforced by Pydantic fields including:
   - min_length / max_length on string fields
@@ -7,27 +7,15 @@ Tests validation rules enforced by Pydantic fields including:
   - required vs optional fields and their defaults
   - BaseModel override (SanitizedModel) automatic HTML stripping
 
-models.py is loaded directly via importlib because the untracked models/
-package directory shadows it on sys.path.
+models.py was split into the `models/` package (one module per domain) and the
+root file removed; import the package directly.
 """
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
-
+import models
 import pytest
 from pydantic import ValidationError
-
-# ── Load server/models.py directly, bypassing the models/ package ──────────
-_MODELS_PATH = Path(__file__).resolve().parent.parent.parent / "models.py"
-_spec = importlib.util.spec_from_file_location("_models_py", _MODELS_PATH)
-assert _spec is not None and _spec.loader is not None
-models = importlib.util.module_from_spec(_spec)
-sys.modules["_models_py"] = models
-_spec.loader.exec_module(models)
-
 
 # ===================================================================
 # SanitizedModel (BaseModel override) — HTML stripping behavior

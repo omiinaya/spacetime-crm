@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     for name, (coro, interval) in SCHEDULED_TASKS.items():
         task = asyncio.create_task(coro(interval), name=f"scheduler:{name}")
         _scheduler_tasks.append(task)
-        print(f"[scheduler] Started: {name} (every {interval}s)")
+        logger.info("[scheduler] Started: %s (every %ss)", name, interval)
 
     yield
 
@@ -70,7 +70,7 @@ app.add_middleware(
 )
 
 # hermes-id agent authentication (env: HERMES_AUTH_SERVER_URL / HERMES_AUTH_PROJECT / HERMES_AUTH_VERIFY)
-from hermes_id.fastapi_plugin import install_agent_auth
+from hermes_id.fastapi_plugin import install_agent_auth  # noqa: E402
 
 install_agent_auth(app)
 

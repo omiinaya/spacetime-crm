@@ -20,6 +20,7 @@ class RecurringInvoiceRuleCreate(BaseModel):
     due_date_days: int = Field(default=30, ge=0, le=365)
     line_items: list[RecurringInvoiceLineItem] = Field(default_factory=list)
     next_generation_date: int = Field(default=0, ge=0)
+    currency: str = Field(default="USD", max_length=3)
 
 
 class RecurringInvoiceRuleUpdate(BaseModel):

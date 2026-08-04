@@ -110,9 +110,7 @@ describe("RecurringInvoicesPage", () => {
 
 		await userEvent.click(screen.getByText("New Rule"));
 		await waitFor(() => {
-			expect(
-				screen.getByText("Create Recurring Invoice Rule"),
-			).toBeTruthy();
+			expect(screen.getByText("Create Recurring Invoice Rule")).toBeTruthy();
 		});
 	});
 

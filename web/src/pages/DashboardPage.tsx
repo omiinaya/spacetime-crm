@@ -102,7 +102,9 @@ export default function DashboardPage({
 		api.reports
 			.get()
 			.then(setReports)
-			.catch(() => toast.error("Failed to load reports data", { id: "reports-data" }));
+			.catch(() =>
+				toast.error("Failed to load reports data", { id: "reports-data" }),
+			);
 	}, []);
 
 	// In-app low-stock alert (email notify is handled by the 7 AM cron)

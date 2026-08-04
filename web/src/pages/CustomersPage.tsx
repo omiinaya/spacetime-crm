@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api, Customer } from "../lib/api";
+import type { PageId } from "../lib/navigation";
 import type { Ticket as TicketType, Invoice, Appointment } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
 import { queryClient } from "../lib/query-client";
@@ -79,7 +80,7 @@ interface TimelineEvent {
 	label: string;
 	status: string;
 	detail: string;
-	page: string;
+	page: PageId;
 }
 
 function CustomerDetailPanel({
@@ -89,7 +90,7 @@ function CustomerDetailPanel({
 }: {
 	customer: Customer;
 	onClose: () => void;
-	onNavigate?: (page: string) => void;
+	onNavigate?: (page: PageId) => void;
 }) {
 	const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
 		queryKey: ["customer-tickets", customer.id],
@@ -158,7 +159,7 @@ function CustomerDetailPanel({
 			label: `#${t.ticket_number} ${t.title || "Untitled"}`,
 			status: t.status,
 			detail: formatDate(t.created_at),
-			page: "tickets",
+			page: "tickets" as const,
 		})),
 		...invoices.map((inv) => ({
 			id: `invoice-${inv.id}`,
@@ -169,7 +170,7 @@ function CustomerDetailPanel({
 			detail: `${formatCurrency(inv.total, inv.currency)} · ${formatDate(
 				inv.created_at,
 			)}`,
-			page: "invoices",
+			page: "invoices" as const,
 		})),
 		...appointments.map((a) => ({
 			id: `appointment-${a.id}`,
@@ -178,7 +179,7 @@ function CustomerDetailPanel({
 			label: a.title || "Appointment",
 			status: a.status,
 			detail: formatDateTime(a.start_time),
-			page: "appointments",
+			page: "appointments" as const,
 		})),
 	].sort((a, b) => b.ts - a.ts);
 
@@ -288,7 +289,7 @@ function CustomerDetailPanel({
 export default function CustomersPage({
 	onNavigate,
 }: {
-	onNavigate?: (page: string) => void;
+	onNavigate?: (page: PageId) => void;
 }) {
 	const pag = usePagination(PAGE_SIZE);
 	const [search, setSearch] = useState("");

@@ -114,14 +114,3 @@ pub fn update_tenant_member_role(ctx: &ReducerContext, id: String, role: String)
             .update(TenantMember { role, ..m });
     }
 }
-
-#[cfg(test)]
-mod tenant_tests {
-    use super::*;
-
-    #[test]
-    fn test_tenant_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

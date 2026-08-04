@@ -68,8 +68,10 @@ async def send_email_blast(
 
     try:
         rows = await _sql(
-            f"SELECT id, first_name, last_name, email FROM customer WHERE {where_sql} ORDER BY created_at DESC LIMIT 500"
+            f"SELECT id, first_name, last_name, email, created_at FROM customer WHERE {where_sql}"
         )
+        rows.sort(key=lambda c: c.get("created_at", 0), reverse=True)
+        rows = rows[:500]
     except Exception as e:
         logger.error("Failed to query customers for blast: %s", e)
         raise HTTPException(500, "Failed to query customers") from e

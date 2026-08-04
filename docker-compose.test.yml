@@ -18,10 +18,13 @@ version: "3.8"
 
 services:
   # ─── SpacetimeDB Test Instance ─────────────────────────────────────
-  # Uses the official SpacetimeDB image with in-memory storage for fast,
-  # isolated test runs. No persistent volumes = clean state every run.
+  # Uses the official SpacetimeDB image (CLI + embedded standalone) with
+  # ephemeral storage for fast, isolated test runs. No persistent volumes =
+  # clean state every run. Version pinned to match production (2.6.1).
+  # NOTE: `spacetimedb/spacetimedb:*` does NOT exist on Docker Hub.
   spacetime-test:
-    image: spacetimedb/spacetimedb:2.6.1
+    image: clockworklabs/spacetime:v2.6.1
+    command: ["start", "-l", "0.0.0.0:3001"]
     container_name: spacetime-crm-stdb-test
     ports:
       - "3002:3001"
@@ -32,8 +35,9 @@ services:
       retries: 15
       start_period: 10s
     # Ephemeral storage — no persistence between test runs
+    # (`spacetime start` writes under $HOME/.local/share/spacetime)
     tmpfs:
-      - /var/lib/spacetimedb
+      - /home/spacetime/.local/share/spacetime
     # Reduce resource usage for CI
     deploy:
       resources:

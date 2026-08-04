@@ -148,9 +148,7 @@ def main():
             print(f"  ✓ {table}: {len(rows)} rows")
 
     if missing:
-        print(
-            f"\n⚠️  Tables missing from the deployed module (not backed up): {', '.join(missing)}"
-        )
+        print(f"\n⚠️  Tables missing from the deployed module (not backed up): {', '.join(missing)}")
         print("   The running STDB module is older than server/spacetimedb/src/. Publish")
         print("   the current module, then re-run this backup to include them.")
 

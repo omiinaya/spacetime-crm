@@ -315,13 +315,23 @@ class TestBuildReportData:
     async def test_revenue_report(self) -> None:
         """Revenue report should sum invoice totals for paid/sent statuses."""
         mock_rows = [
-            [100.0, "2024-06-01", "paid", "Alice"],
-            [50.0, "2024-06-02", "sent", "Bob"],
-            [25.0, "2024-06-03", "draft", "Charlie"],  # excluded
+            {"total": 100.0, "created_at": "2024-06-01", "status": "paid", "customer_id": "c1"},
+            {"total": 50.0, "created_at": "2024-06-02", "status": "sent", "customer_id": "c2"},
+            {
+                "total": 25.0,
+                "created_at": "2024-06-03",
+                "status": "draft",
+                "customer_id": "c3",
+            },  # excluded
+        ]
+        mock_customers = [
+            {"id": "c1", "first_name": "Alice", "last_name": ""},
+            {"id": "c2", "first_name": "Bob", "last_name": ""},
+            {"id": "c3", "first_name": "Charlie", "last_name": ""},
         ]
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
-            mock_sql.return_value = mock_rows
+            mock_sql.side_effect = [mock_rows, mock_customers]
             result = await _build_report_data("revenue", "tenant-1", {"period": "last_30_days"})
 
         assert result["type"] == "revenue"
@@ -329,19 +339,47 @@ class TestBuildReportData:
         assert result["invoice_count"] == 3
         assert result["period"] == "last_30_days"
         assert len(result["rows"]) == 3
-        mock_sql.assert_called_once()
+        # Rows are sorted newest-first: Charlie (06-03), Bob (06-02), Alice (06-01)
+        assert [r["customer_name"] for r in result["rows"]] == ["Charlie", "Bob", "Alice"]
+        assert mock_sql.call_count == 2
 
     @pytest.mark.asyncio
     async def test_tickets_report_no_filter(self) -> None:
         """Tickets report without status filter."""
         mock_rows = [
-            ["TCK-1", "Issue A", "open", "high", "2024-06-01", "Alice"],
-            ["TCK-2", "Issue B", "closed", "low", "2024-06-02", "Bob"],
-            ["TCK-3", "Issue C", "in_progress", "medium", "2024-06-03", "Charlie"],
+            {
+                "ticket_number": "TCK-1",
+                "title": "Issue A",
+                "status": "open",
+                "priority": "high",
+                "created_at": "2024-06-01",
+                "customer_id": "c1",
+            },
+            {
+                "ticket_number": "TCK-2",
+                "title": "Issue B",
+                "status": "closed",
+                "priority": "low",
+                "created_at": "2024-06-02",
+                "customer_id": "c2",
+            },
+            {
+                "ticket_number": "TCK-3",
+                "title": "Issue C",
+                "status": "in_progress",
+                "priority": "medium",
+                "created_at": "2024-06-03",
+                "customer_id": "c3",
+            },
+        ]
+        mock_customers = [
+            {"id": "c1", "first_name": "Alice", "last_name": ""},
+            {"id": "c2", "first_name": "Bob", "last_name": ""},
+            {"id": "c3", "first_name": "Charlie", "last_name": ""},
         ]
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
-            mock_sql.return_value = mock_rows
+            mock_sql.side_effect = [mock_rows, mock_customers]
             result = await _build_report_data("tickets", "tenant-1", {})
 
         assert result["type"] == "tickets"
@@ -353,12 +391,30 @@ class TestBuildReportData:
     async def test_tickets_report_with_status_filter(self) -> None:
         """Tickets report with status filter should filter rows and update counts."""
         mock_rows = [
-            ["TCK-1", "Issue A", "open", "high", "2024-06-01", "Alice"],
-            ["TCK-2", "Issue B", "closed", "low", "2024-06-02", "Bob"],
+            {
+                "ticket_number": "TCK-1",
+                "title": "Issue A",
+                "status": "open",
+                "priority": "high",
+                "created_at": "2024-06-01",
+                "customer_id": "c1",
+            },
+            {
+                "ticket_number": "TCK-2",
+                "title": "Issue B",
+                "status": "closed",
+                "priority": "low",
+                "created_at": "2024-06-02",
+                "customer_id": "c2",
+            },
+        ]
+        mock_customers = [
+            {"id": "c1", "first_name": "Alice", "last_name": ""},
+            {"id": "c2", "first_name": "Bob", "last_name": ""},
         ]
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
-            mock_sql.return_value = mock_rows
+            mock_sql.side_effect = [mock_rows, mock_customers]
             result = await _build_report_data("tickets", "tenant-1", {"status": "closed"})
 
         assert result["type"] == "tickets"
@@ -370,12 +426,16 @@ class TestBuildReportData:
     async def test_payments_report(self) -> None:
         """Payments report should sum all amounts."""
         mock_rows = [
-            [100.0, "cc", "2024-06-01", "Alice"],
-            [50.0, "cash", "2024-06-02", "Bob"],
+            {"amount": 100.0, "method": "cc", "created_at": "2024-06-01", "customer_id": "c1"},
+            {"amount": 50.0, "method": "cash", "created_at": "2024-06-02", "customer_id": "c2"},
+        ]
+        mock_customers = [
+            {"id": "c1", "first_name": "Alice", "last_name": ""},
+            {"id": "c2", "first_name": "Bob", "last_name": ""},
         ]
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
-            mock_sql.return_value = mock_rows
+            mock_sql.side_effect = [mock_rows, mock_customers]
             result = await _build_report_data("payments", "tenant-1", {})
 
         assert result["type"] == "payments"
@@ -387,9 +447,27 @@ class TestBuildReportData:
     async def test_inventory_report(self) -> None:
         """Inventory report should identify low stock items."""
         mock_rows = [
-            ["Widget", "WDG-001", 3, 15.0, "Parts"],  # low stock (< 5)
-            ["Gadget", "GDG-001", 10, 25.0, "Electronics"],  # ok
-            ["Bolt", "BLT-001", 1, 0.5, "Hardware"],  # low stock
+            {
+                "name": "Widget",
+                "sku": "WDG-001",
+                "quantity_on_hand": 3,
+                "price": 15.0,
+                "category": "Parts",
+            },  # low stock (< 5)
+            {
+                "name": "Gadget",
+                "sku": "GDG-001",
+                "quantity_on_hand": 10,
+                "price": 25.0,
+                "category": "Electronics",
+            },  # ok
+            {
+                "name": "Bolt",
+                "sku": "BLT-001",
+                "quantity_on_hand": 1,
+                "price": 0.5,
+                "category": "Hardware",
+            },  # low stock
         ]
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
@@ -405,7 +483,13 @@ class TestBuildReportData:
     async def test_inventory_null_quantity_not_low_stock(self) -> None:
         """Products with null quantity should not count as low stock."""
         mock_rows = [
-            ["Service", "SRV-001", None, 100.0, "Services"],
+            {
+                "name": "Service",
+                "sku": "SRV-001",
+                "quantity_on_hand": None,
+                "price": 100.0,
+                "category": "Services",
+            },
         ]
 
         with patch("routes.report_helpers._sql", new_callable=AsyncMock) as mock_sql:
@@ -465,7 +549,17 @@ class TestGenerateAndDeliver:
             patch("routes.report_helpers.send_email", new_callable=AsyncMock) as mock_send,
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock) as mock_audit,
         ):
-            mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]
+            mock_sql.side_effect = [
+                [
+                    {
+                        "total": 100.0,
+                        "created_at": "2024-06-01",
+                        "status": "paid",
+                        "customer_id": "c1",
+                    }
+                ],
+                [{"id": "c1", "first_name": "Alice", "last_name": ""}],
+            ]
 
             result = await _generate_and_deliver(schedule, user)
 
@@ -521,7 +615,19 @@ class TestGenerateAndDeliver:
             patch("routes.report_helpers._render_report_email") as mock_render,
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
-            mock_sql.return_value = [["TCK-1", "Issue", "open", "high", "2024-06-01", "Alice"]]
+            mock_sql.side_effect = [
+                [
+                    {
+                        "ticket_number": "TCK-1",
+                        "title": "Issue",
+                        "status": "open",
+                        "priority": "high",
+                        "created_at": "2024-06-01",
+                        "customer_id": "c1",
+                    }
+                ],
+                [{"id": "c1", "first_name": "Alice", "last_name": ""}],
+            ]
             mock_render.side_effect = TypeError("Can't render")
 
             result = await _generate_and_deliver(schedule, user)
@@ -555,7 +661,17 @@ class TestGenerateAndDeliver:
             patch("routes.report_helpers.send_email", new_callable=AsyncMock),
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
-            mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]
+            mock_sql.side_effect = [
+                [
+                    {
+                        "total": 100.0,
+                        "created_at": "2024-06-01",
+                        "status": "paid",
+                        "customer_id": "c1",
+                    }
+                ],
+                [{"id": "c1", "first_name": "Alice", "last_name": ""}],
+            ]
 
             result = await _generate_and_deliver(schedule, user)
 
@@ -585,7 +701,17 @@ class TestGenerateAndDeliver:
             patch("routes.report_helpers.send_email", new_callable=AsyncMock) as mock_send,
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
-            mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]
+            mock_sql.side_effect = [
+                [
+                    {
+                        "total": 100.0,
+                        "created_at": "2024-06-01",
+                        "status": "paid",
+                        "customer_id": "c1",
+                    }
+                ],
+                [{"id": "c1", "first_name": "Alice", "last_name": ""}],
+            ]
             mock_send.side_effect = [None, RuntimeError("SMTP timeout")]
 
             result = await _generate_and_deliver(schedule, user)
@@ -613,7 +739,17 @@ class TestGenerateAndDeliver:
             patch("routes.report_helpers.send_email", new_callable=AsyncMock),
             patch("routes.report_helpers._log_audit", new_callable=AsyncMock),
         ):
-            mock_sql.return_value = [[100.0, "2024-06-01", "paid", "Alice"]]
+            mock_sql.side_effect = [
+                [
+                    {
+                        "total": 100.0,
+                        "created_at": "2024-06-01",
+                        "status": "paid",
+                        "customer_id": "c1",
+                    }
+                ],
+                [{"id": "c1", "first_name": "Alice", "last_name": ""}],
+            ]
 
             result = await _generate_and_deliver(schedule, user)
 

@@ -12,6 +12,7 @@ import { Badge } from "../../components/ui/badge";
 import Pagination from "../../components/Pagination";
 import { Plus, Mail, Edit3, CheckSquare, Square } from "lucide-react";
 import type { UseMutationResult } from "@tanstack/react-query";
+import type { UsePaginationReturn } from "../../lib/usePagination";
 import type {
 	Invoice,
 	Customer,
@@ -19,6 +20,9 @@ import type {
 	InvoiceLineItem,
 	InvoiceSummary,
 } from "../../lib/api";
+
+/** Mutations whose mutationFn takes no arguments (reads state via closure). */
+type VoidMutation = UseMutationResult<unknown, Error, void, unknown>;
 
 const statusColors: Record<
 	string,
@@ -44,18 +48,18 @@ interface InvoiceListProps {
 	toggleSelect: (id: string) => void;
 	toggleSelectAll: () => void;
 	setSelectedIds: (ids: Set<string>) => void;
-	sendReminderMutation: UseMutationResult;
+	sendReminderMutation: VoidMutation;
 	selectedIdsSize: number;
 	showBulkEdit: boolean;
 	setShowBulkEdit: (v: boolean) => void;
 	bulkStatus: string;
 	setBulkStatus: (v: string) => void;
-	bulkMutation: UseMutationResult;
-	batchEmailMutation: UseMutationResult;
-	bulkEditMutation: UseMutationResult;
+	bulkMutation: VoidMutation;
+	batchEmailMutation: VoidMutation;
+	bulkEditMutation: VoidMutation;
 	bulkEditForm: { terms: string; notes: string };
 	setBulkEditForm: (f: { terms: string; notes: string }) => void;
-	pag: any;
+	pag: UsePaginationReturn;
 	statusMutation: UseMutationResult;
 	taxMutation: UseMutationResult;
 	taxRates: TaxRate[];
@@ -85,7 +89,7 @@ interface InvoiceListProps {
 		method: string;
 		reference: string;
 	}) => void;
-	recordPaymentMutation: UseMutationResult;
+	recordPaymentMutation: VoidMutation;
 	selectedInvCurrency: string;
 	selectedInvTotal: number;
 	selectedInvSubtotal: number;
@@ -176,7 +180,7 @@ export default function InvoiceList({
 								size="sm"
 								variant="ghost"
 								className="absolute top-1 right-1 h-6 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-950/30"
-								onClick={() => sendReminderMutation.mutate(undefined as any)}
+								onClick={() => sendReminderMutation.mutate()}
 								disabled={sendReminderMutation.isPending}
 							>
 								{sendReminderMutation.isPending ? (
@@ -216,7 +220,7 @@ export default function InvoiceList({
 					</Select>
 					<Button
 						size="sm"
-						onClick={() => bulkMutation.mutate(undefined as any)}
+						onClick={() => bulkMutation.mutate()}
 						disabled={bulkMutation.isPending}
 					>
 						{bulkMutation.isPending ? (
@@ -227,7 +231,7 @@ export default function InvoiceList({
 					<Button
 						size="sm"
 						variant="outline"
-						onClick={() => batchEmailMutation.mutate(undefined as any)}
+						onClick={() => batchEmailMutation.mutate()}
 						disabled={batchEmailMutation.isPending}
 					>
 						{batchEmailMutation.isPending ? (
@@ -567,9 +571,7 @@ export default function InvoiceList({
 												/>
 												<Button
 													size="sm"
-													onClick={() =>
-														recordPaymentMutation.mutate(undefined as any)
-													}
+													onClick={() => recordPaymentMutation.mutate()}
 													disabled={recordPaymentMutation.isPending}
 												>
 													{recordPaymentMutation.isPending ? (
@@ -639,7 +641,7 @@ export default function InvoiceList({
 									Cancel
 								</Button>
 								<Button
-									onClick={() => bulkEditMutation.mutate(undefined as any)}
+									onClick={() => bulkEditMutation.mutate()}
 									disabled={
 										bulkEditMutation.isPending ||
 										(!bulkEditForm.terms && !bulkEditForm.notes)

@@ -494,8 +494,8 @@ function AppShell() {
 						>
 							<WifiOff className="h-3.5 w-3.5 shrink-0" />
 							<span>
-								You're offline — showing cached data. Changes will be
-								saved when your connection returns.
+								You're offline — showing cached data. Changes will be saved when
+								your connection returns.
 							</span>
 						</div>
 					)}

@@ -92,6 +92,8 @@ pub use custom_field::*;
 pub use customer::*;
 pub use customer_geolocation::*;
 pub use estimate::*;
+#[cfg(test)]
+pub use geolocation_tool::*;
 pub use gift_card::*;
 pub use inventory::*;
 pub use invoice::*;
@@ -99,6 +101,7 @@ pub use payment::*;
 pub use pos::*;
 pub use product::*;
 pub use purchase_order::*;
+pub use push_subscription::*;
 pub use recurring_invoice_rule::*;
 pub use saved_payment_method::*;
 pub use scheduled_report::*;

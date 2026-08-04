@@ -167,6 +167,22 @@ class TestAppointmentCRUD:
         )
         assert_ok(resp)
 
+    def test_by_tech_endpoint(self, test_admin_headers: dict, session_suffix: str):
+        """GET /api/appointments/by-tech works (STDB has no ORDER BY support)."""
+        appt_id = _create_appointment(
+            test_admin_headers, session_suffix, "bytech", title="By Tech Appt"
+        )
+        assert appt_id
+
+        resp = httpx.get(
+            f"{SERVER_URL}/api/appointments/by-tech?start=0&end=9999999999999",
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        data = assert_ok(resp)
+        assert isinstance(data, dict)
+        assert len(data) > 0
+
 
 class TestRecurringAppointments:
     """Recurring appointment series and occurrence generation."""

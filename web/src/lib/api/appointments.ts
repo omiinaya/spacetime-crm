@@ -1,5 +1,5 @@
 import { apiFetch, buildPaginationParams } from "./client";
-import type { Appointment } from "./types";
+import type { Appointment, RecurringAppointmentSeries } from "./types";
 
 export const appointments = {
 	list: (customerId?: string, offset?: number, limit?: number) => {
@@ -45,7 +45,10 @@ export const appointments = {
 			body: JSON.stringify({ series_id: seriesId }),
 		}),
 	recurring: {
-		list: () => apiFetch<{ series: Appointment[] }>("/appointments/recurring"),
+		list: () =>
+			apiFetch<{ series: RecurringAppointmentSeries[] }>(
+				"/appointments/recurring",
+			),
 	},
 	byTech: (start: number, end: number) =>
 		apiFetch<{

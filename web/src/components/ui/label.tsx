@@ -1,26 +1,15 @@
 import { cn } from "../../lib/utils";
 
-export function Label({
-	children,
-	className,
-	htmlFor,
-	...props
-}: {
-	children: React.ReactNode;
-	className?: string;
-	htmlFor?: string;
-	[key: string]: any;
-}) {
+export function Label({ className, ...props }: React.ComponentProps<"label">) {
 	return (
 		<label
-			htmlFor={htmlFor}
 			className={cn(
 				"text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
 				className,
 			)}
 			{...props}
 		>
-			{children}
+			{props.children}
 		</label>
 	);
 }

@@ -58,6 +58,7 @@ async def create_recurring_rule(
             body.due_date_days,
             line_items_json,
             body.next_generation_date,
+            body.currency,
         ],
     )
     await _log_audit(user, "create", "recurring_invoice_rule", body.name)

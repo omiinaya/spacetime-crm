@@ -54,9 +54,7 @@ describe("PortalLoginPage", () => {
 		await userEvent.click(screen.getByText("Sign In"));
 
 		await waitFor(() => {
-			expect(
-				screen.getByText("Email and password required"),
-			).toBeTruthy();
+			expect(screen.getByText("Email and password required")).toBeTruthy();
 		});
 	});
 

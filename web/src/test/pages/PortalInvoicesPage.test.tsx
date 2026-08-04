@@ -58,7 +58,13 @@ const invDetail = {
 	invoice: {
 		...invoices[0],
 		line_items: [
-			{ id: "li_1", description: "Screen replacement", quantity: 1, unit_price: 200, total: 200 },
+			{
+				id: "li_1",
+				description: "Screen replacement",
+				quantity: 1,
+				unit_price: 200,
+				total: 200,
+			},
 		],
 		payments: [],
 		total_paid: 0,
@@ -117,7 +123,10 @@ describe("PortalInvoicesPage", () => {
 		mock.push({ invoices });
 		mock.push(invDetail);
 		mock.push({ payment_methods: [] });
-		mock.push({ session_id: "cs_1", url: "https://checkout.stripe.com/c/pay/cs_1" }); // checkout session
+		mock.push({
+			session_id: "cs_1",
+			url: "https://checkout.stripe.com/c/pay/cs_1",
+		}); // checkout session
 		render(<PortalInvoicesPage />, { wrapper });
 
 		await waitFor(() => {
@@ -129,15 +138,11 @@ describe("PortalInvoicesPage", () => {
 			expect(screen.getByText("Screen replacement")).toBeTruthy();
 		});
 
-		await userEvent.click(
-			screen.getByText(/Pay \$.+ with Card/),
-		);
+		await userEvent.click(screen.getByText(/Pay \$.+ with Card/));
 
 		await waitFor(() => {
 			expect(
-				mock
-					.calls()
-					.some((c) => c.url.includes("create-checkout-session")),
+				mock.calls().some((c) => c.url.includes("create-checkout-session")),
 			).toBe(true);
 		});
 	});

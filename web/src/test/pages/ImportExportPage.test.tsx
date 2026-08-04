@@ -69,7 +69,9 @@ it("renders entity dropdown with 10 options", () => {
 it("shows the required columns details on the Import section", () => {
 	render(<ImportExportPage />);
 	expect(
-		screen.getByText("Required columns (CSV header / XLSX first row / JSON keys)"),
+		screen.getByText(
+			"Required columns (CSV header / XLSX first row / JSON keys)",
+		),
 	).toBeInTheDocument();
 });
 

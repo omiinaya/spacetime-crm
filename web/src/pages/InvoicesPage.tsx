@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
+import type { PageId } from "../lib/navigation";
 import {
 	api,
 	Invoice,
@@ -55,7 +56,7 @@ const statusColors: Record<
 export default function InvoicesPage({
 	onNavigate,
 }: {
-	onNavigate?: (page: string) => void;
+	onNavigate?: (page: PageId) => void;
 } = {}) {
 	const pag = usePagination(PAGE_SIZE);
 	const [filter, setFilter] = useState("");

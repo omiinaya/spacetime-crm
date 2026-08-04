@@ -265,11 +265,11 @@ export default function AppointmentsPage() {
 										</div>
 										<p className="text-xs text-muted-foreground mt-1">
 											{customerName(s.customer_id)}
-											{(s as any).occurrence_count > 0 && (
+											{s.occurrence_count > 0 && (
 												<span>
 													{" "}
-													&middot; {(s as any).occurrence_count} occurrence
-													{(s as any).occurrence_count !== 1 ? "s" : ""}
+													&middot; {s.occurrence_count} occurrence
+													{s.occurrence_count !== 1 ? "s" : ""}
 												</span>
 											)}
 										</p>

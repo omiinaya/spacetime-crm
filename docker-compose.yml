@@ -2,11 +2,17 @@ version: "3.8"
 
 services:
   spacetime:
-    image: spacetimedb/spacetimedb:latest
+    # Official SpacetimeDB image (CLI + embedded standalone). Version pinned to
+    # match production (2.6.1). NOTE: `spacetimedb/spacetimedb:*` does NOT exist
+    # on Docker Hub — the old reference made `docker compose up` fail.
+    image: clockworklabs/spacetime:v2.6.1
+    command: ["start", "-l", "0.0.0.0:3001"]
     ports:
       - "3001:3001"
     volumes:
-      - spacetime_data:/var/lib/spacetimedb
+      # `spacetime start` stores replica data under $HOME/.local/share/spacetime
+      # (container user `spacetime`, HOME=/home/spacetime)
+      - spacetime_data:/home/spacetime/.local/share/spacetime
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:3001/"]
       interval: 10s

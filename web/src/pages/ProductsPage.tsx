@@ -29,6 +29,16 @@ import { printBarcodeLabel } from "../components/BarcodeLabel";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
 
+/** Minimal typing for the experimental BarcodeDetector API (Chromium). */
+interface BarcodeDetectorLike {
+	detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>;
+}
+interface WindowWithBarcodeDetector extends Window {
+	BarcodeDetector?: new (options?: {
+		formats?: string[];
+	}) => BarcodeDetectorLike;
+}
+
 const PAGE_SIZE = 25;
 
 const emptyForm: Partial<Product> = {
@@ -286,19 +296,21 @@ export default function ProductsPage() {
 
 	const scanLoop = () => {
 		if (!scanning || !videoRef.current || !barcodeDetectorSupported) return;
-		const detector = new (window as any).BarcodeDetector({
-			formats: [
-				"qr_code",
-				"ean_13",
-				"ean_8",
-				"code_128",
-				"code_39",
-				"upc_a",
-				"upc_e",
-				"codabar",
-				"data_matrix",
-			],
-		});
+		const detector = new (window as WindowWithBarcodeDetector).BarcodeDetector!(
+			{
+				formats: [
+					"qr_code",
+					"ean_13",
+					"ean_8",
+					"code_128",
+					"code_39",
+					"upc_a",
+					"upc_e",
+					"codabar",
+					"data_matrix",
+				],
+			},
+		);
 		detector
 			.detect(videoRef.current)
 			.then((barcodes: { rawValue: string }[]) => {

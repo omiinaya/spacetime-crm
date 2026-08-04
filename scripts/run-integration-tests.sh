@@ -33,7 +33,9 @@ STDB_URL="http://${STDB_HOST}:${STDB_PORT}"
 BACKEND_PORT="${BACKEND_PORT:-8723}"
 BACKEND_URL="http://${STDB_HOST}:${BACKEND_PORT}"
 CONTAINER_NAME="spacetime-crm-test-3002"
-IMAGE="spacetimedb/spacetimedb:latest"
+# Official SpacetimeDB image (CLI + embedded standalone). Version pinned to match
+# production (2.6.1). NOTE: `spacetimedb/spacetimedb:*` does NOT exist on Docker Hub.
+IMAGE="clockworklabs/spacetime:v2.6.1"
 
 CLEANUP=true
 BUILD_WASM=true
@@ -179,8 +181,8 @@ else
     --health-timeout 2s \
     --health-retries 20 \
     --health-start-period 8s \
-    --tmpfs /var/lib/spacetimedb \
-    "$IMAGE" >/dev/null
+    --tmpfs /home/spacetime/.local/share/spacetime \
+    "$IMAGE" start -l 0.0.0.0:3001 >/dev/null
 
   log_info "Waiting for STDB to become healthy..."
 

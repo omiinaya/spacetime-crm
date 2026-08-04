@@ -36,10 +36,7 @@ beforeEach(() => {
 
 describe("PortalDashboard", () => {
 	it("renders greeting with customer first name", () => {
-		localStorage.setItem(
-			"portal_token",
-			"tok",
-		);
+		localStorage.setItem("portal_token", "tok");
 		localStorage.setItem(
 			"portal_customer",
 			JSON.stringify({

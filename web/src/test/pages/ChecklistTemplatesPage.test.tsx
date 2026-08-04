@@ -86,7 +86,9 @@ describe("ChecklistTemplatesPage", () => {
 
 		await userEvent.click(screen.getByText(/new template/i));
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("e.g. Standard PC Repair")).toBeTruthy();
+			expect(
+				screen.getByPlaceholderText("e.g. Standard PC Repair"),
+			).toBeTruthy();
 		});
 
 		await userEvent.type(

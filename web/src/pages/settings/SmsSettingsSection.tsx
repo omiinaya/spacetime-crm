@@ -50,7 +50,8 @@ export default function SmsSettingsSection() {
 			from_number?: string;
 		}) => {
 			const payload = { ...data };
-			if (!payload.auth_token) (payload as any).auth_token = undefined;
+			// Don't send an empty token — backend keeps the existing secret
+			if (!payload.auth_token) delete payload.auth_token;
 			return api.settings.sms.save(payload);
 		},
 		onSuccess: () => {
@@ -64,8 +65,13 @@ export default function SmsSettingsSection() {
 
 	const testMutation = useMutation({
 		mutationFn: async () => {
-			const saveData = { ...smsConfig };
-			if (!saveData.auth_token) (saveData as any).auth_token = undefined;
+			const saveData: {
+				account_sid: string;
+				from_number: string;
+				auth_token?: string;
+			} = { ...smsConfig };
+			// Don't send an empty token — backend keeps the existing secret
+			if (!saveData.auth_token) delete saveData.auth_token;
 			await api.settings.sms.save(saveData);
 			return api.settings.sms.test();
 		},

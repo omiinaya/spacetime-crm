@@ -149,14 +149,3 @@ pub fn upsert_user_settings(
 pub fn delete_user_settings(ctx: &ReducerContext, user_id: String) {
     ctx.db.user_settings().user_id().delete(&user_id);
 }
-
-#[cfg(test)]
-mod user_tests {
-    use super::*;
-
-    #[test]
-    fn test_user_basic() {
-        // TODO: implement basic test
-        assert!(true);
-    }
-}

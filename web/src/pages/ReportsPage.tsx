@@ -492,10 +492,10 @@ export default function ReportsPage() {
 											border: "1px solid var(--color-border)",
 											borderRadius: "8px",
 										}}
-										formatter={(value: TooltipValueType | undefined, name: number | string | undefined) => [
-											`$${Number(value || 0).toFixed(2)}`,
-											name,
-										]}
+										formatter={(
+											value: TooltipValueType | undefined,
+											name: number | string | undefined,
+										) => [`$${Number(value || 0).toFixed(2)}`, name]}
 									/>
 									<Legend />
 								</PieChart>
@@ -634,7 +634,10 @@ export default function ReportsPage() {
 										border: "1px solid var(--color-border)",
 										borderRadius: "8px",
 									}}
-									formatter={(value: TooltipValueType | undefined) => [value, "New Customers"]}
+									formatter={(value: TooltipValueType | undefined) => [
+										value,
+										"New Customers",
+									]}
 								/>
 								<Bar
 									dataKey="new_customers"

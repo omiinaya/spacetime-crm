@@ -20,7 +20,9 @@ mod tests {
             15,
             r#"[{"description":"Rent","quantity":1,"unit_price":1000}]"#.into(),
             1700000000000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         let rules: Vec<RecurringInvoiceRule> = ctx.db.recurring_invoice_rules().iter().collect();
         assert_eq!(rules.len(), 1);
         let r = &rules[0];
@@ -42,7 +44,9 @@ mod tests {
             15,
             "[]".into(),
             1000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         let id = ctx
             .db
             .recurring_invoice_rules()
@@ -87,7 +91,9 @@ mod tests {
             15,
             "[]".into(),
             1000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         assert_eq!(ctx.db.recurring_invoice_rules().iter().count(), 1);
         let id = ctx
             .db
@@ -117,8 +123,10 @@ mod tests {
             15,
             items.into(),
             now - 1000,
-        ); // due now
-           // Generate invoices
+            "USD".into(),
+        )
+        .unwrap(); // due now
+                   // Generate invoices
         assert_eq!(ctx.db.invoices().iter().count(), 0);
         generate_recurring_invoices(&ctx, "t_gr".into());
         // Should have created 1 invoice
@@ -170,7 +178,9 @@ mod tests {
             15,
             "[]".into(),
             far_future,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         generate_recurring_invoices(&ctx, "t".into());
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
@@ -189,7 +199,9 @@ mod tests {
             15,
             "[]".into(),
             now - 1000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         // Pause it
         let id = ctx
             .db
@@ -230,7 +242,9 @@ mod tests {
             15,
             "[]".into(),
             now - 1000,
-        );
+            "USD".into(),
+        )
+        .unwrap();
         generate_recurring_invoices(&ctx, "t".into());
         assert_eq!(ctx.db.invoices().iter().count(), 0);
     }
