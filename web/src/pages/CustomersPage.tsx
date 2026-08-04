@@ -204,7 +204,12 @@ function CustomerDetailPanel({
 						<p className="text-xs text-muted-foreground">{customer.company}</p>
 					)}
 				</div>
-				<Button variant="ghost" size="sm" onClick={onClose} aria-label="Collapse activity timeline">
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={onClose}
+					aria-label="Collapse activity timeline"
+				>
 					<ChevronUp className="h-4 w-4" />
 				</Button>
 			</div>
