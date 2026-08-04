@@ -348,7 +348,7 @@ function AppShell() {
 								return <TenantsPage />;
 							case "agent-access":
 								return <AgentAccessPage />;
-							}
+						}
 					})()}
 				</Suspense>
 			</ErrorBoundary>

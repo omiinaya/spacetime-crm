@@ -92,6 +92,7 @@ async def _sql(query: str) -> list[dict[str, Any]]:
             cols = [
                 e["name"]["some"] for e in schema.get("elements", []) if "some" in e.get("name", {})
             ]
+
             # Column types tell us which values are STDB Options — those come
             # back as [0, val] (Some) / [1, []] (None) and must be unwrapped
             # before they reach routes/frontends. Only match the canonical
@@ -100,14 +101,10 @@ async def _sql(query: str) -> list[dict[str, Any]]:
             def _is_option(e: dict) -> bool:
                 alg = e.get("algebraic_type", {})
                 variants = alg.get("Sum", {}).get("variants", [])
-                names = {
-                    v.get("name", {}).get("some", "") for v in variants
-                }
+                names = {v.get("name", {}).get("some", "") for v in variants}
                 return names == {"some", "none"}
 
-            option_cols = {
-                i for i, e in enumerate(schema.get("elements", [])) if _is_option(e)
-            }
+            option_cols = {i for i, e in enumerate(schema.get("elements", [])) if _is_option(e)}
             for row in rows:
                 if option_cols:
                     row = [

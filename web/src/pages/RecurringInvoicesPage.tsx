@@ -408,7 +408,7 @@ export default function RecurringInvoicesPage() {
 									<option value="CAD">CAD (C$)</option>
 								</Select>
 							</div>
-							</div>
+						</div>
 
 						{/* Line items */}
 						<div>
@@ -555,7 +555,7 @@ export default function RecurringInvoicesPage() {
 													<span className="text-foreground">
 														{rule.currency || "USD"}
 													</span>
-													</p>
+												</p>
 												{items.length > 0 && (
 													<p className="text-xs mt-1">
 														{items.length} line item
