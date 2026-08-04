@@ -22,12 +22,7 @@ import TenantsPage from "./TenantsPage";
 import AgentAccessPage from "./AgentAccess";
 import { Tabs } from "../components/ui/tabs";
 
-type SettingsTab =
-	| "general"
-	| "notifications"
-	| "business"
-	| "data"
-	| "system";
+type SettingsTab = "general" | "notifications" | "business" | "data" | "system";
 
 const TABS: { id: SettingsTab; label: string }[] = [
 	{ id: "general", label: "General" },

@@ -383,7 +383,7 @@ function AppShell() {
 					{(() => {
 						switch (page) {
 							case "dashboard":
-							return <DashboardPage stats={stats} onNavigate={navigate} />;
+								return <DashboardPage stats={stats} onNavigate={navigate} />;
 							case "customers":
 								return <CustomersPage onNavigate={navigate} />;
 							case "tickets":
