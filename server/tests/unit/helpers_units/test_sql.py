@@ -395,6 +395,65 @@ class TestPaginated:
         count_query = mock_sql.call_args_list[0][0][0]
         assert "WHERE" not in count_query
 
+    @pytest.mark.asyncio
+    async def test_sorts_mixed_zero_and_timestamp_values(self) -> None:
+        """Falsy-but-valid numeric sort values (e.g. start_time=0) must not be
+        coerced to "" — mixing int/str raises TypeError (regression for
+        GET /api/appointments 500 when an appointment has start_time=0)."""
+        mock_rows = [
+            {"id": "r-zero", "start_time": 0},
+            {"id": "r-late", "start_time": 1785949200000},
+            {"id": "r-early", "start_time": 1785307777710},
+        ]
+
+        async def fake_sql(query: str) -> list[dict]:
+            if "count(*)" in query:
+                return [{"cnt": 3}]
+            return mock_rows
+
+        with patch("helpers._sql", new_callable=AsyncMock) as mock_sql:
+            mock_sql.side_effect = fake_sql
+            from helpers import _paginated
+
+            rows, total = await _paginated(
+                tenant_id="t-1",
+                table="appointment",
+                order_by="start_time",
+                order_desc=False,
+            )
+
+        assert total == 3
+        assert [r["id"] for r in rows] == ["r-zero", "r-early", "r-late"]
+
+    @pytest.mark.asyncio
+    async def test_sorts_none_values_after_valid(self) -> None:
+        """None (STDB Option None) sort values use the type-appropriate
+        default and never crash the sort."""
+        mock_rows = [
+            {"id": "r-1", "start_time": None},
+            {"id": "r-2", "start_time": 100},
+        ]
+
+        async def fake_sql(query: str) -> list[dict]:
+            if "count(*)" in query:
+                return [{"cnt": 2}]
+            return mock_rows
+
+        with patch("helpers._sql", new_callable=AsyncMock) as mock_sql:
+            mock_sql.side_effect = fake_sql
+            from helpers import _paginated
+
+            rows, total = await _paginated(
+                tenant_id="t-1",
+                table="appointment",
+                order_by="start_time",
+                order_desc=False,
+            )
+
+        assert total == 2
+        # Ascending: None → default 0 sorts before 100.
+        assert [r["id"] for r in rows] == ["r-1", "r-2"]
+
 
 # ===================================================================
 # _call  — STDB reducer calls

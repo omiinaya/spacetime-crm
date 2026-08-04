@@ -190,7 +190,26 @@ async def _paginated(
         query += f" LIMIT {fetch_n}"
     rows = await _sql(query)
 
-    rows.sort(key=lambda r: r.get(order_by) or "", reverse=order_desc)
+    # Sniff the column's dominant type so falsy-but-valid values (e.g. a
+    # start_time of 0) sort correctly instead of being coerced to "" and
+    # mixing int/str (TypeError). None (STDB Option None) sorts as the
+    # type-appropriate default.
+    def _sort_key(row: dict, col: str, dflt: Any) -> Any:
+        v = row.get(col)
+        if v is None:
+            return dflt
+        return v
+
+    sample = next(
+        (r.get(order_by) for r in rows if r.get(order_by) is not None),
+        None,
+    )
+    default = 0 if isinstance(sample, (int, float)) else ""
+
+    rows.sort(
+        key=lambda r: _sort_key(r, order_by, default),
+        reverse=order_desc,
+    )
     if sensitive_fields:
         rows = [{k: v for k, v in r.items() if k not in sensitive_fields} for r in rows]
     return rows[offset : offset + limit], total
