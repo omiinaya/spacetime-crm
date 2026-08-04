@@ -38,6 +38,36 @@ export async function loginAs(page: Page, role = "admin") {
 }
 
 /**
+ * Navigate to a page via the sidebar and wait for it to settle.
+ */
+export async function navTo(page: Page, label: string) {
+  await page.locator("aside").getByText(label, { exact: true }).click();
+  await waitForLoad(page);
+}
+
+/**
+ * Navigate to a Settings tab (Settings is admin-only, single sidebar entry,
+ * with internal tabs: General / Notifications / Business / Data & Fields / System).
+ */
+export async function navToSettingsTab(page: Page, tabLabel: string) {
+  await navTo(page, "Settings");
+  const tab = page.getByRole("tab", { name: tabLabel, exact: true });
+  await tab.click();
+  await waitForLoad(page);
+}
+
+/**
+ * Navigate to a sub-tab of a parent page (e.g. Payments → "Gift Cards",
+ * Invoices → "Recurring", Customers → "Map").
+ */
+export async function navToSubTab(page: Page, parentLabel: string, subLabel: string) {
+  await navTo(page, parentLabel);
+  const tab = page.getByRole("tab", { name: subLabel, exact: true });
+  await tab.click();
+  await waitForLoad(page);
+}
+
+/**
  * Returns true if the page shows a spinner/loading indicator.
  */
 export async function isLoadingVisible(page: Page): Promise<boolean> {
@@ -46,13 +76,16 @@ export async function isLoadingVisible(page: Page): Promise<boolean> {
 
 /**
  * Wait for loading to finish (spinner disappears, or content appears).
+ * Tolerant: never throws — returns after settling or the grace window.
  */
-export async function waitForLoad(page: Page) {
+export async function waitForLoad(page: Page, timeoutMs = 15_000) {
   // Give React a tick to render
   await page.waitForTimeout(500);
-  // If a spinner is visible, wait for it to go away (up to 8 s)
+  // If a spinner is visible, wait for it to go away
   const spinner = page.locator(".animate-spin").first();
   if (await spinner.isVisible({ timeout: 500 }).catch(() => false)) {
-    await spinner.waitFor({ state: "hidden", timeout: 8_000 }).catch(() => {});
+    await spinner.waitFor({ state: "hidden", timeout: timeoutMs }).catch(() => {});
   }
+  // Give the page a beat to settle after the spinner clears
+  await page.waitForTimeout(300);
 }

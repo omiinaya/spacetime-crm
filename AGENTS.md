@@ -85,7 +85,7 @@ spacetime-crm/
 │   │   ├── components/        # MonthCalendar, etc.
 │   │   ├── pages/             # 32 pages — one per domain (see task map below)
 │   │   └── test/              # Vitest suites: 259 tests (pages/ + components/ + lib/)
-│   ├── e2e/                   # Playwright specs (33 tests)
+│   ├── e2e/                   # Playwright specs (~100 tests, see E2E section below)
 │   ├── package.json           # Scripts: dev, build, preview, test
 │   ├── vite.config.ts         # Port 5185, proxy /api → :8723, PWA plugin
 │   └── index.html
@@ -189,3 +189,31 @@ cd server && cp -n .env.example .env 2>/dev/null; python3 main.py
 161|- **Every mutation audits.** `_log_audit()` is fire-and-forget — never raises.
 162|- **Every entity event fires webhooks.** `_fire_webhook()` via `asyncio.ensure_future()`.
 163|
+
+
+## 5. E2E Testing (Playwright)
+
+Located in `web/e2e/`. Run with `npm run test:e2e` (or `npx playwright test` from `web/`).
+
+- **Auth:** tests inject a fake JWT into `localStorage` (`e2e/helpers.ts` -> `loginAs()`), so the app boots authenticated but every API call 401s. Tests are **UI-structure + interaction** tests (headings, buttons, filters, overlays, tabs, navigation) — they never mutate data. Real CRUD is covered by backend pytest + vitest.
+- **Config** (`playwright.config.ts`): `workers: 1`, `timeout: 90000` — single worker avoids Vite dev-server degradation; see `e2e/_warmup.spec.ts` which pre-compiles every heavy page to avoid cold-start timeouts.
+- **Navigation helpers:** `navTo(page, label)` (sidebar), `navToSubTab(page, parent, sub)` (sub-tab pages), `navToSettingsTab(page, tab)` (Settings tabs).
+- **One spec per page/domain** — add a spec when adding a page.
+
+## 6. Navigation Architecture
+
+The sidebar is **grouped** (`web/src/App.tsx`, `navSections`) — 13 top-level items in labeled sections (Sales, Scheduling, Inventory, Point of Sale, Marketing, Insights, Administration). Secondary pages are **not** top-level:
+
+| Page | Lives at |
+|------|----------|
+| Map | Customers -> **Map** sub-tab (`SUB_TABS`) |
+| Recurring invoices | Invoices -> **Recurring** sub-tab |
+| Payment Methods | Payments -> **Payment Methods** sub-tab |
+| Gift Cards | Payments -> **Gift Cards** sub-tab |
+| Tech Schedule | Appointments -> **Tech Schedule** sub-tab |
+| Import/Export, Custom Fields, Audit Log | Settings -> **Data & Fields** tab |
+| Checklists, Health, Tenants, Agent Access | Settings -> **System** tab |
+
+- `SUB_TABS` (App.tsx) maps a parent page to its sub-tabs; `SUB_TAB_PARENT` maps sub-page ids back to their parent so the tab bar stays visible. `isNavVisible(id, role)` is the single source of truth for role-based visibility (sidebar items and sub-tabs).
+- **When adding a page:** keep the `PageId` union (`src/lib/navigation.ts`) + the App.tsx switch case, then decide: top-level sidebar item, sub-tab under a parent, or a Settings tab.
+- Settings (`SettingsPage.tsx`) is tabbed: General / Notifications / Business / Data & Fields / System.

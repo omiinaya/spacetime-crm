@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, useCallback, Suspense, lazy } from "react";
 import type { PageId } from "./lib/navigation";
 import { Toaster, toast } from "sonner";
 import {
@@ -7,8 +7,8 @@ import {
 	Ticket,
 	FileText,
 	CreditCard,
+	Receipt,
 	Calendar,
-	CalendarClock,
 	Package,
 	FileCheck,
 	ShoppingCart,
@@ -20,26 +20,13 @@ import {
 	ExternalLink,
 	Sun,
 	Moon,
-	Download,
-	Upload,
-	History,
-	HeartPulse,
-	ListOrdered,
-	Map,
-	ListChecks,
-	Building2,
-	Repeat,
-	Gift,
 	Send,
-	Bot,
 	WifiOff,
 } from "lucide-react";
 import { cn } from "./lib/utils";
+import { Tabs } from "./components/ui/tabs";
 import { api, DashboardStats } from "./lib/api";
-import { Badge } from "./components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
-import { Button } from "./components/ui/button";
-import { AuthProvider, useAuth, hasRole } from "./lib/auth";
+import { AuthProvider, useAuth } from "./lib/auth";
 import { PortalAuthProvider, usePortalAuth } from "./lib/portal-auth";
 import { useTheme } from "./lib/theme";
 import { useNetworkStatus } from "./lib/useNetworkStatus";
@@ -96,33 +83,119 @@ interface NavItem {
 	badge?: () => number;
 }
 
-const navItems: NavItem[] = [
-	{ id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-	{ id: "customers", label: "Customers", icon: Users },
-	{ id: "map", label: "Map", icon: Map },
-	{ id: "tickets", label: "Tickets", icon: Ticket },
-	{ id: "invoices", label: "Invoices", icon: FileText },
-	{ id: "recurring-invoices", label: "Recurring", icon: Repeat },
-	{ id: "payments", label: "Payments", icon: CreditCard },
-	{ id: "payment-methods", label: "Payment Methods", icon: CreditCard },
-	{ id: "gift-cards", label: "Gift Cards", icon: Gift },
-	{ id: "email-campaigns", label: "Email Campaigns", icon: Send },
-	{ id: "appointments", label: "Appointments", icon: Calendar },
-	{ id: "tech-schedule", label: "Tech Schedule", icon: CalendarClock },
-	{ id: "products", label: "Products", icon: Package },
-	{ id: "estimates", label: "Estimates", icon: FileCheck },
-	{ id: "purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
-	{ id: "pos", label: "POS", icon: CreditCard },
-	{ id: "import-export", label: "Import/Export", icon: Download },
-	{ id: "custom-fields", label: "Custom Fields", icon: ListOrdered },
-	{ id: "checklist", label: "Checklists", icon: ListChecks },
-	{ id: "health", label: "Health", icon: HeartPulse },
-	{ id: "audit-log", label: "Audit Log", icon: History },
-	{ id: "reports", label: "Reports", icon: BarChart3 },
-	{ id: "settings", label: "Settings", icon: Settings },
-	{ id: "tenants", label: "Tenants", icon: Building2 },
-	{ id: "agent-access", label: "Agent Access", icon: Bot },
+interface NavSection {
+	label: string;
+	items: NavItem[];
+}
+
+/**
+ * Professional grouped navigation. Secondary pages are reachable through
+ * sub-tabs inside their parent page (see SUB_TABS) or through Settings.
+ */
+const navSections: NavSection[] = [
+	{
+		label: "Overview",
+		items: [{ id: "dashboard", label: "Dashboard", icon: LayoutDashboard }],
+	},
+	{
+		label: "Sales",
+		items: [
+			{ id: "customers", label: "Customers", icon: Users },
+			{ id: "tickets", label: "Tickets", icon: Ticket },
+			{ id: "invoices", label: "Invoices", icon: FileText },
+			{ id: "payments", label: "Payments", icon: CreditCard },
+			{ id: "estimates", label: "Estimates", icon: FileCheck },
+		],
+	},
+	{
+		label: "Scheduling",
+		items: [{ id: "appointments", label: "Appointments", icon: Calendar }],
+	},
+	{
+		label: "Inventory",
+		items: [
+			{ id: "products", label: "Products", icon: Package },
+			{ id: "purchase-orders", label: "Purchase Orders", icon: ShoppingCart },
+		],
+	},
+	{
+		label: "Point of Sale",
+		items: [{ id: "pos", label: "POS", icon: Receipt }],
+	},
+	{
+		label: "Marketing",
+		items: [{ id: "email-campaigns", label: "Email Campaigns", icon: Send }],
+	},
+	{
+		label: "Insights",
+		items: [{ id: "reports", label: "Reports", icon: BarChart3 }],
+	},
+	{
+		label: "Administration",
+		items: [{ id: "settings", label: "Settings", icon: Settings }],
+	},
 ];
+
+/**
+ * Sub-tabs shown at the top of a page to reach related views that are no
+ * longer top-level sidebar items.
+ */
+const SUB_TABS: Partial<Record<PageId, { id: PageId; label: string }[]>> = {
+	customers: [
+		{ id: "customers", label: "List" },
+		{ id: "map", label: "Map" },
+	],
+	invoices: [
+		{ id: "invoices", label: "Invoices" },
+		{ id: "recurring-invoices", label: "Recurring" },
+	],
+	payments: [
+		{ id: "payments", label: "Payments" },
+		{ id: "payment-methods", label: "Payment Methods" },
+		{ id: "gift-cards", label: "Gift Cards" },
+	],
+	appointments: [
+		{ id: "appointments", label: "Appointments" },
+		{ id: "tech-schedule", label: "Tech Schedule" },
+	],
+};
+
+/** Maps a sub-page id back to its parent page for the sub-tab bar. */
+const SUB_TAB_PARENT: Partial<Record<PageId, PageId>> = {
+	map: "customers",
+	"recurring-invoices": "invoices",
+	"payment-methods": "payments",
+	"gift-cards": "payments",
+	"tech-schedule": "appointments",
+};
+
+/** Role-based nav visibility (shared by sidebar items and sub-tabs). */
+function isNavVisible(id: PageId, role: string): boolean {
+	if (role === "admin") return true;
+	if (role === "tech") {
+		return ![
+			"health",
+			"custom-fields",
+			"settings",
+			"import-export",
+			"audit-log",
+			"agent-access",
+		].includes(id);
+	}
+	// front_desk
+	return ![
+		"health",
+		"custom-fields",
+		"products",
+		"purchase-orders",
+		"reports",
+		"settings",
+		"import-export",
+		"audit-log",
+		"estimates",
+		"agent-access",
+	].includes(id);
+}
 
 // ── Portal App ──
 
@@ -245,10 +318,21 @@ function PortalShell() {
 function AppShell() {
 	const { user, logout, loading } = useAuth();
 	const [page, setPage] = useState<PageId>("dashboard");
+	const [section, setSection] = useState<PageId>("dashboard");
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const { theme, toggleTheme } = useTheme();
 	const online = useNetworkStatus();
+
+	/**
+	 * Navigate to any page, keeping the parent section in sync so the
+	 * sub-tab bar stays visible when a sub-page (Map, Recurring, ...) is open.
+	 */
+	const navigate = useCallback((id: PageId) => {
+		const parent = SUB_TAB_PARENT[id] ?? id;
+		setSection(parent);
+		setPage(id);
+	}, []);
 
 	useEffect(() => {
 		if (user) {
@@ -299,13 +383,13 @@ function AppShell() {
 					{(() => {
 						switch (page) {
 							case "dashboard":
-								return <DashboardPage stats={stats} onNavigate={setPage} />;
+							return <DashboardPage stats={stats} onNavigate={navigate} />;
 							case "customers":
-								return <CustomersPage onNavigate={setPage} />;
+								return <CustomersPage onNavigate={navigate} />;
 							case "tickets":
 								return <TicketsPage />;
 							case "invoices":
-								return <InvoicesPage onNavigate={setPage} />;
+								return <InvoicesPage onNavigate={navigate} />;
 							case "recurring-invoices":
 								return <RecurringInvoicesPage />;
 							case "payments":
@@ -372,56 +456,47 @@ function AppShell() {
 			</div>
 
 			{/* Nav items */}
-			<div className="flex-1 overflow-y-auto py-2 space-y-1 px-2">
-				{navItems
-					.filter((item) => {
-						// Role-based nav filtering
-						const role = user?.role || "";
-						if (role === "admin") return true;
-						if (role === "tech")
-							return ![
-								"health",
-								"custom-fields",
-								"settings",
-								"import-export",
-								"audit-log",
-								"agent-access",
-							].includes(item.id);
-						// front_desk
-						return ![
-							"health",
-							"custom-fields",
-							"products",
-							"purchase-orders",
-							"reports",
-							"settings",
-							"import-export",
-							"audit-log",
-							"estimates",
-							"agent-access",
-						].includes(item.id);
-					})
-					.map((item) => {
-						const Icon = item.icon;
-						return (
-							<button
-								key={item.id}
-								onClick={() => {
-									setPage(item.id);
-									setMobileOpen(false);
-								}}
-								className={cn(
-									"w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors border-l-2",
-									page === item.id
-										? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
-										: "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent",
-								)}
-							>
-								<Icon className="h-4 w-4 shrink-0" />
-								<span className="truncate">{item.label}</span>
-							</button>
-						);
-					})}
+			<div className="flex-1 overflow-y-auto py-2 px-2">
+				{navSections
+					.map((section) => ({
+						...section,
+						items: section.items.filter((item) =>
+							isNavVisible(item.id, user?.role || ""),
+						),
+					}))
+					.filter((section) => section.items.length > 0)
+					.map((section) => (
+						<div key={section.label} className="pt-3 first:pt-0">
+							{section.label !== "Overview" && (
+								<p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+									{section.label}
+								</p>
+							)}
+							<div className="space-y-1">
+								{section.items.map((item) => {
+									const Icon = item.icon;
+									return (
+										<button
+											key={item.id}
+											onClick={() => {
+												navigate(item.id);
+												setMobileOpen(false);
+											}}
+											className={cn(
+												"w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors border-l-2",
+												page === item.id
+													? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
+													: "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent",
+											)}
+										>
+											<Icon className="h-4 w-4 shrink-0" />
+											<span className="truncate">{item.label}</span>
+										</button>
+									);
+								})}
+							</div>
+						</div>
+					))}
 			</div>
 
 			{/* Portal link + Logout */}
@@ -487,6 +562,24 @@ function AppShell() {
 
 				{/* Page content */}
 				<div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+					{(() => {
+						const tabs = SUB_TABS[section];
+						if (!tabs) return null;
+						const visible = tabs.filter((t) =>
+							isNavVisible(t.id, user?.role || ""),
+						);
+						if (visible.length <= 1) return null;
+						const active = visible.some((t) => t.id === page)
+							? page
+							: visible[0].id;
+						return (
+							<Tabs
+								tabs={visible}
+								active={active}
+								onChange={(id) => navigate(id as PageId)}
+							/>
+						);
+					})()}
 					{!online && (
 						<div
 							role="status"

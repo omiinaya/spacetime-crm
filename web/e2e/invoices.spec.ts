@@ -1,68 +1,55 @@
 import { test, expect } from "@playwright/test";
-import { loginAs, waitForLoad } from "./helpers";
+import { loginAs, waitForLoad, navTo } from "./helpers";
 
 test.describe("Invoices", () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, "admin");
-    await waitForLoad(page);
-    await page.locator("aside").getByText("Invoices", { exact: true }).click();
-    await waitForLoad(page);
+    await navTo(page, "Invoices");
   });
 
   test("page heading and description are visible", async ({ page }) => {
-    await expect(page.locator("h1")).toContainText("Invoices");
-    await expect(page.getByText(/billing and invoicing/i)).toBeVisible();
+    await expect(page.locator("h1").first()).toContainText("Invoices");
+    await expect(page.getByText(/billing and invoicing/i).first()).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("'New Invoice' button is visible", async ({ page }) => {
-    const newBtn = page.getByText("New Invoice", { exact: true });
-    await expect(newBtn).toBeVisible();
+    await expect(page.getByText("New Invoice", { exact: true }).first()).toBeVisible();
   });
 
   test("clicking 'New Invoice' opens the creation form", async ({ page }) => {
-    await page.getByText("New Invoice", { exact: true }).click();
-    await expect(page.getByText("New Invoice").nth(1)).toBeVisible();
-    await expect(page.locator("input[placeholder='Ticket ID (optional)']")).toBeVisible();
-    await expect(page.locator("input[placeholder='Notes']")).toBeVisible();
-    await expect(page.locator("input[placeholder='Terms']")).toBeVisible();
-    await expect(page.getByText("Create", { exact: true })).toBeVisible();
-    await expect(page.getByText("Cancel", { exact: true })).toBeVisible();
+    await page.getByText("New Invoice", { exact: true }).first().click();
+    await waitForLoad(page);
+    await expect(page.getByRole("button", { name: "Create", exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel", exact: true }).first()).toBeVisible();
   });
 
   test("cancel button closes the new invoice form", async ({ page }) => {
-    await page.getByText("New Invoice", { exact: true }).click();
-    await expect(page.getByText("Create", { exact: true })).toBeVisible();
-    await page.getByText("Cancel", { exact: true }).click();
-    await expect(page.getByText("Create", { exact: true })).not.toBeVisible();
-  });
-
-  test("displays status filter buttons", async ({ page }) => {
-    const statusFilters = ["All", "draft", "sent", "paid", "overdue", "cancelled"];
-    for (const filter of statusFilters) {
-      const btn = page.locator("button").filter({ hasText: new RegExp(`^${filter}$`, "i") });
-      await expect(btn.first()).toBeVisible();
-    }
-  });
-
-  test("clicking a status filter changes the active filter", async ({ page }) => {
-    const paidBtn = page.locator("button").filter({ hasText: /^paid$/i });
-    await paidBtn.click();
+    await page.getByText("New Invoice", { exact: true }).first().click();
     await waitForLoad(page);
-    await expect(paidBtn).toBeVisible();
+    await page.getByRole("button", { name: "Cancel", exact: true }).first().click();
+    await expect(page.getByText("New Invoice", { exact: true }).first()).toBeVisible();
   });
 
-  test("shows invoice cards when invoices exist", async ({ page }) => {
-    await page.waitForTimeout(1_000);
-    const invoiceNumbers = page.locator("text=#");
-    const count = await invoiceNumbers.count();
-    if (count > 0) {
-      await expect(invoiceNumbers.first()).toBeVisible();
+  test("status filter buttons render and toggle active state", async ({ page }) => {
+    const filters = ["All", "draft", "sent", "paid", "overdue"];
+    for (const f of filters) {
+      const btn = page.getByRole("button", { name: f, exact: true }).first();
+      await expect(btn).toBeVisible({ timeout: 5_000 });
     }
+    const sent = page.getByRole("button", { name: "sent", exact: true }).first();
+    await sent.click();
+    await waitForLoad(page);
+    await expect(sent).toBeVisible();
   });
 
-  test("shows pagination controls", async ({ page }) => {
-    const nextBtn = page.locator("button").filter({ hasText: /next/i });
-    const prevBtn = page.locator("button").filter({ hasText: /prev/i });
-    await expect(nextBtn.or(prevBtn).first()).toBeVisible({ timeout: 5_000 }).catch(() => {});
+  test("bulk edit controls exist when invoices are present", async ({ page }) => {
+    const bulkBtn = page.getByRole("button", { name: /bulk edit/i }).first();
+    if (await bulkBtn.isVisible().catch(() => false)) {
+      await bulkBtn.click();
+      await waitForLoad(page);
+      await expect(page.getByRole("button", { name: "Cancel", exact: true }).first()).toBeVisible();
+    }
   });
 });

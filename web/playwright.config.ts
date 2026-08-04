@@ -15,8 +15,11 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [["html", { outputFolder: "playwright-report" }], ["list"]],
+  // Always a single worker: multiple workers sharing one Vite dev server
+  // cause concurrent transform contention → timeouts (documented pitfall).
+  workers: 1,
+  timeout: 90_000,
+  reporter: [[process.env.CI ? "github" : "list"]],
   use: {
     baseURL: "http://localhost:5185",
     trace: "on-first-retry",
@@ -37,6 +40,6 @@ export default defineConfig({
         command: "npm run dev",
         url: "http://localhost:5185",
         reuseExistingServer: !process.env.CI,
-        timeout: 30_000,
+        timeout: 60_000,
       },
 });
