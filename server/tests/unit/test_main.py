@@ -6,6 +6,7 @@ The health endpoint test requires mocking the STDB HTTP client.
 
 from __future__ import annotations
 
+import os
 from unittest.mock import AsyncMock, patch
 
 import main
@@ -257,3 +258,46 @@ class TestModuleStructure:
         # Check that the exception handler is registered
         handler = main.app.exception_handlers.get(RateLimitExceeded)
         assert handler is not None
+
+    def test_hermes_id_auth_is_opt_in(self, monkeypatch) -> None:
+        """hermes-id auth must mount ONLY when HERMES_AUTH_SERVER_URL is set.
+
+        When the env var is absent the app still imports (tests/CI/deploys
+        without hermes-id work); when present, the /hermes-id router mounts.
+        """
+        # Baseline: app under test was imported WITHOUT auth configured, so
+        # there must be no hermes-id route.
+        paths = [getattr(r, "path", "") for r in main.app.routes]
+        assert not any("/hermes-id" in p for p in paths), (
+            "hermes-id routes should NOT mount when HERMES_AUTH_SERVER_URL is unset "
+            "(breaks test collection and non-fleet deploys)"
+        )
+
+        # With the env var set (and monkeypatched OS environ), the app should
+        # mount the router. Re-import the module in a fresh interpreter to
+        # exercise the guarded import path.
+        import subprocess
+        import sys
+
+        env = {
+            **os.environ,
+            "HERMES_AUTH_SERVER_URL": "http://192.168.1.10:9488",
+            "HERMES_AUTH_PROJECT": "crm-test",
+        }
+        code = (
+            "import main; schema=main.app.openapi(); "
+            "paths=sorted(schema['paths'].keys()); "
+            "print(any('/hermes-id/' in p for p in paths))"
+        )
+        res = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=".",
+            timeout=30,
+        )
+        assert res.returncode == 0, f"subprocess failed: {res.stderr}"
+        assert "True" in res.stdout, (
+            f"/hermes-id routes should mount when env is set; got: {res.stdout} {res.stderr}"
+        )
