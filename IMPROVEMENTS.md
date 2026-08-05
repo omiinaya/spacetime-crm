@@ -65,8 +65,18 @@ Import customers/products from CSV/XLSX/JSON; export to CSV/XLSX/JSON.
 
 ---
 
-## Legacy / Future backlog (not yet scoped as tasks)
-The following were intentionally left out of the current IMPROVEMENTS scope and
-are candidates for future roadmapping if needed:
-- Multi-tenant hardening (health, tenants, agent access already under Settings → System)
-- Recurring invoice / gift card / tech schedule are delivered and live under their parent pages
+### Legacy / Future backlog — ✅ Done (verified 2026-08-05)
+The former legacy items are all delivered and live in the app. This section is
+kept as a record — the scanner should NOT re-import these as pending tasks.
+- Multi-tenant hardening ✅ Done
+  - Health: `server/routes/health.py`, `web/src/pages/HealthPage.tsx` (Settings → System)
+  - Tenants: `server/spacetimedb/src/tenant.rs`, `server/routes/tenants.py`, `web/src/pages/TenantsPage.tsx` (Settings → System)
+  - Agent access: `server/routes/hermes_id_agents.py`, `web/src/pages/AgentAccess.tsx` (Settings → System)
+- Recurring invoices ✅ Done
+  - Backend: `server/routes/recurring_invoices.py`, `server/spacetimedb/src/recurring_invoice_rule.rs`
+  - Frontend: `web/src/pages/RecurringInvoicesPage.tsx` (Invoices → Recurring sub-tab)
+- Gift cards ✅ Done
+  - Backend: `server/routes/gift_cards.py`, `server/spacetimedb/src/gift_card.rs`
+  - Frontend: `web/src/pages/GiftCardsPage.tsx` (Payments → Gift Cards sub-tab)
+- Tech schedule ✅ Done
+  - Frontend: `web/src/pages/TechnicianSchedulePage.tsx` (Appointments → Tech Schedule sub-tab)
