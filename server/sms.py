@@ -1,6 +1,7 @@
 """SMS notification utility for SpacetimeCRM.
 Uses Twilio REST API with configurable settings stored in a JSON file.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -8,10 +9,9 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from client import get_http_client
-import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +47,12 @@ def get_settings() -> Optional[dict]:
 
 def update_settings(data: dict) -> dict:
     current = _load_settings() or {}
-    current.update({
-        "account_sid": data.get("account_sid", current.get("account_sid", "")),
-        "from_number": data.get("from_number", current.get("from_number", "")),
-    })
+    current.update(
+        {
+            "account_sid": data.get("account_sid", current.get("account_sid", "")),
+            "from_number": data.get("from_number", current.get("from_number", "")),
+        }
+    )
     if "auth_token" in data and data["auth_token"]:
         current["auth_token"] = data["auth_token"]
     _save_settings(current)
@@ -160,15 +162,19 @@ async def test_connection() -> dict:
 
 # ── Notification templates ──
 
+
 def _notify_ticket_status_change(phone: str, ticket_number: int, title: str, status: str) -> None:
     """Send ticket status SMS notification. Fire-and-forget."""
     status_labels = {
-        "new": "New", "in_progress": "In Progress",
-        "waiting_parts": "Waiting for Parts", "waiting_customer": "Waiting for Customer",
-        "resolved": "Resolved", "closed": "Closed",
+        "new": "New",
+        "in_progress": "In Progress",
+        "waiting_parts": "Waiting for Parts",
+        "waiting_customer": "Waiting for Customer",
+        "resolved": "Resolved",
+        "closed": "Closed",
     }
     status_label = status_labels.get(status, status)
-    body = f"Ticket #{ticket_number} — {status_label}: \"{title[:40]}\""
+    body = f'Ticket #{ticket_number} — {status_label}: "{title[:40]}"'
     asyncio.ensure_future(send_sms(phone, body))
 
 

@@ -1,4 +1,5 @@
 """Route registrations for SpacetimeCRM."""
+
 from __future__ import annotations
 
 from routes.appointments import router as appointments_router

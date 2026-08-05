@@ -1,12 +1,15 @@
 """Settings (mail/SMS) routes — get/save/test."""
+
 import httpx
-import pytest
 from .conftest import (
-    SERVER_URL, assert_ok,
-    save_mail_settings, restore_mail_settings,
-    save_sms_settings, restore_sms_settings,
-    save_user_settings, restore_user_settings,
-    test_admin_headers,
+    SERVER_URL,
+    assert_ok,
+    save_mail_settings,
+    restore_mail_settings,
+    save_sms_settings,
+    restore_sms_settings,
+    save_user_settings,
+    restore_user_settings,
 )
 
 
@@ -33,7 +36,8 @@ class TestMailSettings:
                     "smtp_from_name": "CRM",
                     "smtp_tls": True,
                 },
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
@@ -72,7 +76,8 @@ class TestSMSSettings:
                     "twilio_auth_token": "tok_test456",
                     "twilio_from_number": "+15551234567",
                 },
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
@@ -119,7 +124,8 @@ class TestUserSettings:
             resp = httpx.put(
                 f"{SERVER_URL}/api/users/settings",
                 json=payload,
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
@@ -140,7 +146,8 @@ class TestUserSettings:
             resp = httpx.put(
                 f"{SERVER_URL}/api/users/settings",
                 json=payload,
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 

@@ -1,9 +1,20 @@
 #!/bin/sh
 # commit-msg hook — validate commit message with commitlint
 commit_msg_file="$1"
+# git passes a path relative to the repo root (e.g. ".git/COMMIT_EDITMSG").
+# Resolve it to an absolute path BEFORE changing directories, otherwise the
+# ledger in web/ (commitlint doesn't live at the repo root) would resolve it
+# against the wrong cwd (web/.git/COMMIT_EDITMSG) and fail to read it.
+case "$commit_msg_file" in
+  /*) abs_msg="$commit_msg_file" ;;
+  *)  abs_msg="$(pwd)/$commit_msg_file" ;;
+esac
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+# commitlint reads its config from the current directory — run it from web/
+# where the config lives, but feed the message via stdin (not --edit) so it
+# doesn't try to open a .git/COMMIT_EDITMSG relative to web/.
 cd "$repo_root/web" || exit 1
-if ! npx commitlint --edit "$commit_msg_file"; then
+if ! cat "$abs_msg" | npx commitlint; then
   echo ""
   echo "❌ Commit message does not follow conventional commits."
   echo "   Please use format: <type>: <description> (lowercase)"

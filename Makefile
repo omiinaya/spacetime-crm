@@ -203,7 +203,7 @@ container-rebuild: container-build container-up ## Rebuild and restart container
 test-unit:  ## Run fast offline-safe unit tests
 	@echo "--- Backend unit tests ---"
 	@if command -v pytest >/dev/null 2>&1; then \
-		pytest server/ -v --tb=short; \
+		pytest tests/unit/ -v --tb=short; \
 	else \
 		echo "⚠️  pytest not installed. Run: pip install pytest"; \
 	fi

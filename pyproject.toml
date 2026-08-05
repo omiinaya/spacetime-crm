@@ -27,3 +27,4 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["server/tests"]
+asyncio_mode = "auto"

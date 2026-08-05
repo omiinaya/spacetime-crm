@@ -2,9 +2,9 @@
 
 Uses unique_suffix for all identifiers to avoid parallel-session collisions.
 """
+
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity
 
 
 def _create_field(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> dict:
@@ -25,7 +25,8 @@ def _create_field(test_admin_headers: dict, session_suffix: str = "", suffix: st
             "required": False,
             "active": True,
         },
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     data = assert_ok(resp)
     assert "id" in data
@@ -44,7 +45,8 @@ class TestCustomFieldDefinitions:
         resp = httpx.post(
             f"{SERVER_URL}/api/custom-field-definitions",
             json={"entity_type": "invalid_type", "label": "Bad", "field_type": "text"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 422
 
@@ -52,7 +54,8 @@ class TestCustomFieldDefinitions:
         resp = httpx.post(
             f"{SERVER_URL}/api/custom-field-definitions",
             json={"entity_type": "customer", "label": "Bad", "field_type": "binary"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 422
 
@@ -77,18 +80,23 @@ class TestCustomFieldDefinitions:
                 "required": True,
                 "active": True,
             },
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
     def test_delete(self, test_admin_headers: dict, session_suffix: str):
         data = _create_field(test_admin_headers, session_suffix, "delete")
         field_id = data["id"]
-        resp = httpx.delete(f"{SERVER_URL}/api/custom-field-definitions/{field_id}", headers=test_admin_headers, timeout=10)
+        resp = httpx.delete(
+            f"{SERVER_URL}/api/custom-field-definitions/{field_id}", headers=test_admin_headers, timeout=10
+        )
         assert_ok(resp)
 
     def test_delete_nonexistent(self, test_admin_headers: dict):
-        resp = httpx.delete(f"{SERVER_URL}/api/custom-field-definitions/nonexistent-999", headers=test_admin_headers, timeout=10)
+        resp = httpx.delete(
+            f"{SERVER_URL}/api/custom-field-definitions/nonexistent-999", headers=test_admin_headers, timeout=10
+        )
         assert resp.status_code < 500
 
 
@@ -110,9 +118,17 @@ class TestCustomFieldValues:
         # Create a customer entity to attach values to
         suf = unique_suffix()
         email = f"field-test-{suf}@example.com"
-        httpx.post(f"{SERVER_URL}/api/customers", json={
-            "first_name": "Field", "last_name": "Test", "email": email, "phone": "555-0000",
-        }, headers=test_admin_headers, timeout=10)
+        httpx.post(
+            f"{SERVER_URL}/api/customers",
+            json={
+                "first_name": "Field",
+                "last_name": "Test",
+                "email": email,
+                "phone": "555-0000",
+            },
+            headers=test_admin_headers,
+            timeout=10,
+        )
         r = httpx.get(f"{SERVER_URL}/api/customers", params={"search": email}, headers=test_admin_headers, timeout=10)
         items = r.json().get("customers", [])
         assert items, "Customer not created"
@@ -122,7 +138,8 @@ class TestCustomFieldValues:
         resp = httpx.put(
             f"{SERVER_URL}/api/custom-field-values/{entity_id}",
             json={"values": {field_id: "Hello World"}},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -146,7 +163,8 @@ class TestCustomFieldValues:
         resp = httpx.put(
             f"{SERVER_URL}/api/custom-field-values/{entity_id}",
             json={"values": {data["id"]: "orphaned value"}},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code < 500, resp.text[:200]
 
@@ -159,5 +177,9 @@ class TestCustomFieldErrors:
         assert resp.status_code in (401, 403)
 
     def test_unauthorized_create(self, client: httpx.Client):
-        resp = client.post("/api/custom-field-definitions", json={"entity_type": "customer", "label": "X", "field_type": "text"}, timeout=10)
+        resp = client.post(
+            "/api/custom-field-definitions",
+            json={"entity_type": "customer", "label": "X", "field_type": "text"},
+            timeout=10,
+        )
         assert resp.status_code in (401, 403)

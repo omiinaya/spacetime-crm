@@ -10,17 +10,17 @@ sessions (parallel/sequential) never collides. Created entities are
 tracked and cleaned up at session end via STDB SQL DELETE (not fragile
 HTTP endpoint calls).
 """
+
 import os
-import json
 import uuid
-import time
-import pytest
-import httpx
+
 import bcrypt
+import httpx
+import pytest
 
 SERVER_URL = os.environ.get("CRM_TEST_SERVER", "http://localhost:8723")
 ADMIN_EMAIL = os.environ.get("CRM_ADMIN_EMAIL", "admin@crm.local")
-ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "change-me-in-production")
+ADMIN_PW = os.environ.get("CRM_ADMIN_PW", "admin123")
 
 # Test STDB container settings (used by test helpers for direct SQL lookups)
 STDB_HOST = os.environ.get("STDB_HOST", "localhost")
@@ -28,6 +28,21 @@ STDB_PORT = int(os.environ.get("STDB_TEST_PORT", os.environ.get("STDB_PORT", "30
 STDB_DB = os.environ.get("STDB_DB", "spacetime-crm")
 STDB_SQL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/sql"
 STDB_CALL_URL = f"http://{STDB_HOST}:{STDB_PORT}/v1/database/{STDB_DB}/call"
+
+
+def _jwt_tenant_id(headers: dict) -> str:
+    """Extract tenant_id from a Bearer JWT in the given headers."""
+    import base64
+    import json
+
+    token = headers.get("Authorization", "").replace("Bearer ", "").strip()
+    if not token:
+        return ""
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(token.split(".")[1] + "=="))
+        return payload.get("tenant_id", "")
+    except Exception:
+        return ""
 
 
 def _stdb_sql(query: str) -> list[dict]:
@@ -42,26 +57,64 @@ def _stdb_sql(query: str) -> list[dict]:
         headers={"Content-Type": "application/sql"},
         timeout=10,
     )
-    assert resp.status_code == 200, (
-        f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
-    )
+    assert resp.status_code == 200, f"STDB SQL failed ({resp.status_code}): {resp.text[:200]}"
     return resp.json()
 
 
 def _stdb_write(query: str) -> None:
     """Run a write SQL statement (DELETE, INSERT, etc) against STDB.
 
+    Requires an authenticated identity (STDB denies anonymous DML).
     Ignores errors on DELETE — the table may not exist or be empty.
     """
     try:
         httpx.post(
             STDB_SQL_URL,
             content=query,
-            headers={"Content-Type": "application/sql"},
+            headers={
+                "Content-Type": "application/sql",
+                **_stdb_auth_headers(),
+            },
             timeout=30,
         )
     except Exception:
         pass
+
+
+_STDB_TOKEN_CACHE: str | None = None
+
+
+def _stdb_auth_headers() -> dict[str, str]:
+    """Return STDB identity-token auth headers, cached from cli.toml."""
+    global _STDB_TOKEN_CACHE
+    if _STDB_TOKEN_CACHE:
+        return {"Authorization": f"Bearer {_STDB_TOKEN_CACHE}"}
+    token = ""
+    try:
+        with open(os.path.expanduser("~/.config/spacetime/cli.toml")) as f:
+            for line in f:
+                if line.strip().startswith("spacetimedb_token"):
+                    token = line.split("=", 1)[1].strip().strip('"')
+                    break
+    except Exception:
+        pass
+    if token:
+        _STDB_TOKEN_CACHE = token
+        return {"Authorization": f"Bearer {token}"}
+    return {}
+
+
+def _stdb_call(reducer: str, args: list[str]) -> None:
+    """Call a STDB reducer via the HTTP /call endpoint.
+
+    This is the ONLY way to execute reducers (SQL SELECT does NOT work).
+    """
+    resp = httpx.post(
+        f"{STDB_CALL_URL}/{reducer}",
+        json=args,
+        timeout=30,
+    )
+    assert resp.status_code == 200, f"STDB call '{reducer}' failed ({resp.status_code}): {resp.text[:200]}"
 
 
 def unique_suffix() -> str:
@@ -201,6 +254,111 @@ def _cleanup_by_suffix(session_suffix: str) -> int:
     return count
 
 
+def _cleanup_stale_test_tenants() -> int:
+    """Delete tenants from prior (possibly failed) test sessions.
+
+    Every test session creates a tenant whose slug matches `test-tenant-%`.
+    When a session is interrupted before its teardown, that tenant and ALL
+    of its rows (including entities with FIXED names like 'Status Test')
+    linger in the shared STDB database and confuse later runs (helpers that
+    look up by fixed title can return a foreign stale row).
+
+    The STDB `delete_tenant` reducer only removes the tenant + its members,
+    so this also purges every entity row referencing the stale tenant IDs
+    (customers, tickets, invoices, ...).
+    """
+    try:
+        rows = _stdb_sql("SELECT * FROM tenants")
+        if not rows or not rows[0].get("rows"):
+            return 0
+        schema = rows[0]["schema"]["elements"]
+        id_idx = next(
+            (i for i, e in enumerate(schema) if e["name"].get("some") == "id"),
+            0,
+        )
+        slug_idx = next(
+            (i for i, e in enumerate(schema) if e["name"].get("some") == "slug"),
+            1,
+        )
+        stale_ids: list[str] = []
+        for row in rows[0]["rows"]:
+            slug = row[slug_idx] if slug_idx < len(row) else ""
+            if isinstance(slug, str) and slug.startswith("test-tenant-"):
+                stale_ids.append(str(row[id_idx]))
+        removed = 0
+        for tenant_id in stale_ids:
+            try:
+                _stdb_call("delete_tenant", [tenant_id])
+                removed += 1
+            except Exception:
+                pass
+        # Purge orphaned entity rows: any row whose tenant_id is not present
+        # in the tenants table belongs to a tenant that no longer exists
+        # (deleted by THIS or an EARLIER cleanup run). Legacy rows with an
+        # empty tenant_id are left untouched.
+        try:
+            known = {str(r[id_idx]) for r in rows[0]["rows"]}
+        except Exception:
+            known = set()
+        orphan_tables = [
+            "customer",
+            "ticket",
+            "invoices",
+            "payment",
+            "appointment",
+            "products",
+            "estimates",
+            "purchase_order",
+            "counter_sale",
+            "recurring_invoice_rules",
+            "webhook_subscriptions",
+            "scheduled_reports",
+            "custom_field_definitions",
+            "checklist_templates",
+            "tax_rates",
+            "user",
+            "user_settings",
+            "customer_geolocations",
+            "saved_payment_methods",
+            "invoice_line_items",
+            "estimate_line_items",
+            "purchase_order_line_item",
+            "inventory_adjustment",
+            "ticket_note",
+            "ticket_timer",
+            "counter_sale_line_item",
+            "pos_line_item",
+            "audit_log",
+        ]
+        for table in orphan_tables:
+            try:
+                tresp = _stdb_sql(f"SELECT tenant_id FROM {table}")
+                if not tresp or not tresp[0].get("rows"):
+                    continue
+                tid_col = next(
+                    (i for i, e in enumerate(tresp[0]["schema"]["elements"]) if e["name"].get("some") == "tenant_id"),
+                    0,
+                )
+                orphan_tids = {
+                    str(r[tid_col])
+                    for r in tresp[0]["rows"]
+                    if tid_col < len(r)
+                    and isinstance(r[tid_col], str)
+                    and r[tid_col].startswith("tnt_")
+                    and r[tid_col] not in known
+                }
+                for tid in orphan_tids:
+                    try:
+                        _stdb_write(f"DELETE FROM {table} WHERE tenant_id = '{tid}'")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        return removed
+    except Exception:
+        return 0
+
+
 # ── Fixtures ──────────────────────────────────────────────────────
 
 
@@ -218,16 +376,41 @@ def session_suffix() -> str:
     suf = uuid.uuid4().hex[:12]
     # Pre-session cleanup: remove stale data from the previous session
     # that might still match this suffix (edge case for very fast re-runs)
+    _cleanup_stale_test_tenants()
     _cleanup_by_suffix(suf)
     return suf
 
 
 @pytest.fixture(scope="session")
 def admin_token() -> str:
-    """Log in as admin once per session and return the JWT."""
-    resp = httpx.post(f"{SERVER_URL}/api/auth/login", json={
-        "email": ADMIN_EMAIL, "password": ADMIN_PW,
-    }, timeout=10)
+    """Log in as admin once per session and return the JWT.
+
+    Self-healing: if the shared admin's password hash was clobbered by a
+    stray test (shared-STDB failure mode), reset it to ADMIN_PW and retry.
+    """
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/login",
+        json={
+            "email": ADMIN_EMAIL,
+            "password": ADMIN_PW,
+        },
+        timeout=10,
+    )
+    if resp.status_code == 401:
+        # Attempt self-heal: reset the admin password, then retry once.
+        try:
+            rows = _stdb_sql(f"SELECT id FROM user WHERE email = '{ADMIN_EMAIL}'")
+            if rows and rows[0].get("rows"):
+                uid = rows[0]["rows"][0][0]
+                hashed = bcrypt.hashpw(ADMIN_PW.encode(), bcrypt.gensalt()).decode()
+                _stdb_call("set_user_password", [uid, hashed])
+                resp = httpx.post(
+                    f"{SERVER_URL}/api/auth/login",
+                    json={"email": ADMIN_EMAIL, "password": ADMIN_PW},
+                    timeout=10,
+                )
+        except Exception:
+            pass
     assert resp.status_code == 200, f"Admin login failed: {resp.text}"
     data = resp.json()
     assert "token" in data
@@ -237,9 +420,14 @@ def admin_token() -> str:
 @pytest.fixture(scope="session")
 def admin_user() -> dict:
     """Log in and return user info."""
-    resp = httpx.post(f"{SERVER_URL}/api/auth/login", json={
-        "email": ADMIN_EMAIL, "password": ADMIN_PW,
-    }, timeout=10)
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/login",
+        json={
+            "email": ADMIN_EMAIL,
+            "password": ADMIN_PW,
+        },
+        timeout=10,
+    )
     assert resp.status_code == 200
     return resp.json()["user"]
 
@@ -278,6 +466,7 @@ def auth_headers(admin_token) -> dict:
 # STDB state isolation between parallel test runs. This avoids flaky tests
 # when multiple test sessions run against the same STDB instance.
 
+
 @pytest.fixture(scope="session")
 def test_tenant_slug(session_suffix: str) -> str:
     """Unique tenant slug for this test session."""
@@ -299,7 +488,7 @@ def test_admin_email(session_suffix: str) -> str:
 @pytest.fixture(scope="session")
 def test_admin_password() -> str:
     """Password for test admin users."""
-    return "change-me-in-production"
+    return "testadmin123"
 
 
 @pytest.fixture(scope="session")
@@ -333,7 +522,11 @@ def isolated_tenant(
     # Create admin user in the new tenant
     resp = httpx.post(
         f"{SERVER_URL}/api/users",
-        json={"name": f"test-admin-{test_tenant_slug}", "email": test_admin_email, "role": "admin"},
+        json={
+            "name": f"test-admin-{test_tenant_slug}",
+            "email": test_admin_email,
+            "role": "admin",
+        },
         headers=auth_headers_session,
         timeout=10,
     )
@@ -355,7 +548,7 @@ def isolated_tenant(
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
+    _stdb_call("set_user_password", [admin_user_id, hashed])
 
     # Log in as the test admin to get a token
     resp = httpx.post(
@@ -389,6 +582,91 @@ def isolated_tenant(
         )
     except Exception:
         pass
+
+
+@pytest.fixture(scope="session")
+def second_isolated_tenant(session_suffix: str, auth_headers_session: dict) -> dict:
+    """Create a SECOND isolated tenant (tenant B) with its own admin user.
+
+    Mirrors the ``isolated_tenant`` fixture (tenant A) so multi-tenant
+    isolation tests can exercise cross-tenant access with two fully
+    independent admin tokens. Cleanup happens at session end.
+    """
+    slug = f"test-tenant-b-{session_suffix}"
+    name = f"Test Tenant B {session_suffix}"
+    email = f"admin-b-{session_suffix}@test.local"
+    password = "testadmin123"
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/tenants",
+        json={"name": name, "slug": slug},
+        headers=auth_headers_session,
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Failed to create tenant B: {resp.text}"
+
+    rows = _stdb_sql(f"SELECT * FROM tenants WHERE slug = '{slug}'")
+    assert rows and rows[0]["rows"], f"Tenant B not found: {slug}"
+    tenant_id = rows[0]["rows"][0][0]
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/users",
+        json={"name": f"test-admin-{slug}", "email": email, "role": "admin"},
+        headers=auth_headers_session,
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Failed to create admin user B: {resp.text}"
+
+    rows = _stdb_sql(f"SELECT * FROM user WHERE email = '{email}'")
+    assert rows and rows[0]["rows"], f"Admin user B not found: {email}"
+    admin_user_id = rows[0]["rows"][0][0]
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/tenants/{tenant_id}/members",
+        json={"username": f"test-admin-{slug}", "role": "admin"},
+        headers=auth_headers_session,
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Failed to add tenant B member: {resp.text}"
+
+    hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    _stdb_call("set_user_password", [admin_user_id, hashed])
+
+    resp = httpx.post(
+        f"{SERVER_URL}/api/auth/login",
+        json={"email": email, "password": password},
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Tenant B admin login failed: {resp.text}"
+    admin_token = resp.json()["token"]
+
+    tenant_info = {
+        "tenant_id": tenant_id,
+        "tenant_slug": slug,
+        "admin_user_id": admin_user_id,
+        "admin_email": email,
+        "admin_token": admin_token,
+    }
+
+    _CREATED_ENTITIES.setdefault("tenant", []).append(tenant_id)
+    _CREATED_ENTITIES.setdefault("user", []).append(admin_user_id)
+
+    yield tenant_info
+
+    try:
+        httpx.delete(
+            f"{SERVER_URL}/api/tenants/{tenant_id}",
+            headers=auth_headers_session,
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="session")
+def second_tenant_headers(second_isolated_tenant: dict) -> dict:
+    """Bearer auth header dict for the second (tenant B) admin."""
+    return {"Authorization": f"Bearer {second_isolated_tenant['admin_token']}"}
 
 
 @pytest.fixture(scope="session")
@@ -433,17 +711,13 @@ def _session_cleanup(request, session_suffix: str, auth_headers_session: dict):
 
 def assert_ok(resp: httpx.Response, status: int = 200):
     """Assert a successful response and return parsed JSON."""
-    assert resp.status_code == status, (
-        f"Expected {status}, got {resp.status_code}: {resp.text[:300]}"
-    )
+    assert resp.status_code == status, f"Expected {status}, got {resp.status_code}: {resp.text[:300]}"
     return resp.json()
 
 
 def assert_unauthorized(resp: httpx.Response):
     """Assert a 401 or 403 response."""
-    assert resp.status_code in (401, 403), (
-        f"Expected 401/403, got {resp.status_code}: {resp.text[:300]}"
-    )
+    assert resp.status_code in (401, 403), f"Expected 401/403, got {resp.status_code}: {resp.text[:300]}"
 
 
 def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -> dict:
@@ -466,7 +740,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     resp = httpx.post(
         f"{SERVER_URL}/api/customers",
         json=data,
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert resp.status_code == 200, f"Customer create failed: {resp.text[:200]}"
@@ -474,7 +748,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     r2 = httpx.get(
         f"{SERVER_URL}/api/customers",
         params={"search": data["email"]},
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert r2.status_code == 200
@@ -517,7 +791,8 @@ def restore_mail_settings(auth_headers: dict, settings: dict | None) -> None:
                 "smtp_from_name": settings.get("smtp_from_name", ""),
                 "smtp_tls": settings.get("smtp_tls", True),
             },
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -547,7 +822,34 @@ def restore_sms_settings(auth_headers: dict, settings: dict | None) -> None:
                 "twilio_auth_token": settings.get("twilio_auth_token", ""),
                 "twilio_from_number": settings.get("twilio_from_number", ""),
             },
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
+        )
+    except Exception:
+        pass
+
+
+def save_app_config(auth_headers: dict) -> dict | None:
+    """Fetch current app config so it can be restored later."""
+    try:
+        resp = httpx.get(f"{SERVER_URL}/api/settings/app", headers=auth_headers, timeout=10)
+        if resp.status_code == 200:
+            return resp.json().get("config")
+    except Exception:
+        pass
+    return None
+
+
+def restore_app_config(auth_headers: dict, config: dict | None) -> None:
+    """Restore previously saved app config."""
+    if config is None:
+        return
+    try:
+        httpx.post(
+            f"{SERVER_URL}/api/settings/app",
+            json=config,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -576,7 +878,8 @@ def restore_user_settings(auth_headers: dict, settings: dict | None) -> None:
                 "theme": settings.get("theme", "system"),
                 "default_ticket_status": settings.get("default_ticket_status", "new"),
             },
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -592,7 +895,8 @@ def save_sla_targets(auth_headers: dict) -> dict:
     try:
         resp = httpx.get(
             f"{SERVER_URL}/api/tickets/sla-settings",
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
         data = resp.json()
         return data.get("targets", dict(DEFAULT_SLA_TARGETS))
@@ -608,7 +912,8 @@ def restore_sla_targets(auth_headers: dict, targets: dict) -> None:
         httpx.post(
             f"{SERVER_URL}/api/tickets/sla-settings",
             json={"targets": targets},
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -630,7 +935,11 @@ def save_default_tax_rate(auth_headers: dict) -> dict | None:
             rates = resp.json().get("tax_rates", [])
             for rate in rates:
                 if rate.get("is_default"):
-                    return {"id": rate["id"], "rate": rate["rate"], "name": rate["name"]}
+                    return {
+                        "id": rate["id"],
+                        "rate": rate["rate"],
+                        "name": rate["name"],
+                    }
     except Exception:
         pass
     return None
@@ -648,14 +957,20 @@ def restore_default_tax_rate(auth_headers: dict, saved: dict | None) -> None:
                 if rate.get("is_default") and rate["id"] != saved.get("id"):
                     httpx.put(
                         f"{SERVER_URL}/api/tax-rates/{rate['id']}",
-                        json={"name": rate["name"], "rate": rate["rate"], "is_default": False},
-                        headers=auth_headers, timeout=10,
+                        json={
+                            "name": rate["name"],
+                            "rate": rate["rate"],
+                            "is_default": False,
+                        },
+                        headers=auth_headers,
+                        timeout=10,
                     )
         # Restore the saved rate as default
         httpx.put(
             f"{SERVER_URL}/api/tax-rates/{saved['id']}",
             json={"name": saved["name"], "rate": saved["rate"], "is_default": True},
-            headers=auth_headers, timeout=10,
+            headers=auth_headers,
+            timeout=10,
         )
     except Exception:
         pass
@@ -688,7 +1003,8 @@ def _reset_global_state(auth_headers_session: dict, session_suffix: str):
                 "smtp_from_name": "",
                 "smtp_tls": True,
             },
-            headers=auth_headers_session, timeout=10,
+            headers=auth_headers_session,
+            timeout=10,
         )
     except Exception:
         pass
@@ -701,7 +1017,8 @@ def _reset_global_state(auth_headers_session: dict, session_suffix: str):
                 "twilio_auth_token": "",
                 "twilio_from_number": "",
             },
-            headers=auth_headers_session, timeout=10,
+            headers=auth_headers_session,
+            timeout=10,
         )
     except Exception:
         pass

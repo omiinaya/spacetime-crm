@@ -1,4 +1,5 @@
 """Customer portal routes + Stripe checkout session creation."""
+
 from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
@@ -6,14 +7,23 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
 
 from config import settings
-from helpers import _safe_id, (
-    _sql, _call, _sort, _log_audit, _fire_webhook,
-    _safe_customer, logger, security,
+from helpers import (
+    _safe_id,
+    _sql,
+    _call,
+    _sort,
+    _safe_customer,
+    _sanitize_sql,
+    security,
 )
 from rate_limit import limiter
 from models import (
-    PortalLoginRequest, PortalNoteCreate, PortalPaymentCreate,
-    PortalSetPassword, PortalCheckoutSessionCreate, PortalPayWithSavedCard,
+    PortalLoginRequest,
+    PortalNoteCreate,
+    PortalPaymentCreate,
+    PortalSetPassword,
+    PortalCheckoutSessionCreate,
+    PortalPayWithSavedCard,
 )
 from stripe_payments import create_checkout_session, create_payment_intent, is_configured as stripe_configured
 
@@ -174,12 +184,15 @@ async def portal_add_note(ticket_id: str, body: PortalNoteCreate, customer: dict
     rows = await _sql(f"SELECT * FROM ticket WHERE id = '{_safe_id(ticket_id)}' AND customer_id = '{customer['id']}'")
     if not rows:
         raise HTTPException(404, "Ticket not found")
-    await _call("add_ticket_note", [
-        ticket_id,
-        f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or "Customer",
-        body.content,
-        False,
-    ])
+    await _call(
+        "add_ticket_note",
+        [
+            ticket_id,
+            f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or "Customer",
+            body.content,
+            False,
+        ],
+    )
     return {"ok": True}
 
 
@@ -196,7 +209,9 @@ async def portal_invoices(customer: dict = Depends(get_current_customer)):
 @router.get("/api/portal/invoices/{invoice_id}")
 async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_current_customer)):
     """Single invoice detail with line items (customer-owned only)."""
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+    )
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
@@ -220,20 +235,25 @@ async def portal_make_payment(body: PortalPaymentCreate, customer: dict = Depend
     amount = body.amount
     method = body.method
 
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+    )
     if not rows:
         raise HTTPException(404, "Invoice not found")
 
-    await _call("record_payment", [
-        customer.get("tenant_id", ""),
-        invoice_id,
-        customer["id"],
-        amount,
-        method,
-        body.reference,
-        "Online payment via customer portal",
-        "USD",
-    ])
+    await _call(
+        "record_payment",
+        [
+            customer.get("tenant_id", ""),
+            invoice_id,
+            customer["id"],
+            amount,
+            method,
+            body.reference,
+            "Online payment via customer portal",
+            "USD",
+        ],
+    )
 
     payments = await _sql(f"SELECT * FROM payment WHERE invoice_id = '{_safe_id(invoice_id)}'")
     inv = rows[0]
@@ -281,7 +301,9 @@ async def portal_set_password(body: PortalSetPassword, customer: dict = Depends(
 
 
 @router.post("/api/portal/payments/create-checkout-session")
-async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, customer: dict = Depends(get_current_customer)):
+async def portal_create_checkout_session(
+    body: PortalCheckoutSessionCreate, customer: dict = Depends(get_current_customer)
+):
     """Create a Stripe Checkout Session for an invoice payment."""
     if not stripe_configured():
         raise HTTPException(503, "Stripe is not configured. Set STRIPE_SECRET_KEY in .env")
@@ -290,7 +312,9 @@ async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, cust
     if not invoice_id:
         raise HTTPException(400, "invoice_id is required")
 
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+    )
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
@@ -330,9 +354,7 @@ async def portal_create_checkout_session(body: PortalCheckoutSessionCreate, cust
 @router.get("/api/portal/payment-methods")
 async def portal_payment_methods(customer: dict = Depends(get_current_customer)):
     """List the customer's saved payment methods."""
-    rows = await _sql(
-        f"SELECT * FROM saved_payment_methods WHERE customer_id = '{customer['id']}'"
-    )
+    rows = await _sql(f"SELECT * FROM saved_payment_methods WHERE customer_id = '{customer['id']}'")
     return {"payment_methods": _sort(rows, "created_at", desc=True)}
 
 
@@ -349,7 +371,9 @@ async def portal_pay_with_saved_card(
     payment_method_id = body.payment_method_id
 
     # Verify invoice belongs to customer
-    rows = await _sql(f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'")
+    rows = await _sql(
+        f"SELECT * FROM invoices WHERE id = '{_safe_id(invoice_id)}' AND customer_id = '{customer['id']}'"
+    )
     if not rows:
         raise HTTPException(404, "Invoice not found")
     inv = rows[0]
@@ -390,16 +414,19 @@ async def portal_pay_with_saved_card(
         raise HTTPException(502, f"Stripe payment failed: {error_detail}")
 
     # Record payment
-    await _call("record_payment", [
-        customer.get("tenant_id", ""),
-        invoice_id,
-        customer["id"],
-        amount_due,
-        "card",
-        result.get("payment_intent_id", ""),
-        f"Stripe saved card payment — {result.get('payment_intent_id', '')}",
-        "USD",
-    ])
+    await _call(
+        "record_payment",
+        [
+            customer.get("tenant_id", ""),
+            invoice_id,
+            customer["id"],
+            amount_due,
+            "card",
+            result.get("payment_intent_id", ""),
+            f"Stripe saved card payment — {result.get('payment_intent_id', '')}",
+            "USD",
+        ],
+    )
 
     # Update invoice status
     new_status = "paid"

@@ -1,4 +1,5 @@
 """Report schedule management — saved reports with scheduled email delivery."""
+
 from __future__ import annotations
 
 import json
@@ -7,8 +8,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from helpers import (
-    _sql, _sql_t, _call, _log_audit,
-    require_role, _safe_id, logger,
+    _sql,
+    _sql_t,
+    _call,
+    _log_audit,
+    require_role,
+    _safe_id,
+    logger,
 )
 from models import ScheduledReportCreate, ScheduledReportUpdate
 from mail import send_email
@@ -29,25 +35,29 @@ async def list_schedules(
     rows = await _sql_t("SELECT * FROM scheduled_reports", user["tenant_id"])
     rows.sort(key=lambda r: r.get("next_run_at", 0))
     total = len(rows)
-    return {"schedules": rows[offset:offset + limit], "total": total, "offset": offset, "limit": limit}
+    return {"schedules": rows[offset : offset + limit], "total": total, "offset": offset, "limit": limit}
 
 
 @router.post("/api/report-schedules")
 async def create_schedule(body: ScheduledReportCreate, user: dict = Depends(require_role("admin"))):
     """Create a new scheduled report."""
+    _validate_schedule_payload(body)
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     next_run_at = _calc_next_run(body.schedule_frequency, body.schedule_config, now_ms)
 
-    result = await _call("create_scheduled_report", [
-        user["tenant_id"],
-        body.name,
-        body.report_type,
-        body.schedule_frequency,
-        json.dumps(body.schedule_config),
-        json.dumps(body.recipients if isinstance(body.recipients, list) else [body.recipients]),
-        json.dumps(body.filters),
-        next_run_at,
-    ])
+    result = await _call(
+        "create_scheduled_report",
+        [
+            user["tenant_id"],
+            body.name,
+            body.report_type,
+            body.schedule_frequency,
+            json.dumps(body.schedule_config),
+            json.dumps(body.recipients if isinstance(body.recipients, list) else [body.recipients]),
+            json.dumps(body.filters),
+            next_run_at,
+        ],
+    )
 
     await _log_audit(user, "create", "scheduled_report", "", body.name)
     return {"ok": True, "id": result.get("id", "") if isinstance(result, dict) else "", "next_run_at": next_run_at}
@@ -60,6 +70,7 @@ async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: d
     existing = await _sql(f"SELECT * FROM scheduled_reports WHERE id = '{_safe_id(schedule_id)}'")
     if not existing:
         raise HTTPException(404, "Schedule not found")
+    _validate_schedule_payload(body)
 
     name = body.name
     report_type = body.report_type
@@ -74,11 +85,20 @@ async def update_schedule(schedule_id: str, body: ScheduledReportUpdate, user: d
     now_ms = int(datetime.utcnow().timestamp() * 1000)
     next_run_at = _calc_next_run(schedule_frequency, schedule_config, now_ms)
 
-    await _call("update_scheduled_report", [
-        schedule_id, name, report_type, schedule_frequency,
-        json.dumps(schedule_config), json.dumps(recipients),
-        json.dumps(filters), next_run_at, enabled,
-    ])
+    await _call(
+        "update_scheduled_report",
+        [
+            schedule_id,
+            name,
+            report_type,
+            schedule_frequency,
+            json.dumps(schedule_config),
+            json.dumps(recipients),
+            json.dumps(filters),
+            next_run_at,
+            enabled,
+        ],
+    )
     await _log_audit(user, "update", "scheduled_report", schedule_id, name)
     return {"ok": True}
 
@@ -168,6 +188,23 @@ async def _generate_and_deliver(schedule: dict, user: dict) -> dict:
         return {"ok": False, "error": str(e)}
 
 
+def _validate_schedule_payload(body) -> None:
+    """Business-rule validation for scheduled report create/update.
+
+    Returns 400 (not Pydantic 422) for domain violations so clients can
+    distinguish invalid request shapes from invalid business values.
+    """
+    allowed_types = {"revenue", "tickets", "invoices", "appointments", "tech_productivity", "customers"}
+    allowed_frequencies = {"daily", "weekly", "monthly"}
+    if body.report_type not in allowed_types:
+        raise HTTPException(400, f"Invalid report_type: {body.report_type}")
+    if body.schedule_frequency not in allowed_frequencies:
+        raise HTTPException(400, f"Invalid schedule_frequency: {body.schedule_frequency}")
+    recipients = body.recipients if isinstance(body.recipients, list) else [body.recipients]
+    if not recipients or not any(r for r in recipients):
+        raise HTTPException(400, "At least one recipient is required")
+
+
 def _calc_next_run(frequency: str, config: dict, from_ms: int) -> int:
     """Calculate the next run timestamp based on frequency and config."""
     dt = datetime.fromtimestamp(from_ms / 1000)
@@ -219,19 +256,14 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             ms_end = ms + timedelta(days=30)
             ms_ts = int(ms.timestamp() * 1000)
             ms_end_ts = int(ms_end.timestamp() * 1000)
-            month_rev = sum(
-                float(p.get("amount", 0))
-                for p in payments
-                if ms_ts <= p.get("created_at", 0) < ms_end_ts
-            )
+            month_rev = sum(float(p.get("amount", 0)) for p in payments if ms_ts <= p.get("created_at", 0) < ms_end_ts)
             revenue_by_month.append({"label": ms.strftime("%b %y"), "value": round(month_rev, 2)})
 
         total_paid = sum(float(p.get("amount", 0)) for p in payments)
         total_sent = sum(1 for inv in invoices if inv.get("status") not in ("draft", "cancelled"))
         total_paid_count = sum(1 for inv in invoices if inv.get("status") == "paid")
         outstanding = sum(
-            float(inv.get("total", 0)) for inv in invoices
-            if inv.get("status") in ("sent", "overdue", "partial")
+            float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue", "partial")
         )
 
         return {
@@ -331,8 +363,7 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
 
         inv_by_status = [{"label": s.capitalize(), "value": c} for s, c in sorted(status_counts.items())]
         outstanding = sum(
-            float(inv.get("total", 0)) for inv in invoices
-            if inv.get("status") in ("sent", "overdue", "partial")
+            float(inv.get("total", 0)) for inv in invoices if inv.get("status") in ("sent", "overdue", "partial")
         )
 
         total_sent_inv = sum(1 for inv in invoices if inv.get("status") in ("sent", "overdue", "partial"))
@@ -340,7 +371,11 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
         # On-the-fly detection for sent/partial past-due
         now_ms_inv = int(now.timestamp() * 1000)
         for inv in invoices:
-            if inv.get("status") in ("sent", "partial") and inv.get("due_date", 0) > 0 and inv.get("due_date", 0) < now_ms_inv:
+            if (
+                inv.get("status") in ("sent", "partial")
+                and inv.get("due_date", 0) > 0
+                and inv.get("due_date", 0) < now_ms_inv
+            ):
                 overdue_count += 1
                 total_sent_inv += 1
         overdue_rate = round((overdue_count / total_sent_inv * 100), 1) if total_sent_inv > 0 else 0
@@ -366,10 +401,12 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             ms_end = ms + timedelta(days=30)
             ms_ts = int(ms.timestamp() * 1000)
             ms_end_ts = int(ms_end.timestamp() * 1000)
-            appt_by_month.append({
-                "label": ms.strftime("%b %y"),
-                "value": sum(1 for a in appointments if ms_ts <= a.get("start_time", 0) < ms_end_ts),
-            })
+            appt_by_month.append(
+                {
+                    "label": ms.strftime("%b %y"),
+                    "value": sum(1 for a in appointments if ms_ts <= a.get("start_time", 0) < ms_end_ts),
+                }
+            )
 
         status_counts: dict[str, int] = {}
         for a in appointments:
@@ -426,7 +463,10 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "metrics": [
                 {"label": "Total Tickets", "value": str(total_assigned)},
                 {"label": "Resolved/Closed", "value": str(total_resolved)},
-                {"label": "Resolution Rate", "value": f"{round(total_resolved / total_assigned * 100, 1) if total_assigned else 0}%"},
+                {
+                    "label": "Resolution Rate",
+                    "value": f"{round(total_resolved / total_assigned * 100, 1) if total_assigned else 0}%",
+                },
                 {"label": "Active Techs", "value": str(len(tech_counts))},
             ],
             "chart": tech_data,
@@ -456,8 +496,14 @@ async def _build_report_data(report_type: str, tenant_id: str, filters: dict) ->
             "title": "Customer Report",
             "metrics": [
                 {"label": "Total Customers", "value": str(len(customers))},
-                {"label": "Active (with invoices)", "value": str(len(set(inv.get("customer_id", "") for inv in invoices)))},
-                {"label": "Avg Revenue/Customer", "value": f"${round(sum(customer_revenue.values()) / len(customer_revenue), 2) if customer_revenue else 0}"},
+                {
+                    "label": "Active (with invoices)",
+                    "value": str(len(set(inv.get("customer_id", "") for inv in invoices))),
+                },
+                {
+                    "label": "Avg Revenue/Customer",
+                    "value": f"${round(sum(customer_revenue.values()) / len(customer_revenue), 2) if customer_revenue else 0}",
+                },
             ],
             "chart": top_customers[:10],
             "chart_label": "Top Customers by Revenue",
@@ -482,7 +528,7 @@ def _render_report_email(report_type: str, name: str, data: dict) -> str:
             f'<span style="width:80px;font-size:11px;color:#666;text-align:right;padding-right:8px">{c["label"]}</span>'
             f'<div style="flex:1;background:#f0f0f0;border-radius:4px;overflow:hidden;height:20px">'
             f'<div style="width:{max(c["value"] / max_val * 100, 5)}%;background:#6366f1;height:20px;border-radius:4px;text-align:right;padding-right:4px;line-height:20px;font-size:10px;color:#fff;min-width:fit-content">'
-            f'{c["value"]}</div></div></div>'
+            f"{c['value']}</div></div></div>"
             for c in data["chart"]
         )
         chart_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart_label", "")}</h3>{bars}'
@@ -495,7 +541,7 @@ def _render_report_email(report_type: str, name: str, data: dict) -> str:
             f'<span style="width:120px;font-size:11px;color:#666;text-align:right;padding-right:8px">{c["label"]}</span>'
             f'<div style="flex:1;background:#f0f0f0;border-radius:4px;overflow:hidden;height:20px">'
             f'<div style="width:{max(c["value"] / max_val * 100, 5)}%;background:#22c55e;height:20px;border-radius:4px;text-align:right;padding-right:4px;line-height:20px;font-size:10px;color:#fff">'
-            f'{c["value"]}</div></div></div>'
+            f"{c['value']}</div></div></div>"
             for c in data["chart2"]
         )
         chart2_html = f'<h3 style="color:#333;margin:20px 0 10px">{data.get("chart2_label", "")}</h3>{bars2}'

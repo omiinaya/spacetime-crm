@@ -1,7 +1,8 @@
 """Error handling and input validation tests."""
+
 import pytest
 import httpx
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+from .conftest import SERVER_URL, unique_suffix, _track_entity
 
 
 @pytest.fixture
@@ -12,7 +13,8 @@ def product_id_for_validation(test_admin_headers: dict, session_suffix: str) -> 
     resp = httpx.post(
         f"{SERVER_URL}/api/products",
         json={"name": "Bad", "sku": sku, "price": -5.00, "quantity_on_hand": -10},
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     assert resp.status_code < 500
     # Track for cleanup
@@ -31,7 +33,8 @@ class TestValidation:
         # Attempt to use a crafted tenant_id — should 400
         resp = httpx.get(
             f"{SERVER_URL}/api/tenants/foo'; DROP TABLE customer; --",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code in (400, 404), f"Expected 400/404, got {resp.status_code}"
 
@@ -49,7 +52,8 @@ class TestValidation:
         """Unsupported HTTP method returns 405."""
         resp = httpx.patch(
             f"{SERVER_URL}/api/customers",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code in (405, 400)
 
@@ -59,7 +63,8 @@ class TestValidation:
         resp = httpx.post(
             f"{SERVER_URL}/api/customers",
             json={"first_name": "", "last_name": "", "email": ""},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 422, f"Expected 422, got {resp.status_code}: {resp.text[:200]}"
 

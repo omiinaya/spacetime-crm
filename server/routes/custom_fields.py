@@ -1,13 +1,18 @@
 """Custom Fields routes."""
+
 from __future__ import annotations
 
 import json
 import secrets
 from fastapi import APIRouter, Depends
 
-from helpers import _safe_id, (
-    _sql, _paginated, _call, _log_audit,
-    require_role, logger,
+from helpers import (
+    _safe_id,
+    _sql,
+    _paginated,
+    _call,
+    _log_audit,
+    require_role,
 )
 from models import CustomFieldDefinitionCreate, CustomFieldValuesUpdate
 
@@ -15,47 +20,62 @@ router = APIRouter()
 
 
 @router.get("/api/custom-field-definitions")
-async def list_custom_field_definitions(offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def list_custom_field_definitions(
+    offset: int = 0, limit: int = 50, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     """List custom field definitions with pagination."""
     rows, total = await _paginated(
-        user["tenant_id"], "custom_field_definitions",
-        offset=offset, limit=limit,
-        order_by="name", order_desc=False,
+        user["tenant_id"],
+        "custom_field_definitions",
+        offset=offset,
+        limit=limit,
+        order_by="name",
+        order_desc=False,
     )
     return {"custom_fields": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @router.post("/api/custom-field-definitions")
-async def create_custom_field_definition(body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
+async def create_custom_field_definition(
+    body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))
+):
     """Create a custom field definition."""
     field_id = secrets.token_hex(12)
-    await _call("create_custom_field_definition", [
-        user["tenant_id"],
-        field_id,
-        body.entity_type,
-        body.label,
-        body.field_type,
-        json.dumps(body.options),
-        body.sort_order,
-        body.required,
-        body.active,
-    ])
+    await _call(
+        "create_custom_field_definition",
+        [
+            user["tenant_id"],
+            field_id,
+            body.entity_type,
+            body.label,
+            body.field_type,
+            json.dumps(body.options),
+            body.sort_order,
+            body.required,
+            body.active,
+        ],
+    )
     await _log_audit(user, "create", "custom_field", body.label)
     return {"ok": True, "id": field_id}
 
 
 @router.put("/api/custom-field-definitions/{field_id}")
-async def update_custom_field_definition(field_id: str, body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))):
+async def update_custom_field_definition(
+    field_id: str, body: CustomFieldDefinitionCreate, user: dict = Depends(require_role("admin"))
+):
     """Update a custom field definition."""
-    await _call("update_custom_field_definition", [
-        field_id,
-        body.label,
-        body.field_type,
-        json.dumps(body.options),
-        body.sort_order,
-        body.required,
-        body.active,
-    ])
+    await _call(
+        "update_custom_field_definition",
+        [
+            field_id,
+            body.label,
+            body.field_type,
+            json.dumps(body.options),
+            body.sort_order,
+            body.required,
+            body.active,
+        ],
+    )
     await _log_audit(user, "update", "custom_field_definition", field_id, body.label)
     return {"ok": True}
 
@@ -76,7 +96,9 @@ async def get_custom_field_values(entity_id: str, user: dict = Depends(require_r
 
 
 @router.put("/api/custom-field-values/{entity_id}")
-async def set_custom_field_values(entity_id: str, body: CustomFieldValuesUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))):
+async def set_custom_field_values(
+    entity_id: str, body: CustomFieldValuesUpdate, user: dict = Depends(require_role("admin", "tech", "front_desk"))
+):
     """Set custom field values for an entity. Body: { values: { field_id: value, ... } }"""
     values = body.values
     for field_id, value in values.items():

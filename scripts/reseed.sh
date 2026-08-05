@@ -13,7 +13,7 @@ echo "[2/3] Seeding demo data..."
 python3 scripts/seed-demo.py
 
 echo "[3/3] Verifying..."
-TOKEN=$(curl -s localhost:8723/api/auth/login -H 'Content-Type: application/json' -d '{"email":"admin@crm.local","password":"PLACEHOLDER_ADMIN_PW"}' | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))")
+TOKEN=$(curl -s localhost:8723/api/auth/login -H 'Content-Type: application/json' -d '{"email":"admin@crm.local","password":"change-me-in-production"}' | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))")
 echo "Login OK: ${TOKEN:0:20}..."
 
 for table in customers products tickets invoices payments appointments; do

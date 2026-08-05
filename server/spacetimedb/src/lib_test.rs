@@ -4,11 +4,12 @@
 //! and asserts table state. Follows the customer_test pattern.
 
 #[cfg(test)]
+// TODO (kanban): Replace 16 unwrap() call(s) with proper error handling
 mod tests {
     use crate::*;
     // Import accessor traits for STDB table access
-    use crate::purchase_order::purchase_order;
     use crate::product::products;
+    use crate::purchase_order::purchase_order;
 
     fn test_ctx() -> ReducerContext {
         ReducerContext::__dummy()
@@ -23,9 +24,16 @@ mod tests {
         let ctx = test_ctx();
         create_ticket(
             &ctx,
-            "tenant_t".into(), "cust_1".into(), "Broken screen".into(),
-            "Cracked glass".into(), "iPhone".into(), "15".into(),
-            "SN001".into(), "high".into(),
+            "tenant_t".into(),
+            "cust_1".into(),
+            "Broken screen".into(),
+            "Cracked glass".into(),
+            "iPhone".into(),
+            "15".into(),
+            "SN001".into(),
+            "".into(),
+            "".into(),
+            "high".into(),
         );
         use crate::ticket::ticket;
         let tickets: Vec<Ticket> = ctx.db.ticket().iter().collect();
@@ -43,7 +51,19 @@ mod tests {
     #[test]
     fn test_update_ticket_status() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Fix".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Fix".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let id = t.id.clone();
@@ -56,7 +76,19 @@ mod tests {
     #[test]
     fn test_assign_ticket() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Assign test".into(), "".into(), "".into(), "".into(), "".into(), "medium".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Assign test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "medium".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let id = t.id.clone();
@@ -69,11 +101,29 @@ mod tests {
     #[test]
     fn test_add_ticket_note() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Note test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Note test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let tid = t.id.clone();
-        add_ticket_note(&ctx, tid.clone(), "Bob".into(), "Checked device".into(), false);
+        add_ticket_note(
+            &ctx,
+            tid.clone(),
+            "Bob".into(),
+            "Checked device".into(),
+            false,
+        );
         use crate::ticket::ticket_note;
         let notes: Vec<TicketNote> = ctx.db.ticket_note().iter().collect();
         assert_eq!(notes.len(), 1);
@@ -87,7 +137,19 @@ mod tests {
     #[test]
     fn test_delete_ticket() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Delete me".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Delete me".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         assert_eq!(ctx.db.ticket().iter().count(), 1);
         let id = ctx.db.ticket().iter().next().unwrap().id.clone();
@@ -98,7 +160,19 @@ mod tests {
     #[test]
     fn test_ticket_timer_lifecycle() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t".into(), "c1".into(), "Timer test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t".into(),
+            "c1".into(),
+            "Timer test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let tid = t.id.clone();
@@ -128,7 +202,17 @@ mod tests {
     #[test]
     fn test_record_payment() {
         let ctx = test_ctx();
-        record_payment(&ctx, "tenant_p".into(), "inv_1".into(), "cust_1".into(), 150.00, "cash".into(), "REF-001".into(), "Walk-in payment".into(), "USD".into());
+        record_payment(
+            &ctx,
+            "tenant_p".into(),
+            "inv_1".into(),
+            "cust_1".into(),
+            150.00,
+            "cash".into(),
+            "REF-001".into(),
+            "Walk-in payment".into(),
+            "USD".into(),
+        );
         use crate::payment::payment;
         let payments: Vec<Payment> = ctx.db.payment().iter().collect();
         assert_eq!(payments.len(), 1);
@@ -141,7 +225,17 @@ mod tests {
     #[test]
     fn test_delete_payment() {
         let ctx = test_ctx();
-        record_payment(&ctx, "t".into(), "i".into(), "c".into(), 50.0, "cash".into(), "".into(), "".into(), "USD".into());
+        record_payment(
+            &ctx,
+            "t".into(),
+            "i".into(),
+            "c".into(),
+            50.0,
+            "cash".into(),
+            "".into(),
+            "".into(),
+            "USD".into(),
+        );
         use crate::payment::payment;
         assert_eq!(ctx.db.payment().iter().count(), 1);
         let id = ctx.db.payment().iter().next().unwrap().id.clone();
@@ -156,7 +250,20 @@ mod tests {
     #[test]
     fn test_create_product() {
         let ctx = test_ctx();
-        create_product(&ctx, "tenant_pr".into(), "Screen".into(), "SCR-001".into(), "".into(), "".into(), "Parts".into(), 29.99, 12.50, 50.0, 5.0, "Aisle-3".into());
+        create_product(
+            &ctx,
+            "tenant_pr".into(),
+            "Screen".into(),
+            "SCR-001".into(),
+            "".into(),
+            "".into(),
+            "Parts".into(),
+            29.99,
+            12.50,
+            50.0,
+            5.0,
+            "Aisle-3".into(),
+        );
         let products_list: Vec<Product> = ctx.db.products().iter().collect();
         assert_eq!(products_list.len(), 1);
         let p = &products_list[0];
@@ -168,10 +275,35 @@ mod tests {
     #[test]
     fn test_update_product() {
         let ctx = test_ctx();
-        create_product(&ctx, "t".into(), "Old".into(), "OLD-001".into(), "".into(), "".into(), "".into(), 10.0, 5.0, 10.0, 0.0, "".into());
+        create_product(
+            &ctx,
+            "t".into(),
+            "Old".into(),
+            "OLD-001".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            10.0,
+            5.0,
+            10.0,
+            0.0,
+            "".into(),
+        );
         let p = ctx.db.products().iter().next().unwrap();
         let pid = p.id.clone();
-        update_product(&ctx, pid.clone(), "New Name".into(), "NEW-001".into(), "".into(), "desc".into(), "cat".into(), 25.0, 8.0, 5.0, "B-12".into());
+        update_product(
+            &ctx,
+            pid.clone(),
+            "New Name".into(),
+            "NEW-001".into(),
+            "".into(),
+            "desc".into(),
+            "cat".into(),
+            25.0,
+            8.0,
+            5.0,
+            "B-12".into(),
+        );
         let updated = ctx.db.products().id().find(&pid).unwrap();
         assert_eq!(updated.name, "New Name");
     }
@@ -179,7 +311,20 @@ mod tests {
     #[test]
     fn test_delete_product() {
         let ctx = test_ctx();
-        create_product(&ctx, "t".into(), "Del".into(), "DEL".into(), "".into(), "".into(), "".into(), 1.0, 0.5, 5.0, 0.0, "".into());
+        create_product(
+            &ctx,
+            "t".into(),
+            "Del".into(),
+            "DEL".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            1.0,
+            0.5,
+            5.0,
+            0.0,
+            "".into(),
+        );
         assert_eq!(ctx.db.products().iter().count(), 1);
         let id = ctx.db.products().iter().next().unwrap().id.clone();
         delete_product(&ctx, id);
@@ -193,7 +338,14 @@ mod tests {
     #[test]
     fn test_create_purchase_order() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "tenant_po".into(), "vendor_1".into(), "notes".into(), "USD".into(), 0.0);
+        create_purchase_order(
+            &ctx,
+            "tenant_po".into(),
+            "vendor_1".into(),
+            "notes".into(),
+            "USD".into(),
+            0.0,
+        );
         let pos: Vec<PurchaseOrder> = ctx.db.purchase_order().iter().collect();
         assert_eq!(pos.len(), 1);
         let po = &pos[0];
@@ -220,10 +372,39 @@ mod tests {
     #[test]
     fn test_ticket_tenant_isolation() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t_a".into(), "c1".into(), "Tkt A".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
-        create_ticket(&ctx, "t_b".into(), "c2".into(), "Tkt B".into(), "".into(), "".into(), "".into(), "".into(), "high".into());
+        create_ticket(
+            &ctx,
+            "t_a".into(),
+            "c1".into(),
+            "Tkt A".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
+        create_ticket(
+            &ctx,
+            "t_b".into(),
+            "c2".into(),
+            "Tkt B".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "high".into(),
+        );
         use crate::ticket::ticket;
-        let tickets: Vec<Ticket> = ctx.db.ticket().iter().filter(|t| t.tenant_id == "t_a").collect();
+        let tickets: Vec<Ticket> = ctx
+            .db
+            .ticket()
+            .iter()
+            .filter(|t| t.tenant_id == "t_a")
+            .collect();
         assert_eq!(tickets.len(), 1);
         assert_eq!(tickets[0].title, "Tkt A");
     }
@@ -251,7 +432,19 @@ mod tests {
     #[test]
     fn test_timer_note_derives_tenant_from_ticket() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t_derived".into(), "c1".into(), "Derive test".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(
+            &ctx,
+            "t_derived".into(),
+            "c1".into(),
+            "Derive test".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "".into(),
+            "low".into(),
+        );
         use crate::ticket::ticket;
         let t = ctx.db.ticket().iter().next().unwrap();
         let tid = t.id.clone();

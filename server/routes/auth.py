@@ -1,24 +1,33 @@
 """Auth routes — login, me, set-password, refresh-tenant, 2FA/TOTP."""
+
 from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from config import settings
-from helpers import _safe_id, (
-    _sql, _call, require_role, get_current_user, logger,
+from helpers import (
+    _safe_id,
+    _sql,
+    _call,
+    _sanitize_sql,
+    get_current_user,
+    logger,
 )
 from models import (
-    LoginRequest, SetPasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
-    Setup2FARequest, CompleteLoginRequest, Disable2FARequest,
-    SetPinRequest, PosLoginRequest,
+    LoginRequest,
+    SetPasswordRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    Setup2FARequest,
+    CompleteLoginRequest,
+    Disable2FARequest,
+    SetPinRequest,
+    PosLoginRequest,
 )
 from rate_limit import limiter
 
 import pyotp
-import base64
-import os
-import json
 from mail import send_email as _send_email
 
 router = APIRouter()

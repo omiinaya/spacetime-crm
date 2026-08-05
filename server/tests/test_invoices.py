@@ -1,21 +1,25 @@
 """Invoice CRUD, line items, tax, PDF, and status workflow integration tests."""
-import pytest
+
 import httpx
-from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _track_entity
 
 
 def _create_test_customer(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     """Create a customer and return their ID."""
     suf = suffix or unique_suffix()
     email = f"inv-cust-{session_suffix}-{suf}@example.com"
-    c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Invoice", last_name=f"Test{suf}", email=email)
+    c = create_customer(
+        test_admin_headers, session_suffix=session_suffix, first_name="Invoice", last_name=f"Test{suf}", email=email
+    )
     cid = c.get("id")
     assert cid, f"Failed to create customer: {c}"
     _track_entity("customer", cid)
     return cid
 
 
-def _create_invoice(test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> tuple[str, str]:
+def _create_invoice(
+    test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides
+) -> tuple[str, str]:
     """Create a customer + invoice and return the (invoice_id, customer_id).
 
     Filters by customer_id which is unique per test call,
@@ -25,13 +29,22 @@ def _create_invoice(test_admin_headers: dict, session_suffix: str = "", suffix: 
     cid = _create_test_customer(test_admin_headers, session_suffix, suffix)
     resp = httpx.post(
         f"{SERVER_URL}/api/invoices",
-        json={"customer_id": cid, "ticket_id": "", "notes": overrides.get("notes", f"Invoice {suffix}"), "terms": "Net 30", "due_date": overrides.get("due_date", 0)},
-        headers=test_admin_headers, timeout=10,
+        json={
+            "customer_id": cid,
+            "ticket_id": "",
+            "notes": overrides.get("notes", f"Invoice {suffix}"),
+            "terms": "Net 30",
+            "due_date": overrides.get("due_date", 0),
+        },
+        headers=test_admin_headers,
+        timeout=10,
     )
     assert_ok(resp)
 
     # Find invoice by customer_id (unique to this test call)
-    r = httpx.get(f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10)
+    r = httpx.get(
+        f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10
+    )
     invs = r.json().get("invoices", [])
     assert len(invs) >= 1, f"No invoice found for customer {cid}"
     inv_id = invs[0]["id"]
@@ -48,7 +61,8 @@ class TestInvoiceCRUD:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices",
             json={"customer_id": cid, "ticket_id": "", "notes": "Test invoice", "terms": "Net 30", "due_date": 0},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -56,7 +70,8 @@ class TestInvoiceCRUD:
         """List invoices returns paginated results."""
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert "invoices" in data
@@ -68,7 +83,8 @@ class TestInvoiceCRUD:
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices",
             params={"status": "draft"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         for inv in data["invoices"]:
@@ -86,14 +102,16 @@ class TestInvoiceCRUD:
             resp = httpx.post(
                 f"{SERVER_URL}/api/invoices/{inv_id}/line-items",
                 json=item,
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert_ok(resp)
 
         # Fetch line items
         r3 = httpx.get(
             f"{SERVER_URL}/api/invoices/{inv_id}/line-items",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(r3)
         assert len(data["line_items"]) >= 2
@@ -105,7 +123,12 @@ class TestInvoiceCRUD:
         """Delete a single line item."""
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "delline", notes="Delete line")
 
-        httpx.post(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", json={"description": "To Delete", "quantity": 1, "unit_price": 10}, headers=test_admin_headers, timeout=10)
+        httpx.post(
+            f"{SERVER_URL}/api/invoices/{inv_id}/line-items",
+            json={"description": "To Delete", "quantity": 1, "unit_price": 10},
+            headers=test_admin_headers,
+            timeout=10,
+        )
 
         # Get the item ID
         r2 = httpx.get(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", headers=test_admin_headers, timeout=10)
@@ -113,7 +136,8 @@ class TestInvoiceCRUD:
 
         resp = httpx.delete(
             f"{SERVER_URL}/api/invoices/{inv_id}/line-items/{item_id}",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -128,7 +152,8 @@ class TestInvoiceCRUD:
         resp = httpx.put(
             f"{SERVER_URL}/api/invoices/{inv_id}/status",
             json={"status": "sent"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -138,7 +163,8 @@ class TestInvoiceCRUD:
         resp = httpx.put(
             f"{SERVER_URL}/api/invoices/{inv_id}/tax-rate",
             json={"tax_rate": 8.5},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -147,7 +173,8 @@ class TestInvoiceCRUD:
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "delete", notes="Delete test")
         resp = httpx.delete(
             f"{SERVER_URL}/api/invoices/{inv_id}",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -156,7 +183,8 @@ class TestInvoiceCRUD:
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "pdf", notes="PDF test")
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices/{inv_id}/pdf",
-            headers=test_admin_headers, timeout=15,
+            headers=test_admin_headers,
+            timeout=15,
         )
         assert resp.status_code == 200, f"PDF failed: {resp.text[:200]}"
         assert resp.headers.get("content-type", "").startswith("application/pdf"), (
@@ -169,14 +197,34 @@ class TestInvoiceCRUD:
         inv_id, _ = _create_invoice(test_admin_headers, session_suffix, "workflow", notes="Full workflow")
 
         # Add items
-        httpx.post(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", json={"description": "Labor", "quantity": 2, "unit_price": 75}, headers=test_admin_headers, timeout=10)
-        httpx.post(f"{SERVER_URL}/api/invoices/{inv_id}/line-items", json={"description": "Part", "quantity": 1, "unit_price": 200}, headers=test_admin_headers, timeout=10)
+        httpx.post(
+            f"{SERVER_URL}/api/invoices/{inv_id}/line-items",
+            json={"description": "Labor", "quantity": 2, "unit_price": 75},
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        httpx.post(
+            f"{SERVER_URL}/api/invoices/{inv_id}/line-items",
+            json={"description": "Part", "quantity": 1, "unit_price": 200},
+            headers=test_admin_headers,
+            timeout=10,
+        )
 
         # Set tax
-        httpx.put(f"{SERVER_URL}/api/invoices/{inv_id}/tax-rate", json={"tax_rate": 7.0}, headers=test_admin_headers, timeout=10)
+        httpx.put(
+            f"{SERVER_URL}/api/invoices/{inv_id}/tax-rate",
+            json={"tax_rate": 7.0},
+            headers=test_admin_headers,
+            timeout=10,
+        )
 
         # Send
-        httpx.put(f"{SERVER_URL}/api/invoices/{inv_id}/status", json={"status": "sent"}, headers=test_admin_headers, timeout=10)
+        httpx.put(
+            f"{SERVER_URL}/api/invoices/{inv_id}/status",
+            json={"status": "sent"},
+            headers=test_admin_headers,
+            timeout=10,
+        )
 
         # PDF
         pdf_resp = httpx.get(f"{SERVER_URL}/api/invoices/{inv_id}/pdf", headers=test_admin_headers, timeout=15)
@@ -192,7 +240,8 @@ class TestInvoiceErrors:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices",
             json={"customer_id": "no-such-customer-id", "notes": "", "due_date": 0},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code < 500, f"Server error on bad customer: {resp.text[:200]}"
 
@@ -201,7 +250,8 @@ class TestInvoiceErrors:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices",
             json={},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 422
 
@@ -211,7 +261,8 @@ class TestInvoiceErrors:
         resp = httpx.put(
             f"{SERVER_URL}/api/invoices/{inv_id}/status",
             json={"status": "nonexistent_status_xyzzy"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         # STDB accepts any string for status — just don't crash
         assert resp.status_code < 500
@@ -220,7 +271,8 @@ class TestInvoiceErrors:
         """PDF for non-existent invoice returns 404."""
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices/nonexistent-id-99999/pdf",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 404
 
@@ -278,7 +330,8 @@ class TestInvoiceErrors:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/bulk-status-update",
             json={"invoice_ids": ids, "status": "sent"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert data["ok"] is True
@@ -292,7 +345,9 @@ class TestInvoiceErrors:
 
     def test_bulk_status_unauthorized(self, client: httpx.Client):
         """Bulk status update requires auth."""
-        resp = client.post("/api/invoices/bulk-status-update", json={"invoice_ids": ["fake"], "status": "sent"}, timeout=10)
+        resp = client.post(
+            "/api/invoices/bulk-status-update", json={"invoice_ids": ["fake"], "status": "sent"}, timeout=10
+        )
         assert resp.status_code in (401, 403)
 
     def test_send_overdue_reminders(self, test_admin_headers: dict):
@@ -320,7 +375,8 @@ class TestInvoiceEmailQueue:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-email",
             json={},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 400
 
@@ -329,7 +385,8 @@ class TestInvoiceEmailQueue:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-email",
             json={"invoice_id": "nonexistent"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 404
 
@@ -340,7 +397,8 @@ class TestInvoiceEmailQueue:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-email",
             json={"invoice_id": inv_id},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert data["ok"] is True
@@ -356,7 +414,8 @@ class TestInvoiceEmailQueue:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-batch-email",
             json={"invoice_ids": []},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert resp.status_code == 400
 
@@ -369,7 +428,8 @@ class TestInvoiceEmailQueue:
         resp = httpx.post(
             f"{SERVER_URL}/api/invoices/send-batch-email",
             json={"invoice_ids": ids},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert "sent" in data

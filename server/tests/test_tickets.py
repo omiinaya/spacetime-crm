@@ -4,12 +4,19 @@ Each test method creates its own data for full STDB state isolation.
 Helpers use unique identifiers + STDB SQL lookups so tests are safe to
 run in parallel or in any order.
 """
-import pytest
+
 import httpx
+
 from .conftest import (
-    SERVER_URL, STDB_SQL_URL, assert_ok, create_customer, unique_suffix,
-    _stdb_sql, _track_entity, save_sla_targets, restore_sla_targets, reset_sla_targets,
-    DEFAULT_SLA_TARGETS,
+    SERVER_URL,
+    _stdb_sql,
+    _track_entity,
+    assert_ok,
+    create_customer,
+    reset_sla_targets,
+    restore_sla_targets,
+    save_sla_targets,
+    unique_suffix,
 )
 
 
@@ -19,12 +26,22 @@ def _create_ticket(test_admin_headers: dict, session_suffix: str = "", suffix: s
     Uses a unique serial number and direct STDB SQL to find the ticket,
     ensuring full isolation from other test data.
     session_suffix ensures cleanup by suffix works across sessions.
+    Pass customer_id in overrides to attach the ticket to an existing customer
+    (skips creating a new one).
     """
     suf = suffix or unique_suffix()
-    email = f"tkt-cust-{session_suffix}-{suf}@example.com"
-    cust = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Ticket", last_name=f"Test{suf}", email=email)
-    cid = cust.get("id")
-    assert cid, f"Failed to create customer: {cust}"
+    cid = overrides.get("customer_id")
+    if not cid:
+        email = f"tkt-cust-{session_suffix}-{suf}@example.com"
+        cust = create_customer(
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Ticket",
+            last_name=f"Test{suf}",
+            email=email,
+        )
+        cid = cust.get("id")
+        assert cid, f"Failed to create customer: {cust}"
 
     device_serial = overrides.get("device_serial", f"SN-{session_suffix}-{suf}")
     resp = httpx.post(
@@ -38,16 +55,47 @@ def _create_ticket(test_admin_headers: dict, session_suffix: str = "", suffix: s
             "device_serial": device_serial,
             "priority": overrides.get("priority", "medium"),
         },
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     assert_ok(resp)
 
     # Look up ticket by unique device_serial via STDB SQL
-    rows = _stdb_sql(f"SELECT * FROM ticket WHERE device_serial = '{device_serial}'")
-    assert len(rows) == 1, f"Expected 1 ticket with serial {device_serial}, got {len(rows)}"
-    tid = rows[0]["id"]
+    result = _stdb_sql(f"SELECT * FROM ticket WHERE device_serial = '{device_serial}'")
+    assert len(result) == 1, "Expected 1 table result"
+    table = result[0]
+    assert table.get("rows") and len(table["rows"]) == 1, (
+        f"Expected 1 ticket with serial {device_serial}, got {len(table.get('rows', []))}"
+    )
+    tid = table["rows"][0][0]  # id is first column
     _track_entity("ticket", tid)
     return tid
+
+
+def _create_customer_no_email(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
+    """Create a customer with no email address and return its ID."""
+    suf = suffix or unique_suffix()
+    last_name = f"NoEmail{session_suffix}{suf}"
+    resp = httpx.post(
+        f"{SERVER_URL}/api/customers",
+        json={
+            "first_name": "NoEmail",
+            "last_name": last_name,
+            "email": "",
+            "phone": "555-0000",
+        },
+        headers=test_admin_headers,
+        timeout=10,
+    )
+    assert_ok(resp)
+
+    # Look up customer by unique last_name via STDB SQL
+    result = _stdb_sql(f"SELECT * FROM customer WHERE last_name = '{last_name}'")
+    table = result[0]
+    assert table.get("rows") and len(table["rows"]) == 1, f"Expected 1 customer with last_name {last_name}"
+    cid = table["rows"][0][0]
+    _track_entity("customer", cid)
+    return cid
 
 
 class TestTicketFlow:
@@ -63,7 +111,8 @@ class TestTicketFlow:
         """List tickets returns results."""
         resp = httpx.get(
             f"{SERVER_URL}/api/tickets",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert "tickets" in data
@@ -74,7 +123,8 @@ class TestTicketFlow:
         resp = httpx.put(
             f"{SERVER_URL}/api/tickets/{tid}/status",
             json={"status": "in_progress"},
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
@@ -83,15 +133,21 @@ class TestTicketFlow:
         tid = _create_ticket(test_admin_headers, session_suffix, "note", title="Note Test")
         resp = httpx.post(
             f"{SERVER_URL}/api/tickets/{tid}/notes",
-            json={"author": "Test Tech", "content": "Inspected device", "internal": False},
-            headers=test_admin_headers, timeout=10,
+            json={
+                "author": "Test Tech",
+                "content": "Inspected device",
+                "internal": False,
+            },
+            headers=test_admin_headers,
+            timeout=10,
         )
         assert_ok(resp)
 
         # Verify note was created
         notes_resp = httpx.get(
             f"{SERVER_URL}/api/tickets/{tid}/notes",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         notes_data = assert_ok(notes_resp)
         notes = notes_data.get("notes", [])
@@ -103,7 +159,12 @@ class TestInvoiceFlow:
 
     def test_create_invoice(self, test_admin_headers: dict, session_suffix: str):
         """Create a basic invoice."""
-        customer = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Invoice", last_name="Test")
+        customer = create_customer(
+            test_admin_headers,
+            session_suffix=session_suffix,
+            first_name="Invoice",
+            last_name="Test",
+        )
         cid = customer.get("id")
         assert cid
 
@@ -116,7 +177,8 @@ class TestInvoiceFlow:
                 "terms": "Due on receipt",
                 "due_date": 1893456000000,  # 2030-01-01
             },
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert data.get("ok") is True
@@ -125,7 +187,8 @@ class TestInvoiceFlow:
         """List invoices returns results."""
         resp = httpx.get(
             f"{SERVER_URL}/api/invoices",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert "invoices" in data
@@ -147,7 +210,8 @@ class TestProductFlow:
                 "quantity_on_hand": 100,
                 "active": True,
             },
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert data.get("ok") is True
@@ -156,7 +220,8 @@ class TestProductFlow:
         """List products."""
         resp = httpx.get(
             f"{SERVER_URL}/api/products",
-            headers=test_admin_headers, timeout=10,
+            headers=test_admin_headers,
+            timeout=10,
         )
         data = assert_ok(resp)
         assert "products" in data
@@ -170,8 +235,12 @@ class TestTicketSLA:
         saved = save_sla_targets(test_admin_headers)
         try:
             reset_sla_targets(test_admin_headers)
-            tid = _create_ticket(test_admin_headers, session_suffix, "sla", priority="urgent")
-            resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-breached", headers=test_admin_headers, timeout=10)
+            _create_ticket(test_admin_headers, session_suffix, "sla", priority="urgent")
+            resp = httpx.get(
+                f"{SERVER_URL}/api/tickets/sla-breached",
+                headers=test_admin_headers,
+                timeout=10,
+            )
             data = assert_ok(resp)
             assert "breaches" in data
             assert "count" in data
@@ -185,7 +254,11 @@ class TestTicketSLA:
         saved = save_sla_targets(test_admin_headers)
         try:
             reset_sla_targets(test_admin_headers)
-            resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=test_admin_headers, timeout=10)
+            resp = httpx.get(
+                f"{SERVER_URL}/api/tickets/sla-targets",
+                headers=test_admin_headers,
+                timeout=10,
+            )
             data = assert_ok(resp)
             assert "targets" in data
             targets = data["targets"]
@@ -207,7 +280,11 @@ class TestTicketSLA:
         saved = save_sla_targets(test_admin_headers)
         try:
             reset_sla_targets(test_admin_headers)
-            resp = httpx.get(f"{SERVER_URL}/api/tickets/sla-settings", headers=test_admin_headers, timeout=10)
+            resp = httpx.get(
+                f"{SERVER_URL}/api/tickets/sla-settings",
+                headers=test_admin_headers,
+                timeout=10,
+            )
             data = assert_ok(resp)
             assert "targets" in data
             assert "updated_at" in data
@@ -223,13 +300,18 @@ class TestTicketSLA:
             resp = httpx.post(
                 f"{SERVER_URL}/api/tickets/sla-settings",
                 json={"targets": custom},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             data = assert_ok(resp)
             assert data["ok"] is True
             assert data["targets"]["urgent"] == 1.0
             # Verify persistence
-            resp2 = httpx.get(f"{SERVER_URL}/api/tickets/sla-targets", headers=test_admin_headers, timeout=10)
+            resp2 = httpx.get(
+                f"{SERVER_URL}/api/tickets/sla-targets",
+                headers=test_admin_headers,
+                timeout=10,
+            )
             data2 = assert_ok(resp2)
             assert data2["targets"]["urgent"] == 1.0
         finally:
@@ -245,21 +327,24 @@ class TestTicketSLA:
             resp = httpx.post(
                 f"{SERVER_URL}/api/tickets/sla-settings",
                 json={"targets": {"urgent": 4, "high": 24, "medium": 72}},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert resp.status_code == 400
             # Non-positive value
             resp = httpx.post(
                 f"{SERVER_URL}/api/tickets/sla-settings",
                 json={"targets": {"urgent": 0, "high": 24, "medium": 72, "low": 120}},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert resp.status_code == 400
             # Exceeds max
             resp = httpx.post(
                 f"{SERVER_URL}/api/tickets/sla-settings",
                 json={"targets": {"urgent": 9000, "high": 24, "medium": 72, "low": 120}},
-                headers=test_admin_headers, timeout=10,
+                headers=test_admin_headers,
+                timeout=10,
             )
             assert resp.status_code == 400
             assert "exceeds max" in resp.text
@@ -270,5 +355,58 @@ class TestTicketSLA:
         """sla-settings endpoints require auth."""
         resp = client.get("/api/tickets/sla-settings", timeout=10)
         assert resp.status_code in (401, 403)
-        resp = client.post("/api/tickets/sla-settings", json={"targets": {"urgent": 4, "high": 24, "medium": 72, "low": 120}}, timeout=10)
+        resp = client.post(
+            "/api/tickets/sla-settings",
+            json={"targets": {"urgent": 4, "high": 24, "medium": 72, "low": 120}},
+            timeout=10,
+        )
+        assert resp.status_code in (401, 403)
+
+
+class TestTicketEmail:
+    """Send ticket email to customer endpoint."""
+
+    def test_send_email_success(self, test_admin_headers: dict, session_suffix: str):
+        """Send email on a valid ticket returns ok + sent_to."""
+        tid = _create_ticket(test_admin_headers, session_suffix, "sendmail", title="Email Test")
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets/{tid}/send-email",
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        data = assert_ok(resp)
+        assert data["ok"] is True
+        assert "sent_to" in data
+        assert "ticket_number" in data
+
+    def test_send_email_no_customer_email(self, test_admin_headers: dict, session_suffix: str):
+        """Send email returns 400 when the customer has no email address."""
+        cid = _create_customer_no_email(test_admin_headers, session_suffix, "noemail")
+        tid = _create_ticket(
+            test_admin_headers,
+            session_suffix,
+            "noemail",
+            customer_id=cid,
+            title="No Email Test",
+        )
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets/{tid}/send-email",
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 400
+        assert "no email" in resp.text
+
+    def test_send_email_missing_ticket(self, test_admin_headers: dict):
+        """Send email on a nonexistent ticket returns 404."""
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets/nonexistent-ticket-id/send-email",
+            headers=test_admin_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 404
+
+    def test_send_email_unauthorized(self, client: httpx.Client):
+        """Send email requires auth."""
+        resp = client.post("/api/tickets/any-id/send-email", timeout=10)
         assert resp.status_code in (401, 403)

@@ -33,14 +33,15 @@ fn call_url() -> String {
     format!("{}/v1/database/{}/call", stdb_url(), stdb_db())
 }
 
-fn run_curl(method: &str, url: &str, data: Option<&str>) -> Result<String, String> {
+fn run_curl(method: &str, url: &str, data: Option<(&str, &str)>) -> Result<String, String> {
+    // data = (body, content_type)
     let mut cmd = Command::new("curl");
     cmd.arg("-sSf");
     cmd.arg("-X").arg(method);
     cmd.arg("--max-time").arg("15");
-    if let Some(body) = data {
+    if let Some((body, content_type)) = data {
         cmd.arg("-d").arg(body);
-        cmd.arg("-H").arg("Content-Type: application/sql");
+        cmd.arg("-H").arg(format!("Content-Type: {content_type}"));
     }
     cmd.arg(url);
 
@@ -55,14 +56,14 @@ fn run_curl(method: &str, url: &str, data: Option<&str>) -> Result<String, Strin
 }
 
 fn run_sql(query: &str) -> Result<String, String> {
-    run_curl("POST", &sql_url(), Some(query))
+    run_curl("POST", &sql_url(), Some((query, "application/sql")))
 }
 
 fn call_reducer(reducer: &str, args_json: &str) -> Result<String, String> {
     run_curl(
         "POST",
-        &format!("{}/{}", call_url(), reducer),
-        Some(args_json),
+        &format!("{}/{reducer}", call_url()),
+        Some((args_json, "application/json")),
     )
 }
 
@@ -80,7 +81,7 @@ fn assert_sql_contains(query: &str, expected: &str, label: &str) -> Result<(), S
 // ── Connection & Module Health ────────────────────────────────────
 
 fn test_stdb_is_reachable() -> Result<(), String> {
-    let _ = run_curl("GET", &stdb_url(), None)?;
+    let _ = run_curl("GET", &format!("{}/v1/health", stdb_url()), None)?;
     Ok(())
 }
 
@@ -95,8 +96,8 @@ fn test_module_is_published() -> Result<(), String> {
 
 fn test_list_tables() -> Result<(), String> {
     for tbl in &[
-        "customer", "ticket", "invoice", "payment",
-        "appointment", "user", "products", "tenant", "audit_log",
+        "customer", "ticket", "invoices", "payment",
+        "appointment", "user", "products", "tenants", "audit_log",
     ] {
         let out = run_sql(&format!("SELECT count(*) AS cnt FROM {tbl}"))?;
         if !out.contains("cnt") && !out.contains("rows") {
@@ -131,7 +132,7 @@ fn test_create_customer() -> Result<(), String> {
 fn test_create_ticket() -> Result<(), String> {
     let _ = call_reducer(
         "create_ticket",
-        r#"["tenant_tk","cust_tk1","Broken screen","Cracked glass","iPhone","15","SN001","high"]"#,
+        r#"["tenant_tk","cust_tk1","Broken screen","Cracked glass","iPhone","15","SN001","","","high"]"#,
     )?;
     assert_sql_contains(
         "SELECT status, priority FROM ticket WHERE title = 'Broken screen'",
@@ -149,7 +150,7 @@ fn test_create_ticket() -> Result<(), String> {
 fn test_update_ticket_status() -> Result<(), String> {
     let _ = call_reducer(
         "create_ticket",
-        r#"["t_upd","c_upd","Status test","","","","","low"]"#,
+        r#"["t_upd","c_upd","Status test","","","","","","","low"]"#,
     )?;
     let out = run_sql("SELECT id FROM ticket WHERE title = 'Status test'")?;
     let id = extract_id_from_output(&out);
@@ -187,15 +188,15 @@ fn extract_id_from_output(output: &str) -> String {
 fn test_create_invoice() -> Result<(), String> {
     let _ = call_reducer(
         "create_invoice",
-        r#"["tenant_inv","cust_inv1","","Container invoice","Net 30",1710000000000,"USD"]"#,
+        r#"["tenant_inv","cust_inv1","","Container invoice","Net 30",1710000000000,"USD",0.0,0.0]"#,
     )?;
     assert_sql_contains(
-        "SELECT status, currency FROM invoice WHERE notes = 'Container invoice'",
+        "SELECT status, currency FROM invoices WHERE notes = 'Container invoice'",
         "draft",
         "create_invoice status",
     )?;
     assert_sql_contains(
-        "SELECT status, currency FROM invoice WHERE notes = 'Container invoice'",
+        "SELECT status, currency FROM invoices WHERE notes = 'Container invoice'",
         "USD",
         "create_invoice currency",
     )?;
@@ -247,7 +248,7 @@ fn test_create_user() -> Result<(), String> {
 fn test_create_tenant() -> Result<(), String> {
     let _ = call_reducer("create_tenant", r#"["Container Shop","container-shop"]"#)?;
     assert_sql_contains(
-        "SELECT name FROM tenant WHERE slug = 'container-shop'",
+        "SELECT name FROM tenants WHERE slug = 'container-shop'",
         "Container Shop",
         "create_tenant",
     )?;
@@ -259,7 +260,7 @@ fn test_create_tenant() -> Result<(), String> {
 fn test_create_appointment() -> Result<(), String> {
     let _ = call_reducer(
         "create_appointment",
-        r#"["tenant_appt","cust_appt1","","Screen repair","Replace cracked screen",1700000000000,1700003600000,false,"",""]"#,
+        r#"["tenant_appt","cust_appt1","","Screen repair","Replace cracked screen",1700000000000,1700003600000,false,"","","00a3e0"]"#,
     )?;
     assert_sql_contains(
         "SELECT status FROM appointment WHERE title = 'Screen repair'",

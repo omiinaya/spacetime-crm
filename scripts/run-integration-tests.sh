@@ -267,7 +267,7 @@ step "6" "Python backend integration tests"
 
 export CRM_TEST_SERVER="${BACKEND_URL}"
 export CRM_ADMIN_EMAIL="${CRM_ADMIN_EMAIL:-admin@crm.local}"
-export CRM_ADMIN_PW="${CRM_ADMIN_PW:-PLACEHOLDER_ADMIN_PW}"
+export CRM_ADMIN_PW="${CRM_ADMIN_PW:-change-me-in-production}"
 export STDB_HOST="${STDB_HOST}"
 export STDB_PORT="${STDB_PORT}"
 export STDB_DB="${STDB_DB}"

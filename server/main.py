@@ -1,4 +1,5 @@
 """SpacetimeCRM — FastAPI application entry point."""
+
 from __future__ import annotations
 
 import os
@@ -13,7 +14,6 @@ from fastapi.responses import FileResponse
 
 from config import settings
 from log_config import configure_logging, get_uvicorn_log_config
-from helpers import logger
 
 # Generate a default JWT secret on startup if none configured
 if settings.jwt_secret == "change-me-to-a-random-secret":
@@ -41,9 +41,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 from handlers import register_exception_handlers
+
 register_exception_handlers(app)
 
 from routes import register_routers
+
 register_routers(app)
 
 # ── SPA static files ──────────────────────────────────────────

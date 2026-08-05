@@ -1,8 +1,7 @@
 """CSV export and import tests."""
-import io
+
 import httpx
-import pytest
-from .conftest import SERVER_URL, assert_ok, unique_suffix, _track_entity, test_admin_headers
+from .conftest import SERVER_URL, assert_ok, unique_suffix
 
 
 class TestExport:

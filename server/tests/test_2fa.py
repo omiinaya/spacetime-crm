@@ -4,11 +4,12 @@ Uses the isolated tenant admin for user creation so a failed 2FA test
 never affects the global admin. All test users are created within the
 isolated tenant scope and cleaned up at module end.
 """
+
 import pyotp
 import httpx
-import time
 import pytest
-from .conftest import SERVER_URL, assert_ok, _track_entity
+import bcrypt
+from .conftest import SERVER_URL, assert_ok, _track_entity, _stdb_call
 
 
 @pytest.fixture(scope="module")
@@ -29,7 +30,8 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     resp = httpx.post(
         f"{SERVER_URL}/api/users",
         json={"name": name, "email": email, "role": "admin"},
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     assert resp.status_code == 200, f"Create 2FA test user failed: {resp.text[:200]}"
 
@@ -37,12 +39,18 @@ def _2fa_user(test_admin_headers: dict, session_suffix: str) -> tuple[str, str, 
     list_resp = httpx.get(
         f"{SERVER_URL}/api/users",
         params={"limit": 500},
-        headers=test_admin_headers, timeout=10,
+        headers=test_admin_headers,
+        timeout=10,
     )
     users = list_resp.json().get("users", [])
     uid = next((u["id"] for u in users if u.get("email") == email), None)
     assert uid, f"Could not find user ID for {email}"
     _track_entity("user", uid)
+
+    # /api/users creates users without a password — set one so the login
+    # flow used by the 2FA tests works (mirrors the conftest tenant-admin pattern).
+    hashed = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    _stdb_call("set_user_password", [uid, hashed])
 
     yield email, pw, uid
 
