@@ -13,7 +13,12 @@ from .conftest import create_customer, unique_suffix
 
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.asyncio(loop_scope="session"),
+    # Function-scoped loop: this file must NOT share a session loop with the
+    # scheduler tests (tests/unit/scheduler_tests/*), which call asyncio.run()
+    # and thereby close/clear the current event loop. With loop_scope="session"
+    # the shared loop is left closed after those files run, surfacing as an
+    # intermittent "RuntimeError: Event loop is closed" under full-suite load.
+    pytest.mark.asyncio(loop_scope="function"),
 ]
 
 

@@ -407,6 +407,11 @@ class TestSchemaCoverage:
         for path in schema["paths"]:
             if path == "/{full_path}":
                 continue
+            # hermes-id agent-auth routes are mounted dynamically by the external
+            # hermes_id.fastapi_plugin (server/main.py -> install_agent_auth) when
+            # HERMES_AUTH_SERVER_URL is set — invisible to the routes/ AST walker.
+            if path.startswith("/hermes-id/"):
+                continue
             if path not in registered:
                 orphan.append(path)
         if orphan:
