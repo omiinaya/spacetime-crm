@@ -18,6 +18,7 @@ from helpers import (
 )
 from models import (
     PortalCheckoutSessionCreate,
+    PortalEstimateStatusUpdate,
     PortalLoginRequest,
     PortalNoteCreate,
     PortalPaymentCreate,
@@ -141,8 +142,12 @@ async def portal_stats(customer: dict = Depends(get_current_customer)):
     cid = customer["id"]
     tickets = await _sql(f"SELECT * FROM ticket WHERE customer_id = '{_sqlesc(cid)}'")
     invoices = await _sql(f"SELECT * FROM invoices WHERE customer_id = '{_sqlesc(cid)}'")
+    estimates = await _sql(f"SELECT * FROM estimates WHERE customer_id = '{_sqlesc(cid)}'")
     appointments = await _sql(f"SELECT * FROM appointment WHERE customer_id = '{_sqlesc(cid)}'")
     open_tickets = sum(1 for t in tickets if t.get("status") not in ("resolved", "closed"))
+    pending_estimates = sum(
+        1 for e in estimates if e.get("status") in ("draft", "sent", "pending", "")
+    )
     total_billed = sum(
         float(i.get("total", 0)) for i in invoices if i.get("status") not in ("cancelled", "draft")
     )
@@ -156,6 +161,7 @@ async def portal_stats(customer: dict = Depends(get_current_customer)):
         "total_paid": total_paid,
         "balance_due": total_billed - total_paid,
         "upcoming_appointments": len(upcoming),
+        "pending_estimates": pending_estimates,
     }
 
 
@@ -246,6 +252,60 @@ async def portal_invoice_detail(invoice_id: str, customer: dict = Depends(get_cu
     inv["total_paid"] = total_paid
     inv["balance_due"] = float(inv.get("total", 0)) - total_paid
     return {"invoice": inv}
+
+
+# ── Estimates ──────────────────────────────────────────────────
+
+
+@router.get("/api/portal/estimates")
+async def portal_estimates(customer: dict = Depends(get_current_customer)):
+    """Customer's estimates (open + history)."""
+    rows = await _sql(f"SELECT * FROM estimates WHERE customer_id = '{_sqlesc(customer['id'])}'")
+    return {"estimates": _sort(rows, "created_at")}
+
+
+@router.get("/api/portal/estimates/{estimate_id}")
+async def portal_estimate_detail(estimate_id: str, customer: dict = Depends(get_current_customer)):
+    """Single estimate detail with line items (customer-owned only)."""
+    rows = await _sql(
+        f"SELECT * FROM estimates WHERE id = '{_sqlesc(estimate_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
+    )
+    if not rows:
+        raise HTTPException(404, "Estimate not found")
+    est = rows[0]
+    items = await _sql(
+        f"SELECT * FROM estimate_line_items WHERE estimate_id = '{_sqlesc(estimate_id)}'"
+    )
+    est["line_items"] = _sort(items, "sort_order", desc=False)
+    return {"estimate": est}
+
+
+@router.post("/api/portal/estimates/{estimate_id}/status")
+async def portal_estimate_status(
+    estimate_id: str,
+    body: PortalEstimateStatusUpdate,
+    customer: dict = Depends(get_current_customer),
+):
+    """Customer approves or declines their estimate.
+
+    Only transitions to a terminal customer-visible state are allowed
+    (approved / declined). Anything else is rejected.
+    """
+    status = (body.status or "").strip().lower()
+    if status not in ("approved", "declined"):
+        raise HTTPException(
+            400,
+            "Portal estimate status changes are limited to 'approved' or 'declined'",
+        )
+
+    rows = await _sql(
+        f"SELECT * FROM estimates WHERE id = '{_sqlesc(estimate_id)}' AND customer_id = '{_sqlesc(customer['id'])}'"
+    )
+    if not rows:
+        raise HTTPException(404, "Estimate not found")
+
+    await _call("update_estimate_status", [estimate_id, status])
+    return {"ok": True}
 
 
 # ── Payments ───────────────────────────────────────────────────

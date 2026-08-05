@@ -10,7 +10,7 @@
 ### P0 — Customer portal web view ✅ Done
 Customers can log in, see their open tickets, approve/decline estimates, and view invoice history.
 - Backend: `server/routes/portal.py`
-- Frontend: `web/src/pages/PortalLoginPage.tsx`, `PortalDashboard.tsx`, `PortalTicketsPage.tsx`, `PortalInvoicesPage.tsx`, `PortalAppointmentsPage.tsx`
+- Frontend: `web/src/pages/PortalLoginPage.tsx`, `PortalDashboard.tsx`, `PortalTicketsPage.tsx`, `PortalInvoicesPage.tsx`, `PortalEstimatesPage.tsx`, `PortalAppointmentsPage.tsx`
 - Auth: `web/src/lib/portal-auth.ts`
 
 ### P0 — PDF generation for invoices and estimates ✅ Done
@@ -51,8 +51,8 @@ Inventory adjustments tracked with reason codes (received, sold, damaged, return
 - Backend: `server/spacetimedb/src/inventory.rs`
 
 ### P2 — Dashboard charts (revenue over time, ticket trends) ✅ Done
-Recharts bar/line charts for monthly revenue and ticket volume on the dashboard.
-- Frontend: `web/src/pages/DashboardPage.tsx` (BarChart, LineChart from `recharts`)
+Recharts charts for monthly revenue and ticket status breakdown on the dashboard.
+- Frontend: `web/src/pages/DashboardPage.tsx` (BarChart for monthly revenue, PieChart for tickets by status — both from `recharts`)
 
 ### P2 — Dark/light mode toggle ✅ Done
 Theme toggle in settings; light theme via CSS variables.

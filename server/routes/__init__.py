@@ -45,7 +45,13 @@ def register_routers(app):
     app.include_router(export_import_router)
     app.include_router(gift_cards_router)
     app.include_router(health_router)
-    app.include_router(hermes_id_agents_router)
+    # hermes-id agent approval proxy — opt-in like main.py's install_agent_auth.
+    # Only mounted when the auth server is configured; the endpoints proxy to
+    # HERMES_AUTH_SERVER_URL and would 500 (RuntimeError) otherwise.
+    import os
+
+    if os.environ.get("HERMES_AUTH_SERVER_URL"):
+        app.include_router(hermes_id_agents_router)
     app.include_router(invoices_router)
     app.include_router(payments_router)
     app.include_router(payment_methods_router)

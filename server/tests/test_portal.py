@@ -146,6 +146,36 @@ def _create_portal_invoice(customer_id: str, admin_headers: dict, tag: str = "")
     return ""
 
 
+def _create_portal_estimate(
+    customer_id: str, admin_headers: dict, portal_headers: dict, tag: str = ""
+) -> str:
+    """Create an estimate for the portal customer, find it via the portal API, return its ID."""
+    notes = f"Portal estimate test {tag}" if tag else "Portal estimate test"
+    resp = httpx.post(
+        f"{SERVER_URL}/api/estimates",
+        json={
+            "customer_id": customer_id,
+            "ticket_id": "",
+            "notes": notes,
+            "expires_at": 0,
+            "currency": "USD",
+        },
+        headers=admin_headers,
+        timeout=10,
+    )
+    assert_ok(resp)
+
+    # The create endpoint returns {"ok": True}; locate the estimate through
+    # the customer's own portal list (also exercises GET /api/portal/estimates).
+    resp = httpx.get(f"{SERVER_URL}/api/portal/estimates", headers=portal_headers, timeout=10)
+    data = assert_ok(resp)
+    for est in data.get("estimates", []):
+        if est.get("notes") == notes:
+            _track_entity("estimate", est["id"])
+            return est["id"]
+    raise AssertionError(f"Estimate not found via portal: {resp.text[:200]}")
+
+
 class TestPortalAuth:
     """Portal login and profile."""
 
@@ -247,6 +277,151 @@ class TestPortalInvoices:
     def test_invoice_nonexistent(self, portal_headers: dict):
         resp = httpx.get(
             f"{SERVER_URL}/api/portal/invoices/fake-999",
+            headers=portal_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 404
+
+
+class TestPortalEstimates:
+    """Customer estimate viewing and approve/decline — each test creates its own estimate."""
+
+    def test_list_estimates(
+        self, portal_headers: dict, portal_customer_id: str, admin_headers: dict
+    ):
+        _create_portal_estimate(portal_customer_id, admin_headers, portal_headers, "list")
+        resp = httpx.get(f"{SERVER_URL}/api/portal/estimates", headers=portal_headers, timeout=10)
+        data = assert_ok(resp)
+        assert "estimates" in data
+        assert len(data["estimates"]) >= 1
+
+    def test_estimate_detail(
+        self, portal_headers: dict, portal_customer_id: str, admin_headers: dict
+    ):
+        est_id = _create_portal_estimate(
+            portal_customer_id, admin_headers, portal_headers, "detail"
+        )
+        resp = httpx.get(
+            f"{SERVER_URL}/api/portal/estimates/{est_id}",
+            headers=portal_headers,
+            timeout=10,
+        )
+        data = assert_ok(resp)
+        assert "estimate" in data
+        assert data["estimate"]["id"] == est_id
+        assert "line_items" in data["estimate"]
+
+    def test_estimate_nonexistent(self, portal_headers: dict):
+        resp = httpx.get(
+            f"{SERVER_URL}/api/portal/estimates/fake-999",
+            headers=portal_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 404
+
+    def test_approve_estimate(
+        self, portal_headers: dict, portal_customer_id: str, admin_headers: dict
+    ):
+        est_id = _create_portal_estimate(
+            portal_customer_id, admin_headers, portal_headers, "approve"
+        )
+        resp = httpx.post(
+            f"{SERVER_URL}/api/portal/estimates/{est_id}/status",
+            json={"status": "approved"},
+            headers=portal_headers,
+            timeout=10,
+        )
+        assert_ok(resp)
+
+        # Confirm the status actually changed server-side.
+        detail = httpx.get(
+            f"{SERVER_URL}/api/portal/estimates/{est_id}", headers=portal_headers, timeout=10
+        )
+        assert detail.json()["estimate"]["status"] == "approved"
+
+    def test_decline_estimate(
+        self, portal_headers: dict, portal_customer_id: str, admin_headers: dict
+    ):
+        est_id = _create_portal_estimate(
+            portal_customer_id, admin_headers, portal_headers, "decline"
+        )
+        resp = httpx.post(
+            f"{SERVER_URL}/api/portal/estimates/{est_id}/status",
+            json={"status": "declined"},
+            headers=portal_headers,
+            timeout=10,
+        )
+        assert_ok(resp)
+
+        detail = httpx.get(
+            f"{SERVER_URL}/api/portal/estimates/{est_id}", headers=portal_headers, timeout=10
+        )
+        assert detail.json()["estimate"]["status"] == "declined"
+
+    def test_invalid_status_rejected(self, portal_headers: dict):
+        # Portal is restricted to approved/declined — anything else is a 400.
+        resp = httpx.post(
+            f"{SERVER_URL}/api/portal/estimates/some-est/status",
+            json={"status": "draft"},
+            headers=portal_headers,
+            timeout=10,
+        )
+        assert resp.status_code == 400
+
+    def test_other_customers_estimate_rejected(self, portal_headers: dict, admin_headers: dict):
+        # Estimate owned by a different customer, so the portal user must get 404.
+        # Create a second, unrelated customer + estimate via admin.
+        other_email = "other-portal@test.com"
+        resp = httpx.post(
+            f"{SERVER_URL}/api/customers",
+            json={"first_name": "Other", "last_name": "User", "email": other_email},
+            headers=admin_headers,
+            timeout=10,
+        )
+        assert_ok(resp)
+        other_cust = (
+            httpx.get(
+                f"{SERVER_URL}/api/customers",
+                params={"search": other_email},
+                headers=admin_headers,
+                timeout=10,
+            )
+            .json()
+            .get("customers", [])
+        )
+        if other_cust:
+            _track_entity("customer", other_cust[0]["id"])
+            other_id = other_cust[0]["id"]
+        else:
+            raise AssertionError("Other customer not found")
+
+        est_notes = "Portal estimate other owner"
+        created = httpx.post(
+            f"{SERVER_URL}/api/estimates",
+            json={
+                "customer_id": other_id,
+                "ticket_id": "",
+                "notes": est_notes,
+                "expires_at": 0,
+                "currency": "USD",
+            },
+            headers=admin_headers,
+            timeout=10,
+        )
+        assert_ok(created)
+
+        # Locate it via admin list to assert portal 404s on the foreign id.
+        admin_list = httpx.get(f"{SERVER_URL}/api/estimates", headers=admin_headers, timeout=10)
+        other_est_id = None
+        for est in admin_list.json().get("estimates", []):
+            if est.get("notes") == est_notes:
+                other_est_id = est["id"]
+                break
+        assert other_est_id, "Other-owned estimate not found in admin list"
+        _track_entity("estimate", other_est_id)
+
+        resp = httpx.get(
+            f"{SERVER_URL}/api/portal/estimates/{other_est_id}",
             headers=portal_headers,
             timeout=10,
         )

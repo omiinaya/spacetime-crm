@@ -28,3 +28,7 @@ class PortalSetPassword(BaseModel):
 
 class PortalCheckoutSessionCreate(BaseModel):
     invoice_id: str = Field(..., min_length=1)
+
+
+class PortalEstimateStatusUpdate(BaseModel):
+    status: str = Field(..., min_length=1, max_length=50)

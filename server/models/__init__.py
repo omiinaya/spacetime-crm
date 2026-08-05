@@ -56,6 +56,7 @@ from .payment_methods import (
 )
 from .portal import (
     PortalCheckoutSessionCreate,
+    PortalEstimateStatusUpdate,
     PortalLoginRequest,
     PortalNoteCreate,
     PortalPaymentCreate,
@@ -178,6 +179,7 @@ __all__ = [
     "PortalPaymentCreate",
     "PortalSetPassword",
     "PortalCheckoutSessionCreate",
+    "PortalEstimateStatusUpdate",
     # POS
     "POSCreate",
     "POSAddItem",

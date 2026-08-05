@@ -334,6 +334,12 @@ class TestSchemaCoverage:
         for fname in sorted(os.listdir(routes_dir)):
             if not fname.endswith(".py") or fname == "__init__.py":
                 continue
+            # hermes_id_agents.py is env-gated (HERMES_AUTH_SERVER_URL) like the
+            # plugin routes — its /api/admin/hermes-id/* paths mount only when
+            # the auth server is configured, so they are invisible to the schema
+            # on non-fleet deploys and must not be demanded here.
+            if fname == "hermes_id_agents.py":
+                continue
             fpath = os.path.join(routes_dir, fname)
             with open(fpath) as f:
                 try:
@@ -382,6 +388,10 @@ class TestSchemaCoverage:
         for fname in sorted(os.listdir(routes_dir)):
             if not fname.endswith(".py") or fname == "__init__.py":
                 continue
+            # hermes_id_agents.py is env-gated (HERMES_AUTH_SERVER_URL) — skip
+            # so the source scan stays consistent with runtime mounting.
+            if fname == "hermes_id_agents.py":
+                continue
             fpath = os.path.join(routes_dir, fname)
             with open(fpath) as f:
                 try:
@@ -411,6 +421,10 @@ class TestSchemaCoverage:
             # hermes_id.fastapi_plugin (server/main.py -> install_agent_auth) when
             # HERMES_AUTH_SERVER_URL is set — invisible to the routes/ AST walker.
             if path.startswith("/hermes-id/"):
+                continue
+            # /api/admin/hermes-id/* are the env-gated admin proxy routes from
+            # routes/hermes_id_agents.py (skipped by the AST walker above).
+            if path.startswith("/api/admin/hermes-id/"):
                 continue
             if path not in registered:
                 orphan.append(path)
