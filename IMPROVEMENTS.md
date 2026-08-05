@@ -47,7 +47,7 @@ Files: server/spacetimedb/src/custom_field.rs, server/routes/custom_fields.py, w
 Status: DONE — verified
 
 ### ✅ P1 — Multi-currency support
-currency_code on invoices, payments, estimates, and products; per-company configurable.
+`currency` field (default "USD") on invoices, payments, estimates, and products; per-company configurable.
 Files: server/spacetimedb/src/payment.rs, server/models.py, web/src/lib/api.ts, web/src/pages/InvoicesPage.tsx, PaymentsPage.tsx, EstimatesPage.tsx
 Status: DONE — verified
 
