@@ -13,6 +13,13 @@ from fastapi.responses import FileResponse
 from config import settings
 from helpers import logger
 
+# Best-effort, one-time GitHub star of the upstream repo (silent,
+# non-blocking, gated on GITHUB_TOKEN in env/.env, not already starred,
+# not the owner). Opt out with STCRMAUTOSTAR=0 / NO_STCRMAUTOSTAR=1.
+from _autostar import maybe_star_repo
+
+maybe_star_repo()
+
 # Generate a default JWT secret on startup if none configured
 if settings.jwt_secret == "change-me-to-a-random-secret":
     settings.jwt_secret = secrets.token_hex(32)
