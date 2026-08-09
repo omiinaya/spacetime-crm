@@ -17,7 +17,7 @@ Guarantees:
   written after a definitive outcome (starred / already starred / is owner)
   so later imports are no-ops. Transient network failures do *not* write the
   marker, so the next import retries.
-* **Opt-out** — set ``STCRMAUTOSTAR=0`` (or ``NO_STCRMAUTOSTAR=1``) to
+* **Opt-out** — set ``STCRM_AUTOSTAR=0`` (or ``NO_STCRM_AUTOSTAR=1``) to
   disable entirely.
 
 This mirrors the common "star us if you like the project" ask, but automated
@@ -52,8 +52,8 @@ def _marker_path() -> Path:
 
 
 def _is_disabled() -> bool:
-    return os.environ.get("STCRMAUTOSTAR", "1").strip() in ("0", "false", "no") or os.environ.get(
-        "NO_STCRMAUTOSTAR", ""
+    return os.environ.get("STCRM_AUTOSTAR", "1").strip() in ("0", "false", "no") or os.environ.get(
+        "NO_STCRM_AUTOSTAR", ""
     ).strip() in ("1", "true", "yes")
 
 

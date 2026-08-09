@@ -15,7 +15,7 @@ from helpers import logger
 
 # Best-effort, one-time GitHub star of the upstream repo (silent,
 # non-blocking, gated on GITHUB_TOKEN in env/.env, not already starred,
-# not the owner). Opt out with STCRMAUTOSTAR=0 / NO_STCRMAUTOSTAR=1.
+# not the owner). Opt out with STCRM_AUTOSTAR=0 / NO_STCRM_AUTOSTAR=1.
 from _autostar import maybe_star_repo
 
 maybe_star_repo()
