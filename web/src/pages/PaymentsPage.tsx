@@ -1,24 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
 import { api } from "../lib/api";
 import { usePagination } from "../lib/usePagination";
+import { formatCurrency } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import Pagination from "../components/Pagination";
-import { CreditCard, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Plus, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 25;
 
+const EMPTY_FORM = { invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "", currency: "USD" };
+
 export default function PaymentsPage() {
   const pag = usePagination(PAGE_SIZE);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "", currency: "USD" });
+  const [form, setForm] = useState(EMPTY_FORM);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["payments", { offset: pag.offset }],
     queryFn: async () => {
       const [pRes, iRes, cRes] = await Promise.all([
@@ -28,11 +31,13 @@ export default function PaymentsPage() {
       ]);
       return { payments: pRes.payments, invoices: iRes.invoices, customers: cRes.customers, total: pRes.total };
     },
-    select: (res) => {
-      pag.setTotal(res.total);
-      return { payments: res.payments, invoices: res.invoices, customers: res.customers };
-    },
   });
+
+  // Sync pagination total outside the query's select to avoid render loops.
+  useEffect(() => {
+    if (data) pag.setTotal(data.total);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   const payments = data?.payments ?? [];
   const invoices = data?.invoices ?? [];
@@ -43,7 +48,7 @@ export default function PaymentsPage() {
     onSuccess: () => {
       toast.success("Payment recorded");
       setShowForm(false);
-      setForm({ invoice_id: "", customer_id: "", amount: 0, method: "cash", reference: "", notes: "", currency: "USD" });
+      setForm(EMPTY_FORM);
       queryClient.invalidateQueries({ queryKey: ["payments"] });
     },
     onError: () => toast.error("Failed to record payment"),
@@ -58,7 +63,14 @@ export default function PaymentsPage() {
     onError: () => toast.error("Failed to delete"),
   });
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+  // Total Collected must be grouped per payment currency — summing amounts
+  // across currencies and labeling them with the form's currency was the bug.
+  const totalsByCurrency = payments.reduce<Record<string, number>>((acc, p) => {
+    const cur = p.currency || "USD";
+    acc[cur] = (acc[cur] || 0) + (Number(p.amount) || 0);
+    return acc;
+  }, {});
+  const totalCurrencies = Object.keys(totalsByCurrency).sort();
 
   return (
     <>
@@ -70,12 +82,35 @@ export default function PaymentsPage() {
         <Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4 mr-1.5" />Record Payment</Button>
       </div>
 
+      {isError && (
+        <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <p className="text-sm text-destructive">Failed to load payments. Please try again.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+          </Button>
+        </div>
+      )}
+
       <Card>
         <CardContent className="pt-4 flex items-center gap-4">
           <CreditCard className="h-8 w-8 text-green-400" />
-          <div>
+          <div className="flex-1">
             <p className="text-xs text-muted-foreground">Total Collected</p>
-            <p className="text-2xl font-bold text-green-400">{form.currency || "USD"} {totalAmount.toFixed(2)}</p>
+            {totalCurrencies.length === 0 ? (
+              <p className="text-2xl font-bold text-green-400">{formatCurrency(0)}</p>
+            ) : (
+              <div className="flex flex-wrap gap-x-4">
+                {totalCurrencies.map((cur) => (
+                  <p key={cur} className="text-2xl font-bold text-green-400">
+                    {formatCurrency(totalsByCurrency[cur], cur)}
+                    <span className="ml-1.5 text-sm font-medium text-muted-foreground">{cur}</span>
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -123,11 +158,23 @@ export default function PaymentsPage() {
       )}
 
       <div className="space-y-3">
+        {!isLoading && !isError && payments.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium">No payments yet</p>
+              <p className="text-sm mt-1">Record your first payment to start tracking revenue</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => setShowForm(true)}>
+                <Plus className="h-4 w-4 mr-1.5" /> Record Payment
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {payments.map((p) => (
           <Card key={p.id}>
             <CardContent className="pt-4 flex items-center justify-between">
               <div>
-                <p className="font-medium">{p.currency || "USD"} {p.amount.toFixed(2)}</p>
+                <p className="font-medium">{formatCurrency(p.amount, p.currency)}</p>
                 <p className="text-xs text-muted-foreground">via {p.method} — {new Date(p.created_at).toLocaleDateString()}</p>
                 {p.reference && <p className="text-xs text-muted-foreground">Ref: {p.reference}</p>}
               </div>
