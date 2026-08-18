@@ -11,9 +11,11 @@ from helpers import (
 from models import (
     LoginRequest, SetPasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
     Setup2FARequest, CompleteLoginRequest, Disable2FARequest,
-    SetPinRequest, PosLoginRequest,
+    SetPinRequest, PosLoginRequest, DidAuthRequest,
 )
 from rate_limit import limiter
+
+from did_auth import auth_enabled, auth_project, verify_did_token
 
 import pyotp
 import base64
@@ -138,6 +140,36 @@ async def login(request: Request, login_data: LoginRequest):
             "role": user["role"],
             "tenant_id": tenant_id,
         },
+    }
+
+
+@router.post("/api/auth/did")
+@limiter.limit("60/minute")
+async def auth_did(request: Request, body: DidAuthRequest):
+    """Verify a hermes-id DID token (offline Ed25519 signature + aud + expiry).
+
+    Fail-open: when HERMES_AUTH_SERVER_URL is unset (or the SDK is not
+    installed) the endpoint reports ``verified=False`` instead of erroring,
+    so existing JWT login and every other route keep working untouched.
+    When auth is configured, invalid tokens are rejected with 401.
+    """
+    try:
+        payload = verify_did_token(body.did_token)
+    except HTTPException:
+        raise
+    if not payload:
+        return {
+            "verified": False,
+            "did": None,
+            "enabled": auth_enabled(),
+            "project": auth_project(),
+        }
+    return {
+        "verified": True,
+        "did": payload.get("did"),
+        "project": payload.get("aud", auth_project()),
+        "enabled": auth_enabled(),
+        "payload": payload,
     }
 
 

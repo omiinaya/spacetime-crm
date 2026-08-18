@@ -542,6 +542,13 @@ class PosLoginRequest(BaseModel):
     pin: str = Field(..., min_length=4, max_length=10, pattern=r"^\d{4,10}$")
 
 
+# ─── hermes-id DID Auth ────────────────────────────────────────
+
+class DidAuthRequest(BaseModel):
+    """Verify a hermes-id DID token (offline Ed25519 signature + aud + expiry)."""
+    did_token: str = Field(..., min_length=1, max_length=4096)
+
+
 # ─── Business Hours ─────────────────────────────────────────────
 
 class DayHours(BaseModel):

@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     app_url: str = "http://localhost:8723"
+    # hermes-id DID auth (mirrors spacetime-kanban did_auth.py — fail-open when unset)
+    hermes_auth_server_url: str = ""
+    hermes_auth_project: str = "crm"
 
     @property
     def stdb_sql_url(self) -> str:
