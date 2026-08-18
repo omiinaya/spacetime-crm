@@ -66,6 +66,8 @@ pub fn create_ticket(
     device_model: String,
     device_serial: String,
     priority: String,
+    device_imei: String,
+    device_password: String,
 ) {
     let id = super::make_id("tkt", ctx);
     let now = super::now_ms(ctx);
@@ -80,8 +82,8 @@ pub fn create_ticket(
         device_type,
         device_model,
         device_serial,
-        device_imei: String::new(),
-        device_password: String::new(),
+        device_imei,
+        device_password,
         status: "new".to_string(),
         priority,
         assigned_user_id: String::new(),

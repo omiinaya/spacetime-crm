@@ -49,6 +49,8 @@ async def create_ticket(body: TicketCreate, user: dict = Depends(require_role("a
         body.device_model,
         body.device_serial,
         body.priority,
+        body.device_imei,
+        body.device_password,
     ])
     await _log_audit(user, "create", "ticket", body.title, f"customer={body.customer_id}")
     asyncio.ensure_future(_fire_webhook("ticket.created", {

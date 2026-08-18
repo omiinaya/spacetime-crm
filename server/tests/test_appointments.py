@@ -7,6 +7,24 @@ import httpx
 from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
+def _row_dict(rows: list) -> dict:
+    """Normalize an STDB SQL response into a flat row dict (schema/rows or flat)."""
+    if not rows:
+        return {}
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        elements = entry.get("schema", {}).get("elements", [])
+        cols = []
+        for el in elements:
+            n = el.get("name", {})
+            cols.append(n.get("some", n) if isinstance(n, dict) else n)
+        row = entry.get("rows", [])
+        if not row:
+            return {}
+        return dict(zip(cols, row[0]))
+    return entry
+
+
 def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> str:
     """Create a customer + appointment and return the appointment ID.
 
@@ -28,6 +46,7 @@ def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suff
         "end_time": overrides.get("end_time", 1783003600000),
         "all_day": overrides.get("all_day", False),
         "recurrence_rule": overrides.get("recurrence_rule", ""),
+        "color": overrides.get("color", ""),
     }, headers=test_admin_headers, timeout=10)
 
     rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
@@ -44,6 +63,35 @@ class TestAppointmentCRUD:
         """Create a basic appointment."""
         appt_id = _create_appointment(test_admin_headers, session_suffix, "create", title="Basic Appointment")
         assert appt_id, "Expected non-empty appointment ID"
+
+    def test_create_appointment_persists_color(self, test_admin_headers: dict, session_suffix: str):
+        """color from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        title = f"Appt-Color-{session_suffix}-{suf}"
+        email = f"appt-color-{session_suffix}-{suf}@example.com"
+        c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Color{suf}", email=email)
+        assert c.get("id")
+        resp = httpx.post(
+            f"{SERVER_URL}/api/appointments",
+            json={
+                "customer_id": c["id"],
+                "title": title,
+                "description": "Verify color persists",
+                "start_time": 1783000000000,
+                "end_time": 1783003600000,
+                "all_day": False,
+                "recurrence_rule": "",
+                "color": "#3498db",
+            },
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
+        assert len(rows) >= 1, f"No appointment found with title '{title}'"
+        appt = _row_dict(rows)
+        assert appt["color"] == "#3498db", f"color={appt.get('color')!r}"
+        _track_entity("appointment", appt["id"])
 
     def test_list_appointments(self, test_admin_headers: dict):
         """List appointments returns paginated results."""

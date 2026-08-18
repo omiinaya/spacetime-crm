@@ -4,6 +4,24 @@ import httpx
 from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
+def _row_dict(rows: list) -> dict:
+    """Normalize an STDB SQL response into a flat row dict (schema/rows or flat)."""
+    if not rows:
+        return {}
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        elements = entry.get("schema", {}).get("elements", [])
+        cols = []
+        for el in elements:
+            n = el.get("name", {})
+            cols.append(n.get("some", n) if isinstance(n, dict) else n)
+        row = entry.get("rows", [])
+        if not row:
+            return {}
+        return dict(zip(cols, row[0]))
+    return entry
+
+
 def _create_customer(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     suf = suffix or unique_suffix()
     c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Est", last_name=f"Test{suf}", email=f"est-{session_suffix}-{suf}@example.com")
@@ -34,6 +52,25 @@ class TestEstimateCRUD:
             headers=test_admin_headers, timeout=10,
         )
         assert_ok(resp)
+
+    def test_create_estimate_persists_tax_and_discount(self, test_admin_headers: dict, session_suffix: str):
+        """tax_rate + discount_amount from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        cid = _create_customer(test_admin_headers, session_suffix, f"tax{suf}")
+        notes = f"Est tax test {session_suffix}-{suf}"
+        resp = httpx.post(
+            f"{SERVER_URL}/api/estimates",
+            json={"customer_id": cid, "notes": notes, "expires_at": 0, "tax_rate": 8.875, "discount_amount": 15.0},
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        rows = _stdb_sql(f"SELECT * FROM estimates WHERE notes = '{notes}'")
+        assert len(rows) == 1, f"Expected 1 estimate with notes '{notes}', got {len(rows)}"
+        est = _row_dict(rows)
+        assert float(est.get("tax_rate", 0)) == 8.875, f"tax_rate={est.get('tax_rate')!r}"
+        assert float(est.get("discount_amount", 0)) == 15.0, f"discount_amount={est.get('discount_amount')!r}"
+        _track_entity("estimate", est["id"])
 
     def test_list_estimates(self, test_admin_headers: dict):
         resp = httpx.get(f"{SERVER_URL}/api/estimates", headers=test_admin_headers, timeout=10)

@@ -4,6 +4,24 @@ import httpx
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
+def _row_dict(rows: list) -> dict:
+    """Normalize an STDB SQL response into a flat row dict (schema/rows or flat)."""
+    if not rows:
+        return {}
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        elements = entry.get("schema", {}).get("elements", [])
+        cols = []
+        for el in elements:
+            n = el.get("name", {})
+            cols.append(n.get("some", n) if isinstance(n, dict) else n)
+        row = entry.get("rows", [])
+        if not row:
+            return {}
+        return dict(zip(cols, row[0]))
+    return entry
+
+
 @pytest.fixture
 def test_product_id(test_admin_headers: dict, session_suffix: str) -> str:
     """Create a product for PO line items and return its ID.
@@ -44,6 +62,23 @@ class TestPurchaseOrderCRUD:
         vendor = f"Acme Supplies {session_suffix}-{unique_suffix()}"
         resp = httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": "Monthly restock"}, headers=test_admin_headers, timeout=10)
         assert_ok(resp)
+
+    def test_create_purchase_order_persists_shipping_cost(self, test_admin_headers: dict, session_suffix: str):
+        """shipping_cost from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        vendor = f"ShipCo {session_suffix}-{suf}"
+        resp = httpx.post(
+            f"{SERVER_URL}/api/purchase-orders",
+            json={"vendor_name": vendor, "notes": "Shipping cost test", "shipping_cost": 24.95},
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        rows = _stdb_sql(f"SELECT * FROM purchase_order WHERE vendor_name = '{vendor}'")
+        assert len(rows) == 1, f"Expected 1 PO with vendor {vendor}, got {len(rows)}"
+        po = _row_dict(rows)
+        assert float(po.get("shipping_cost", 0)) == 24.95, f"shipping_cost={po.get('shipping_cost')!r}"
+        _track_entity("purchase_order", po["id"])
 
     def test_list_purchase_orders(self, test_admin_headers: dict):
         resp = httpx.get(f"{SERVER_URL}/api/purchase-orders", headers=test_admin_headers, timeout=10)

@@ -52,6 +52,29 @@ class TestInvoiceCRUD:
         )
         assert_ok(resp)
 
+    def test_create_invoice_persists_discount_fields(self, test_admin_headers: dict, session_suffix: str):
+        """discount_amount + discount_percent from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        cid = _create_test_customer(test_admin_headers, session_suffix, suf)
+        resp = httpx.post(
+            f"{SERVER_URL}/api/invoices",
+            json={
+                "customer_id": cid, "ticket_id": "",
+                "notes": f"Discount test {suf}", "terms": "Net 30", "due_date": 0,
+                "discount_amount": 12.5, "discount_percent": 7.5,
+            },
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        r = httpx.get(f"{SERVER_URL}/api/invoices", params={"customer_id": cid, "limit": 1}, headers=test_admin_headers, timeout=10)
+        invs = r.json().get("invoices", [])
+        assert len(invs) >= 1, f"No invoice found for customer {cid}"
+        inv = invs[0]
+        assert float(inv.get("discount_amount", 0)) == 12.5, f"discount_amount={inv.get('discount_amount')!r}"
+        assert float(inv.get("discount_percent", 0)) == 7.5, f"discount_percent={inv.get('discount_percent')!r}"
+        _track_entity("invoice", inv["id"])
+
     def test_list_invoices(self, test_admin_headers: dict):
         """List invoices returns paginated results."""
         resp = httpx.get(

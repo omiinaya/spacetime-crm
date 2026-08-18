@@ -42,7 +42,7 @@ pub struct PurchaseOrderLineItem {
 }
 
 #[spacetimedb::reducer]
-pub fn create_purchase_order(ctx: &ReducerContext, tenant_id: String, vendor_name: String, notes: String, currency: String) {
+pub fn create_purchase_order(ctx: &ReducerContext, tenant_id: String, vendor_name: String, notes: String, currency: String, shipping_cost: f64) {
     let id = super::make_id("po", ctx);
     let now = super::now_ms(ctx);
     let po_number = ctx.db.purchase_order().iter().count() as u64 + 1001;
@@ -54,7 +54,7 @@ pub fn create_purchase_order(ctx: &ReducerContext, tenant_id: String, vendor_nam
         status: "draft".to_string(),
         subtotal: 0.0,
         tax_amount: 0.0,
-        shipping_cost: 0.0,
+        shipping_cost,
         total: 0.0,
         notes,
         created_at: now,

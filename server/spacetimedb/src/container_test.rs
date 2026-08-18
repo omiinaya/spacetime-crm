@@ -118,7 +118,7 @@ mod tests {
     fn container_create_ticket() {
         if !should_run() { return; }
         let _ = call_reducer("create_ticket",
-            r#"["tenant_tk","cust_tk1","Broken screen - container","Cracked glass","iPhone","15","SN001","high"]"#);
+            r#"["tenant_tk","cust_tk1","Broken screen - container","Cracked glass","iPhone","15","SN001","high","IMEI-001","pw123"]"#);
 
         let out = run_sql(
             "SELECT status, priority FROM ticket WHERE title = 'Broken screen - container'");
@@ -130,7 +130,7 @@ mod tests {
     fn container_update_ticket_status() {
         if !should_run() { return; }
         let _ = call_reducer("create_ticket",
-            r#"["t_upd","c_upd","Status update test","","","","","low"]"#);
+            r#"["t_upd","c_upd","Status update test","","","","","low","",""]"#);
 
         // Get ticket id
         let out = run_sql("SELECT id FROM ticket WHERE title = 'Status update test'");
@@ -174,7 +174,7 @@ mod tests {
     fn container_create_invoice() {
         if !should_run() { return; }
         let _ = call_reducer("create_invoice",
-            r#"["tenant_inv","cust_inv1","","Container invoice test","Net 30",1710000000000,"USD"]"#);
+            r#"["tenant_inv","cust_inv1","","Container invoice test","Net 30",1710000000000,"USD",5.0,10.0]"#);
 
         let out = run_sql(
             "SELECT status, currency FROM invoice WHERE notes = 'Container invoice test'");
@@ -232,7 +232,7 @@ mod tests {
         if !should_run() { return; }
         let _ = call_reducer("create_appointment",
             r#"["tenant_appt","cust_appt1","","Screen repair - container",
-               "Replace cracked screen",1700000000000,1700003600000,false,"",""]"#);
+               "Replace cracked screen",1700000000000,1700003600000,false,"","","FF0000"]"#);
 
         let out = run_sql(
             "SELECT status FROM appointment WHERE title = 'Screen repair - container'");

@@ -36,7 +36,7 @@ mod tests {
             &ctx, "t_appt".into(), "cust_1".into(), "tkt_1".into(),
             "Screen repair".into(), "Replace cracked screen".into(),
             1700000000000, 1700003600000, false,
-            String::new(), String::new(),
+            String::new(), String::new(), String::new(),
         );
         use crate::appointment::appointment;
         let appts: Vec<Appointment> = ctx.db.appointment().iter().collect();
@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn test_update_appointment_status() {
         let ctx = test_ctx();
-        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Test".into(), "".into(), 1000, 2000, false, "".into(), "".into());
+        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Test".into(), "".into(), 1000, 2000, false, "".into(), "".into(), "".into());
         let a = ctx.db.appointment().iter().next().unwrap();
         assert_eq!(a.status, "scheduled");
         let id = a.id.clone();
@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn test_set_recurrence() {
         let ctx = test_ctx();
-        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Recur".into(), "".into(), 1000, 2000, false, "".into(), "".into());
+        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Recur".into(), "".into(), 1000, 2000, false, "".into(), "".into(), "".into());
         let a = ctx.db.appointment().iter().next().unwrap();
         let id = a.id.clone();
         assert!(a.recurrence_rule.is_empty());
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_generate_next_occurrence() {
         let ctx = test_ctx();
-        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Series".into(), "".into(), 1000, 2000, false, "".into(), "FREQ=WEEKLY".into());
+        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Series".into(), "".into(), 1000, 2000, false, "".into(), "FREQ=WEEKLY".into(), "".into());
         let parent = ctx.db.appointment().iter().next().unwrap();
         let series_id = parent.id.clone();
         assert_eq!(ctx.db.appointment().iter().count(), 1);
@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test_delete_appointment() {
         let ctx = test_ctx();
-        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Del".into(), "".into(), 1000, 2000, false, "".into(), "".into());
+        create_appointment(&ctx, "t".into(), "c1".into(), "".into(), "Del".into(), "".into(), 1000, 2000, false, "".into(), "".into(), "".into());
         assert_eq!(ctx.db.appointment().iter().count(), 1);
         let id = ctx.db.appointment().iter().next().unwrap().id.clone();
         delete_appointment(&ctx, id);
@@ -165,7 +165,7 @@ mod tests {
     fn test_apply_checklist_template() {
         let ctx = test_ctx();
         // Need a ticket first (for tenant_id derivation)
-        crate::create_ticket(&ctx, "t_ck".into(), "c1".into(), "Check ticket".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        crate::create_ticket(&ctx, "t_ck".into(), "c1".into(), "Check ticket".into(), "".into(), "".into(), "".into(), "".into(), "low".into(), "".into(), "".into());
         let tkt = ctx.db.ticket().iter().next().unwrap();
         let tid = tkt.id.clone();
         // Create template with items
@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn test_update_checklist_item() {
         let ctx = test_ctx();
-        crate::create_ticket(&ctx, "t".into(), "c1".into(), "T".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        crate::create_ticket(&ctx, "t".into(), "c1".into(), "T".into(), "".into(), "".into(), "".into(), "".into(), "low".into(), "".into(), "".into());
         let tid = ctx.db.ticket().iter().next().unwrap().id.clone();
         create_checklist_template(&ctx, "t".into(), "T".into(), "".into(), r#"[{"label":"X"}]"#.into());
         let tmpl_id = ctx.db.checklist_templates().iter().next().unwrap().id.clone();
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn test_delete_ticket_checklist() {
         let ctx = test_ctx();
-        crate::create_ticket(&ctx, "t".into(), "c1".into(), "T".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        crate::create_ticket(&ctx, "t".into(), "c1".into(), "T".into(), "".into(), "".into(), "".into(), "".into(), "low".into(), "".into(), "".into());
         let tid = ctx.db.ticket().iter().next().unwrap().id.clone();
         create_checklist_template(&ctx, "t".into(), "T".into(), "".into(), r#"[{"label":"X"},{"label":"Y"}]"#.into());
         let tmpl_id = ctx.db.checklist_templates().iter().next().unwrap().id.clone();
@@ -885,7 +885,7 @@ mod tests {
     fn test_create_invoice() {
         let ctx = test_ctx();
         create_invoice(&ctx, "t_inv".into(), "cust_1".into(), "tkt_1".into(),
-            "Please pay".into(), "Net 30".into(), 1700100000000, "USD".into());
+            "Please pay".into(), "Net 30".into(), 1700100000000, "USD".into(), 0.0, 0.0);
         let invoices: Vec<Invoice> = ctx.db.invoices().iter().collect();
         assert_eq!(invoices.len(), 1);
         let i = &invoices[0];
@@ -898,7 +898,7 @@ mod tests {
     #[test]
     fn test_update_invoice_status() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         let id = ctx.db.invoices().iter().next().unwrap().id.clone();
         assert_eq!(ctx.db.invoices().id().find(&id).unwrap().status, "draft");
         update_invoice_status(&ctx, id.clone(), "sent".into());
@@ -913,7 +913,7 @@ mod tests {
         // Can't control timestamp directly in dummy ctx, but we can insert a row
         // with an overdue due_date by using the raw insert pattern via the table accessor
         create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(),
-            now - 86400000, "USD".into()); // due yesterday
+            now - 86400000, "USD".into(), 0.0, 0.0); // due yesterday
         let id = ctx.db.invoices().iter().next().unwrap().id.clone();
         update_invoice_status(&ctx, id.clone(), "sent".into());
         mark_overdue_invoices(&ctx);
@@ -924,7 +924,7 @@ mod tests {
     #[test]
     fn test_add_invoice_line_item() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         let inv_id = ctx.db.invoices().iter().next().unwrap().id.clone();
         add_invoice_line_item(&ctx, inv_id.clone(), "service".into(), "Labor".into(), 2.0, 75.0);
         let items: Vec<InvoiceLineItem> = ctx.db.invoice_line_items().iter().collect();
@@ -943,7 +943,7 @@ mod tests {
     #[test]
     fn test_delete_invoice_line_item() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         let inv_id = ctx.db.invoices().iter().next().unwrap().id.clone();
         add_invoice_line_item(&ctx, inv_id.clone(), "s".into(), "Item".into(), 1.0, 10.0);
         assert_eq!(ctx.db.invoice_line_items().iter().count(), 1);
@@ -955,7 +955,7 @@ mod tests {
     #[test]
     fn test_delete_invoice() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         assert_eq!(ctx.db.invoices().iter().count(), 1);
         let id = ctx.db.invoices().iter().next().unwrap().id.clone();
         delete_invoice(&ctx, id);
@@ -965,7 +965,7 @@ mod tests {
     #[test]
     fn test_set_invoice_tax_rate() {
         let ctx = test_ctx();
-        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into());
+        create_invoice(&ctx, "t".into(), "c1".into(), "".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         let inv_id = ctx.db.invoices().iter().next().unwrap().id.clone();
         add_invoice_line_item(&ctx, inv_id.clone(), "s".into(), "Item".into(), 1.0, 100.0);
         set_invoice_tax_rate(&ctx, inv_id.clone(), 8.875);
@@ -983,7 +983,7 @@ mod tests {
     fn test_create_estimate() {
         let ctx = test_ctx();
         create_estimate(&ctx, "t_est".into(), "cust_1".into(), "tkt_1".into(),
-            "Estimate notes".into(), 1700500000000, "USD".into());
+            "Estimate notes".into(), 1700500000000, "USD".into(), 0.0, 0.0);
         let estimates: Vec<Estimate> = ctx.db.estimates().iter().collect();
         assert_eq!(estimates.len(), 1);
         let e = &estimates[0];
@@ -995,7 +995,7 @@ mod tests {
     #[test]
     fn test_update_estimate_status() {
         let ctx = test_ctx();
-        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into());
+        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         let id = ctx.db.estimates().iter().next().unwrap().id.clone();
         assert_eq!(ctx.db.estimates().id().find(&id).unwrap().status, "draft");
         update_estimate_status(&ctx, id.clone(), "approved".into());
@@ -1005,7 +1005,7 @@ mod tests {
     #[test]
     fn test_add_estimate_line_item() {
         let ctx = test_ctx();
-        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into());
+        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         let est_id = ctx.db.estimates().iter().next().unwrap().id.clone();
         add_estimate_line_item(&ctx, est_id.clone(), "part".into(), "Screen".into(), 1.0, 89.99);
         let items: Vec<EstimateLineItem> = ctx.db.estimate_line_items().iter().collect();
@@ -1023,7 +1023,7 @@ mod tests {
     #[test]
     fn test_delete_estimate() {
         let ctx = test_ctx();
-        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into());
+        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "".into(), 0, "USD".into(), 0.0, 0.0);
         assert_eq!(ctx.db.estimates().iter().count(), 1);
         let id = ctx.db.estimates().iter().next().unwrap().id.clone();
         delete_estimate(&ctx, id);
@@ -1033,7 +1033,7 @@ mod tests {
     #[test]
     fn test_convert_estimate_to_invoice() {
         let ctx = test_ctx();
-        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "Convert me".into(), 1000, "USD".into());
+        create_estimate(&ctx, "t".into(), "c1".into(), "".into(), "Convert me".into(), 1000, "USD".into(), 0.0, 0.0);
         let est_id = ctx.db.estimates().iter().next().unwrap().id.clone();
         // Add line items
         add_estimate_line_item(&ctx, est_id.clone(), "service".into(), "Repair".into(), 1.0, 200.0);
@@ -1213,7 +1213,7 @@ mod tests {
     #[test]
     fn test_po_submit_for_approval() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t_po".into(), "Vendor Co".into(), "Urgent".into(), "USD".into());
+        create_purchase_order(&ctx, "t_po".into(), "Vendor Co".into(), "Urgent".into(), "USD".into(), 0.0);
         let po = ctx.db.purchase_order().iter().next().unwrap();
         let poid = po.id.clone();
         assert_eq!(po.status, "draft");
@@ -1224,7 +1224,7 @@ mod tests {
     #[test]
     fn test_po_submit_for_approval_from_non_draft_is_noop() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         submit_for_approval(&ctx, poid.clone());
         assert_eq!(ctx.db.purchase_order().id().find(&poid).unwrap().status, "pending_approval");
@@ -1236,7 +1236,7 @@ mod tests {
     #[test]
     fn test_po_approve() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         submit_for_approval(&ctx, poid.clone());
         approve_po(&ctx, poid.clone(), "user_admin".into());
@@ -1249,7 +1249,7 @@ mod tests {
     #[test]
     fn test_po_approve_from_draft_is_noop() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         approve_po(&ctx, poid, "user_admin".into());
         // Should stay draft
@@ -1259,7 +1259,7 @@ mod tests {
     #[test]
     fn test_po_reject() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         submit_for_approval(&ctx, poid.clone());
         reject_po(&ctx, poid.clone());
@@ -1269,7 +1269,7 @@ mod tests {
     #[test]
     fn test_po_reject_from_draft_is_noop() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         reject_po(&ctx, poid);
         // Should stay draft
@@ -1279,7 +1279,7 @@ mod tests {
     #[test]
     fn test_po_add_and_delete_line_item() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         // Add a line item
         add_po_line_item(&ctx, poid.clone(), "prod_1".into(), "Cable".into(), 10.0, 5.0);
@@ -1310,7 +1310,7 @@ mod tests {
         let pid = prod.id.clone();
         assert_eq!(prod.quantity_on_hand, 5.0);
         // Create PO and add line item referencing the product
-        create_purchase_order(&ctx, "t_rcv".into(), "MemSupplier".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t_rcv".into(), "MemSupplier".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         add_po_line_item(&ctx, poid.clone(), pid.clone(), "8GB DDR4".into(), 10.0, 30.0);
         let item = ctx.db.purchase_order_line_item().iter().next().unwrap();
@@ -1339,7 +1339,7 @@ mod tests {
         create_product(&ctx, "t".into(), "P".into(), "P".into(), "".into(),
             "".into(), "".into(), 1.0, 0.5, 0.0, 0.0, "".into());
         let pid = ctx.db.products().iter().next().unwrap().id.clone();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         add_po_line_item(&ctx, poid.clone(), pid, "Item".into(), 3.0, 10.0);
         let item_id = ctx.db.purchase_order_line_item().iter().next().unwrap().id.clone();
@@ -1352,7 +1352,7 @@ mod tests {
     #[test]
     fn test_delete_purchase_order() {
         let ctx = test_ctx();
-        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into());
+        create_purchase_order(&ctx, "t".into(), "V".into(), "".into(), "USD".into(), 0.0);
         let poid = ctx.db.purchase_order().iter().next().unwrap().id.clone();
         // Add line items
         add_po_line_item(&ctx, poid.clone(), "p1".into(), "Item A".into(), 2.0, 10.0);
@@ -1371,7 +1371,7 @@ mod tests {
     #[test]
     fn test_delete_ticket_timer() {
         let ctx = test_ctx();
-        create_ticket(&ctx, "t_tmr".into(), "c1".into(), "Timer test delete".into(), "".into(), "".into(), "".into(), "".into(), "low".into());
+        create_ticket(&ctx, "t_tmr".into(), "c1".into(), "Timer test delete".into(), "".into(), "".into(), "".into(), "".into(), "low".into(), "".into(), "".into());
         let tid = ctx.db.ticket().iter().next().unwrap().id.clone();
         start_ticket_timer(&ctx, tid, "user_1".into());
         use crate::ticket::ticket_timer;
