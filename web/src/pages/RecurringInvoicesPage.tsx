@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, Customer } from "../lib/api";
+import { api, Customer, RecurringInvoiceRule } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -16,20 +16,7 @@ interface RecurringLineItem {
   item_type: string;
 }
 
-interface RecurringRule {
-  id: string;
-  tenant_id: string;
-  customer_id: string;
-  name: string;
-  frequency: string;
-  interval_count: number;
-  next_generation_date: number;
-  last_generated_date: number;
-  due_date_days: number;
-  line_items_json: string;
-  status: string;
-  created_at: number;
-  updated_at: number;
+interface RecurringRule extends RecurringInvoiceRule {
   customer_name?: string;
 }
 
@@ -210,7 +197,7 @@ export default function RecurringInvoicesPage() {
 
   const updateLineItem = (idx: number, field: keyof RecurringLineItem, value: string | number) => {
     const updated = [...lineItems];
-    (updated[idx] as any)[field] = value;
+    updated[idx] = { ...updated[idx], [field]: value };
     setLineItems(updated);
   };
 

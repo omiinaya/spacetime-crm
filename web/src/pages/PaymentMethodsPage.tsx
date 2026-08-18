@@ -1,23 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, Customer } from "../lib/api";
+import { api, Customer, SavedPaymentMethod } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { CreditCard, Plus, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
 
-interface PaymentMethod {
-  id: string;
-  customer_id: string;
-  stripe_payment_method_id: string;
-  brand: string;
-  last4?: string;
+interface PaymentMethod extends SavedPaymentMethod {
+  /** Some API responses use the snake_case alias for last4. */
   last_4?: string;
-  exp_month: number;
-  exp_year: number;
-  is_default: boolean;
-  created_at: number;
   customer_name?: string;
 }
 

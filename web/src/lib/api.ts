@@ -510,6 +510,8 @@ export interface Tenant {
   settings: string;
   created_at: number;
   updated_at: number;
+  /** Populated by GET /tenants/{id} (server enriches with members). */
+  members?: TenantMember[];
 }
 
 export interface TenantMember {
@@ -590,6 +592,29 @@ export interface AuditLogEntry {
   entity_id: string;
   details: string;
   created_at: number;
+}
+
+/** Input shape for creating/updating a recurring invoice rule. */
+export interface RecurringInvoiceRuleInput {
+  customer_id: string;
+  name: string;
+  frequency: string;
+  interval_count: number;
+  next_generation_date?: number;
+  due_date_days?: number;
+  line_items?: { description: string; quantity: number; unit_price: number; item_type: string }[];
+  status?: string;
+}
+
+/** Input shape for saving a Stripe payment method. */
+export interface SavedPaymentMethodInput {
+  customer_id: string;
+  stripe_payment_method_id?: string;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  is_default?: boolean;
 }
 
 // ── API client ──
@@ -1272,12 +1297,12 @@ export const api = {
   recurringInvoices: {
     list: () =>
       apiFetch<{ rules: RecurringInvoiceRule[] }>("/recurring-invoices"),
-    create: (data: any) =>
+    create: (data: RecurringInvoiceRuleInput) =>
       apiFetch<{ ok: boolean }>("/recurring-invoices", {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    update: (id: string, data: any) =>
+    update: (id: string, data: Partial<RecurringInvoiceRuleInput>) =>
       apiFetch<{ ok: boolean }>(`/recurring-invoices/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
@@ -1297,7 +1322,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ customer_id }),
       }),
-    save: (data: any) =>
+    save: (data: SavedPaymentMethodInput) =>
       apiFetch<{ ok: boolean }>("/payment-methods", {
         method: "POST",
         body: JSON.stringify(data),
@@ -1373,7 +1398,7 @@ export const api = {
       }),
   },
   userSettings: {
-    get: () => apiFetch<{ settings: { user_id: string; theme: string; default_ticket_status: string; created_at: number; updated_at: number } | null }>("/users/settings"),
+    get: () => apiFetch<{ settings: UserSettings | null }>("/users/settings"),
     update: (data: { theme: string; default_ticket_status: string }) =>
       apiFetch<{ ok: boolean }>("/users/settings", {
         method: "PUT",

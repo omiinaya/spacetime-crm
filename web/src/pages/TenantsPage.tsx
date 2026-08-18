@@ -4,29 +4,13 @@ import {
   Building2, Plus, Trash2, Edit3, Users, UserPlus, X,
   RefreshCw, Shield, User,
 } from "lucide-react";
-import { api } from "../lib/api";
+import { api, Tenant, TenantMember } from "../lib/api";
 import { useAuth, hasRole } from "../lib/auth";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 
-interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
-  logo_url: string;
-  settings: string;
-  created_at: number;
-  updated_at: number;
-}
-
-interface TenantMember {
-  id: string;
-  tenant_id: string;
-  username: string;
-  role: string;
-  created_at: number;
-}
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Request failed");
 
 export default function TenantsPage() {
   const { user, refreshTenant } = useAuth();
@@ -55,8 +39,8 @@ export default function TenantsPage() {
     try {
       const data = await api.tenants.list();
       setTenants(data.tenants || []);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     } finally {
       setLoading(false);
     }
@@ -68,8 +52,8 @@ export default function TenantsPage() {
     try {
       const data = await api.tenants.get(tenantId);
       setMembers(data.tenant?.members || []);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     }
   };
 
@@ -87,8 +71,8 @@ export default function TenantsPage() {
       setNewName("");
       setNewSlug("");
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     }
   };
 
@@ -105,8 +89,8 @@ export default function TenantsPage() {
       if (selected?.id === editTenant.id) {
         setSelected({ ...selected, name: editName.trim(), slug: editSlug.trim() });
       }
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     }
   };
 
@@ -120,8 +104,8 @@ export default function TenantsPage() {
         setMembers([]);
       }
       await load();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     }
   };
 
@@ -137,8 +121,8 @@ export default function TenantsPage() {
       setMemberUsername("");
       setMemberRole("user");
       await loadMembers(selected.id);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     }
   };
 
@@ -148,8 +132,8 @@ export default function TenantsPage() {
       await api.tenants.removeMember(selected.id, memberId);
       toast.success("Member removed");
       await loadMembers(selected.id);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     }
   };
 
@@ -160,8 +144,8 @@ export default function TenantsPage() {
       toast.success(`Migrated: ${result.users_migrated} users assigned`);
       await load();
       await refreshTenant();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(errMsg(e));
     } finally {
       setMigrating(false);
     }

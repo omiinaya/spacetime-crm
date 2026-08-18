@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../lib/query-client";
-import { api } from "../lib/api";
+import { api, CustomFieldDefinition } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -11,18 +11,7 @@ import {
   Plus, Edit2, Trash2, GripVertical, Save, X,
 } from "lucide-react";
 
-interface FieldDef {
-  id: string;
-  entity_type: string;
-  label: string;
-  field_type: string;
-  options: string;
-  sort_order: number;
-  required: boolean;
-  active: boolean;
-  created_at: number;
-  updated_at: number;
-}
+type FieldDef = CustomFieldDefinition;
 
 const ENTITY_TYPES = ["customer", "ticket", "invoice", "product", "estimate", "purchase_order"];
 const FIELD_TYPES = ["text", "number", "date", "select", "multiselect", "checkbox", "textarea"];
@@ -224,8 +213,8 @@ function FieldForm({
       }
       queryClient.invalidateQueries({ queryKey: ["custom-fields"] });
       onSave();
-    } catch (e: any) {
-      setError(e?.message || "Failed to save");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
     }

@@ -102,7 +102,7 @@ export default function AuditLogPage() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e: any) => (
+                {entries.map((e) => (
                   <tr key={e.id} className="border-b border-slate-800 hover:bg-slate-800/30">
                     <td className="px-4 py-3 text-slate-400 whitespace-nowrap font-mono text-xs">
                       {formatTime(e.created_at)}
