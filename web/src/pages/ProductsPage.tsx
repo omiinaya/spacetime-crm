@@ -9,7 +9,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
 import Pagination from "../components/Pagination";
-import { Package, Plus, Search, ClipboardList, Scan, ScanLine, AlertTriangle, Printer, ArrowRightLeft } from "lucide-react";
+import { Package, Plus, Search, ClipboardList, Scan, ScanLine, AlertTriangle, Printer, ArrowRightLeft, RefreshCw } from "lucide-react";
 import { printBarcodeLabel } from "../components/BarcodeLabel";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
@@ -53,17 +53,19 @@ export default function ProductsPage() {
     staleTime: 60000,
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["products", { search, category: categoryFilter, offset: pag.offset }],
     queryFn: async () => {
       const res = await api.products.list(search, categoryFilter, pag.offset, PAGE_SIZE);
       return res;
     },
-    select: (res) => {
-      pag.setTotal(res.total);
-      return { products: res.products };
-    },
   });
+
+  // Sync pagination total outside the query's select to avoid render loops.
+  useEffect(() => {
+    if (data) pag.setTotal(data.total);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   const products = data?.products ?? [];
 
@@ -371,9 +373,33 @@ export default function ProductsPage() {
         </Card>
       )}
 
+      {isError && (
+        <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <p className="text-sm text-destructive">Failed to load products. Please try again.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Product list */}
         <div className={`space-y-3 ${selectedProduct ? "hidden lg:block" : ""}`}>
+          {!isLoading && !isError && products.length === 0 && (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                <p className="text-lg font-medium">No products yet</p>
+                <p className="text-sm mt-1">Add your first product to start tracking inventory</p>
+                <Button size="sm" className="mt-4" onClick={() => { setShowForm(true); setEditId(null); setForm({ ...emptyForm }); }}>
+                  <Plus className="h-4 w-4 mr-1.5" /> Add Product
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           {products.map((p) => (
             <Card
               key={p.id}
