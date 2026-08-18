@@ -45,6 +45,23 @@ class TestPurchaseOrderCRUD:
         resp = httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": "Monthly restock"}, headers=test_admin_headers, timeout=10)
         assert_ok(resp)
 
+    def test_create_purchase_order_persists_shipping_cost(self, test_admin_headers: dict, session_suffix: str):
+        """shipping_cost from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        vendor = f"ShipCo {session_suffix}-{suf}"
+        resp = httpx.post(
+            f"{SERVER_URL}/api/purchase-orders",
+            json={"vendor_name": vendor, "notes": "Shipping cost test", "shipping_cost": 24.95},
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        rows = _stdb_sql(f"SELECT * FROM purchase_order WHERE vendor_name = '{vendor}'")
+        assert len(rows) == 1, f"Expected 1 PO with vendor {vendor}, got {len(rows)}"
+        po = rows[0]
+        assert float(po.get("shipping_cost", 0)) == 24.95, f"shipping_cost={po.get('shipping_cost')!r}"
+        _track_entity("purchase_order", po["id"])
+
     def test_list_purchase_orders(self, test_admin_headers: dict):
         resp = httpx.get(f"{SERVER_URL}/api/purchase-orders", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)

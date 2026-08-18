@@ -28,6 +28,7 @@ def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suff
         "end_time": overrides.get("end_time", 1783003600000),
         "all_day": overrides.get("all_day", False),
         "recurrence_rule": overrides.get("recurrence_rule", ""),
+        "color": overrides.get("color", ""),
     }, headers=test_admin_headers, timeout=10)
 
     rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
@@ -44,6 +45,18 @@ class TestAppointmentCRUD:
         """Create a basic appointment."""
         appt_id = _create_appointment(test_admin_headers, session_suffix, "create", title="Basic Appointment")
         assert appt_id, "Expected non-empty appointment ID"
+
+    def test_create_appointment_persists_color(self, test_admin_headers: dict, session_suffix: str):
+        """color from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        title = f"Appt-Color-{session_suffix}-{suf}"
+        _create_appointment(test_admin_headers, session_suffix, "color", title=title, color="#3498db")
+
+        rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
+        assert len(rows) >= 1, f"No appointment found with title '{title}'"
+        appt = rows[0]
+        assert appt["color"] == "#3498db", f"color={appt.get('color')!r}"
+        _track_entity("appointment", appt["id"])
 
     def test_list_appointments(self, test_admin_headers: dict):
         """List appointments returns paginated results."""

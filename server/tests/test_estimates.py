@@ -35,6 +35,25 @@ class TestEstimateCRUD:
         )
         assert_ok(resp)
 
+    def test_create_estimate_persists_tax_and_discount(self, test_admin_headers: dict, session_suffix: str):
+        """tax_rate + discount_amount from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        cid = _create_customer(test_admin_headers, session_suffix, f"tax{suf}")
+        notes = f"Est tax test {session_suffix}-{suf}"
+        resp = httpx.post(
+            f"{SERVER_URL}/api/estimates",
+            json={"customer_id": cid, "notes": notes, "expires_at": 0, "tax_rate": 8.875, "discount_amount": 15.0},
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        rows = _stdb_sql(f"SELECT * FROM estimate WHERE notes = '{notes}'")
+        assert len(rows) == 1, f"Expected 1 estimate with notes '{notes}', got {len(rows)}"
+        est = rows[0]
+        assert float(est.get("tax_rate", 0)) == 8.875, f"tax_rate={est.get('tax_rate')!r}"
+        assert float(est.get("discount_amount", 0)) == 15.0, f"discount_amount={est.get('discount_amount')!r}"
+        _track_entity("estimate", est["id"])
+
     def test_list_estimates(self, test_admin_headers: dict):
         resp = httpx.get(f"{SERVER_URL}/api/estimates", headers=test_admin_headers, timeout=10)
         data = assert_ok(resp)

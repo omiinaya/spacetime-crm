@@ -59,6 +59,39 @@ class TestTicketFlow:
         assert tid, "Expected a ticket ID"
         assert tid.startswith("tkt_"), f"Unexpected ticket ID format: {tid}"
 
+    def test_create_ticket_persists_device_fields(self, test_admin_headers: dict, session_suffix: str):
+        """device_imei + device_password from the Pydantic model must persist to STDB."""
+        suf = unique_suffix()
+        email = f"tkt-dev-{session_suffix}-{suf}@example.com"
+        cust = create_customer(test_admin_headers, session_suffix=session_suffix, email=email)
+        cid = cust.get("id")
+        assert cid, f"Failed to create customer: {cust}"
+
+        device_serial = f"SN-DEV-{session_suffix}-{suf}"
+        resp = httpx.post(
+            f"{SERVER_URL}/api/tickets",
+            json={
+                "customer_id": cid,
+                "title": "Device fields test",
+                "description": "Verify IMEI + password persist",
+                "device_type": "Phone",
+                "device_model": "Pixel",
+                "device_serial": device_serial,
+                "device_imei": "IMEI-1234567890",
+                "device_password": "pw-secret-42",
+                "priority": "medium",
+            },
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
+
+        rows = _stdb_sql(f"SELECT * FROM ticket WHERE device_serial = '{device_serial}'")
+        assert len(rows) == 1, f"Expected 1 ticket with serial {device_serial}, got {len(rows)}"
+        ticket = rows[0]
+        assert ticket["device_imei"] == "IMEI-1234567890", f"device_imei={ticket.get('device_imei')!r}"
+        assert ticket["device_password"] == "pw-secret-42", f"device_password={ticket.get('device_password')!r}"
+        _track_entity("ticket", ticket["id"])
+
     def test_list_tickets(self, test_admin_headers: dict):
         """List tickets returns results."""
         resp = httpx.get(
