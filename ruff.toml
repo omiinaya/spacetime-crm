@@ -1,0 +1,56 @@
+# Ruff configuration for SpacetimeCRM.
+# Docs: https://docs.astral.sh/ruff/settings/
+#
+# Rule set is a pragmatic baseline for the FastAPI + scripts codebase:
+#   E/F  — pycodestyle + pyflakes (errors, unused imports, undefined names)
+#   I    — isort (import sorting)
+#   UP   — pyupgrade (modern syntax)
+#   B    — bugbear (common bug patterns)
+#   SIM  — simplify (readability)
+#   ASYNC — asyncio correctness (replaces flake8-async)
+# DTZ/S/EXE/RUF are intentionally NOT enabled: the codebase still uses
+# `datetime.utcnow()` and bare `except` in recovery paths; those become a
+# separate cleanup task. This config is the contract — it should never
+# flag *more* than the current baseline without a deliberate decision.
+
+target-version = "py311"
+line-length = 120
+
+exclude = [
+    ".git",
+    ".venv",
+    "node_modules",
+    "dist",
+    "target",
+    "__pycache__",
+    "server/spacetimedb/target",
+    "web/dist",
+    "web/node_modules",
+]
+
+src = ["server", "scripts"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+ignore = [
+    # FastAPI idioms: Depends()/Query()/Header() in default args.
+    "B008",
+    # Deliberate recovery paths: try/except that swallows and continues.
+    "S110",
+    # B904: raise-from chaining — noisy in existing handlers, revisit later.
+    "B904",
+]
+
+[lint.isort]
+known-first-party = [
+    "config",
+    "client",
+    "helpers",
+    "models",
+    "mail",
+    "sms",
+    "webhooks",
+    "stripe_payments",
+    "routes",
+]
+force-sort-within-sections = true

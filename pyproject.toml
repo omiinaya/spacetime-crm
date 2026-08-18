@@ -1,0 +1,35 @@
+# SpacetimeCRM — Python project metadata + tool configuration.
+#
+# NOTE: runtime dependencies intentionally stay in `server/requirements.txt`
+# (the deployment source of truth used by Docker/CI). This file carries
+# project metadata and developer-tool settings (pytest, ruff, setuptools).
+[project]
+name = "spacetime-crm"
+version = "0.1.0"
+description = "RepairShopr-inspired CRM built on SpacetimeDB — customers, tickets, invoicing, appointments, inventory, POS"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "SpacetimeCRM contributors" }]
+keywords = ["crm", "repair-shop", "spacetimedb", "fastapi", "react"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
+]
+
+# No `dependencies` here — see server/requirements.txt.
+
+[tool.setuptools]
+# Server is a runnable application, not a library; keep the build backend
+# from trying to discover packages in server/.
+py-modules = []
+
+[tool.pytest.ini_options]
+testpaths = ["server/tests"]
+addopts = "-q"

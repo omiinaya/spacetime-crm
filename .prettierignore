@@ -1,0 +1,21 @@
+# Build output
+web/dist/
+web/coverage/
+web/playwright-report/
+web/test-results/
+web/.auth/
+
+# Dependencies
+node_modules/
+server/.venv/
+
+# Rust build artifacts
+target/
+server/spacetimedb/target/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local env
+.env

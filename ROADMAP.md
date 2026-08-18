@@ -1,6 +1,6 @@
 # SpacetimeCRM — Roadmap & Honest Assessment
 
-| **Last assessed:** | 2026-07-07 |
+| **Last assessed:** | 2026-08-18 |
 | **Overall completeness:** | ~96% |
 | **Total endpoints:** | 99 API routes (25 route files) |
 | **Total STDB artifacts:** | 27 tables + 73 reducers |
@@ -381,23 +381,23 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 
 ### 9B — CI/CD gaps
 
-| # | Item | Effort |
-|---|------|--------|
-| 1 | **Dependabot config** — `.github/dependabot.yml` for automated dep updates | 10m |
-| 2 | **Docker image CI build** — GitHub workflow that builds and pushes to registry | 30m |
-| 3 | **Deployment workflow** — CI deploy to staging/production after tests pass | 1h |
-| 4 | **Commit message linting** — commitlint or similar | 15m |
+| # | Item | Effort | Status |
+|---|------|--------|:------:|
+| 1 | **Dependabot config** — `.github/dependabot.yml` for automated dep updates | 10m | ✅ Done |
+| 2 | **Docker image CI build** — GitHub workflow that builds and pushes to registry | 30m | ✅ Done |
+| 3 | **Deployment workflow** — CI deploy to staging/production after tests pass | 1h | ❌ Pending |
+| 4 | **Commit message linting** — commitlint or similar | 15m | ❌ Pending |
 
 ### 9C — Dev tooling gaps
 
-| # | Item | Effort |
-|---|------|--------|
-| 1 | **Ruff config** (`ruff.toml`) — Customize rule set | 10m |
-| 2 | **Prettier config** (`.prettierrc`) — Format web/ consistently | 10m |
-| 3 | **`.editorconfig`** — Cross-editor settings | 5m |
-| 4 | **`.python-version`** — Pin Python version for pyenv | 2m |
-| 5 | **`.nvmrc`** — Pin Node version for nvm | 2m |
-| 6 | **`pyproject.toml`** — Python project metadata + tool config | 15m |
+| # | Item | Effort | Status |
+|---|------|--------|:------:|
+| 1 | **Ruff config** (`ruff.toml`) — Customize rule set | 10m | ✅ Done |
+| 2 | **Prettier config** (`.prettierrc`) — Format web/ consistently | 10m | ✅ Done |
+| 3 | **`.editorconfig`** — Cross-editor settings | 5m | ✅ Done |
+| 4 | **`.python-version`** — Pin Python version for pyenv | 2m | ✅ Done |
+| 5 | **`.nvmrc`** — Pin Node version for nvm | 2m | ✅ Done |
+| 6 | **`pyproject.toml`** — Python project metadata + tool config | 15m | ✅ Done |
 
 ---
 
@@ -448,8 +448,8 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | # | Issue | Severity | Fix |
 |---|-------|:--------:|-----|
 | 11 | **Inline lazy imports** in 3 route files (from mail/sms inside function body) | 🟢 LOW | 10 min |
-| 12 | **No Dependabot config** | 🟢 LOW | 5 min |
-| 13 | **No linter config files** (ruff.toml, .prettierrc, .editorconfig, .nvmrc) | 🟢 LOW | 10 min |
+| 12 | **No Dependabot config** | 🟢 LOW | ✅ **Fixed** — `.github/dependabot.yml` (pip, npm, cargo, actions) |
+| 13 | **No linter config files** (ruff.toml, .prettierrc, .editorconfig, .nvmrc) | 🟢 LOW | ✅ **Fixed** — ruff.toml, .prettierrc, .editorconfig, .python-version, .nvmrc, pyproject.toml |
 | 14 | **Docker images use latest tags** (spacetimedb:latest, node:22-alpine) | 🟢 LOW | 5 min |
 | 15 | **`.dockerignore` is thin** — excludes too little from build context | 🟢 LOW | 5 min |
 | 16 | **No structured logging** — stdout is plain text | 🟢 LOW | 15 min |
@@ -457,6 +457,8 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 ---
 
 ## 🏆 Feature Gap Analysis vs. RepairShopr
+
+> **Status legend:** ✅ Complete · ⚠️ Partial/foundation · ❌ Not started · ⏳ **Planned-future** (queued for a later sprint — acknowledged gap, not silently dropped)
 
 | Feature | Our Status | Gap Notes |
 |---------|:----------:|-----------|
@@ -470,8 +472,8 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Purchase orders | ✅ Complete | Approvals, receiving |
 | Time tracking | ✅ Complete | Ticket timers |
 | Customer portal | ✅ Complete | Dashboard, tickets, invoices, appointments |
-| Email notifications | ✅ Complete | 7 event types, templates |
-| SMS notifications | ✅ Configured | Twilio integration |
+| Email notifications | ⏳ Planned-future | Basic SMTP engine + 7 Jinja2 templates exist (`server/mail.py`); full email integration (delivery analytics, templates UI, provider console) queued for a later sprint |
+| SMS notifications | ⏳ Planned-future | Twilio engine exists (`server/sms.py`, settings UI); full phone/SMS integration (2-way, opt-out management) queued for a later sprint |
 | Stripe payments | ✅ Complete | Checkout + SetupIntent + PaymentIntent |
 | Webhook API | ✅ Complete | HMAC-SHA256, 13 events |
 | Reporting | ✅ Complete | Revenue, tickets, invoices, appointments, tech, customers, SLA |
@@ -481,7 +483,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | Data import/export | ✅ CSV | CSV only — no XLSX/JSON |
 | Multi-tenant | ✅ Complete | 27 tables scoped |
 | POS / counter sale | ✅ Complete | Kiosk with cart, payment, receipt, refund |
-| Invoice email delivery | ✅ Complete | Single + batch + queue status |
+| Invoice email delivery | ⏳ Planned-future | Single + batch + queue status work today via the SMTP engine; considered part of the queued email integration sprint |
 | Multi-currency | ✅ Foundation | On entities + API, not in STDB reducers |
 | 2FA / TOTP | ✅ Complete | QR setup, challenge login, disable |
 | SLA tracking | ✅ Complete | Priority thresholds, configurable |
@@ -491,7 +493,7 @@ FastAPI could auto-generate OpenAPI spec, but Pydantic models use the raw `Sanit
 | **Inventory: bin/shelf locations** | ⚠️ Partial | `location` field exists, no search/filter |
 | **Inventory: reorder alerts** | ⚠️ Partial | Email alert via cron, no in-app notification |
 | **Service type breakdown** | ❌ Missing | Reports don't split service vs parts |
-| **Customer email marketing** | ❌ Missing | No blast/campaign functionality |
+| **Customer email marketing** | ⏳ Planned-future | No blast/campaign functionality; queued with the email integration sprint |
 | **Technician scheduling** | ❌ Missing | No per-tech calendar view |
 | **Push notifications** | ❌ Missing | Browser push via service worker |
 | **Gift cards** | ❌ Missing | POS gift card sale/redeem |
