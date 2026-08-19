@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # hermes-id DID auth (mirrors spacetime-kanban did_auth.py — fail-open when unset)
     hermes_auth_server_url: str = ""
     hermes_auth_project: str = "crm"
+    # Structured JSON logging (ROADMAP 9A-5): LOG_LEVEL + STRUCTURED_LOGGING
+    log_level: str = "info"
+    structured_logging: bool = False
 
     @property
     def stdb_sql_url(self) -> str:

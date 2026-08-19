@@ -13,6 +13,12 @@ from fastapi.responses import FileResponse
 from config import settings
 from helpers import logger
 
+# Structured JSON logging (ROADMAP 9A-5): wire log_config into startup so
+# LOG_LEVEL / STRUCTURED_LOGGING from env/.env actually take effect.
+from log_config import configure_logging
+
+configure_logging(level=settings.log_level, structured=settings.structured_logging)
+
 # Best-effort, one-time GitHub star of the upstream repo (silent,
 # non-blocking, gated on GITHUB_TOKEN in env/.env, not already starred,
 # not the owner). Opt out with STCRM_AUTOSTAR=0 / NO_STCRM_AUTOSTAR=1.

@@ -35,14 +35,19 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log_entry, default=str)
 
 
-def configure_logging(logger_name: Optional[str] = None) -> logging.Logger:
+def configure_logging(logger_name: Optional[str] = None, level: Optional[str] = None, structured: Optional[bool] = None) -> logging.Logger:
     """Configure structured logging for the app.
 
-    In production (STRUCTURED_LOGGING=true), outputs JSON to stderr.
-    In dev, outputs colored text to stderr.
+    In production (STRUCTURED_LOGGING=true / structured=True), outputs JSON
+    to stderr. In dev, outputs colored text to stderr.
+
+    ``level`` and ``structured`` override the LOG_LEVEL / STRUCTURED_LOGGING
+    env vars (used by config.Settings when wiring at app startup).
     """
     logger = logging.getLogger(logger_name) if logger_name else logging.getLogger()
-    logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
+    level_name = (level or LOG_LEVEL).upper()
+    use_json = STRUCTURED if structured is None else structured
+    logger.setLevel(getattr(logging, level_name, logging.INFO))
 
     # Remove existing handlers to avoid duplicates
     logger.handlers.clear()
@@ -50,7 +55,7 @@ def configure_logging(logger_name: Optional[str] = None) -> logging.Logger:
     handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(logger.level)
 
-    if STRUCTURED:
+    if use_json:
         handler.setFormatter(JsonFormatter())
     else:
         handler.setFormatter(logging.Formatter(
