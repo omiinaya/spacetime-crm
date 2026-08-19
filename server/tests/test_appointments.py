@@ -7,6 +7,34 @@ import httpx
 from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
+def _row_dict(rows: list) -> dict:
+    """Normalize an STDB SQL response into a flat row dict (schema/rows or flat)."""
+    if not rows:
+        return {}
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        elements = entry.get("schema", {}).get("elements", [])
+        cols = []
+        for el in elements:
+            n = el.get("name", {})
+            cols.append(n.get("some", n) if isinstance(n, dict) else n)
+        row = entry.get("rows", [])
+        if not row:
+            return {}
+        return dict(zip(cols, row[0]))
+    return entry
+
+
+def _row_count(rows: list) -> int:
+    """Number of rows in an STDB SQL response (schema/rows or flat)."""
+    if not rows:
+        return 0
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        return len(entry.get("rows", []))
+    return len(rows)
+
+
 def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> str:
     """Create a customer + appointment and return the appointment ID.
 
@@ -33,7 +61,7 @@ def _create_appointment(test_admin_headers: dict, session_suffix: str = "", suff
 
     rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
     assert len(rows) >= 1, f"No appointment found with title '{title}'"
-    appt_id = rows[0]["id"]
+    appt_id = _row_dict(rows)["id"]
     _track_entity("appointment", appt_id)
     return appt_id
 
@@ -50,11 +78,28 @@ class TestAppointmentCRUD:
         """color from the Pydantic model must persist to STDB."""
         suf = unique_suffix()
         title = f"Appt-Color-{session_suffix}-{suf}"
-        _create_appointment(test_admin_headers, session_suffix, "color", title=title, color="#3498db")
+        email = f"appt-color-{session_suffix}-{suf}@example.com"
+        c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Appt", last_name=f"Color{suf}", email=email)
+        assert c.get("id")
+        resp = httpx.post(
+            f"{SERVER_URL}/api/appointments",
+            json={
+                "customer_id": c["id"],
+                "title": title,
+                "description": "Verify color persists",
+                "start_time": 1783000000000,
+                "end_time": 1783003600000,
+                "all_day": False,
+                "recurrence_rule": "",
+                "color": "#3498db",
+            },
+            headers=test_admin_headers, timeout=10,
+        )
+        assert_ok(resp)
 
         rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
         assert len(rows) >= 1, f"No appointment found with title '{title}'"
-        appt = rows[0]
+        appt = _row_dict(rows)
         assert appt["color"] == "#3498db", f"color={appt.get('color')!r}"
         _track_entity("appointment", appt["id"])
 
@@ -163,7 +208,7 @@ class TestRecurringAppointments:
         # Get our series ID from STDB
         rows = _stdb_sql(f"SELECT * FROM appointment WHERE title = '{title}'")
         assert len(rows) > 0
-        series_id = rows[0].get("series_id", "")
+        series_id = _row_dict(rows).get("series_id", "")
         if not series_id:
             series_id = appt_id
 
@@ -173,7 +218,7 @@ class TestRecurringAppointments:
 
         # Check series again via STDB SQL
         children = _stdb_sql(f"SELECT * FROM appointment WHERE series_id = '{series_id}'")
-        assert len(children) >= 2, f"Expected >=2 children, got {len(children)}"
+        assert _row_count(children) >= 2, f"Expected >=2 children, got {_row_count(children)}"
 
 
 class TestAppointmentErrors:

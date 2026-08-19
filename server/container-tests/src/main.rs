@@ -131,7 +131,7 @@ fn test_create_customer() -> Result<(), String> {
 fn test_create_ticket() -> Result<(), String> {
     let _ = call_reducer(
         "create_ticket",
-        r#"["tenant_tk","cust_tk1","Broken screen","Cracked glass","iPhone","15","SN001","high"]"#,
+        r#"["tenant_tk","cust_tk1","Broken screen","Cracked glass","iPhone","15","SN001","high","IMEI-001","pw123"]"#,
     )?;
     assert_sql_contains(
         "SELECT status, priority FROM ticket WHERE title = 'Broken screen'",
@@ -149,7 +149,7 @@ fn test_create_ticket() -> Result<(), String> {
 fn test_update_ticket_status() -> Result<(), String> {
     let _ = call_reducer(
         "create_ticket",
-        r#"["t_upd","c_upd","Status test","","","","","low"]"#,
+        r#"["t_upd","c_upd","Status test","","","","","low","",""]"#,
     )?;
     let out = run_sql("SELECT id FROM ticket WHERE title = 'Status test'")?;
     let id = extract_id_from_output(&out);
@@ -187,7 +187,7 @@ fn extract_id_from_output(output: &str) -> String {
 fn test_create_invoice() -> Result<(), String> {
     let _ = call_reducer(
         "create_invoice",
-        r#"["tenant_inv","cust_inv1","","Container invoice","Net 30",1710000000000,"USD"]"#,
+        r#"["tenant_inv","cust_inv1","","Container invoice","Net 30",1710000000000,"USD",5.0,10.0]"#,
     )?;
     assert_sql_contains(
         "SELECT status, currency FROM invoice WHERE notes = 'Container invoice'",
@@ -259,7 +259,7 @@ fn test_create_tenant() -> Result<(), String> {
 fn test_create_appointment() -> Result<(), String> {
     let _ = call_reducer(
         "create_appointment",
-        r#"["tenant_appt","cust_appt1","","Screen repair","Replace cracked screen",1700000000000,1700003600000,false,"",""]"#,
+        r#"["tenant_appt","cust_appt1","","Screen repair","Replace cracked screen",1700000000000,1700003600000,false,"","","FF0000"]"#,
     )?;
     assert_sql_contains(
         "SELECT status FROM appointment WHERE title = 'Screen repair'",

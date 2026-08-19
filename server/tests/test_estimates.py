@@ -4,6 +4,24 @@ import httpx
 from .conftest import SERVER_URL, assert_ok, create_customer, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
+def _row_dict(rows: list) -> dict:
+    """Normalize an STDB SQL response into a flat row dict (schema/rows or flat)."""
+    if not rows:
+        return {}
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        elements = entry.get("schema", {}).get("elements", [])
+        cols = []
+        for el in elements:
+            n = el.get("name", {})
+            cols.append(n.get("some", n) if isinstance(n, dict) else n)
+        row = entry.get("rows", [])
+        if not row:
+            return {}
+        return dict(zip(cols, row[0]))
+    return entry
+
+
 def _create_customer(test_admin_headers: dict, session_suffix: str = "", suffix: str = "") -> str:
     suf = suffix or unique_suffix()
     c = create_customer(test_admin_headers, session_suffix=session_suffix, first_name="Est", last_name=f"Test{suf}", email=f"est-{session_suffix}-{suf}@example.com")
@@ -14,9 +32,9 @@ def _create_estimate(test_admin_headers: dict, session_suffix: str = "", suffix:
     cid = _create_customer(test_admin_headers, session_suffix, suffix)
     notes = f"Est test {session_suffix}-{suffix or unique_suffix()}"
     httpx.post(f"{SERVER_URL}/api/estimates", json={"customer_id": cid, "notes": notes, "expires_at": 0}, headers=test_admin_headers, timeout=10)
-    rows = _stdb_sql(f"SELECT id FROM estimate WHERE notes = '{notes}'")
+    rows = _stdb_sql(f"SELECT id FROM estimates WHERE notes = '{notes}'")
     assert len(rows) > 0, f"Estimate not found for notes '{notes}'"
-    eid = rows[0]["id"]
+    eid = _row_dict(rows)["id"]
     _track_entity("estimate", eid)
     return eid
 
@@ -26,7 +44,7 @@ class TestEstimateCRUD:
 
     def test_create_estimate(self, test_admin_headers: dict, session_suffix: str):
         cid = _create_customer(test_admin_headers, session_suffix, "create")
-        from .conftest import unique_suffix, test_admin_headers
+        from .conftest import unique_suffix
         notes = f"Test estimate {session_suffix}-{unique_suffix()}"
         resp = httpx.post(
             f"{SERVER_URL}/api/estimates",
@@ -47,9 +65,9 @@ class TestEstimateCRUD:
         )
         assert_ok(resp)
 
-        rows = _stdb_sql(f"SELECT * FROM estimate WHERE notes = '{notes}'")
+        rows = _stdb_sql(f"SELECT * FROM estimates WHERE notes = '{notes}'")
         assert len(rows) == 1, f"Expected 1 estimate with notes '{notes}', got {len(rows)}"
-        est = rows[0]
+        est = _row_dict(rows)
         assert float(est.get("tax_rate", 0)) == 8.875, f"tax_rate={est.get('tax_rate')!r}"
         assert float(est.get("discount_amount", 0)) == 15.0, f"discount_amount={est.get('discount_amount')!r}"
         _track_entity("estimate", est["id"])

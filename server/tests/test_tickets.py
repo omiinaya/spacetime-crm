@@ -13,6 +13,28 @@ from .conftest import (
 )
 
 
+def _row_dict(rows: list) -> dict:
+    """Normalize an STDB SQL response into a flat row dict.
+
+    Modern STDB returns [{"schema": {...}, "rows": [[...]]}]; older
+    versions returned flat [{"col": val}, ...]. Handle both.
+    """
+    if not rows:
+        return {}
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        elements = entry.get("schema", {}).get("elements", [])
+        cols = []
+        for el in elements:
+            n = el.get("name", {})
+            cols.append(n.get("some", n) if isinstance(n, dict) else n)
+        row = entry.get("rows", [])
+        if not row:
+            return {}
+        return dict(zip(cols, row[0]))
+    return entry
+
+
 def _create_ticket(test_admin_headers: dict, session_suffix: str = "", suffix: str = "", **overrides) -> str:
     """Create a customer + ticket and return the ticket ID.
 
@@ -45,7 +67,7 @@ def _create_ticket(test_admin_headers: dict, session_suffix: str = "", suffix: s
     # Look up ticket by unique device_serial via STDB SQL
     rows = _stdb_sql(f"SELECT * FROM ticket WHERE device_serial = '{device_serial}'")
     assert len(rows) == 1, f"Expected 1 ticket with serial {device_serial}, got {len(rows)}"
-    tid = rows[0]["id"]
+    tid = _row_dict(rows)["id"]
     _track_entity("ticket", tid)
     return tid
 
@@ -87,7 +109,7 @@ class TestTicketFlow:
 
         rows = _stdb_sql(f"SELECT * FROM ticket WHERE device_serial = '{device_serial}'")
         assert len(rows) == 1, f"Expected 1 ticket with serial {device_serial}, got {len(rows)}"
-        ticket = rows[0]
+        ticket = _row_dict(rows)
         assert ticket["device_imei"] == "IMEI-1234567890", f"device_imei={ticket.get('device_imei')!r}"
         assert ticket["device_password"] == "pw-secret-42", f"device_password={ticket.get('device_password')!r}"
         _track_entity("ticket", ticket["id"])

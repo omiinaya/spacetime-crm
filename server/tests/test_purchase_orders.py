@@ -4,6 +4,24 @@ import httpx
 from .conftest import SERVER_URL, assert_ok, unique_suffix, _stdb_sql, _track_entity, test_admin_headers
 
 
+def _row_dict(rows: list) -> dict:
+    """Normalize an STDB SQL response into a flat row dict (schema/rows or flat)."""
+    if not rows:
+        return {}
+    entry = rows[0]
+    if isinstance(entry, dict) and "schema" in entry and "rows" in entry:
+        elements = entry.get("schema", {}).get("elements", [])
+        cols = []
+        for el in elements:
+            n = el.get("name", {})
+            cols.append(n.get("some", n) if isinstance(n, dict) else n)
+        row = entry.get("rows", [])
+        if not row:
+            return {}
+        return dict(zip(cols, row[0]))
+    return entry
+
+
 @pytest.fixture
 def test_product_id(test_admin_headers: dict, session_suffix: str) -> str:
     """Create a product for PO line items and return its ID.
@@ -32,7 +50,7 @@ def _create_po(test_admin_headers: dict, session_suffix: str, tag: str = "") -> 
     httpx.post(f"{SERVER_URL}/api/purchase-orders", json={"vendor_name": vendor, "notes": f"PO test {suf}"}, headers=test_admin_headers, timeout=10)
     rows = _stdb_sql(f"SELECT id FROM purchase_order WHERE vendor_name = '{vendor}'")
     assert len(rows) > 0, f"PO not found for vendor {vendor}"
-    po_id = rows[0]["id"]
+    po_id = _row_dict(rows)["id"]
     _track_entity("purchase_order", po_id)
     return po_id
 
@@ -58,7 +76,7 @@ class TestPurchaseOrderCRUD:
 
         rows = _stdb_sql(f"SELECT * FROM purchase_order WHERE vendor_name = '{vendor}'")
         assert len(rows) == 1, f"Expected 1 PO with vendor {vendor}, got {len(rows)}"
-        po = rows[0]
+        po = _row_dict(rows)
         assert float(po.get("shipping_cost", 0)) == 24.95, f"shipping_cost={po.get('shipping_cost')!r}"
         _track_entity("purchase_order", po["id"])
 

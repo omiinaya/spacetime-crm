@@ -355,7 +355,14 @@ def isolated_tenant(
 
     # Set password for the admin user
     hashed = bcrypt.hashpw(test_admin_password.encode(), bcrypt.gensalt()).decode()
-    _stdb_write(f"SELECT set_user_password('{admin_user_id}', '{hashed}')")
+    resp = httpx.post(
+        f"{STDB_CALL_URL}/set_user_password",
+        json=[admin_user_id, hashed],
+        timeout=10,
+    )
+    assert resp.status_code < 300, (
+        f"Set user password: {resp.status_code} {resp.text[:200]}"
+    )
 
     # Log in as the test admin to get a token
     resp = httpx.post(
@@ -466,7 +473,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     resp = httpx.post(
         f"{SERVER_URL}/api/customers",
         json=data,
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert resp.status_code == 200, f"Customer create failed: {resp.text[:200]}"
@@ -474,7 +481,7 @@ def create_customer(auth_headers: dict, session_suffix: str = "", **overrides) -
     r2 = httpx.get(
         f"{SERVER_URL}/api/customers",
         params={"search": data["email"]},
-        headers=auth_headers_session,
+        headers=auth_headers,
         timeout=10,
     )
     assert r2.status_code == 200
