@@ -12,7 +12,7 @@ import asyncio
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from client import get_http_client
 from config import settings
@@ -26,7 +26,10 @@ security = HTTPBearer(auto_error=False)
 # ── Jinja2 template loader ────────────────────────────────────
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
-jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
+jinja_env = Environment(
+    loader=FileSystemLoader(str(TEMPLATE_DIR)),
+    autoescape=select_autoescape(["html", "xml"]),
+)
 
 STATUS_LABELS = {
     "draft": "Draft", "sent": "Sent", "paid": "Paid",
